@@ -40,6 +40,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import ApiTableActions from '../components/ApiTableActions.vue'
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+
+
 
 interface Api {
   id: number
@@ -64,6 +68,79 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const apis = ref<Api[]>([])
 const loading = ref(true)
+
+//new API
+const newApiDialogOpen = ref(false)
+const newApiForm = ref({
+  name: '',
+  description: '',
+  tags: ''
+})
+const newApiLoading = ref(false)
+const newApiError = ref('')
+
+//edit API
+const isEditMode = ref(false)
+const editingApiId = ref<number|null>(null)
+
+const openNewApiDialog = () => {
+  newApiForm.value = { name: '', description: '', tags: '' }
+  newApiError.value = ''
+  newApiDialogOpen.value = true
+}
+
+const closeNewApiDialog = () => {
+  newApiDialogOpen.value = false
+  newApiError.value = ''
+  newApiForm.value = { name: '', description: '', tags: '' }
+  isEditMode.value = false
+  editingApiId.value = null
+}
+
+const submitNewApi = async (e: Event) => {
+  e.preventDefault()
+  newApiLoading.value = true
+  newApiError.value = ''
+  try {
+    let url = 'http://127.0.0.1:8000/api/apis'
+    let method = 'POST'
+    if (isEditMode.value && editingApiId.value) {
+      url = `http://127.0.0.1:8000/api/apis/${editingApiId.value}`
+      method = 'PUT'
+    }
+    const body = isEditMode.value && editingApiId.value
+      ? { ...newApiForm.value, id: editingApiId.value }
+      : {... newApiForm.value, api_type: 'python'}
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!response.ok) throw new Error('Failed to save API')
+    closeNewApiDialog()
+    await fetchApis()
+    // refresh  API list here
+  } catch (err: any) {
+    newApiError.value = err.message || 'Error saving API'
+  } finally {
+    newApiLoading.value = false
+    isEditMode.value = false
+    editingApiId.value = null
+  }
+}
+
+const openEditApiDialog = (api: Api) => {
+  isEditMode.value = true
+  editingApiId.value = api.id
+  console.log('Editing API ID:', editingApiId.value)
+  newApiForm.value = {
+    name: api.name,
+    description: api.description,
+    tags: api.tags,
+  }
+  newApiDialogOpen.value = true
+}
+
 
 // Define table columns
 const columns: ColumnDef<Api>[] = [
@@ -141,6 +218,7 @@ const columns: ColumnDef<Api>[] = [
       return h(ApiTableActions, {
         api,
         onExpand: row.toggleExpanded,
+        onEdit: () => openEditApiDialog(api),
       })
     },
   },
@@ -176,8 +254,8 @@ const table = useVueTable({
   },
 })
 
-// Fetch data on mount
-onMounted(async () => {
+const fetchApis = async () => {
+  loading.value = true
   try {
     const response = await fetch('http://127.0.0.1:8000/api/apis')
     apis.value = await response.json()
@@ -187,7 +265,10 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+// Fetch data on mount
+onMounted(fetchApis)
 </script>
 
 <template>
@@ -214,6 +295,45 @@ onMounted(async () => {
                 :model-value="table.getColumn('name')?.getFilterValue() as string"
                 @update:model-value="table.getColumn('name')?.setFilterValue($event)"
               />
+              <Dialog v-model:open="newApiDialogOpen">
+              <DialogTrigger as-child>
+                <Button class="ml-4 text-green-600" variant="outline" @click="openNewApiDialog">
+                  New API
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <form @submit="submitNewApi" class="space-y-6">
+                  <DialogHeader>
+                    <DialogTitle>{{ isEditMode ? 'Edit API' : 'Create New API' }}</DialogTitle>
+
+                  </DialogHeader>
+                  <div class="grid gap-4">
+                    <div>
+                      <Label for="api-name" class="mb-1">Name</Label>
+                      <Input id="api-name" v-model="newApiForm.name" required placeholder="API Name" />
+                    </div>
+                    <div>
+                      <Label for="api-description" class="mb-1">Description</Label>
+                      <Input id="api-description" v-model="newApiForm.description" placeholder="Description" />
+                    </div>
+                    <div>
+                      <Label for="api-tags" class="mb-1">Tags</Label>
+                      <Input id="api-tags" v-model="newApiForm.tags" placeholder="Tags (comma separated)" />
+                    </div>
+                    <div v-if="newApiError" class="text-red-600 text-sm">{{ newApiError }}</div>
+                  </div>
+                  <DialogFooter class="gap-2">
+                    <DialogClose as-child>
+                      <Button variant="secondary" type="button" @click="closeNewApiDialog">Cancel</Button>
+                    </DialogClose>
+                    <Button type="submit" variant="default" :disabled="newApiLoading">
+                      <span v-if="newApiLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
+                      <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
                   <Button variant="outline" class="ml-auto">

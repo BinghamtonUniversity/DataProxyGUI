@@ -10,30 +10,37 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-// interface Api {
-//   id: number
-//   name: string
-//   description: string
-//   tags: string
-//   api_type: string
-//   user_id: number
-//   created_at: string
-//   updated_at: string
-//   created_by_id: number
-//   updated_by_id: number
-//   deleted_at: string | null
-// }
+interface Api {
+  id: number
+  name: string
+  description: string
+  tags: string
+  api_type: string
+  user_id: number
+  created_at: string
+  updated_at: string
+  created_by_id: number
+  updated_by_id: number
+  deleted_at: string | null
+}
 
 interface Props {
-  // api: Api
+  api: Api
   onExpand?: () => void
 }
 
 const props = defineProps<Props>()
+const emit = defineEmits(['edit'])
+
 
 // const handleCopyId = () => {
 //   navigator.clipboard.writeText(props.api.id.toString())
 // }
+
+const handleEditApi = () => {
+  emit('edit', props.api)
+}
+
 </script>
 
 <template>
@@ -53,7 +60,7 @@ const props = defineProps<Props>()
       <DropdownMenuItem @click="onExpand">
         View details
       </DropdownMenuItem>
-      <DropdownMenuItem>Edit API</DropdownMenuItem>
+      <DropdownMenuItem @click="handleEditApi">Edit API</DropdownMenuItem>
       <DropdownMenuItem class="text-red-600">Delete API</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
