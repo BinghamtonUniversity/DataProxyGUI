@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Link } from '@inertiajs/vue3'
 
 interface Api {
   id: number
@@ -26,7 +27,6 @@ interface Api {
 
 interface Props {
   api: Api
-  onExpand?: () => void
 }
 
 const props = defineProps<Props>()
@@ -57,8 +57,15 @@ const handleEditApi = () => {
         Copy API ID
       </DropdownMenuItem> -->
       <DropdownMenuSeparator />
-      <DropdownMenuItem @click="onExpand">
-        View details
+      <DropdownMenuItem :as-child="true">
+        <Link
+          class="block w-full text-left"
+          :href="`/apis/${props.api.id}`"
+          as="button"
+          prefetch
+        >
+          View details
+        </Link>
       </DropdownMenuItem>
       <DropdownMenuItem @click="handleEditApi">Edit API</DropdownMenuItem>
       <DropdownMenuItem class="text-red-600">Delete API</DropdownMenuItem>

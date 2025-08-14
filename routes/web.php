@@ -15,6 +15,9 @@ Route::get('/apis', function () {
     return Inertia::render('Apis');
 })->middleware(['auth', 'verified'])->name('apis');
 
+Route::get('/apis/{id}', function ($id) {
+    return Inertia::render('ApiEdit', ['id' => $id]);
+})->middleware(['auth', 'verified'])->name('api.edit');
 
 Route::get('/editor', function () {
     return Inertia::render('Editor');

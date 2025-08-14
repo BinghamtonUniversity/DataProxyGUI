@@ -132,7 +132,6 @@ const submitNewApi = async (e: Event) => {
 const openEditApiDialog = (api: Api) => {
   isEditMode.value = true
   editingApiId.value = api.id
-  console.log('Editing API ID:', editingApiId.value)
   newApiForm.value = {
     name: api.name,
     description: api.description,
@@ -217,7 +216,7 @@ const columns: ColumnDef<Api>[] = [
       const api = row.original
       return h(ApiTableActions, {
         api,
-        onExpand: row.toggleExpanded,
+        // onExpand: row.toggleExpanded,
         onEdit: () => openEditApiDialog(api),
       })
     },
