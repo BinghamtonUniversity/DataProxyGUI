@@ -190,8 +190,14 @@
 
 import { ref, computed, watch, nextTick } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-
 import { Head } from '@inertiajs/vue3';
+
+const breadcrumbs = [
+  {
+    title: 'Types Example',
+    href: '/types-example',
+  },
+];
 import TextField from '../components/fields/TextField.vue';
 import TextAreaField from '../components/fields/TextAreaField.vue';
 import TelField from '../components/fields/TelField.vue';
