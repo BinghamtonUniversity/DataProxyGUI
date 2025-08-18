@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,13 @@ Route::get('/apis/{id}', function ($id) {
 Route::get('/editor', function () {
     return Inertia::render('Editor');
 })->middleware(['auth', 'verified'])->name('editor');
+
+Route::get('/formviewer-example', function () {
+    return Inertia::render('FormViewerExample');
+})->middleware(['auth', 'verified'])->name('formviewer.example');
+Route::get('/types-example', function () {
+    return Inertia::render('TypesExample');
+})->middleware(['auth', 'verified'])->name('types.example');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

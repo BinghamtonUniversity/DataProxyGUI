@@ -23,6 +23,26 @@ const mainNavItems: NavItem[] = [
         title: 'Editor',
         href: '/editor',
         icon: BookOpen,
+    },
+    {
+        title: 'Datatable Example',
+        href: '/datatable-example',
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Types Example',
+        href: '/types-example',
+        icon: Folder,
+    },
+    {
+        title: 'FormViewer Example',
+        href: '/formviewer-example',
+        icon: BookOpen,
+    },
+    {
+        title: 'Formbuilder Example',
+        href: '/formbuilder-example',
+        icon: LayoutGrid,
     }
 ];
 

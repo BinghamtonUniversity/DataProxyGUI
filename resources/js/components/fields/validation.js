@@ -1,0 +1,476 @@
+// validation.js
+// Dynamic, extensible validation module for form fields
+// Usage:
+//   import { validateField } from './validation.js';
+//   const errors = validateField(value, config, matchValues);
+//   - value: the field value
+//   - config: field config (should include validate array if custom rules)
+//   - matchValues: (optional) object of other field values for 'matches' rule
+
+// Helper function to determine input type from format
+function getInputTypeFromFormat(format) {
+  if (!format || !format.input) return 'date';
+  
+  const formatStr = format.input;
+  
+  // Map specific accepted formats to input types
+  switch (formatStr) {
+    case 'h:mm A':
+      return 'time';
+    case 'MM':
+    case 'YYYY':
+      return 'number';
+    case 'MM/YYYY':
+      return 'month';
+    case 'MM/DD':
+    case 'MM/DD/YYYY':
+    case 'YYYY-MM-DD':
+    case 'MM/DD/YYYY h:mm A':
+    default:
+      return 'date';
+  }
+}
+
+// Helper function to extract valid values from options (including optgroups)
+function getValidValuesFromOptions(options) {
+  if (!options || !Array.isArray(options)) return [];
+  
+  const validValues = [];
+  
+  for (const option of options) {
+    if (option.type === 'optgroup' && option.options) {
+      // Handle optgroup format with existing options
+      for (const subOption of option.options) {
+        if (typeof subOption === 'string') {
+          validValues.push(subOption);
+        } else if (subOption && subOption.value !== undefined) {
+          validValues.push(subOption.value);
+        }
+      }
+    } else if (option.type === 'optgroup' && (option.min !== undefined || option.max !== undefined)) {
+      // Handle optgroup with min/max - generate numeric options
+      const min = option.min || 0;
+      const max = option.max || 10;
+      for (let i = min; i <= max; i++) {
+        validValues.push(i.toString());
+      }
+    } else if (typeof option === 'string') {
+      // Handle string options
+      validValues.push(option);
+    } else if (option && option.value !== undefined) {
+      // Handle object options
+      validValues.push(option.value);
+    }
+  }
+  
+  return validValues;
+}
+
+// Built-in validation rules
+const rules = {
+  required: (value, config) => {
+    if (config.required && (value === undefined || value === null || value === '')) {
+      return 'This field is required.';
+    }
+    return null;
+  },
+  minLength: (value, config) => {
+    if (config.minLength && value && value.length < config.minLength) {
+      return `Minimum length is ${config.minLength}.`;
+    }
+    return null;
+  },
+  maxLength: (value, config) => {
+    if (config.maxLength && value && value.length > config.maxLength) {
+      return `Maximum length is ${config.maxLength}.`;
+    }
+    return null;
+  },
+  pattern: (value, config) => {
+    if (config.pattern && value && !(new RegExp(config.pattern).test(value))) {
+      return 'Invalid format.';
+    }
+    return null;
+  },
+  email: (value, config) => {
+    if (config.type === 'email') {
+      if (config.required && (!value || value.trim() === '')) {
+        return 'Email address is required.';
+      }
+      if (value && value.trim() !== '' && !/^\S+@\S+\.\S+$/.test(value)) {
+        return 'Invalid email address.';
+      }
+    }
+    return null;
+  },
+  phone: (value, config) => {
+    if (config.type === 'tel') {
+      if (config.required && (!value || value.trim() === '')) {
+        return 'Phone number is required.';
+      }
+      if (value && value.trim() !== '' && !/^[\+]?[1-9][\d]{0,15}$/.test(value.replace(/[\s\-\(\)]/g, ''))) {
+        return 'Invalid phone number.';
+      }
+    }
+    return null;
+  },
+  url: (value, config) => {
+    if (config.type === 'url') {
+      if (config.required && (!value || value.trim() === '')) {
+        return 'URL is required.';
+      }
+      if (value && value.trim() !== '') {
+        try {
+          new URL(value);
+        } catch {
+          return 'Invalid URL.';
+        }
+      }
+    }
+    return null;
+  },
+  number: (value, config) => {
+    if (config.type === 'number') {
+      if (config.required && (value === undefined || value === null || value === '')) {
+        return 'Number is required.';
+      }
+      if (value !== undefined && value !== null && value !== '') {
+        const numValue = Number(value);
+        if (isNaN(numValue)) {
+          return 'Invalid number.';
+        }
+        
+        // Check min value
+        if (config.min !== null && config.min !== undefined && numValue < config.min) {
+          return `Number must be at least ${config.min}.`;
+        }
+        
+        // Check max value
+        if (config.max !== null && config.max !== undefined && numValue > config.max) {
+          return `Number must be at most ${config.max}.`;
+        }
+      }
+    }
+    return null;
+  },
+  currency: (value, config) => {
+    if (config.type === 'currency') {
+      if (config.required && (value === undefined || value === null || value === '')) {
+        return 'Amount is required.';
+      }
+      if (value !== undefined && value !== null && value !== '') {
+        const numValue = Number(value);
+        if (isNaN(numValue)) {
+          return 'Invalid amount.';
+        }
+        
+        // Check if negative (unless allowed)
+        if (numValue < 0 && config.min !== null && config.min !== undefined && config.min >= 0) {
+          return 'Amount cannot be negative.';
+        }
+        
+        // Check min value
+        if (config.min !== null && config.min !== undefined && numValue < config.min) {
+          return `Amount must be at least ${config.min}.`;
+        }
+        
+        // Check max value
+        if (config.max !== null && config.max !== undefined && numValue > config.max) {
+          return `Amount must be at most ${config.max}.`;
+        }
+        
+        // Check decimal places (currency should have max 2 decimal places)
+        const decimalPlaces = (numValue.toString().split('.')[1] || '').length;
+        if (decimalPlaces > 2) {
+          return 'Amount cannot have more than 2 decimal places.';
+        }
+      }
+    }
+    return null;
+  },
+  color: (value, config) => {
+    if (config.type === 'color') {
+      if (config.required && (value === undefined || value === null || value === '')) {
+        return 'Color is required.';
+      }
+      if (value !== undefined && value !== null && value !== '') {
+        // Validate hex color format (#RRGGBB)
+        if (!/^#[0-9A-Fa-f]{6}$/.test(value)) {
+          return 'Invalid color format. Use #RRGGBB format (e.g., #ff0000).';
+        }
+      }
+    }
+    return null;
+  },
+  hidden: (value, config) => {
+    if (config.type === 'hidden') {
+      if (config.required && (value === undefined || value === null || value === '')) {
+        return 'Hidden field is required.';
+      }
+      // Hidden fields can contain any value type, so no format validation needed
+      // Custom validation rules can be applied through the validate array
+    }
+    return null;
+  },
+  select: (value, config) => {
+    if (config.type === 'select') {
+      if (config.required) {
+        if (config.multiple) {
+          // For multiple selection, check if array is empty
+          if (!Array.isArray(value) || value.length === 0) {
+            return 'Please select at least one option.';
+          }
+        } else {
+          // For single selection, check if value is empty
+          if (value === undefined || value === null || value === '') {
+            return 'Please select an option.';
+          }
+        }
+      }
+      
+      // Validate that selected values exist in options (including optgroups)
+      if (value && config.options && config.options.length > 0) {
+        // Extract all valid values from options and optgroups
+        const validValues = [];
+        
+        for (const option of config.options) {
+          if (option.type === 'optgroup' && option.options) {
+            // Handle optgroup format with existing options
+            for (const subOption of option.options) {
+              if (typeof subOption === 'string') {
+                validValues.push(subOption);
+              } else if (subOption && subOption.value !== undefined) {
+                validValues.push(subOption.value);
+              }
+            }
+          } else if (option.type === 'optgroup' && (option.min !== undefined || option.max !== undefined)) {
+            // Handle optgroup with min/max - generate numeric options
+            const min = option.min || 0;
+            const max = option.max || 10;
+            for (let i = min; i <= max; i++) {
+              validValues.push(i.toString());
+            }
+          } else if (typeof option === 'string') {
+            // Handle string options
+            validValues.push(option);
+          } else if (option && option.value !== undefined) {
+            // Handle object options
+            validValues.push(option.value);
+          }
+        }
+        
+        // Validate selected values exist in options
+        if (config.multiple && Array.isArray(value)) {
+          for (const selectedValue of value) {
+            if (!validValues.includes(selectedValue)) {
+              return 'Invalid option selected.';
+            }
+          }
+        } else if (!config.multiple && !validValues.includes(value)) {
+          return 'Invalid option selected.';
+        }
+      }
+    }
+    return null;
+  },
+  date: (value, config) => {
+    if (config.type === 'date') {
+      if (config.required && (!value || value.trim() === '')) {
+        return 'Date is required.';
+      }
+      if (value && value.trim() !== '') {
+        // Handle different input types based on format
+        const inputType = getInputTypeFromFormat(config.format);
+        
+        if (inputType === 'time') {
+          // Validate time format for h:mm A
+          if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+            return 'Invalid time format. Use HH:MM format.';
+          }
+        } else if (inputType === 'month') {
+          // Validate month format for MM/YYYY (YYYY-MM in HTML)
+          if (!/^\d{4}-\d{2}$/.test(value)) {
+            return 'Invalid month format. Use YYYY-MM format.';
+          }
+        } else if (inputType === 'number') {
+          // Validate number format for MM or YYYY
+          const num = parseInt(value);
+          if (isNaN(num)) {
+            return 'Invalid number format.';
+          }
+          
+          if (config.format?.input === 'MM') {
+            // Month validation (1-12)
+            if (num < 1 || num > 12) {
+              return 'Month must be between 1 and 12.';
+            }
+          } else if (config.format?.input === 'YYYY') {
+            // Year validation (1900-2100)
+            if (num < 1900 || num > 2100) {
+              return 'Year must be between 1900 and 2100.';
+            }
+          }
+        } else {
+          // Standard date validation
+          const date = new Date(value);
+          if (isNaN(date.getTime())) {
+            return 'Invalid date.';
+          }
+          // Check min date if specified
+          if (config.minDate && date < new Date(config.minDate)) {
+            return `Date must be on or after ${new Date(config.minDate).toLocaleDateString()}.`;
+          }
+          // Check max date if specified
+          if (config.maxDate && date > new Date(config.maxDate)) {
+            return `Date must be on or before ${new Date(config.maxDate).toLocaleDateString()}.`;
+          }
+        }
+      }
+    }
+    return null;
+  },
+  combobox: (value, config) => {
+    if (config.type === 'combobox') {
+      if (config.required && (!value || value.trim() === '')) {
+        return 'This field is required.';
+      }
+      
+      // If custom values are not allowed, check if value is in options
+      if (!config.allowCustom && value && value.trim() !== '') {
+        const validValues = getValidValuesFromOptions(config.options);
+        if (validValues.length > 0 && !validValues.includes(value)) {
+          return 'Please select a valid option from the list.';
+        }
+      }
+    }
+    return null;
+  },
+  custom: (value, config) => {
+    if (typeof config.customValidation === 'function') {
+      return config.customValidation(value, config);
+    }
+    return null;
+  },
+  range: (value, config) => {
+    if (config.type === 'range') {
+      if (config.required && (value === undefined || value === null || value === '')) {
+        return 'This field is required.';
+      }
+      if (value !== undefined && value !== null && value !== '') {
+        const numValue = Number(value);
+        if (isNaN(numValue)) {
+          return 'Invalid number.';
+        }
+        if (config.min !== null && config.min !== undefined && numValue < config.min) {
+          return `Value must be at least ${config.min}.`;
+        }
+        if (config.max !== null && config.max !== undefined && numValue > config.max) {
+          return `Value must be at most ${config.max}.`;
+        }
+        if (config.step !== null && config.step !== undefined && ((numValue - (config.min || 0)) % config.step !== 0)) {
+          return `Value must be a multiple of ${config.step} from ${config.min || 0}.`;
+        }
+      }
+    }
+    return null;
+  },
+  checkbox: (value, config) => {
+    if (config.type === 'checkbox') {
+      if (config.required && (value === undefined || value === null || value === false)) {
+        return 'This checkbox is required.';
+      }
+      // Checkbox values should be boolean
+      if (value !== undefined && value !== null && typeof value !== 'boolean') {
+        return 'Checkbox value must be true or false.';
+      }
+    }
+    return null;
+  },
+  switch: (value, config) => {
+    if (config.type === 'switch') {
+      if (config.required && (value === undefined || value === null || value === false)) {
+        return 'This switch is required.';
+      }
+      // Switch values should be boolean
+      if (value !== undefined && value !== null && typeof value !== 'boolean') {
+        return 'Switch value must be true or false.';
+      }
+    }
+    return null;
+  }
+};
+
+// Custom validation rules from config.validate
+function runCustomValidations(value, config, matchValues = {}) {
+  const errors = [];
+  if (Array.isArray(config.validate)) {
+    for (const rule of config.validate) {
+      if (!rule.conditions) continue;
+      switch (rule.type) {
+        case 'date':
+          if (value && isNaN(Date.parse(value))) {
+            errors.push(rule.message || 'Invalid date');
+          }
+          break;
+        case 'valid_url':
+          if (value && value.trim() !== '') {
+            try { 
+              new URL(value); 
+            } catch { 
+              errors.push(rule.message || 'Invalid URL'); 
+            }
+          }
+          break;
+        case 'valid_email':
+          if (value && value.trim() !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            errors.push(rule.message || 'Invalid email');
+          }
+          break;
+        case 'length':
+          if (typeof rule.min === 'number' && value.length < rule.min) {
+            errors.push(rule.message || `Minimum length is ${rule.min}`);
+          }
+          if (typeof rule.max === 'number' && value.length > rule.max) {
+            errors.push(rule.message || `Maximum length is ${rule.max}`);
+          }
+          break;
+        case 'numeric':
+          if (value && isNaN(Number(value))) {
+            errors.push(rule.message || 'Must be numeric');
+          }
+          break;
+        case 'pattern':
+          try {
+            const regex = new RegExp(rule.regex, rule.flags || '');
+            if (value && !regex.test(value)) {
+              errors.push(rule.message || 'Invalid format');
+            }
+          } catch {
+            errors.push('Invalid pattern');
+          }
+          break;
+        case 'matches':
+          if (matchValues && value !== matchValues[rule.name]) {
+            errors.push(rule.message || `Must match ${rule.name}`);
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  }
+  return errors;
+}
+
+// Main validation function
+export function validateField(value, config, matchValues = {}) {
+  const errors = [];
+  // Built-in rules
+  for (const ruleName in rules) {
+    const error = rules[ruleName](value, config);
+    if (error) errors.push(error);
+  }
+  // Custom rules
+  errors.push(...runCustomValidations(value, config, matchValues));
+  return errors;
+} 
