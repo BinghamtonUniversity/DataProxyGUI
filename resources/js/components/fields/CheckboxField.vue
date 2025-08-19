@@ -1,7 +1,7 @@
 <template>
   <div v-if="show" :class="{ 'checkbox-field-container': !inFieldset }">
     <!-- Main Label (only show if there are no options) -->
-    <label v-if="label && (!options || options.length === 0)" :for="fieldId" class="block text-sm font-medium text-gray-900 dark:text-white mb-3" :class="{ 'text-red-500': localError || (props.errors && props.errors.length > 0) }">
+    <label v-if="label"  :for="fieldId" class="block text-sm font-medium text-gray-900 dark:text-white mb-3" :class="{ 'text-red-500': localError || (props.errors && props.errors.length > 0) }">
       {{ label }}
       <span v-if="required" class="text-red-500 ml-1">*</span>
       <span
@@ -66,25 +66,29 @@ const props = defineProps({
   name: { type: String, required: true },
   fieldId: { type: String, default: () => `field_${Math.random().toString(36).substr(2, 9)}` },
   label: { type: String, default: '' },
-  value: { type: [Boolean, String], default: false },
-  required: { type: Boolean, default: false },
+  value: { type: [Boolean, String], default: "false" },
+  required: { type: [Boolean,String,Array], default: true },
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
-  edit: { type: Boolean, default: true },
-  show: { type: Boolean, default: true },
+  edit: { type: [Boolean,String,Array], default: true },
+  show: { type: [Boolean,String,Array], default: true },
+  parse: { type: [Boolean,String,Array], default: true },
   help: { type: String, default: '' },
   info: { type: String, default: '' },
   autofocus: { type: Boolean, default: false },
   validate: { type: Array, default: () => [] },
   showColumn: { type: Boolean, default: false },
-  options: { type: Array, default: () => [] },
+  options: { type: Array, default: () => [
+    { label: 'false', value: 'false' },
+    { label: 'true', value: 'true' }
+  ] },
   inFieldset: { type: Boolean, default: false },
   errors: { type: Array, default: () => [] }
 });
 
 const emit = defineEmits(['update:value', 'validation-error', 'validation-success', 'blur', 'focus']);
 
-const internalValue = ref(Boolean(props.value));
+const internalValue = ref(props.value == props.options[1].value ? true : false);
 const localError = ref('');
 const showInfo = ref(false);
 
@@ -100,8 +104,9 @@ const validate = () => {
 };
 
 const handleChange = (event) => {
-  internalValue.value = event.target.checked;
-  emit('update:value', internalValue.value);
+  internalValue.value = event.target.checked ? true : false;
+  var updatedValue = internalValue.value ? props.options[1].value : props.options[0].value;
+  emit('update:value', updatedValue);
   validate();
 };
 
@@ -115,16 +120,16 @@ const handleFocus = () => {
 };
 
 const getCheckboxLabel = () => {
-  if (props.options && props.options.length >= 2) {
+  if (props.options && props.options.length === 2) {
     // Use custom labels from options
     return internalValue.value ? props.options[1].label : props.options[0].label;
   }
   // Default labels
-  return internalValue.value ? 'Yes' : 'No';
+  return internalValue.value ? 'true' : 'false';
 };
 
 watch(() => props.value, (newValue) => {
-  internalValue.value = Boolean(newValue);
+  internalValue.value = Boolean(newValue)
 }, { immediate: true });
 
 watch(() => props.validate, () => {
@@ -278,4 +283,4 @@ input[type="checkbox"]::after {
   background-color: rgb(55 65 81) !important;
   border-color: rgb(75 85 99) !important;
 }
-</style> 
+</style>

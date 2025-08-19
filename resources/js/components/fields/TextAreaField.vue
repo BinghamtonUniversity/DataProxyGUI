@@ -111,22 +111,10 @@ const props = defineProps({
   },
   
   // Form builder attributes
-  show: {
-    type: Boolean,
-    default: true
-  },
-  edit: {
-    type: Boolean,
-    default: true
-  },
-  parse: {
-    type: Boolean,
-    default: true
-  },
-  required: {
-    type: Boolean,
-    default: false
-  },
+  show:  { type: [Boolean,String,Array], default: true },
+  edit: { type: [Boolean,String,Array], default: true },
+  parse:  { type: [Boolean,String,Array], default: true },
+  required: { type: [Boolean,String,Array], default: true },
   
   // Textarea specific properties
   rows: {

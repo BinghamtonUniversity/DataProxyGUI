@@ -32,10 +32,11 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  edit: {
-    type: Boolean,
-    default: true
-  }
+  edit:  { type: [Boolean,String,Array], default: true },
+  show:  { type: [Boolean,String,Array], default: true },
+  parse:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: true },
+
 });
 
 const emit = defineEmits(['update:value', 'validation-error', 'validation-success']);

@@ -376,24 +376,17 @@ const rules = {
   },
   checkbox: (value, config) => {
     if (config.type === 'checkbox') {
-      if (config.required && (value === undefined || value === null || value === false)) {
+
+      if (config.required && (value === undefined || value === null || value  == false ) ) {
         return 'This checkbox is required.';
-      }
-      // Checkbox values should be boolean
-      if (value !== undefined && value !== null && typeof value !== 'boolean') {
-        return 'Checkbox value must be true or false.';
       }
     }
     return null;
   },
   switch: (value, config) => {
     if (config.type === 'switch') {
-      if (config.required && (value === undefined || value === null || value === false)) {
+      if (config.required && (value === undefined || value === null ) && value !== config.options?.[1]?.value) {
         return 'This switch is required.';
-      }
-      // Switch values should be boolean
-      if (value !== undefined && value !== null && typeof value !== 'boolean') {
-        return 'Switch value must be true or false.';
       }
     }
     return null;

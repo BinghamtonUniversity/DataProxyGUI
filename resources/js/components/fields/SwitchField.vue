@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="switch-field-container">
+  <div v-if="show" :class="{ 'switch-field-container': !inFieldset }">
     <!-- Label -->
     <label v-if="label" :for="fieldId" class="block text-sm font-medium text-gray-900 dark:text-white mb-2" :class="{ 'text-red-500': localError || (props.errors && props.errors.length > 0) }">
       {{ label }}
@@ -78,24 +78,29 @@ const props = defineProps({
   name: { type: String, required: true },
   fieldId: { type: String, default: () => `field_${Math.random().toString(36).substr(2, 9)}` },
   label: { type: String, default: '' },
-  value: { type: [Boolean, String], default: false },
-  required: { type: Boolean, default: false },
+  value: { type: [Boolean, String], default: "false" },
+  required:  { type: [Boolean,String,Array], default: true },
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
-  edit: { type: Boolean, default: true },
-  show: { type: Boolean, default: true },
+  edit:  { type: [Boolean,String,Array], default: true },
+  show:  { type: [Boolean,String,Array], default: true },
+  parse :  { type: [Boolean,String,Array], default: true },
   help: { type: String, default: '' },
   info: { type: String, default: '' },
   autofocus: { type: Boolean, default: false },
   validate: { type: Array, default: () => [] },
   showColumn: { type: Boolean, default: false },
-  options: { type: Array, default: () => [] },
+  options: { type: Array, default: () => [
+    { label: 'false', value: 'false' },
+    { label: 'true', value: 'true' }
+  ] },
+  inFieldset: { type: Boolean, default: false },
   errors: { type: Array, default: () => [] }
 });
 
 const emit = defineEmits(['update:value', 'validation-error', 'validation-success', 'blur', 'focus']);
 
-const internalValue = ref(Boolean(props.value));
+const internalValue = ref(props.value == props.options[1].value ? true : false);
 const localError = ref('');
 const showInfo = ref(false);
 
@@ -111,9 +116,9 @@ const validate = () => {
 };
 
 const handleToggle = () => {
-  if (props.disabled || !props.edit) return;
-  internalValue.value = !internalValue.value;
-  emit('update:value', internalValue.value);
+  internalValue.value = !internalValue.value ? true : false;
+  var updatedValue = internalValue.value ? props.options[1].value : props.options[0].value;
+  emit('update:value', updatedValue);
   validate();
 };
 
@@ -132,7 +137,7 @@ const getSwitchLabel = () => {
     return internalValue.value ? props.options[1].label : props.options[0].label;
   }
   // Default labels
-  return internalValue.value ? 'On' : 'Off';
+  return internalValue.value ? 'true' : 'false';
 };
 
 watch(() => props.value, (newValue) => {

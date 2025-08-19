@@ -169,33 +169,7 @@
                     ]">
                     <!-- Field Preview -->
                     <div class="space-y-3">
-                      <!-- Field Label with Info Icon -->
-                      <div class="flex items-center justify-between">
-                        <label :class="formbuilderTheme.fieldLabel">
-                          {{ element.label }}
-                          <span v-if="element.required" class="text-error ml-1">*</span>
 
-                          <span
-                            v-if="element.info"
-                            class="relative cursor-pointer ml-1"
-                            @mouseenter="hoveredInfoIndex = index"
-                            @mouseleave="hoveredInfoIndex = null"
-                          >
-                            <svg class="w-4 h-4 text-primary inline" fill="currentColor" viewBox="0 0 20 20">
-                              <circle cx="10" cy="10" r="9" fill="var(--md-sys-color-primary)"/>
-                              <text x="10" y="15" text-anchor="middle" font-size="12" fill="white">?</text>
-                            </svg>
-                            <span
-                              v-if="hoveredInfoIndex === index"
-                              class="absolute left-1/2 z-10 -translate-x-1/2 mt-2 w-48 p-2 rounded-2xl bg-surface-container text-xs text-on-surface shadow-elevation-3 border border-outline"
-                              style="pointer-events: none;"
-                            >
-                              {{ element.info }}
-                            </span>
-                          </span>
-                        </label>
-                        <span :class="formbuilderTheme.fieldType">{{ element.type }}</span>
-                      </div>
                       
                       <!-- Dynamic Field Preview -->
                       <div class="preview-container" @click.stop>
@@ -209,7 +183,11 @@
                       
                       <!-- Field Name (small text) -->
                       <div :class="formbuilderTheme.info">
-                        Field name: <code class="bg-surface-container-high px-2 py-1 rounded-lg text-on-surface-variant">{{ element.name }}</code>
+                        <div class="flex items-center justify-between">
+                          <span>Field name: <code class="bg-surface-container-high px-2 py-1 rounded-lg text-on-surface-variant">{{ element.name }}</code></span>
+                          <span :class="formbuilderTheme.fieldType">{{ element.type }}</span>
+                        </div>
+
                       </div>
                     </div>
                   </div>
@@ -379,16 +357,16 @@
                         class="w-full"
                       />
                     </div>
-                    
-                    <!-- Required -->
-                    <div class="flex items-center gap-4">
+                    <!-- TODO -->
+                    <!-- Fillable -->
+                    <!-- <div class="flex items-center gap-4">
                       <CheckboxField
-                        v-model:value="selectedField.required"
-                        name="fieldRequired"
-                        label="Required"
+                        v-model:value="selectedField.fillable"
+                        name="fieldFillable"
+                        label="Fillable"
                         class="w-full"
                       />
-                    </div>
+                    </div> -->
                   </div>
                 </div>
                 
@@ -428,6 +406,7 @@
                           { label: '11 Columns', value: '11' },
                           { label: '12 Columns (Full Width)', value: '12' }
                         ]"
+                  
                         placeholder="Select width"
                         class="w-full"
                       />
@@ -470,11 +449,16 @@
                     
                     <!-- Allow Duplication -->
                     <div class="flex items-center gap-4">
-                      <CheckboxField
+                      <SwitchField
                         v-model:value="selectedField.allowDuplication"
                         name="fieldAllowDuplication"
                         label="Allow Duplication"
                         class="w-full"
+                        :required=false
+                        :options="[
+                          { label: 'Not Allow', value: false },
+                          { label: 'Allow', value: true }
+                        ]"
                       />
                     </div>
                     
@@ -483,20 +467,21 @@
                       <!-- Min/Max Configuration -->
                       <div class="grid grid-cols-12 gap-4">
                         <div class="col-span-6">
-                          <label class="block text-xs text-on-surface-variant mb-2 font-medium">Minimum</label>
+                          
                           <NumberField
+                            :label ='`Minimum`'
                             v-model:value="selectedField.arrayMin"
                             name="fieldArrayMin"
-                            placeholder="null"
+                            placeholder="1"
                             class="w-full"
                           />
                         </div>
                         <div class="col-span-6">
-                          <label class="block text-xs text-on-surface-variant mb-2 font-medium">Maximum</label>
                           <NumberField
+                            :label ='`Maximum`'
                             v-model:value="selectedField.arrayMax"
                             name="fieldArrayMax"
-                            placeholder="null"
+                            placeholder="5"
                             class="w-full"
                           />
                         </div>
@@ -506,7 +491,7 @@
                 </div>
                 
                 <!-- Field-Specific Configuration -->
-                <div v-if="selectedField.type === 'select' || selectedField.type === 'combobox' || selectedField.type === 'radio'" class="mb-4">
+                <div v-if="selectedField.type === 'select' || selectedField.type === 'combobox' || selectedField.type === 'radio' || selectedField.type === 'checkbox' || selectedField.type === 'switch'" class="mb-4">
                   <button
                     @click="toggleConfigSection('options')"
                     class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
@@ -521,52 +506,69 @@
                     </svg>
                   </button>
                   <div class="config-section-content space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.options ? 'expanded' : 'collapsed'">
-                    <!-- Multiple Selection -->
+                    <!-- Multiple Selection (only for select/combobox) -->
                     <div v-if="selectedField.type === 'select' || selectedField.type === 'combobox'" class="flex items-center gap-4">
-                      <CheckboxField
+                      <SwitchField
                         v-model:value="selectedField.multiple"
                         name="fieldMultiple"
                         label="Allow Multiple Selections"
                         class="w-full"
                       />
                     </div>
-                    
                     <!-- Options List -->
                     <div>
                       <label class="block text-xs text-on-surface-variant mb-2 font-medium">Options</label>
                       <div class="space-y-2">
-                        <div v-for="(option, index) in selectedField.options || []" :key="index" class="flex gap-2">
-                          <TextField
-                            v-model:value="option.label"
-                            :name="`optionLabel_${index}`"
-                            placeholder="Label"
-                            class="flex-1"
-                          />
-                          <TextField
-                            v-model:value="option.value"
-                            :name="`optionValue_${index}`"
-                            placeholder="Value"
-                            class="flex-1"
-                          />
+                        <template v-if="selectedField.type === 'checkbox' || selectedField.type === 'switch'">
+                          <div v-for="(option, index) in selectedField.options || []" :key="index" class="flex gap-2">
+                            <TextField
+                              v-model:value="option.label"
+                              :name="`optionLabel_${index}`"
+                              :placeholder="index === 0 ? 'False Label' : 'True Label'"
+                              class="flex-1"
+                            />
+                            <TextField
+                              v-model:value="option.value"
+                              :name="`optionValue_${index}`"
+                              :placeholder="index === 0 ? 'False Value' : 'True Value'"
+                              class="flex-1"
+                            />
+                          </div>
+                        </template>
+                        <template v-else>
+                          <div v-for="(option, index) in selectedField.options || []" :key="index" class="flex gap-2">
+                            <TextField
+                              v-model:value="option.label"
+                              :name="`optionLabel_${index}`"
+                              placeholder="Label"
+                              class="flex-1"
+                            />
+                            <TextField
+                              v-model:value="option.value"
+                              :name="`optionValue_${index}`"
+                              placeholder="Value"
+                              class="flex-1"
+                            />
+                            <button
+                              @click="removeOption(index)"
+                              type="button"
+                              class="px-3 py-2 text-error hover:text-error hover:bg-error-8 rounded-xl transition-all duration-200"
+                              :disabled="(selectedField.options || []).length <= 1">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                              </svg>
+                            </button>
+                          </div>
                           <button
-                            @click="removeOption(index)"
+                            @click="addOption"
                             type="button"
-                            class="px-3 py-2 text-error hover:text-error hover:bg-error-8 rounded-xl transition-all duration-200"
-                            :disabled="(selectedField.options || []).length <= 1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            class="w-full px-4 py-2 text-primary hover:text-primary hover:bg-primary-8 rounded-xl transition-all duration-200 border border-primary text-sm">
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                             </svg>
+                            Add Option
                           </button>
-                        </div>
-                        <button
-                          @click="addOption"
-                          type="button"
-                          class="w-full px-4 py-2 text-primary hover:text-primary hover:bg-primary-8 rounded-xl transition-all duration-200 border border-primary text-sm">
-                          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                          </svg>
-                          Add Option
-                        </button>
+                        </template>
                       </div>
                     </div>
                   </div>
@@ -782,60 +784,71 @@
                   </button>
                   <div class="config-section-content space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.validation ? 'expanded' : 'collapsed'">
                     <!-- Enable Validation Switch -->
-                    <div class="flex items-center justify-between">
+                    <!-- <div class="flex items-center justify-between">
                       <label class="block text-xs text-on-surface-variant mb-2 font-medium">Enable Validation</label>
                       <input 
                         type="checkbox" 
                         v-model="selectedField.validate"
                         class="w-4 h-4 text-primary bg-surface-container border-outline rounded focus:ring-primary-20 focus:ring-2">
+                    </div> -->
+
+                    <div class="flex items-center gap-4">
+
+                    <SwitchField
+                        v-model:value="selectedField.enableValidate"
+                        name="fieldEnableValidation"
+                        label="Enable Validation"
+                        class="w-full"
+                        :required=false
+                        :options="[
+                          { label: 'Not Validate', value: false },
+                          { label: 'Validate', value: true }
+                        ]"
+                      />
                     </div>
-                    
                     <!-- Validation Configuration (only show if validation is enabled) -->
-                    <div v-if="selectedField.validate" class="space-y-3 pl-4 border-l-2 border-primary-20">
+                    <div v-if="selectedField.enableValidate" class="space-y-3 pl-4 border-l-2 border-primary-20">
                       <!-- Validation Type -->
                       <div>
-                        <label class="block text-xs text-on-surface-variant mb-2 font-medium">Validation Type</label>
-                        <div class="relative">
-                          <select
-                            v-model="selectedField.validationType"
-                            class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200 appearance-none pr-10">
-                            <option value="none">None</option>
-                            <option value="matches">Matches</option>
-                            <option value="date">Date</option>
-                            <option value="valid_url">Valid URL</option>
-                            <option value="valid_email">Valid Email</option>
-                            <option value="length">Length</option>
-                            <option value="numeric">Numeric</option>
-                            <option value="pattern">Pattern</option>
-                          </select>
-                          <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                            <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                          </div>
-                        </div>
+                        <SelectField
+                          v-model:value="selectedField.validationType"
+                          name="fieldValidationType"
+                          :options="[
+                            { label: 'None', value: 'none' },
+                            { label: 'Matches', value: 'matches' },
+                            { label: 'Date', value: 'date' },
+                            { label: 'Valid URL', value: 'valid_url' },
+                            { label: 'Valid Email', value: 'valid_email' },
+                            { label: 'Length', value: 'length' },
+                            { label: 'Numeric', value: 'numeric' },
+                            { label: 'Pattern', value: 'pattern' }
+                          ]"
+                          placeholder="Select validation type"
+                          class="w-full">
+                        </SelectField>
                       </div>
                       
                       <!-- Pattern Configuration (only for pattern type) -->
                       <div v-if="selectedField.validationType === 'pattern'" class="space-y-3">
+                        <TextField
+                          v-model:value="selectedField.validationPattern"
+                          name="fieldValidationPattern"
+                          label="Regex Pattern"
+                          placeholder="Enter regex pattern"
+                          class="w-full">
+                        </TextField>
+
+                        
+                        
                         <div>
-                          <label class="block text-xs text-on-surface-variant mb-2 font-medium">Regex Pattern</label>
-                          <input
-                            v-model="selectedField.validationPattern"
-                            type="text"
-                            placeholder="Enter regex pattern (e.g., ^[A-Za-z]+$)"
-                            class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200">
-                        </div>
-                        <div>
-                          <label class="block text-xs text-on-surface-variant mb-2 font-medium">Regex Flags</label>
-                          <input
-                            v-model="selectedField.validationFlags"
-                            type="text"
+                          <TextField
+                            v-model:value="selectedField.validationFlags"
+                            name="fieldValidationFlags"
+                            label="Regex Flags"
                             placeholder="Enter flags (e.g., gi)"
-                            class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200">
-                          <div class="text-xs text-on-surface-variant mt-1">
-                            Common flags: g (global), i (case insensitive), m (multiline)
-                          </div>
+                            help="Common flags: g (global), i (case insensitive), m (multiline)"
+                            class="w-full">
+                          </TextField>                          
                         </div>
                       </div>
                       
@@ -1020,6 +1033,18 @@
           :key="previewKey"
           :form-config="formConfigForPreview"
           v-model="previewFormData" />
+        <!-- Collapsible JSON Output -->
+        <div class="mt-6">
+          <button @click="showPreviewJson = !showPreviewJson" class="w-full flex items-center justify-between px-4 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium hover:bg-surface-container-high transition-all duration-200">
+            <span>Show Form Data JSON</span>
+            <svg :class="['w-5 h-5 transition-transform duration-200', showPreviewJson ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+          <div v-if="showPreviewJson" class="mt-2 p-3 bg-surface-container-high rounded-xl border border-outline-variant overflow-auto max-h-64">
+            <pre class="text-xs text-on-surface-variant">{{ JSON.stringify(previewFormData, null, 2) }}</pre>
+          </div>
+        </div>
       </div>
       <template #footer>
         <button
@@ -1071,6 +1096,7 @@ import FieldsetField from '../fields/FieldsetField.vue';
 import ArrayField from '../fields/ArrayField.vue';
 import HiddenField from '../fields/HiddenField.vue';
 import OutputField from '../fields/OutputField.vue';
+
 
 const fieldTypes = [
   { type: 'text', label: 'Text', category: 'input' },
@@ -1146,6 +1172,7 @@ const dragOverIndex = ref(null);
 const isDragging = ref(false);
 const previewPosition = ref(null);
 const previewElement = ref(null);
+const showPreviewJson = ref(false); // <-- Define showPreviewJson as a ref
 
 // Navigation data for managing nested fieldsets
 const navigationPath = ref([]);
@@ -1203,8 +1230,8 @@ function getOriginalIndex(previewIndex) {
 }
 
 const configSections = ref({
-  basic: true,
-  display: false,
+  basic: false,
+  display: true,
   options: false,
   range: false,
   section: false,
@@ -1251,10 +1278,9 @@ function getFieldProps(field) {
     value: field.value,
     required: field.required,
     help: field.help,
-    info: field.info,
+    info: field.info,    
   };
 
-  // Add type-specific props
   switch (field.type) {
     case 'select':
     case 'combobox':
@@ -1266,6 +1292,20 @@ function getFieldProps(field) {
           { label: 'Option 2', value: 'option2' }
         ],
         multiple: field.multiple || false,
+      };
+    case 'checkbox':
+    case 'switch':
+      return {
+        ...baseProps,
+        options: field.options && field.options.length === 2
+          ? [
+              { label: field.options[0].label, value: field.options[0].value },
+              { label: field.options[1].label, value: field.options[1].value }
+            ]
+          : [
+              { label: 'false', value: 'false' },
+              { label: 'true', value: 'true' }
+            ],
       };
     case 'range':
       return {
@@ -1315,7 +1355,6 @@ function onDragOver(event) {
     
     // Calculate and update preview position
     const dropPosition = calculateDropPosition(event);
-    console.log('Drop position calculated:', dropPosition, 'Mouse Y:', event.clientY);
     previewPosition.value = dropPosition;
   }
 }
@@ -1411,11 +1450,8 @@ function createAndAddField(event, position) {
   if (typeData) {
     try {
       const type = JSON.parse(typeData);
-      
-      // Determine the default type based on the dropped category
       let defaultType = 'text';
       let defaultLabel = 'New Field';
-      
       switch (type.category) {
         case 'input':
           defaultType = 'text';
@@ -1434,31 +1470,38 @@ function createAndAddField(event, position) {
           defaultLabel = 'Section';
           break;
       }
-      
       const newField = {
+        allowDuplication:false,
+        enableValidate: false,
+        validationType: 'none',
+        validationWhen: 'always', // Todo
         type: defaultType,
         label: defaultLabel,
         name: `${defaultType}_${Date.now()}`,
         placeholder: '',
-        value: '',
+        value: (defaultType === 'checkbox' || defaultType === 'switch') ? 'false' : '',
         required: false,
         help: '',
         info: '',
         updateKey: 0,
-        // Set default condition values
-        show: 'true',
-        edit: 'true',
-        parse: 'true',
-        required: 'true',
+        show: true,
+        edit: true,
+        parse: true,
+        width: '12',
+        offset: '0',
+        options: (defaultType === 'checkbox' || defaultType === 'switch')
+          ? [
+              { label: 'false', value: 'false' },
+              { label: 'true', value: 'true' }
+            ]
+          : undefined,
       };
-
-      // Add type-specific properties
       if (defaultType === 'select' || defaultType === 'combobox' || defaultType === 'radio') {
         newField.options = [
           { label: 'Option 1', value: 'option1' },
           { label: 'Option 2', value: 'option2' }
         ];
-        newField.multiple = false;
+
       } else if (defaultType === 'range') {
         newField.min = 0;
         newField.max = 100;
@@ -1473,22 +1516,14 @@ function createAndAddField(event, position) {
         newField.removeEnable = 'auto';
         newField.duplicateClone = false;
       }
-
-      // Insert at the specified position in current context
       const currentFields = getCurrentFields();
       currentFields.splice(position, 0, newField);
-      
-      // Automatically select the newly added field
       selectedFieldIndex.value = position;
     } catch (error) {
       console.error('Error parsing dropped data:', error);
     }
   }
 }
-
-
-
-
 
 function selectField(index) {
   // Simple selection - just set the selectedFieldIndex
@@ -1737,6 +1772,21 @@ function getFieldJson(field) {
         }
       };
       break;
+    case 'checkbox':
+    case 'switch':
+      base.type = field.booleanType || field.type || 'checkbox';
+      base.value = field.value || 'false';
+      base.showColumn = true;
+      base.options = field.options && field.options.length === 2
+        ? [
+            { label: field.options[0].label, value: field.options[0].value },
+            { label: field.options[1].label, value: field.options[1].value }
+          ]
+        : [
+            { label: 'false', value: 'false' },
+            { label: 'true', value: 'true' }
+          ];
+      break;
   }
 
   // Add array properties for any field that has allowDuplication enabled
@@ -1781,7 +1831,7 @@ function getFieldJson(field) {
   }
 
   // Add validation properties
-  if (field.validate) {
+  if (field.enableValidate) {
     const validationRule = {
       type: field.validationType || 'none'
     };
@@ -1833,7 +1883,7 @@ function getFieldJson(field) {
     }
 
     // Set validation as an array with the rule
-    base.validate = [validationRule];
+    base.enableValidate = [validationRule];
   }
 
   // Legacy validation properties (for backward compatibility)
@@ -1887,45 +1937,51 @@ watch(
   () => selectedField.value?.type,
   (newType, oldType) => {
     if (newType && newType !== oldType && selectedField.value) {
-      console.log('Field type changed from', oldType, 'to', newType);
-      // Update field properties based on new type
       const field = selectedField.value;
-      
-      // Reset type-specific properties
-      if (newType === 'select' || newType === 'combobox' || newType === 'radio') {
+      if (
+        newType === 'select' ||
+        newType === 'combobox' ||
+        newType === 'radio' ||
+        newType === 'checkbox' ||
+        newType === 'switch'
+      ) {
         if (!field.options) {
-          field.options = [
-            { label: 'Option 1', value: 'option1' },
-            { label: 'Option 2', value: 'option2' }
-          ];
+          if (newType === 'select' || newType === 'combobox' || newType === 'radio') {
+            field.options = [
+              { label: 'Option 1', value: 'option1' },
+              { label: 'Option 2', value: 'option2' }
+            ];
+          }
+          if (newType === 'checkbox' || newType === 'switch') {
+            field.options = [
+              { label: 'false', value: 'false' },
+              { label: 'true', value: 'true' }
+            ];
+          }
         }
-        field.multiple = false;
+        if (newType === 'select' || newType === 'combobox' || newType === 'radio') {
+          field.multiple = false;
+        }
       } else {
-        // Remove options for non-option fields
         delete field.options;
         delete field.multiple;
       }
-      
       if (newType === 'range') {
         field.min = field.min || 0;
         field.max = field.max || 100;
         field.step = field.step || 1;
       } else {
-        // Remove range properties for non-range fields
         delete field.min;
         delete field.max;
         delete field.step;
       }
-      
       if (newType === 'fieldset') {
         field.fields = field.fields || [];
         field.description = field.description || '';
       } else {
-        // Remove fieldset properties for non-fieldset fields
         delete field.fields;
         delete field.description;
       }
-      
       if (newType === 'array') {
         field.arrayMin = field.arrayMin || null;
         field.arrayMax = field.arrayMax || null;
@@ -1933,7 +1989,6 @@ watch(
         field.removeEnable = field.removeEnable || 'auto';
         field.duplicateClone = field.duplicateClone || false;
       } else {
-        // Remove array properties for non-array fields
         delete field.arrayMin;
         delete field.arrayMax;
         delete field.duplicateEnable;
@@ -2120,4 +2175,4 @@ input[type="checkbox"]:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--md-sys-color-primary);
 }
-</style> 
+</style>

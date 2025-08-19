@@ -126,22 +126,10 @@ const props = defineProps({
   },
   
   // Input properties
-  required: {
-    type: Boolean,
-    default: false
-  },
-  show: {
-    type: Boolean,
-    default: true
-  },
-  edit: {
-    type: Boolean,
-    default: true
-  },
-  parse: {
-    type: Boolean,
-    default: true
-  },
+  required:  { type: [Boolean,String,Array], default: true },
+  show:  { type: [Boolean,String,Array], default: true },
+  edit:  { type: [Boolean,String,Array], default: true },
+  parse:  { type: [Boolean,String,Array], default: true },
   
   // Fieldset context
   inFieldset: {

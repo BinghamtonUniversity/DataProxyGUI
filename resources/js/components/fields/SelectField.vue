@@ -252,10 +252,7 @@ const props = defineProps({
     type: String,
     default: 'Select an option...'
   },
-  required: {
-    type: Boolean,
-    default: false
-  },
+  required:  { type: [Boolean,String,Array], default: true },
   disabled: {
     type: Boolean,
     default: false
@@ -264,14 +261,9 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  edit: {
-    type: Boolean,
-    default: true
-  },
-  show: {
-    type: Boolean,
-    default: true
-  },
+  edit:  { type: [Boolean,String,Array], default: true },
+  show:  { type: [Boolean,String,Array], default: true },
+  parse:  { type: [Boolean,String,Array], default: true },
   help: {
     type: String,
     default: ''

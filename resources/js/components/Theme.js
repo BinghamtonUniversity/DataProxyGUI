@@ -24,8 +24,8 @@ export const theme = {
     avatar: 'w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold',
   },
   modal: {
-    overlay: 'fixed inset-0 z-50 overflow-y-auto',
-    backdrop: 'fixed inset-0 bg-black bg-opacity-50 transition-opacity',
+  overlay: 'fixed inset-0 z-50 overflow-y-auto backdrop-blur-sm  bg-opacity-15',
+    backdrop: 'fixed inset-0 bg-opacity-50 transition-opacity',
     container: 'flex min-h-full items-center justify-center p-4',
     dialog: 'relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden',
     header: 'flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700',
