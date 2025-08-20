@@ -620,7 +620,7 @@ const initializeFormData = () => {
         console.log(`initializeFormData: Setting fieldset ${field.name} to empty object`);
       }
     } else if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
-      newData[field.name] = field.defaultValue || false;
+      newData[field.name] = field.value || false;
     } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {
       if (field.multiple) {
         newData[field.name] = [];

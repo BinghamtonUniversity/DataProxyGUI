@@ -239,7 +239,7 @@
                 <span :class="formbuilderTheme.sectionTitle">{{ selectedField.label }}</span>
                 <button
                   @click="removeField(selectedFieldIndex)"
-                  class="inline-flex items-center gap-2 px-3 py-1.5 text-error hover:text-error hover:bg-error-8 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2 text-sm font-medium">
+                  class="inline-flex items-center gap-2 px-3 py-1.5 text-error hover:text-error hover:bg-error-8 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2 text-sm font-medium mb-4">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                   </svg>
@@ -251,7 +251,7 @@
               <div v-if="selectedField.type === 'fieldset'" class="mb-4">
                 <button
                   @click="manageSection(selectedFieldIndex)"
-                  class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-on-primary rounded-xl hover:bg-primary-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm font-medium">
+                  class="w-full flex items-center justify-center gap-2 px-4 py-3  text-on-primary rounded-xl hover:bg-primary-high transition-all ring-2 ring-secondary bg-blue duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm font-medium">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                   </svg>
@@ -265,7 +265,7 @@
                 <div class="mb-4">
                   <button
                     @click="toggleConfigSection('basic')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -348,6 +348,7 @@
                       :rows="2"
                       placeholder="Enter instructions"
                       class="w-full"
+                      :required="false"
                     />   
                     <!-- More Information -->
                     
@@ -358,6 +359,7 @@
                       :rows="2"
                       placeholder="Enter additional information"
                       class="w-full"
+                      :required="false"
                     />
 
                     <!-- TODO -->
@@ -377,7 +379,7 @@
                 <div class="mb-4">
                   <button
                     @click="toggleConfigSection('display')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6z"></path>
@@ -495,7 +497,7 @@
                 <div v-if="selectedField.type === 'select' || selectedField.type === 'combobox' || selectedField.type === 'radio' || selectedField.type === 'checkbox' || selectedField.type === 'switch'" class="mb-4">
                   <button
                     @click="toggleConfigSection('options')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
@@ -518,19 +520,22 @@
                     </div>
                     <!-- Options List -->
                     <div>
-                      <label class="block text-xs text-on-surface-variant mb-2 font-medium">Options</label>
+
                       <div class="space-y-2">
                         <template v-if="selectedField.type === 'checkbox' || selectedField.type === 'switch'">
                           <div v-for="(option, index) in selectedField.options || []" :key="index" class="flex gap-2">
-                            <TextField
+                              <TextField
                               v-model:value="option.label"
                               :name="`optionLabel_${index}`"
+                              :label="index === 0 ? 'False Label' : 'True Label'"
                               :placeholder="index === 0 ? 'False Label' : 'True Label'"
+                              :required="false"
                               class="flex-1"
                             />
                             <TextField
                               v-model:value="option.value"
                               :name="`optionValue_${index}`"
+                              :label="index === 0 ? 'False Value' : 'True Value'"
                               :placeholder="index === 0 ? 'False Value' : 'True Value'"
                               class="flex-1"
                             />
@@ -579,7 +584,7 @@
                 <div v-if="selectedField.type === 'range'" class="mb-4">
                   <button
                     @click="toggleConfigSection('range')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path>
@@ -623,7 +628,7 @@
                 <div class="mb-4">
                   <button
                     @click="toggleConfigSection('conditions')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -724,10 +729,10 @@
                 </div>
                 
                 <!-- Validation Configuration -->
-                <div class="mb-4">
+                <div v-if="selectedField.type != 'fieldset'" class="mb-4">
                   <button
                     @click="toggleConfigSection('validation')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -738,7 +743,9 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                   </button>
-                  <div class="config-section-content space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.validation ? 'expanded' : 'collapsed'">
+                  <div class="config-section-content  space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.validation ? 'expanded' : 'collapsed'">
+                    <!-- Enable Validation -->
+                     <div class="flex items-center gap-4">
                     <SwitchField
                         v-model:value="selectedField.enableValidate"
                         name="fieldEnableValidation"
@@ -750,28 +757,28 @@
                           { label: 'Validate', value: true }
                         ]"
                       />
+                    </div>
                     <!-- Validation Configuration (only show if validation is enabled) -->
-                    <div v-if="selectedField.enableValidate" class="space-y-3 pl-4 border-l-2 border-primary-20">
+                    <div v-if="selectedField.enableValidate" class=" space-y-3 pl-4 border-l-2 border-primary-20">
                       <!-- Validation Type -->
-                      <div>
-                        <SelectField
-                          v-model:value="selectedField.validationType"
-                          name="fieldValidationType"
-                          :options="[
-                            { label: 'None', value: 'none' },
-                            { label: 'Matches', value: 'matches' },
-                            { label: 'Matches - Field/Value (NEW)', value: 'matchesfieldvalue' },
-                            { label: 'Date', value: 'date' },
-                            { label: 'Valid URL', value: 'valid_url' },
-                            { label: 'Valid Email', value: 'valid_email' },
-                            { label: 'Length', value: 'length' },
-                            { label: 'Numeric', value: 'numeric' },
-                            { label: 'Pattern', value: 'pattern' }
-                          ]"
-                          placeholder="Select validation type"
-                          class="w-full">
-                        </SelectField>
-                      </div>
+                      <SelectField
+                        v-model:value="selectedField.validationType"
+                        name="fieldValidationType"
+                        :options="[
+                          { label: 'None', value: 'none' },
+                          { label: 'Matches', value: 'matches' },
+                          { label: 'Matches - Field/Value (NEW)', value: 'matchesfieldvalue' },
+                          { label: 'Date', value: 'date' },
+                          { label: 'Valid URL', value: 'valid_url' },
+                          { label: 'Valid Email', value: 'valid_email' },
+                          { label: 'Length', value: 'length' },
+                          { label: 'Numeric', value: 'numeric' },
+                          { label: 'Pattern', value: 'pattern' }
+                        ]"
+                        placeholder="Select validation type"
+                        class="w-full">
+                      </SelectField>
+
                       
                       <!-- Pattern Configuration (only for pattern type) -->
                       <div v-if="selectedField.validationType === 'pattern'" class="space-y-3">
@@ -1147,7 +1154,7 @@ const configSections = ref({
   display: false,
   options: false,
   range: false,
-  conditions: true,
+  conditions: false,
   validation: false
 });
 
@@ -1390,7 +1397,7 @@ function createAndAddField(event, position) {
         label: defaultLabel,
         name: `${defaultType}_${Date.now()}`,
         placeholder: '',
-        value: (defaultType === 'checkbox' || defaultType === 'switch') ? false : '',
+        value: (type.category === 'boolean') ? 'false' : '',
         help: '',
         info: '',
         updateKey: 0,
@@ -1465,9 +1472,6 @@ function showPreviewModal() {
   previewFormData.value = {};
   // Increment key to force re-render
   previewKey.value++;
-
-  console.log('Fields array:', fields.value);
-  console.log('Form config for preview:', formConfigForPreview.value);
 
   isPreviewModalOpen.value = true;
 }
