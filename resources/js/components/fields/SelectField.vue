@@ -27,11 +27,7 @@
     <!-- Input Field -->
     <div v-if="!inFieldset" class="flex items-stretch w-full">
       <!-- Pre (icon) -->
-      <span 
-        class="inline-flex items-center justify-center px-3 border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm font-normal rounded-l-md min-w-[44px]"
-      >
-        <i class="fa-solid fa-chevron-down text-base"></i>
-      </span>
+  
       
       <!-- Main Select -->
       <select
@@ -44,21 +40,14 @@
         :autocomplete="autocomplete"
         :autofocus="autofocus"
         :name="name"
-        class="flex-1 min-w-0 py-2 px-3 text-sm border bg-white dark:!bg-gray-800 text-gray-900 dark:!text-white transition-colors duration-200"
+        class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md"
         :class="[
-          // Border classes
-          'border-l-0',
-          'border-t border-b border-gray-300 dark:!border-gray-600',
-          // Border radius classes
-          'rounded-r-md',
           // Focus states
           'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
           // Disabled states
-          !edit ? 'cursor-not-allowed bg-gray-100 dark:!bg-gray-700 text-gray-500 dark:!text-gray-400' : 'hover:border-gray-400 dark:hover:border-gray-500',
+          !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : 'hover:border-gray-400 dark:hover:border-gray-500',
           // Error states
-          (localError || (props.errors && props.errors.length > 0)) ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : '',
-          // Readonly states
-          !edit ? 'bg-gray-100 dark:!bg-gray-700' : ''
+          localError ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : ''
         ]"
         @change="handleChange"
         @blur="handleBlur"

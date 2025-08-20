@@ -641,8 +641,8 @@
                         name="showField"
                         label="Show"
                         :options="[
-                          { label: 'Always', value: true },
-                          { label: 'Never', value: false },
+                          { label: 'Always', value: 'true' },
+                          { label: 'Never', value: 'false' },
                           { label: 'Use same settings  as Edit', value: 'edit' },
                           { label: 'Use same settings  as Parse', value: 'parse' },
                           { label: 'Conditionally', value: 'conditional' }
@@ -662,8 +662,8 @@
                         name="editField"
                         label="Edit"
                         :options="[
-                          { label: 'Always', value: true },
-                          { label: 'Never', value: false },
+                          { label: 'Always', value: 'true' },
+                          { label: 'Never', value: 'false' },
                           { label: 'Use same settings  as Show', value: 'show' },
                           { label: 'Use same settings  as Parse', value: 'parse' },
                           { label: 'Conditionally', value: 'conditional' }
@@ -683,8 +683,8 @@
                         name="parseField"
                         label="Parse"
                         :options="[
-                          { label: 'Always', value: true },
-                          { label: 'Never', value: false },
+                          { label: 'Always', value: 'true' },
+                          { label: 'Never', value: 'false' },
                           { label: 'Use same settings  as Show', value: 'show' },
                           { label: 'Use same settings  as Edit', value: 'edit' },
                           { label: 'Conditionally', value: 'conditional' }
@@ -704,8 +704,8 @@
                         name="requiredField"
                         label="Required"
                         :options="[
-                          { label: 'Always', value: true },
-                          { label: 'Never', value: false },
+                          { label: 'Always', value: 'true' },
+                          { label: 'Never', value: 'false' },
                           { label: 'Use same settings as Show', value: 'show' },
                           { label: 'Use same settings  as Edit', value: 'edit' },
                           { label: 'Use same settings  as Parse', value: 'parse' },
@@ -1188,7 +1188,7 @@ function getFieldProps(field) {
     label: field.label,
     placeholder: field.placeholder,
     value: field.value,
-    required: field.required,
+    required: false,
     help: field.help,
     info: field.info,    
   };
@@ -1394,10 +1394,10 @@ function createAndAddField(event, position) {
         help: '',
         info: '',
         updateKey: 0,
-        show: true,
-        edit: true,
-        parse: true,
-        required: false,
+        show: 'true',
+        edit: 'true',
+        parse: 'true',
+        required: 'false',
         width: '12',
         offset: '0',
         options: (defaultType === 'checkbox' || defaultType === 'switch')
@@ -1632,7 +1632,6 @@ function getFieldJson(field) {
     type: field.type,
     placeholder: field.placeholder,
     value: field.value,
-    required: field.required,
     help: field.help,
     info: field.info,
   };
@@ -1714,16 +1713,40 @@ function getFieldJson(field) {
 
   // Add conditions
   if (field.show !== undefined) {
-    base.show = field.show;
+    if (field.show === 'true') {
+      base.show = true;
+    } else if (field.show === 'false') {
+      base.show = false;
+    } else {
+      base.show = field.show;
+    }
   }
   if (field.edit !== undefined) {
-    base.edit = field.edit;
+    if (field.edit === 'true') {
+      base.edit = true;
+    } else if (field.edit === 'false') {
+      base.edit = false;
+    } else {
+      base.edit = field.edit;
+    }
   }
   if (field.parse !== undefined) {
-    base.parse = field.parse;
+    if (field.parse === 'true') {
+      base.parse = true;
+    } else if (field.parse === 'false') {
+      base.parse = false;
+    } else {
+      base.parse = field.parse;
+    }
   }
   if (field.required !== undefined) {
-    base.required = field.required;
+    if (field.required === 'true') {
+      base.required = true;
+    } else if (field.required == 'false') {
+      base.required = false;
+    } else {
+      base.required = field.required;
+    }
   }
 
   // Add conditional logic groups
