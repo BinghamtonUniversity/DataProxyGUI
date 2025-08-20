@@ -60,7 +60,7 @@ const handleEditApi = () => {
       <DropdownMenuItem :as-child="true">
         <Link
           class="block w-full text-left"
-          :href="`/apis/${props.api.id}`"
+          :href="`/apis/${props.api.id}/routes`"
           as="button"
           prefetch
         >

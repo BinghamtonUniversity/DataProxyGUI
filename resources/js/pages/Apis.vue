@@ -68,6 +68,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const apis = ref<Api[]>([])
 const loading = ref(true)
+const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 
 //new API
 const newApiDialogOpen = ref(false)
@@ -102,10 +103,10 @@ const submitNewApi = async (e: Event) => {
   newApiLoading.value = true
   newApiError.value = ''
   try {
-    let url = 'http://127.0.0.1:8000/api/apis'
+    let url = `${djangoBaseUrl}/api/apis`
     let method = 'POST'
     if (isEditMode.value && editingApiId.value) {
-      url = `http://127.0.0.1:8000/api/apis/${editingApiId.value}`
+      url = `${djangoBaseUrl}/api/apis/${editingApiId.value}`
       method = 'PUT'
     }
     const body = isEditMode.value && editingApiId.value
@@ -256,7 +257,7 @@ const table = useVueTable({
 const fetchApis = async () => {
   loading.value = true
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/apis')
+    const response = await fetch(`${djangoBaseUrl}/api/apis`)
     apis.value = await response.json()
   } catch (e) {
     apis.value = []

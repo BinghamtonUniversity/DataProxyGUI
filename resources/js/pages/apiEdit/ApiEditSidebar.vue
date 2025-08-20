@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<!-- <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 import DeleteUser from '@/components/DeleteUser.vue';
@@ -21,7 +21,7 @@ defineProps<Props>();
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: 'API Edit',
-        href: '/apis/api_id',
+        href: '/api/api_id',
     },
 ];
 
@@ -31,7 +31,7 @@ const page = usePage();
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="Api -- Name" />
+        <Head title="API Management" />
 
         <APILayout>
             
@@ -39,4 +39,4 @@ const page = usePage();
 
        
     </AppLayout>
-</template>
+</template> -->
