@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -45,6 +46,22 @@ Route::middleware(['auth', 'verified'])->prefix('apis/{api_id}')->group(function
 Route::get('/editor', function () {
     return Inertia::render('Editor');
 })->middleware(['auth', 'verified'])->name('editor');
+
+Route::get('/formviewer-example', function () {
+    return Inertia::render('FormViewerExample');
+})->middleware(['auth', 'verified'])->name('formviewer.example');
+
+Route::get('/types-example', function () {
+    return Inertia::render('TypesExample');
+})->middleware(['auth', 'verified'])->name('types.example');
+
+Route::get('/settings', function () {
+    return Inertia::render('Settings');
+})->middleware(['auth', 'verified'])->name('settings');
+
+Route::get('/formbuilder-example', function () {
+    return Inertia::render('FormBuilderExample');
+})->middleware(['auth', 'verified'])->name('formbuilder.example');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
