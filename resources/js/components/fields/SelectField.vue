@@ -169,6 +169,7 @@
         <!-- Regular options -->
         <option
           v-else
+          :key="option.value"
           :value="option.value"
           :disabled="option.disabled"
           :selected="isOptionSelected(option.value)"
@@ -245,8 +246,8 @@ const props = defineProps({
     default: ''
   },
   value: {
-    type: [String, Number, Array],
-    default: () => []
+    type: [String, Number, Array, Boolean],
+    default: false
   },
   placeholder: {
     type: String,
@@ -356,12 +357,20 @@ const processedOptions = computed(() => {
         max: option.max
       };
     }
-    
+
     // Handle string options
     if (typeof option === 'string') {
       return { label: option, value: option };
     } 
-    
+
+    // Handle boolean options
+    if (typeof option === 'boolean') {
+      return { label: option ? 'true' : 'false', value: option ? true : false };
+    }
+    // Handle number options
+    if (typeof option === 'number') {
+      return { label: option.toString(), value: option.toString() };
+    }
     // Handle object options
     if (typeof option === 'object') {
       return option;
@@ -497,7 +506,12 @@ const handleFocus = () => {
 
 // Watchers
 watch(() => props.value, (newValue) => {
-  internalValue.value = props.multiple ? (newValue || []) : (newValue || '');
+  if (props.multiple) {
+    internalValue.value = Array.isArray(newValue) ? newValue : [];
+  } else {
+    // If newValue is undefined, null, or empty string, default to false
+    internalValue.value = (newValue === undefined || newValue === null || newValue === '') ? false : newValue;
+  }
 }, { immediate: true });
 
 watch(() => props.validate, () => {

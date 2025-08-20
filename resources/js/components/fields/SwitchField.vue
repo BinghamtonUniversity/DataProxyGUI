@@ -116,6 +116,7 @@ const validate = () => {
 };
 
 const handleToggle = () => {
+
   internalValue.value = !internalValue.value ? true : false;
   var updatedValue = internalValue.value ? props.options[1].value : props.options[0].value;
   emit('update:value', updatedValue);

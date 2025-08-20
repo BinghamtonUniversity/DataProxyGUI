@@ -280,10 +280,11 @@
                   <div class="config-section-content space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.basic ? 'expanded' : 'collapsed'">
                                          <!-- Type Selector -->
                      <div>
-                       <label class="block text-xs text-on-surface-variant mb-2 font-medium">Type</label>
+
                        <SelectField
                          v-model:value="selectedField.type"
                          name="fieldType"
+                         label="Type"
                          :options="fieldTypeOptions"
                          placeholder="Select field type"
                          class="w-full"
@@ -293,18 +294,20 @@
                                          <!-- Field Label and Name -->
                      <div class="flex gap-4">
                        <div class="flex-1">
-                         <label class="block text-xs text-on-surface-variant mb-2 font-medium">Field Label<span class="text-error">*</span></label>
-                                                <TextField
+
+                        <TextField
                          v-model:value="selectedField.label"
+                          label="Label"
                          name="fieldLabel"
+                         :required="false"
                          placeholder="Label"
                          class="w-full"
                        />
                        </div>
                        <div class="flex-1">
-                         <label class="block text-xs text-on-surface-variant mb-2 font-medium">Name</label>
                          <TextField
                            v-model:value="selectedField.name"
+                           label="Name"
                            name="fieldName"
                            placeholder="Name"
                            class="w-full"
@@ -314,10 +317,11 @@
                     
                      <!-- Placeholder -->
                      <div v-if="selectedField.type !== 'output' && selectedField.type !== 'hidden'">
-                       <label :class="formbuilderTheme.configLabel">Placeholder</label>
                        <TextField
                          v-model:value="selectedField.placeholder"
                          name="fieldPlaceholder"
+                         label="Placeholder"
+                         :required="false"
                          placeholder="Placeholder"
                          class="w-full"
                        />
@@ -325,38 +329,37 @@
                     
                     <!-- Default value -->
                     <div v-if="selectedField.type !== 'output' && selectedField.type !== 'hidden'">
-                      <label :class="formbuilderTheme.configLabel">Default value</label>
+
                       <TextField
                         v-model:value="selectedField.value"
                         name="fieldValue"
+                        label="Default Value"
+                        :required="false"
                         placeholder="Default Value"
                         class="w-full"
                       />
                     </div>
                     
                     <!-- Instructions -->
-                    <div>
-                      <label :class="formbuilderTheme.configLabel">Instructions</label>
-                      <TextAreaField
-                        v-model:value="selectedField.help"
-                        name="fieldHelp"
-                        :rows="2"
-                        placeholder="Enter instructions"
-                        class="w-full"
-                      />
-                    </div>
-                    
+                    <TextAreaField
+                      v-model:value="selectedField.help"
+                      name="fieldHelp"
+                      label="Instructions"
+                      :rows="2"
+                      placeholder="Enter instructions"
+                      class="w-full"
+                    />   
                     <!-- More Information -->
-                    <div>
-                      <label :class="formbuilderTheme.configLabel">More Information</label>
-                      <TextAreaField
-                        v-model:value="selectedField.info"
-                        name="fieldInfo"
-                        :rows="2"
-                        placeholder="Enter additional information"
-                        class="w-full"
-                      />
-                    </div>
+                    
+                    <TextAreaField
+                      v-model:value="selectedField.info"
+                      label="More Information"
+                      name="fieldInfo"
+                      :rows="2"
+                      placeholder="Enter additional information"
+                      class="w-full"
+                    />
+
                     <!-- TODO -->
                     <!-- Fillable -->
                     <!-- <div class="flex items-center gap-4">
@@ -387,37 +390,36 @@
                   </button>
                   <div class="config-section-content space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.display ? 'expanded' : 'collapsed'">
                     <!-- Width Configuration -->
-                    <div>
-                      <label class="block text-xs text-on-surface-variant mb-2 font-medium">Width (Columns)</label>
-                      <SelectField
-                        v-model:value="selectedField.width"
-                        name="fieldWidth"
-                        :options="[
-                          { label: '1 Column', value: '1' },
-                          { label: '2 Columns', value: '2' },
-                          { label: '3 Columns', value: '3' },
-                          { label: '4 Columns', value: '4' },
-                          { label: '5 Columns', value: '5' },
-                          { label: '6 Columns', value: '6' },
-                          { label: '7 Columns', value: '7' },
-                          { label: '8 Columns', value: '8' },
-                          { label: '9 Columns', value: '9' },
-                          { label: '10 Columns', value: '10' },
-                          { label: '11 Columns', value: '11' },
-                          { label: '12 Columns (Full Width)', value: '12' }
-                        ]"
-                  
-                        placeholder="Select width"
-                        class="w-full"
-                      />
-                    </div>
+
+                    <SelectField
+                      v-model:value="selectedField.width"
+                      name="fieldWidth"
+                      :options="[
+                        { label: '1 Column', value: '1' },
+                        { label: '2 Columns', value: '2' },
+                        { label: '3 Columns', value: '3' },
+                        { label: '4 Columns', value: '4' },
+                        { label: '5 Columns', value: '5' },
+                        { label: '6 Columns', value: '6' },
+                        { label: '7 Columns', value: '7' },
+                        { label: '8 Columns', value: '8' },
+                        { label: '9 Columns', value: '9' },
+                        { label: '10 Columns', value: '10' },
+                        { label: '11 Columns', value: '11' },
+                        { label: '12 Columns (Full Width)', value: '12' }
+                      ]"
+                      label="Width"
+                      placeholder="Select width"
+                      class="w-full"
+                    />
+
                     
                     <!-- Offset Configuration (only show if width is not 12) -->
                     <div v-if="selectedField.width && selectedField.width !== '12'">
-                      <label class="block text-xs text-on-surface-variant mb-2 font-medium">Offset (Columns)</label>
                       <SelectField
                         v-model:value="selectedField.offset"
                         name="fieldOffset"
+                        label="Offset"
                         :options="[
                           { label: 'No Offset', value: '0' },
                           { label: '1 Column', value: '1' },
@@ -467,7 +469,6 @@
                       <!-- Min/Max Configuration -->
                       <div class="grid grid-cols-12 gap-4">
                         <div class="col-span-6">
-                          
                           <NumberField
                             :label ='`Minimum`'
                             v-model:value="selectedField.arrayMin"
@@ -591,66 +592,33 @@
                   </button>
                   <div class="config-section-content space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.range ? 'expanded' : 'collapsed'">
                     <div class="grid grid-cols-3 gap-4">
-                      <div>
-                        <label class="block text-xs text-on-surface-variant mb-2 font-medium">Min</label>
+
                         <NumberField
+                          label="Min"
                           v-model:value="selectedField.min"
                           name="fieldMin"
                           placeholder="0"
                           class="w-full"
                         />
-                      </div>
-                      <div>
-                        <label class="block text-xs text-on-surface-variant mb-2 font-medium">Max</label>
                         <NumberField
+                          label="Max"
                           v-model:value="selectedField.max"
                           name="fieldMax"
                           placeholder="100"
                           class="w-full"
                         />
-                      </div>
-                      <div>
-                        <label class="block text-xs text-on-surface-variant mb-2 font-medium">Step</label>
                         <NumberField
+                          label="Step"
                           v-model:value="selectedField.step"
                           name="fieldStep"
                           placeholder="1"
                           class="w-full"
                         />
-                      </div>
+
                     </div>
                   </div>
                 </div>
-                
-                <!-- Section Configuration -->
-                <div v-if="selectedField.type === 'fieldset'" class="mb-4">
-                  <button
-                    @click="toggleConfigSection('section')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                    <span class="flex items-center gap-2">
-                      <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                      </svg>
-                      Section Settings
-                    </span>
-                    <svg :class="['w-5 h-5 text-on-surface-variant transition-transform duration-200', configSections.section ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                  </button>
-                  <div class="config-section-content space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.section ? 'expanded' : 'collapsed'">
-                    <div>
-                      <label class="block text-xs text-on-surface-variant mb-2 font-medium">Description</label>
-                      <TextAreaField
-                        v-model:value="selectedField.description"
-                        name="fieldDescription"
-                        placeholder="Enter section description"
-                        :rows="2"
-                        class="w-full"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
+                                
                 <!-- Conditions Configuration -->
                 <div class="mb-4">
                   <button
@@ -668,24 +636,20 @@
                   </button>
                   <div class="config-section-content space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.conditions ? 'expanded' : 'collapsed'">
                     <!-- Show Condition -->
-                    <div>
-                      <label class="block text-xs text-on-surface-variant mb-2 font-medium">Show Field</label>
-                      <div class="relative">
-                        <select v-model="selectedField.show" class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200 appearance-none pr-10">
-                          <option value="true">Always</option>
-                          <option value="false">Never</option>
-                          <option :value="'edit'">Same as Edit</option>
-                          <option :value="'parse'">Same as Parse</option>
-                          <option value="conditional">Conditionally</option>
-                        </select>
-                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                          <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                    
+                    <SelectField
+                        v-model:value="selectedField.show"
+                        name="showField"
+                        label="Show"
+                        :options="[
+                          { label: 'Always', value: true },
+                          { label: 'Never', value: false },
+                          { label: 'Use same settings  as Edit', value: 'edit' },
+                          { label: 'Use same settings  as Parse', value: 'parse' },
+                          { label: 'Conditionally', value: 'conditional' }
+                        ]"
+                        placeholder="Select condition"
+                        class="w-full"
+                      /> 
                     <!-- Show Conditional Logic UI -->
                     <ConditionalLogic
                       v-if="selectedField.show === 'conditional'"
@@ -693,24 +657,20 @@
                       condition-type="show" />
                     
                     <!-- Edit Condition -->
-                    <div>
-                      <label class="block text-xs text-on-surface-variant mb-2 font-medium">Edit Field</label>
-                      <div class="relative">
-                        <select v-model="selectedField.edit" class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200 appearance-none pr-10">
-                          <option value="true">Always</option>
-                          <option value="false">Never</option>
-                          <option :value="'show'">Same as Show</option>
-                          <option :value="'parse'">Same as Parse</option>
-                          <option value="conditional">Conditionally</option>
-                        </select>
-                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                          <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                    
+                    <SelectField
+                        v-model:value="selectedField.edit"
+                        name="editField"
+                        label="Edit"
+                        :options="[
+                          { label: 'Always', value: true },
+                          { label: 'Never', value: false },
+                          { label: 'Use same settings  as Show', value: 'show' },
+                          { label: 'Use same settings  as Parse', value: 'parse' },
+                          { label: 'Conditionally', value: 'conditional' }
+                        ]"
+                        placeholder="Select condition"
+                        class="w-full"
+                      /> 
                     <!-- Edit Conditional Logic UI -->
                     <ConditionalLogic
                       v-if="selectedField.edit === 'conditional'"
@@ -718,24 +678,20 @@
                       condition-type="edit" />
                     
                     <!-- Parse Condition -->
-                    <div>
-                      <label class="block text-xs text-on-surface-variant mb-2 font-medium">Parse Field</label>
-                      <div class="relative">
-                        <select v-model="selectedField.parse" class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200 appearance-none pr-10">
-                          <option value="true">Always</option>
-                          <option value="false">Never</option>
-                          <option :value="'show'">Same as Show</option>
-                          <option :value="'edit'">Same as Edit</option>
-                          <option value="conditional">Conditionally</option>
-                        </select>
-                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                          <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                    
+                     <SelectField
+                        v-model:value="selectedField.parse"
+                        name="parseField"
+                        label="Parse"
+                        :options="[
+                          { label: 'Always', value: true },
+                          { label: 'Never', value: false },
+                          { label: 'Use same settings  as Show', value: 'show' },
+                          { label: 'Use same settings  as Edit', value: 'edit' },
+                          { label: 'Conditionally', value: 'conditional' }
+                        ]"
+                        placeholder="Select condition"
+                        class="w-full"
+                      />                     
                     <!-- Parse Conditional Logic UI -->
                     <ConditionalLogic
                       v-if="selectedField.parse === 'conditional'"
@@ -743,21 +699,21 @@
                       condition-type="parse" />
                     
                     <!-- Required Condition -->
-                    <div>
-                      <label class="block text-xs text-on-surface-variant mb-2 font-medium">Required Field</label>
-                      <div class="relative">
-                        <select v-model="selectedField.required" class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200 appearance-none pr-10">
-                          <option value="true">Always</option>
-                          <option value="false">Never</option>
-                          <option value="conditional">Conditionally</option>
-                        </select>
-                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                          <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
+                     <SelectField
+                        v-model:value="selectedField.required"
+                        name="requiredField"
+                        label="Required"
+                        :options="[
+                          { label: 'Always', value: true },
+                          { label: 'Never', value: false },
+                          { label: 'Use same settings as Show', value: 'show' },
+                          { label: 'Use same settings  as Edit', value: 'edit' },
+                          { label: 'Use same settings  as Parse', value: 'parse' },
+                          { label: 'Conditionally', value: 'conditional' }
+                        ]"
+                        placeholder="Select condition"
+                        class="w-full"
+                      />
                     
                     <!-- Required Conditional Logic UI -->
                     <ConditionalLogic
@@ -783,17 +739,6 @@
                     </svg>
                   </button>
                   <div class="config-section-content space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.validation ? 'expanded' : 'collapsed'">
-                    <!-- Enable Validation Switch -->
-                    <!-- <div class="flex items-center justify-between">
-                      <label class="block text-xs text-on-surface-variant mb-2 font-medium">Enable Validation</label>
-                      <input 
-                        type="checkbox" 
-                        v-model="selectedField.validate"
-                        class="w-4 h-4 text-primary bg-surface-container border-outline rounded focus:ring-primary-20 focus:ring-2">
-                    </div> -->
-
-                    <div class="flex items-center gap-4">
-
                     <SwitchField
                         v-model:value="selectedField.enableValidate"
                         name="fieldEnableValidation"
@@ -805,7 +750,6 @@
                           { label: 'Validate', value: true }
                         ]"
                       />
-                    </div>
                     <!-- Validation Configuration (only show if validation is enabled) -->
                     <div v-if="selectedField.enableValidate" class="space-y-3 pl-4 border-l-2 border-primary-20">
                       <!-- Validation Type -->
@@ -816,6 +760,7 @@
                           :options="[
                             { label: 'None', value: 'none' },
                             { label: 'Matches', value: 'matches' },
+                            { label: 'Matches - Field/Value (NEW)', value: 'matchesfieldvalue' },
                             { label: 'Date', value: 'date' },
                             { label: 'Valid URL', value: 'valid_url' },
                             { label: 'Valid Email', value: 'valid_email' },
@@ -838,85 +783,62 @@
                           class="w-full">
                         </TextField>
 
+                        <TextField
+                          v-model:value="selectedField.validationFlags"
+                          name="fieldValidationFlags"
+                          label="Regex Flags"
+                          placeholder="Enter flags (e.g., gi)"
+                          help="Common flags: g (global), i (case insensitive), m (multiline)"
+                          class="w-full">
+                        </TextField>                          
                         
-                        
-                        <div>
-                          <TextField
-                            v-model:value="selectedField.validationFlags"
-                            name="fieldValidationFlags"
-                            label="Regex Flags"
-                            placeholder="Enter flags (e.g., gi)"
-                            help="Common flags: g (global), i (case insensitive), m (multiline)"
+                      </div>
+                      
+                      <!-- Length & Numeric Configuration (only for length & numberic type) -->
+                      <div v-if="selectedField.validationType === 'length' ||selectedField.validationType === 'numeric' "  class="space-y-3">
+                        <div class="grid grid-cols-2 gap-4">
+                          <NumberField
+                            v-model:value="selectedField.validationMinLength"
+                            name="fieldValidationMinLength"
+                            label="Minimum Length"
+                            placeholder="0"
                             class="w-full">
-                          </TextField>                          
+                          </NumberField>
+
+                          <NumberField
+                            v-model:value="selectedField.validationMaxLength"
+                            name="fieldValidationMaxLength"
+                            label="Maximum Length"
+                            placeholder="0"
+                            class="w-full">
+                          </NumberField>
+
                         </div>
                       </div>
                       
-                      <!-- Length Configuration (only for length type) -->
-                      <div v-if="selectedField.validationType === 'length'" class="space-y-3">
-                        <div class="grid grid-cols-2 gap-4">
-                          <div>
-                            <label class="block text-xs text-on-surface-variant mb-2 font-medium">Minimum Length</label>
-                            <input
-                              v-model="selectedField.validationMinLength"
-                              type="number"
-                              min="0"
-                              placeholder="0"
-                              class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200">
-                          </div>
-                          <div>
-                            <label class="block text-xs text-on-surface-variant mb-2 font-medium">Maximum Length</label>
-                            <input
-                              v-model="selectedField.validationMaxLength"
-                              type="number"
-                              min="0"
-                              placeholder="100"
-                              class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200">
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <!-- Numeric Configuration (only for numeric type) -->
-                      <div v-if="selectedField.validationType === 'numeric'" class="space-y-3">
-                        <div class="grid grid-cols-2 gap-4">
-                          <div>
-                            <label class="block text-xs text-on-surface-variant mb-2 font-medium">Minimum Value</label>
-                            <input
-                              v-model="selectedField.validationMinValue"
-                              type="number"
-                              placeholder="0"
-                              class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200">
-                          </div>
-                          <div>
-                            <label class="block text-xs text-on-surface-variant mb-2 font-medium">Maximum Value</label>
-                            <input
-                              v-model="selectedField.validationMaxValue"
-                              type="number"
-                              placeholder="100"
-                              class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200">
-                          </div>
-                        </div>
-                      </div>
                       
                       <!-- Matches Configuration (only for matches type) -->
-                      <div v-if="selectedField.validationType === 'matches'" class="space-y-3">
+                      <div v-if="selectedField.validationType === 'matches' || selectedField.validationType === 'matchesfieldvalue'" class="space-y-3">
+                        <TextField
+                          :v-model:value="selectedField.validationFieldName"
+                          name="fieldValidationFieldName"
+                          placeholder="Enter field name to match"
+                          label="Field Name">
+                        </TextField>
+                      </div>
+                      <div v-if="selectedField.validationType === 'matchesfieldvalue'" class="space-y-3">      
+
                         <div>
-                          <label class="block text-xs text-on-surface-variant mb-2 font-medium">Field Name</label>
-                          <input
-                            v-model="selectedField.validationFieldName"
-                            type="text"
-                            placeholder="Enter field name to match"
-                            class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200">
-                        </div>
-                        <div>
-                          <label class="block text-xs text-on-surface-variant mb-2 font-medium">Expected Values</label>
+                          
                           <div class="space-y-2">
                             <div v-for="(value, index) in selectedField.validationValues || ['']" :key="index" class="flex gap-2">
-                              <input
-                                v-model="selectedField.validationValues[index]"
-                                type="text"
+                             
+                              <TextField
+                                :v-model:value="selectedField.validationValues[index]"
+                                name="fieldValidationFieldName"
                                 :placeholder="`Value ${index + 1}`"
-                                class="flex-1 px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200">
+                                label="Expected Values">
+                              </TextField>
                               <button
                                 @click="removeValidationValue(index)"
                                 type="button"
@@ -941,32 +863,26 @@
                       </div>
                       
                       <!-- Error Message -->
-                      <div>
-                        <label class="block text-xs text-on-surface-variant mb-2 font-medium">Error Message</label>
-                        <input
-                          v-model="selectedField.validationMessage"
-                          type="text"
+                      <TextField
+                          v-model:value="selectedField.validationMessage"
+                          name="fieldValidationMessage"
                           :placeholder="getDefaultValidationMessage(selectedField.validationType)"
-                          class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200">
-                      </div>
+                          :value="getDefaultValidationMessage(selectedField.validationType)"
+                          label="Error Message">
+                        </TextField>
+                      
                       
                       <!-- When to Apply Validation -->
-                      <div>
-                        <label class="block text-xs text-on-surface-variant mb-2 font-medium">When to Apply</label>
-                        <div class="relative">
-                          <select
-                            v-model="selectedField.validationWhen"
-                            class="w-full px-4 py-3 rounded-xl border border-outline bg-surface-container text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary-20 focus:border-primary transition-all duration-200 appearance-none pr-10">
-                            <option value="always">Always</option>
-                            <option value="conditional">Conditionally</option>
-                          </select>
-                          <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                            <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
+                      <SelectField
+                        v-model:value="selectedField.validationWhen"
+                        name="validationCondition"
+                        :options="[
+                          { label: 'Always', value: true },
+                          { label: 'Conditionally', value: 'conditional' },
+                        ]"  
+                        label="When to Apply"
+                        class="w-full"
+                      />
                       
                       <!-- Conditional Validation Logic -->
                       <div v-if="selectedField.validationWhen === 'conditional'">
@@ -978,8 +894,6 @@
                     </div>
                   </div>
                 </div>
-                
-
               </div>
             </div>
           </div>
@@ -1167,7 +1081,6 @@ const isPreviewModalOpen = ref(false);
 const formName = ref('my-form');
 const previewFormData = ref({});
 const previewKey = ref(0);
-const hoveredInfoIndex = ref(null);
 const dragOverIndex = ref(null);
 const isDragging = ref(false);
 const previewPosition = ref(null);
@@ -1231,11 +1144,10 @@ function getOriginalIndex(previewIndex) {
 
 const configSections = ref({
   basic: false,
-  display: true,
+  display: false,
   options: false,
   range: false,
-  section: false,
-  conditions: false,
+  conditions: true,
   validation: false
 });
 
@@ -1318,7 +1230,6 @@ function getFieldProps(field) {
       return {
         ...baseProps,
         fields: field.fields || [],
-        description: field.description,
       };
     case 'array':
       return {
@@ -1474,19 +1385,19 @@ function createAndAddField(event, position) {
         allowDuplication:false,
         enableValidate: false,
         validationType: 'none',
-        validationWhen: 'always', // Todo
+        validationWhen: true, // Todo
         type: defaultType,
         label: defaultLabel,
         name: `${defaultType}_${Date.now()}`,
         placeholder: '',
-        value: (defaultType === 'checkbox' || defaultType === 'switch') ? 'false' : '',
-        required: false,
+        value: (defaultType === 'checkbox' || defaultType === 'switch') ? false : '',
         help: '',
         info: '',
         updateKey: 0,
         show: true,
         edit: true,
         parse: true,
+        required: false,
         width: '12',
         offset: '0',
         options: (defaultType === 'checkbox' || defaultType === 'switch')
@@ -1508,7 +1419,6 @@ function createAndAddField(event, position) {
         newField.step = 1;
       } else if (defaultType === 'fieldset') {
         newField.fields = [];
-        newField.description = '';
       } else if (defaultType === 'array') {
         newField.arrayMin = null;
         newField.arrayMax = null;
@@ -1617,7 +1527,8 @@ function removeOption(index) {
 // Validation management functions
 function getDefaultValidationMessage(validationType) {
   const messages = {
-    'matches': 'Please enter a valid value',
+    'matches': 'Please enter a valid field name',
+    'matchesfieldvalue': 'Please enter a valid value',
     'date': 'Please enter a valid date',
     'valid_url': 'Please enter a valid URL',
     'valid_email': 'Please enter a valid email address',
@@ -1754,7 +1665,6 @@ function getFieldJson(field) {
       base.step = field.step || 1;
       break;
     case 'fieldset':
-      base.description = field.description;
       if (field.fields && Array.isArray(field.fields) && field.fields.length > 0) {
         base.fields = field.fields.map(getFieldJson).filter(field => field && Object.keys(field).length > 0);
       }
@@ -1863,6 +1773,12 @@ function getFieldJson(field) {
         }
         break;
       case 'matches':
+        if (field.validationFieldName) {
+          validationRule.fieldName = field.validationFieldName;
+        }
+        break;
+      // NEW validation type for matching specific values
+      case 'matchesfieldvalue':
         if (field.validationFieldName) {
           validationRule.fieldName = field.validationFieldName;
         }
@@ -1977,10 +1893,8 @@ watch(
       }
       if (newType === 'fieldset') {
         field.fields = field.fields || [];
-        field.description = field.description || '';
       } else {
         delete field.fields;
-        delete field.description;
       }
       if (newType === 'array') {
         field.arrayMin = field.arrayMin || null;
@@ -2056,8 +1970,12 @@ watch(
       const field = selectedField.value;
       
       // Initialize validation values for matches type
-      if (newValue === 'matches' && !field.validationValues) {
-        field.validationValues = [''];
+      if (newValue === 'matches' ) {
+        field.validationFieldName = selectedField.value.validationFieldName || '';
+      }
+      else if (newValue == 'matchesfieldvalue' && !field.validationValues) {
+          field.validationFieldName = selectedField.value.validationFieldName || '';
+          field.validationValues = [''];
       }
       
       // Initialize validation message if not set

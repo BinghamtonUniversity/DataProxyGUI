@@ -41,7 +41,7 @@ function getValidValuesFromOptions(options) {
     if (option.type === 'optgroup' && option.options) {
       // Handle optgroup format with existing options
       for (const subOption of option.options) {
-        if (typeof subOption === 'string') {
+        if (typeof subOption === 'string' || typeof subOption === 'boolean' || typeof subOption === 'number') {
           validValues.push(subOption);
         } else if (subOption && subOption.value !== undefined) {
           validValues.push(subOption.value);
@@ -54,7 +54,7 @@ function getValidValuesFromOptions(options) {
       for (let i = min; i <= max; i++) {
         validValues.push(i.toString());
       }
-    } else if (typeof option === 'string') {
+    } else if (typeof option === 'string' || typeof option === 'boolean' || typeof option === 'number') {
       // Handle string options
       validValues.push(option);
     } else if (option && option.value !== undefined) {
@@ -237,7 +237,7 @@ const rules = {
           if (option.type === 'optgroup' && option.options) {
             // Handle optgroup format with existing options
             for (const subOption of option.options) {
-              if (typeof subOption === 'string') {
+              if (typeof subOption === 'string' || typeof subOption === 'boolean' || typeof subOption === 'number') {
                 validValues.push(subOption);
               } else if (subOption && subOption.value !== undefined) {
                 validValues.push(subOption.value);
@@ -250,7 +250,7 @@ const rules = {
             for (let i = min; i <= max; i++) {
               validValues.push(i.toString());
             }
-          } else if (typeof option === 'string') {
+          } else if (typeof option === 'string' || typeof option === 'boolean'  || typeof option === 'number') {
             // Handle string options
             validValues.push(option);
           } else if (option && option.value !== undefined) {
