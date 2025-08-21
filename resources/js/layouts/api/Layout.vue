@@ -3,36 +3,37 @@ import { onMounted, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { type NavItem } from '@/types';
+import { type NavItem, ApiData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 
+// Getting it from web.php parameter
 interface Props {
+    api_type: string;
     api_id: string;
 }
 
 const props = defineProps<Props>();
 
-
 const sidebarNavItems: NavItem[] = [
     {
         title: 'Routes',
-        href: `/apis/${props.api_id}/routes`,
+        href: `/apis/${props.api_type}/${props.api_id}/routes`,
     },
     {
         title: 'Resources',
-        href: `/apis/${props.api_id}/resources`,
+        href: `/apis/${props.api_type}/${props.api_id}/resources`,
     },
     {
         title: 'Functions',
-        href: `/apis/${props.api_id}/functions`
+        href: `/apis/${props.api_type}/${props.api_id}/functions`,
     },
     {
         title: 'Files',
-        href: `/apis/${props.api_id}/files`,
+        href: `/apis/${props.api_type}/${props.api_id}/files`,
     },
     {
         title: 'Options',
-        href: `/apis/${props.api_id}/options`,
+        href: `/apis/${props.api_type}/${props.api_id}/options`,
     }
 ];
 
@@ -40,7 +41,7 @@ const page = usePage();
 
 const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.location).pathname : '';
 // Fetch latest API version data
-const apiData = ref(null)
+const apiData = ref<ApiData | null>(null)
 const loadingApiData = ref(true)
 const apiError = ref('')
 const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
@@ -69,33 +70,36 @@ onMounted(fetchApiData)
     <div class="px-4 py-6">
         <Heading title="API" description="Manage your API settings" />
 
-        <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-12">
-            <aside class="w-full max-w-xl lg:w-48">
-                <nav class="flex flex-col space-y-1 space-x-0">
-                    <Button
-                        v-for="item in sidebarNavItems"
-                        :key="item.href"
-                        variant="ghost"
-                        :class="['w-full justify-start', { 'bg-muted': currentPath === item.href }]"
-                        as-child
-                    >
-                        <Link :href="item.href">
-                            {{ item.title }}
-                        </Link>
-                    </Button>
-                </nav>
-            </aside>
+        <div class="flex flex-col space-y-8">
+        <!-- Tab navigation at the top -->
+        <nav class="flex w-full mb-8">
+            <Button
+                v-for="item in sidebarNavItems"
+                :key="item.href"
+                variant="ghost"
+                :class="[
+                    'flex-1 px-4 py-2 rounded-t-md text-center',
+                    { 'bg-muted font-semibold': currentPath === item.href }
+                ]"
+                as-child
+            >
+                <Link :href="item.href">
+                    {{ item.title }}
+                </Link>
+            </Button>
+        </nav>
 
-            <Separator class="my-6 md:hidden" />
-
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
-                    <slot :apiData="apiData"
-                        :loadingApiData="loadingApiData"
-                        :apiError="apiError" 
-                    />
-                </section>
-            </div>
+        <div class="flex-1 w-4/5">
+            <section class="w-full space-y-12">
+                <slot
+                    :apiData="apiData"
+                    :loadingApiData="loadingApiData"
+                    :apiError="apiError"
+                />
+            </section>
         </div>
+    </div>
+
+        
     </div>
 </template>

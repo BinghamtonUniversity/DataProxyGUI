@@ -9,12 +9,16 @@ const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Editor', href: '/editor' },
 ]
 
-const language = ref<'python' | 'php'>('python')
-const code = ref<string>(
-  language.value === 'python'
-    ? `print("Hello, Python!")`
-    : `<?php echo "Hello, PHP!"; ?>`
-)
+const props = defineProps<{
+  code: string
+  language?: 'python' | 'php'
+}>()
+
+const language = ref(props.language ?? 'python')
+const code = ref(props.code)
+
+watch(() => props.code, (val) => { code.value = val })
+watch(() => props.language, (val) => { if (val) language.value = val })
 
 declare global {
   interface Window {
@@ -36,26 +40,24 @@ function handleMount(editorInstance: any, monaco: any) {
 }
 
 // Switch languages and update model
-watch(language, (lang) => {
-  const inst = editor.value
-  if (!inst) return
-  const model = toRaw(inst).getModel()
-  inst?.getModel() &&
-    (window.monaco.editor.setModelLanguage(model!, lang))
-  code.value = lang === 'python'
-    ? `print("Hello, Python!")`
-    : `<?php echo "Hello, PHP!"; ?>`
-})
+// watch(language, (lang) => {
+//   const inst = editor.value
+//   if (!inst) return
+//   const model = toRaw(inst).getModel()
+//   inst?.getModel() &&
+//     (window.monaco.editor.setModelLanguage(model!, lang))
+//   code.value = lang === 'python'
+//     ? `print("Hello, Python!")`
+//     : `<?php echo "Hello, PHP!"; ?>`
+// })
 </script>
 
 <template>
-  <Head title="Editor" />
-
-  <AppLayout :breadcrumbs="breadcrumbs">
+  
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
       <div class="flex items-center gap-2">
         <label for="lang-select">Language:</label>
-        <select id="lang-select" v-model="language" class="border rounded p-1">
+        <select id="lang-select" v-model="props.language" class="border rounded p-1" disabled>
           <option value="python">Python</option>
           <option value="php">PHP</option>
         </select>
@@ -70,7 +72,7 @@ watch(language, (lang) => {
       <div class="relative flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border" style="min-height: 70vh;">
         <vue-monaco-editor
           v-model:value="code"
-          :language="language"
+          :language="props.language"
           theme="vs-dark"
           :options="editorOptions"
           @mount="handleMount"
@@ -78,5 +80,5 @@ watch(language, (lang) => {
         />
       </div>
     </div>
-  </AppLayout>
+ 
 </template>
