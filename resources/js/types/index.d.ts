@@ -34,6 +34,15 @@ export interface User {
     created_at: string;
     updated_at: string;
 }
+interface ModelData {
+  name: string
+  content: string
+  class_meta: Array<{
+    name: string
+    value: string
+  }>
+  inheritance: string
+}
 
 export interface ApiData {
   id: number;
@@ -41,7 +50,7 @@ export interface ApiData {
   summary: string | null;
   description: string | null;
   stable: boolean;
-  version_models: JSON;
+  version_models: ModelData[];
   version_views: ApiVersionFunction[]; 
   version_urls: ApiVersionUrl[]; 
   options: any[]; 

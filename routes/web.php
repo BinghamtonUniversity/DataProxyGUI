@@ -50,6 +50,13 @@ Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->gro
         ]);
     })->name('apiEdit.files');
 
+    Route::get('/models', function ($api_type, $api_id ) {
+        return Inertia::render('apiEdit/Models', [
+            'api_type' => $api_type,
+            'api_id' => $api_id,
+        ]);
+    })->name('apiEdit.models');
+
     Route::get('/options', function ($api_type, $api_id) {
         return Inertia::render('apiEdit/Options', [
             'api_type' => $api_type,

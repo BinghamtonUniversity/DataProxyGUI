@@ -28,6 +28,10 @@ const sidebarNavItems: NavItem[] = [
         href: `/apis/${props.api_type}/${props.api_id}/functions`,
     },
     {
+        title: 'Models',
+        href: `/apis/${props.api_type}/${props.api_id}/models`,
+    },
+    {
         title: 'Files',
         href: `/apis/${props.api_type}/${props.api_id}/files`,
     },
@@ -89,7 +93,7 @@ onMounted(fetchApiData)
             </Button>
         </nav>
 
-        <div class="flex-1 w-4/5">
+        <div class="flex-1 w-11/12">
             <section class="w-full space-y-12">
                 <slot
                     :apiData="apiData"

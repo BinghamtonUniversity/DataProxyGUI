@@ -17,7 +17,6 @@ interface RouteParams{
 
 
 const props = defineProps<Props>();
-const apiData = ref<ApiData | null>(null)
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
