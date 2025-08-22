@@ -1,4 +1,7 @@
+
 <template>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
+
   <div :class="formbuilderTheme.container">
     <div :class="formbuilderTheme.headerContainer">
       <h1 :class="formbuilderTheme.header">FormBuilder</h1>
@@ -990,6 +993,7 @@
 </template> 
 
 <script setup>
+
 import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import AlertModal from '../AlertModal.vue';
 import FormViewer from '../formviewer/FormViewer.vue';

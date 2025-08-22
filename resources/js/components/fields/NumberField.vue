@@ -3,7 +3,7 @@
     <!-- Label -->
     <label v-if="label" :for="fieldId" class="block text-sm font-medium text-gray-900 dark:text-white mb-2" :class="{ 'text-red-500': localError }">
       {{ label }}
-      <span class="text-red-500 ml-1">*</span>
+      <span v-if="required" class="text-red-500 ml-1">*</span>
       <span
         v-if="info"
         class="relative cursor-pointer ml-1"
