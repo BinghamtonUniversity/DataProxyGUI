@@ -34,7 +34,7 @@ export interface User {
     created_at: string;
     updated_at: string;
 }
-interface ModelData {
+export interface ModelData {
   name: string
   content: string
   class_meta: Array<{
@@ -43,6 +43,29 @@ interface ModelData {
   }>
   inheritance: string
 }
+
+export interface RouteData {
+  path: string
+  verb: string
+  view_name: string
+  required?: Array<{
+    name: string
+    example: string
+    description: string
+  }>
+  optional?: Array<{
+    name: string
+    example: string
+    description: string
+  }>
+}
+
+export interface ResourceData{
+  name: string
+  type: string
+  model_name: string
+}
+
 
 export interface ApiData {
   id: number;
