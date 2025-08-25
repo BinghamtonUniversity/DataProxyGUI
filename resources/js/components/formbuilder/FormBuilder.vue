@@ -162,14 +162,25 @@
                   <!-- Regular Field -->
                   <div
                     v-else
+                    draggable="true"
+                    @dragstart="onFieldDragStart($event, getOriginalIndex(index))"
                     @click="selectField(getOriginalIndex(index))"
                     :class="[
                       formbuilderTheme.fieldCard,
-                      'field-card cursor-pointer',
+                      'field-card cursor-pointer group relative',
                       selectedFieldIndex === getOriginalIndex(index)
                         ? formbuilderTheme.fieldCardSelected
                         : formbuilderTheme.fieldCardUnselected
                     ]">
+                    <!-- Drag Handle -->
+                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <div class="w-6 h-6 bg-surface-container-high rounded-lg flex items-center justify-center cursor-move">
+                        <svg class="w-4 h-4 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+                        </svg>
+                      </div>
+                    </div>
+                    
                     <!-- Field Preview -->
                     <div class="space-y-3">
 
@@ -1263,6 +1274,26 @@ function onDragStart(event, type) {
   previewElement.value = type;
 }
 
+function onFieldDragStart(event, fieldIndex) {
+  const currentFields = getCurrentFields();
+  const field = currentFields[fieldIndex];
+  
+  // Store the field data and mark it as a field reorder operation
+  const dragData = {
+    type: 'field-reorder',
+    fieldIndex: fieldIndex,
+    field: field
+  };
+  
+  event.dataTransfer.setData('application/json', JSON.stringify(dragData));
+  event.dataTransfer.effectAllowed = 'move';
+  isDragging.value = true;
+  previewElement.value = { type: 'field-reorder', label: field.label || 'Field' };
+  
+  // Prevent the click event from firing
+  event.stopPropagation();
+}
+
 function onDragEnter(event) {
   event.preventDefault();
   isDragging.value = true;
@@ -1371,7 +1402,34 @@ function createAndAddField(event, position) {
 
   if (typeData) {
     try {
-      const type = JSON.parse(typeData);
+      const dragData = JSON.parse(typeData);
+      
+      // Handle field reordering
+      if (dragData.type === 'field-reorder') {
+        const currentFields = getCurrentFields();
+        const sourceIndex = dragData.fieldIndex;
+        
+        // Don't do anything if dropping on the same position
+        if (sourceIndex === position) {
+          return;
+        }
+        
+        // Remove the field from its original position
+        const [movedField] = currentFields.splice(sourceIndex, 1);
+        
+        // Adjust the target position if we removed an element before it
+        const adjustedPosition = sourceIndex < position ? position - 1 : position;
+        
+        // Insert the field at the new position
+        currentFields.splice(adjustedPosition, 0, movedField);
+        
+        // Update selection to the new position
+        selectedFieldIndex.value = adjustedPosition;
+        return;
+      }
+      
+      // Handle new field creation (existing logic)
+      const type = dragData;
       let defaultType = 'text';
       let defaultLabel = 'New Field';
       switch (type.category) {
