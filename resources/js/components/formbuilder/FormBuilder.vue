@@ -156,7 +156,9 @@
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                       </svg>
-                      <span class="text-sm font-medium">{{ element.label }} (pos: {{ previewPosition }})</span>
+                      <span class="text-sm font-medium">
+                        {{ previewElement?.type === 'field-reorder' ? 'Moving' : 'Adding' }} {{ element.label }} (pos: {{ previewPosition }})
+                      </span>
                     </div>
                   </div>
                   <!-- Regular Field -->
@@ -1123,6 +1125,11 @@ const currentFieldsWithPreviews = computed(() => {
   }
 
   const result = [];
+  
+  // If we're dragging an existing field (field reorder), hide it from the canvas
+  const isFieldReorder = previewElement.value?.type === 'field-reorder';
+  const draggedFieldIndex = isFieldReorder ? previewElement.value?.fieldIndex : null;
+  
   for (let i = 0; i <= (currentFields?.length || 0); i++) {
     if (i === previewPosition.value) {
       result.push({
@@ -1132,6 +1139,10 @@ const currentFieldsWithPreviews = computed(() => {
       });
     }
     if (i < (currentFields?.length || 0)) {
+      // Skip the field being dragged during reorder
+      if (isFieldReorder && i === draggedFieldIndex) {
+        continue;
+      }
       result.push(currentFields[i]);
     }
   }
@@ -1145,20 +1156,32 @@ function getOriginalIndex(previewIndex) {
   }
 
   const currentFields = getCurrentFields();
+  const isFieldReorder = previewElement.value?.type === 'field-reorder';
+  const draggedFieldIndex = isFieldReorder ? previewElement.value?.fieldIndex : null;
+  
   let originalIndex = 0;
+  let visibleIndex = 0;
+  
   for (let i = 0; i <= currentFields.length; i++) {
-    if (i === previewIndex) {
-      if (i === previewPosition.value) {
+    if (i === previewPosition.value) {
+      if (visibleIndex === previewIndex) {
         // This is a preview element, return the index of the next real field
         return originalIndex;
       }
-      originalIndex++;
+      visibleIndex++;
     }
     if (i < currentFields.length) {
-      if (i === previewIndex) {
-        return originalIndex - 1;
+      // Skip the field being dragged during reorder
+      if (isFieldReorder && i === draggedFieldIndex) {
+        originalIndex++;
+        continue;
+      }
+      
+      if (visibleIndex === previewIndex) {
+        return originalIndex;
       }
       originalIndex++;
+      visibleIndex++;
     }
   }
   return previewIndex;
@@ -1288,7 +1311,11 @@ function onFieldDragStart(event, fieldIndex) {
   event.dataTransfer.setData('application/json', JSON.stringify(dragData));
   event.dataTransfer.effectAllowed = 'move';
   isDragging.value = true;
-  previewElement.value = { type: 'field-reorder', label: field.label || 'Field' };
+  previewElement.value = { 
+    type: 'field-reorder', 
+    label: field.label || 'Field',
+    fieldIndex: fieldIndex 
+  };
   
   // Prevent the click event from firing
   event.stopPropagation();
