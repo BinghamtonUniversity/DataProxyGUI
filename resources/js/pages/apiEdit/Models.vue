@@ -89,11 +89,14 @@ const removeMetaProperty = (index: number) => {
   }
 };
 
-const handleSaveChanges = () => {
+const handleSaveChanges = async () => {
   if (selectedModel.value) {
-    console.log('Saving changes for model:', selectedModel.value)
-    // TODO:: make an API call to persist the changes.
-    // Inertia.put(`/apis/models/${selectedModel.value.id}`, selectedModel.value)
+    try {
+      // await api call
+      console.log('Saving changes for model:', selectedModel.value)
+    } catch (e) {
+      // handle error
+    }
   }
   isEditDialogOpen.value = false
 }

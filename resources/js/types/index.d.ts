@@ -45,18 +45,19 @@ export interface ModelData {
 }
 
 export interface RouteData {
+  description: string
   path: string
   verb: string
   view_name: string
   required?: Array<{
     name: string
-    example: string
-    description: string
+    example?: string
+    description?: string
   }>
   optional?: Array<{
     name: string
-    example: string
-    description: string
+    example?: string
+    description?: string
   }>
 }
 
@@ -75,7 +76,7 @@ export interface ApiData {
   stable: boolean;
   version_models: ModelData[];
   version_views: ApiVersionFunction[]; 
-  version_urls: ApiVersionUrl[]; 
+  version_urls: RouteData[]; 
   options: any[]; 
   version_files: any[]; 
   resources: Record<string, any>; 
@@ -83,15 +84,6 @@ export interface ApiData {
   updated_at: string; 
   created_by: number; 
   updated_by: number; 
-}
-
-export interface ApiVersionUrl {
-  id: number
-  view_name: string
-  path: string
-  verb: string
-  required: RouteParams[]
-  optional: RouteParams[]
 }
 
 export interface ApiVersionFunction {
