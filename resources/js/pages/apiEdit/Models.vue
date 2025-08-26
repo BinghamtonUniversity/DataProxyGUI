@@ -14,13 +14,13 @@ import {
   useVueTable,
 } from '@tanstack/vue-table'
 import { ArrowUpDown, ChevronDown } from 'lucide-vue-next'
-import { h, ref, computed } from 'vue'
+import { h, ref } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 
 import { Head } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import APILayout from '@/layouts/api/Layout.vue'
-import { type BreadcrumbItem, type ApiData, type ResourceData } from '@/types'
+import { type BreadcrumbItem, type ApiData, type ModelData } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -47,6 +47,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import Editor from '@/pages/Editor.vue'
 
 interface Props {
     api_id: string;
@@ -58,23 +59,41 @@ const props = defineProps<Props>()
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: 'API Edit',
-        href: `/apis/${props.api_type}/${props.api_id}/resources`,
+        href: `/apis/${props.api_type}/${props.api_id}/models`,
     },
 ]
 
+// --- Dialog State and Handlers ---
 const isEditDialogOpen = ref(false)
-const selectedResource = ref<ResourceData | null>(null)
+const selectedModel = ref<ModelData | null>(null)
 
-const openEditDialog = (resource: ResourceData) => {
-  selectedResource.value = JSON.parse(JSON.stringify(resource))
+
+const openEditDialog = (model: ModelData) => {
+  // Create a deep copy to prevent modifying the original data directly
+  selectedModel.value = JSON.parse(JSON.stringify(model))
   isEditDialogOpen.value = true
 }
 
+const addMetaProperty = () => {
+  if (selectedModel.value) {
+    if (!selectedModel.value.class_meta) {
+      selectedModel.value.class_meta = [];
+    }
+    selectedModel.value.class_meta.push({ name: '', value: '' });
+  }
+};
+
+const removeMetaProperty = (index: number) => {
+  if (selectedModel.value && selectedModel.value.class_meta) {
+    selectedModel.value.class_meta.splice(index, 1);
+  }
+};
+
 const handleSaveChanges = () => {
-  if (selectedResource.value) {
-    console.log('Saving changes for resource:', selectedResource.value)
-    // TODO: make an API call to persist the changes.
-    // Inertia.put(`/apis/resources/${selectedResource.value.id}`, selectedResource.value)  
+  if (selectedModel.value) {
+    console.log('Saving changes for model:', selectedModel.value)
+    // TODO:: make an API call to persist the changes.
+    // Inertia.put(`/apis/models/${selectedModel.value.id}`, selectedModel.value)
   }
   isEditDialogOpen.value = false
 }
@@ -83,7 +102,7 @@ const handleSaveChanges = () => {
 // --- Table Definition ---
 
 // Define table columns
-const columns: ColumnDef<ResourceData>[] = [
+const columns: ColumnDef<ModelData>[] = [
   {
     id: 'select',
     header: ({ table }) => h(Checkbox, {
@@ -107,30 +126,54 @@ const columns: ColumnDef<ResourceData>[] = [
       return h(Button, {
         variant: 'ghost',
         onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
+      }, () => ['Model Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
     },
     cell: ({ row }) => h('div', { class: 'font-medium text-blue-600' }, row.getValue('name')),
   },
   {
-    accessorKey: 'type',
-    header: 'Type',
+    accessorKey: 'inheritance',
+    header: 'Inheritance',
     cell: ({ row }) => {
-      const type = row.getValue('type') as string
+      const inheritance = row.getValue('inheritance') as string
       return h('div', { 
         class: 'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300' 
-      }, type)
+      }, inheritance)
     },
   },
   {
-    accessorKey: 'model_name',
-    header: ({ column }) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Model Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
+    id: 'class_meta',
+    header: 'Meta Properties',
+    cell: ({ row }) => {
+      const classMeta = row.original.class_meta
+      if (!classMeta || classMeta.length === 0) {
+        return h('div', { class: 'text-gray-500 text-sm' }, 'No meta')
+      }
+      return h('div', { class: 'flex flex-wrap gap-1' }, 
+        classMeta.map((meta, index) => 
+          h('span', { 
+            key: index,
+            class: 'inline-flex items-center rounded px-2 py-1 text-xs bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+          }, `${meta.name}: ${meta.value}`)
+        )
+      )
     },
-    cell: ({ row }) => h('div', { class: 'font-medium' }, row.getValue('model_name')),
-  }
+  },
+  {
+    id: 'content_preview',
+    header: 'Content',
+    cell: ({ row }) => {
+            const content = row.original.content
+            if (!content) {
+                return h('div', { class: 'text-xs text-gray-500' }, 'No content')
+            }
+                
+            const preview = content.substring(0, 50) + (content.length > 50 ? '...' : '')
+            
+            return h('div', { 
+            class: 'max-w-xs text-xs text-gray-600 dark:text-gray-400 truncate font-mono' 
+            }, preview)
+        },
+    },
 ]
 
 // Table state
@@ -140,7 +183,7 @@ const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
 
 // Create table instance that will be computed based on apiData
-const createTable = (data: ResourceData[]) => {
+const createTable = (data: ModelData[]) => {
   return useVueTable({
     data,
     columns,
@@ -163,7 +206,7 @@ const createTable = (data: ResourceData[]) => {
 </script>
 
 <template>
-    <Head title="Resources" />
+    <Head title="Models" />
     
     <AppLayout :breadcrumbs="breadcrumbItems">
         <APILayout :api_id="props.api_id" :api_type="props.api_type">
@@ -181,7 +224,7 @@ const createTable = (data: ResourceData[]) => {
                             <div class="flex items-center justify-center h-32">
                                 <div class="text-center">
                                     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-                                    <p class="mt-2">Loading resources...</p>
+                                    <p class="mt-2">Loading models...</p>
                                 </div>
                             </div>
                         </template>
@@ -190,15 +233,15 @@ const createTable = (data: ResourceData[]) => {
                         <template v-else-if="apiError">
                             <div class="flex items-center justify-center h-32">
                                 <div class="text-center text-red-600">
-                                    <p>Error loading resources: {{ apiError }}</p>
+                                    <p>Error loading models: {{ apiError }}</p>
                                 </div>
                             </div>
                         </template>
 
                         <!-- Data Table -->
-                        <template v-else-if="apiData?.resources && Array.isArray(apiData.resources)">
+                        <template v-else-if="apiData?.version_models">
                             <div v-if="(() => {
-                                const table = createTable(apiData.resources as ResourceData[])
+                                const table = createTable(apiData.version_models)
                                 return true
                             })()" class="w-full">
 
@@ -206,19 +249,19 @@ const createTable = (data: ResourceData[]) => {
                                 <div class="flex items-center py-4">
                                     <Input
                                         class="max-w-sm"
-                                        placeholder="Filter by name..."
+                                        placeholder="Filter by model name..."
                                         :model-value="(() => {
-                                            const table = createTable(apiData.resources as ResourceData[])
+                                            const table = createTable(apiData.version_models)
                                             return table.getColumn('name')?.getFilterValue() as string
                                         })()"
                                         @update:model-value="(() => {
-                                            const table = createTable(apiData.resources as ResourceData[])
+                                            const table = createTable(apiData.version_models)
                                             table.getColumn('name')?.setFilterValue($event)
                                         })"
                                     />
                                     
                                     <Button class="ml-4 text-green-600" variant="outline">
-                                        New Resource
+                                        New Model
                                     </Button>
 
                                     <DropdownMenu>
@@ -230,7 +273,7 @@ const createTable = (data: ResourceData[]) => {
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuCheckboxItem
                                                 v-for="column in (() => {
-                                                    const table = createTable(apiData.resources as ResourceData[])
+                                                    const table = createTable(apiData.version_models)
                                                     return table.getAllColumns().filter((column) => column.getCanHide())
                                                 })()"
                                                 :key="column.id"
@@ -249,7 +292,7 @@ const createTable = (data: ResourceData[]) => {
                                     <Table>
                                         <TableHeader>
                                             <TableRow v-for="headerGroup in (() => {
-                                                const table = createTable(apiData.resources as ResourceData[])
+                                                const table = createTable(apiData.version_models)
                                                 return table.getHeaderGroups()
                                             })()" :key="headerGroup.id">
                                                 <TableHead v-for="header in headerGroup.headers" :key="header.id">
@@ -263,12 +306,12 @@ const createTable = (data: ResourceData[]) => {
                                         </TableHeader>
                                         <TableBody>
                                             <template v-if="(() => {
-                                                const table = createTable(apiData.resources as ResourceData[])
+                                                const table = createTable(apiData.version_models)
                                                 return table.getRowModel().rows?.length
                                             })()">
                                                 <TableRow 
                                                     v-for="row in (() => {
-                                                        const table = createTable(apiData.resources as ResourceData[])
+                                                        const table = createTable(apiData.version_models)
                                                         return table.getRowModel().rows
                                                     })()" 
                                                     :key="row.id" 
@@ -283,7 +326,7 @@ const createTable = (data: ResourceData[]) => {
                                             </template>
                                             <TableRow v-else>
                                                 <TableCell :colspan="columns.length" class="h-24 text-center">
-                                                    No resources found.
+                                                    No models found.
                                                 </TableCell>
                                             </TableRow>
                                         </TableBody>
@@ -294,11 +337,11 @@ const createTable = (data: ResourceData[]) => {
                                 <div class="flex items-center justify-end space-x-2 py-4">
                                     <div class="flex-1 text-sm text-muted-foreground">
                                         {{ (() => {
-                                            const table = createTable(apiData.resources as ResourceData[])
+                                            const table = createTable(apiData.version_models)
                                             return table.getFilteredSelectedRowModel().rows.length
                                         })() }} of
                                         {{ (() => {
-                                            const table = createTable(apiData.resources as ResourceData[])
+                                            const table = createTable(apiData.version_models)
                                             return table.getFilteredRowModel().rows.length
                                         })() }} row(s) selected.
                                     </div>
@@ -307,11 +350,11 @@ const createTable = (data: ResourceData[]) => {
                                             variant="outline"
                                             size="sm"
                                             :disabled="!(() => {
-                                                const table = createTable(apiData.resources as ResourceData[])
+                                                const table = createTable(apiData.version_models)
                                                 return table.getCanPreviousPage()
                                             })()"
                                             @click="(() => {
-                                                const table = createTable(apiData.resources as ResourceData[])
+                                                const table = createTable(apiData.version_models)
                                                 table.previousPage()
                                             })"
                                         >
@@ -321,11 +364,11 @@ const createTable = (data: ResourceData[]) => {
                                             variant="outline"
                                             size="sm"
                                             :disabled="!(() => {
-                                                const table = createTable(apiData.resources as ResourceData[])
+                                                const table = createTable(apiData.version_models)
                                                 return table.getCanNextPage()
                                             })()"
                                             @click="(() => {
-                                                const table = createTable(apiData.resources as ResourceData[])
+                                                const table = createTable(apiData.version_models)
                                                 table.nextPage()
                                             })"
                                         >
@@ -340,32 +383,76 @@ const createTable = (data: ResourceData[]) => {
                         <template v-else>
                             <div class="flex items-center justify-center h-32">
                                 <div class="text-center">
-                                    <p>No resources available for this API version.</p>
+                                    <p>No models available for this API version.</p>
                                 </div>
                             </div>
                         </template>
                     </div>
                 </div>
 
-                <!-- Edit Resource Dialog -->
+                <!-- Edit Model Dialog -->
                 <Dialog v-model:open="isEditDialogOpen">
-                    <DialogContent class="sm:max-w-xl">
+                    <DialogContent class="sm:max-w-2xl">
                         <form @submit.prevent="handleSaveChanges">
                             <DialogHeader>
-                                <DialogTitle>Edit Resource: {{ selectedResource?.name }}</DialogTitle>
+                                <DialogTitle>Edit Model: {{ selectedModel?.name }}</DialogTitle>
                             </DialogHeader>
-                                <div v-if="selectedResource" class="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
+                                <div v-if="selectedModel" class="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
                                     <div class="grid grid-cols-4 items-center gap-4">
-                                        <Label for="resource-name" class="text-right">Name</Label>
-                                        <Input id="resource-name" v-model="selectedResource.name" class="col-span-3" />
+                                        <Label for="model-name" class="text-right">Name</Label>
+                                        <Input id="model-name" v-model="selectedModel.name" class="col-span-3" />
                                     </div>
                                     <div class="grid grid-cols-4 items-center gap-4">
-                                        <Label for="resource-type" class="text-right">Type</Label>
-                                        <Input id="resource-type" v-model="selectedResource.type" class="col-span-3" />
+                                        <Label for="model-inheritance" class="text-right">Inheritance</Label>
+                                        <Input id="model-inheritance" v-model="selectedModel.inheritance" class="col-span-3" />
                                     </div>
-                                    <div class="grid grid-cols-4 items-center gap-4">
-                                        <Label for="resource-modelName" class="text-right">Model Name</Label>
-                                        <Input id="resource-modelName" v-model="selectedResource.model_name" class="col-span-3" />
+                                   
+                                    <!-- Meta Properties Section -->
+                                    <div class="flex flex-col gap-2 border-t pt-4 mt-4">
+                                        <h3 class="text-lg font-medium">Meta Properties</h3>
+                                        <div v-if="selectedModel.class_meta && selectedModel.class_meta.length > 0" class="space-y-3 pr-1">
+                                            <div class="grid grid-cols-9 items-center gap-2">
+                                                <Label class="col-span-4 text-sm font-semibold">Name</Label>
+                                                <Label class="col-span-4 text-sm font-semibold">Value</Label>
+                                            </div>
+                                            <div v-for="(meta, index) in selectedModel.class_meta" :key="index" class="grid grid-cols-9 items-center gap-2">
+                                                <Input 
+                                                    v-model="meta.name" 
+                                                    placeholder="Name" 
+                                                    class="col-span-3"
+                                                />
+                                                <Input 
+                                                    v-model="meta.value" 
+                                                    placeholder="Value" 
+                                                    class="col-span-4"
+                                                />
+                                                <Button 
+                                                    type="button" 
+                                                    variant="destructive" 
+                                                    size="sm"
+                                                    @click="removeMetaProperty(index)"
+                                                    class="col-span-1"
+                                                >
+                                                    x
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
+                                            No meta properties defined.
+                                        </div>
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            size="sm"
+                                            @click="addMetaProperty"
+                                            class="mt-2 self-start"
+                                        >
+                                            +
+                                        </Button>
+                                    </div>
+                                     <div class="grid grid-cols-4 items-start gap-4">
+                                        <Label for="model-content" class="text-right pt-2">Content</Label>
+                                        <Editor id="model-content" v-model="selectedModel.content" class="col-span-6" :code="selectedModel.content" :language="props.api_type === 'python' || props.api_type === 'php' ? props.api_type : undefined" />
                                     </div>
                                 </div>
 
@@ -382,4 +469,3 @@ const createTable = (data: ResourceData[]) => {
         </APILayout>
     </AppLayout>
 </template>
-    

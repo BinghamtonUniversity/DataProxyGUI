@@ -21,31 +21,53 @@ Route::get('/apis', function () {
 // })->middleware(['auth', 'verified'])->name('api.edit');
 
 
-Route::middleware(['auth', 'verified'])->prefix('apis/{api_id}')->group(function () {
-    Route::get('/routes', function ($api_id) {
-        return Inertia::render('apiEdit/Routes', ['api_id' => $api_id]);
+Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->group(function () {
+    Route::get('/routes', function ($api_type, $api_id) {
+        return Inertia::render('apiEdit/Routes', [
+            'api_type' => $api_type,
+            'api_id' => $api_id,
+        ]);
     })->name('apiEdit.routes');
 
-    Route::get('/resources', function ($api_id) {
-        return Inertia::render('apiEdit/Resources',['api_id' => $api_id]);
+    Route::get('/resources', function ($api_type, $api_id) {
+        return Inertia::render('apiEdit/Resources',[
+            'api_type' => $api_type,
+            'api_id' => $api_id,
+        ]);
     })->name('apiEdit.resources');
 
-    Route::get('/functions', function ($api_id) {
-        return Inertia::render('apiEdit/Functions',['api_id' => $api_id]);
+    Route::get('/functions', function ($api_type, $api_id) {
+        return Inertia::render('apiEdit/Functions',[
+            'api_type' => $api_type,
+            'api_id' => $api_id,
+        ]);
     })->name('apiEdit.functions');
 
-    Route::get('/files', function ($api_id) {
-        return Inertia::render('apiEdit/Files', ['api_id' => $api_id]);
+    Route::get('/files', function ($api_type, $api_id ) {
+        return Inertia::render('apiEdit/Files', [
+            'api_type' => $api_type,
+            'api_id' => $api_id,
+        ]);
     })->name('apiEdit.files');
 
-    Route::get('/options', function ($api_id) {
-        return Inertia::render('apiEdit/Options', ['api_id' => $api_id]);
+    Route::get('/models', function ($api_type, $api_id ) {
+        return Inertia::render('apiEdit/Models', [
+            'api_type' => $api_type,
+            'api_id' => $api_id,
+        ]);
+    })->name('apiEdit.models');
+
+    Route::get('/options', function ($api_type, $api_id) {
+        return Inertia::render('apiEdit/Options', [
+            'api_type' => $api_type,
+            'api_id' => $api_id,
+        ]);
     })->name('apiEdit.options');
 });
 
-Route::get('/editor', function () {
-    return Inertia::render('Editor');
-})->middleware(['auth', 'verified'])->name('editor');
+// Route::get('/editor', function () {
+//     return Inertia::render('Editor');
+// })->middleware(['auth', 'verified'])->name('editor');
 
 Route::get('/formviewer-example', function () {
     return Inertia::render('FormViewerExample');

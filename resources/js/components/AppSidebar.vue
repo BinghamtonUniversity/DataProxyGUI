@@ -19,11 +19,11 @@ const mainNavItems: NavItem[] = [
         href: '/apis',
         icon: Folder,
     },
-    {
-        title: 'Editor',
-        href: '/editor',
-        icon: BookOpen,
-    },
+    // {
+    //     title: 'Editor',
+    //     href: '/editor',
+    //     icon: BookOpen,
+    // },
     {
         title: 'Datatable Example',
         href: '/datatable-example',

@@ -34,5 +34,70 @@ export interface User {
     created_at: string;
     updated_at: string;
 }
+export interface ModelData {
+  name: string
+  content: string
+  class_meta: Array<{
+    name: string
+    value: string
+  }>
+  inheritance: string
+}
+
+export interface RouteData {
+  path: string
+  verb: string
+  view_name: string
+  required?: Array<{
+    name: string
+    example: string
+    description: string
+  }>
+  optional?: Array<{
+    name: string
+    example: string
+    description: string
+  }>
+}
+
+export interface ResourceData{
+  name: string
+  type: string
+  model_name: string
+}
+
+
+export interface ApiData {
+  id: number;
+  api: number; 
+  summary: string | null;
+  description: string | null;
+  stable: boolean;
+  version_models: ModelData[];
+  version_views: ApiVersionFunction[]; 
+  version_urls: ApiVersionUrl[]; 
+  options: any[]; 
+  version_files: any[]; 
+  resources: Record<string, any>; 
+  created_at: string; 
+  updated_at: string; 
+  created_by: number; 
+  updated_by: number; 
+}
+
+export interface ApiVersionUrl {
+  id: number
+  view_name: string
+  path: string
+  verb: string
+  required: RouteParams[]
+  optional: RouteParams[]
+}
+
+export interface ApiVersionFunction {
+    name: string;
+    content: string;
+}
+
 
 export type BreadcrumbItemType = BreadcrumbItem;
