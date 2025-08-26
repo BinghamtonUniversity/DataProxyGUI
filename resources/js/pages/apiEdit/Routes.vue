@@ -59,7 +59,7 @@ interface Props {
 
 
 const props = defineProps<Props>()
-
+const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
@@ -72,11 +72,12 @@ const breadcrumbItems: BreadcrumbItem[] = [
 const verbDropdownOpen = ref(false)
 const newRouteDialogOpen = ref(false)
 const newRouteForm = ref({
-  path: '',
-  verb: 'GET',
-  view_name: '',
-  required_params: '',
-  optional_params: ''
+    description: '',
+    path: '',
+    verb: 'GET',
+    view_name: '',
+    required: '',
+    optional: ''
 })
 const newRouteLoading = ref(false)
 const newRouteError = ref('')
@@ -86,11 +87,12 @@ const editingRouteIndex = ref<number | null>(null)
 
 const openNewRouteDialog = () => {
   newRouteForm.value = {
+    description: '',
     path: '',
     verb: 'GET',
     view_name: '',
-    required_params: '',
-    optional_params: ''
+    required: '',
+    optional: ''
   }
   newRouteError.value = ''
   newRouteDialogOpen.value = true
@@ -103,31 +105,88 @@ const closeNewRouteDialog = () => {
   editingRouteIndex.value = null
 }
 
-const submitNewRoute = async (e: Event) => {
-  e.preventDefault()
-  newRouteLoading.value = true
-  newRouteError.value = ''
-  
-  try {
-    // TO:DO API call to save the route
-    // const response = await fetch(`/api/routes`, { ... })
-    closeNewRouteDialog()
-    // Refresh routes data here
-  } catch (err: any) {
-    newRouteError.value = err.message || 'Error saving route'
-  } finally {
-    newRouteLoading.value = false
-  }
+const submitNewRoute = async (
+    e: Event, 
+    updateApiData: (updatedApiData: ApiData) => void,
+    apiData: ApiData | null) => {
+
+    e.preventDefault()
+    newRouteLoading.value = true
+    newRouteError.value = ''
+    if (!apiData) {
+        newRouteError.value = 'API data not available'
+        newRouteLoading.value = false
+        return
+    }
+    try {
+        const newRoute = {
+            description: newRouteForm.value.description,
+            path: newRouteForm.value.path,
+            verb: newRouteForm.value.verb,
+            view_name: newRouteForm.value.view_name,
+            required: (newRouteForm.value.required || '').split(',').map(s => ({ name: s.trim() })).filter(p => p.name),
+            optional: (newRouteForm.value.optional || '').split(',').map(s => ({ name: s.trim() })).filter(p => p.name),
+        }
+        
+        let updatedApiData
+    
+        if (isEditMode.value && editingRouteIndex.value !== null) {
+            // Update existing route in apiData
+            updatedApiData = {
+                ...apiData,
+                version_urls: apiData.version_urls?.map((route, index) => 
+                index === editingRouteIndex.value 
+                    ? { ...route, ...newRoute }
+                    : route
+                ) || []
+            }
+            } else {
+            // Add new route to apiData
+            updatedApiData = {
+                ...apiData,
+                version_urls: [...(apiData.version_urls || []), newRoute]
+            }
+        }
+
+        // console.log('Updated API Data:', updatedApiData)
+
+        const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/code`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(updatedApiData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        }
+
+        const responseData = await response.json()
+        updateApiData(responseData || updatedApiData)
+
+        closeNewRouteDialog()
+    } catch (err: any) {
+        console.error('Error saving route:', err)
+
+        newRouteError.value = err.message || 'Error saving route'
+    } finally {
+        newRouteLoading.value = false
+    }
 }
 
-const openEditRouteDialog = (route: RouteData) => {
+const openEditRouteDialog = (route: RouteData, index: number) => {
   isEditMode.value = true
+  editingRouteIndex.value = index
   newRouteForm.value = {
+    description: route.description || '',
     path: route.path,
     verb: route.verb,
     view_name: route.view_name,
-    required_params: route.required?.map(p => p.name).join(', ') || '',
-    optional_params: route.optional?.map(p => p.name).join(', ') || ''
+    required: route.required?.map(p => p.name).join(', ') || '',
+    optional: route.optional?.map(p => p.name).join(', ') || ''
   }
   newRouteDialogOpen.value = true
 }
@@ -276,11 +335,13 @@ const createTable = (data: RouteData[]) => {
     
     <AppLayout :breadcrumbs="breadcrumbItems">
         <APILayout :api_id="props.api_id" :api_type="props.api_type">
-            <template #default="{ apiData, loadingApiData, apiError }:
+            <template #default="{ apiData, loadingApiData, apiError, updateApiData, refreshApiData }:
             {
                 apiData: ApiData | null, 
                 loadingApiData: boolean, 
-                apiError: string 
+                apiError: string,
+                updateApiData: (updatedApiData: ApiData) => void,
+                refreshApiData: () => void
             }">
                 <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
                     <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
@@ -334,7 +395,7 @@ const createTable = (data: RouteData[]) => {
                                             </Button>
                                         </DialogTrigger>
                                         <DialogContent class="sm:max-w-md">
-                                            <form @submit="submitNewRoute" class="space-y-6">
+                                            <form @submit="(e) => submitNewRoute(e, updateApiData, apiData)" class="space-y-6">
                                                 <DialogHeader>
                                                     <DialogTitle>{{ isEditMode ? 'Edit Route' : 'Create New Route' }}</DialogTitle>
                                                 </DialogHeader>
@@ -374,11 +435,11 @@ const createTable = (data: RouteData[]) => {
                                                     </div>
                                                     <div>
                                                         <Label for="required-params" class="mb-1">Required Parameters</Label>
-                                                        <Input id="required-params" v-model="newRouteForm.required_params" placeholder="param1, param2 (comma separated)" />
+                                                        <Input id="required-params" v-model="newRouteForm.required" placeholder="param1, param2 (comma separated)" />
                                                     </div>
                                                     <div>
                                                         <Label for="optional-params" class="mb-1">Optional Parameters</Label>
-                                                        <Input id="optional-params" v-model="newRouteForm.optional_params" placeholder="param3, param4 (comma separated)" />
+                                                        <Input id="optional-params" v-model="newRouteForm.optional" placeholder="param3, param4 (comma separated)" />
                                                     </div>
                                                     <div v-if="newRouteError" class="text-red-600 text-sm">{{ newRouteError }}</div>
                                                 </div>
@@ -440,14 +501,14 @@ const createTable = (data: RouteData[]) => {
                                                 return table.getRowModel().rows?.length
                                             })()">
                                                 
-                                                    <TableRow v-for="row in (() => {
+                                                    <TableRow v-for="(row, index) in (() => {
                                                         const table = createTable(apiData.version_urls)
                                                         return table.getRowModel().rows
                                                             })()" 
                                                             :key="row.id" 
                                                             :data-state="row.getIsSelected() && 'selected'"
                                                             class="cursor-pointer hover:bg-muted/50"
-                                                            @click="openEditRouteDialog(row.original)">
+                                                            @click="openEditRouteDialog(row.original, index)">
                                                         <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                                                             <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
                                                         </TableCell>

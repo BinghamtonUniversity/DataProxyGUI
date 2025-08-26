@@ -66,13 +66,21 @@ const fetchApiData = async () => {
     }
 }
 
+const updateApiData = (updatedApiData: ApiData) => {
+    apiData.value = updatedApiData
+}
+
+const refreshApiData = () => {
+    fetchApiData()
+}
+
 onMounted(fetchApiData)
 
 </script>
 
 <template>
     <div class="px-4 py-6">
-        <Heading title="API" description="Manage your API settings" />
+        <Heading :title="`API - ${props.api_id}`" description="Manage your API settings" />
 
         <div class="flex flex-col space-y-8">
         <!-- Tab navigation at the top -->
@@ -99,6 +107,8 @@ onMounted(fetchApiData)
                     :apiData="apiData"
                     :loadingApiData="loadingApiData"
                     :apiError="apiError"
+                    :updateApiData="updateApiData"
+                    :refreshApiData="refreshApiData"
                 />
             </section>
         </div>
