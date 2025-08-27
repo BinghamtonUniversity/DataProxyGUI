@@ -40,12 +40,12 @@
         :autocomplete="autocomplete"
         :autofocus="autofocus"
         :name="name"
-        class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md"
+        class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md"
         :class="[
           // Focus states
           'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
           // Disabled states
-          !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : 'hover:border-gray-400 dark:hover:border-gray-500',
+          !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 opacity-75' : 'hover:border-gray-400 dark:hover:border-gray-500',
           // Error states
           localError ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : ''
         ]"
@@ -110,12 +110,12 @@
       :autocomplete="autocomplete"
       :autofocus="autofocus"
       :name="name"
-      class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md"
+      class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md"
       :class="[
         // Focus states
         'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
         // Disabled states
-        !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : 'hover:border-gray-400 dark:hover:border-gray-500',
+        !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 opacity-75' : 'hover:border-gray-400 dark:hover:border-gray-500',
         // Error states
         localError ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : ''
       ]"

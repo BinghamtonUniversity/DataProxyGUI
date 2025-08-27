@@ -44,6 +44,8 @@
                 name="formName"
                 placeholder="Enter form name"
                 class="w-full"
+                :edit="allowFormNameEdit"
+                
               />
             </div>
             <div class="text-xs text-on-surface-variant">
@@ -995,6 +997,10 @@ const props = defineProps({
   formData: {
     type: Object,
     default: () => ({ name: 'my-form', fields: [] })
+  },
+  allowFormNameEdit: {
+    type: Boolean,
+    default: true
   }
 });
 

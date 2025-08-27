@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
+import { ref } from 'vue';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,9 +25,13 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 const page = usePage();
+const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL || '';
 
 // Form state
-const formData = ref({
+const formData = ref<{
+    name: string;
+    fields: any[];
+}>({
     name: 'options',
     fields: []
 });
@@ -43,9 +47,14 @@ const handleFormChange = (newFormData: any) => {
 };
 
 // Save options to database
-const handleSave = async () => {
+const handleSave = async (apiData: ApiData | null, updateApiData: (updatedApiData: ApiData) => void) => {
     if (!formData.value.fields || formData.value.fields.length === 0) {
         saveError.value = 'Please add at least one field to the form';
+        return;
+    }
+
+    if (!apiData) {
+        saveError.value = 'API data not available';
         return;
     }
 
@@ -54,14 +63,23 @@ const handleSave = async () => {
     saveSuccess.value = false;
 
     try {
-        const response = await fetch(`/api/apis/${props.api_id}/options`, {
-            method: 'POST',
+        // Create updated API data with new options
+        const updatedApiData: ApiData = {
+            ...apiData,
+            options: formData.value.fields // Replace options with just the fields array
+        };
+
+        // Update the local state using the updateApiData function
+        updateApiData(updatedApiData);
+
+        // Send the updated API data to the backend
+        const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/code`, {
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
             },
-            body: JSON.stringify(formData.value)
+            body: JSON.stringify(updatedApiData)
         });
 
         if (!response.ok) {
@@ -69,8 +87,8 @@ const handleSave = async () => {
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
-        const result = await response.json();
-        console.log('Options saved successfully:', result);
+        const responseData = await response.json();
+        updateApiData(responseData || updatedApiData);
         
         saveSuccess.value = true;
         setTimeout(() => {
@@ -85,31 +103,25 @@ const handleSave = async () => {
     }
 };
 
-// Load existing options if available
-const loadExistingOptions = async () => {
-    try {
-        const response = await fetch(`/api/apis/${props.api_id}/options`);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.form_config) {
-                formData.value = data.form_config;
-            } else {
-                // Initialize with default structure if no existing data
-                formData.value = {
-                    name: 'options',
-                    fields: []
-                };
-            }
+// Load existing options from apiData
+const loadExistingOptions = (apiData: ApiData | null) => {
+    if (apiData && apiData.options && apiData.options.length > 0) {
+        // If options exist in apiData, check if it's an array of fields or objects with form_config
+        const existingOptions = apiData.options;
+        
+        // Check if the first option has form_config (old format) or is directly fields (new format)
+        if (existingOptions[0] && existingOptions[0].form_config) {
+            // Old format: options contains objects with form_config
+            formData.value = existingOptions[0].form_config;
         } else {
-            // Initialize with default structure if no existing data
+            // New format: options is directly an array of fields
             formData.value = {
                 name: 'options',
-                fields: []
+                fields: existingOptions
             };
         }
-    } catch (error) {
-        console.log('No existing options found or error loading:', error);
-        // Initialize with default structure on error
+    } else {
+        // Initialize with default structure if no options exist
         formData.value = {
             name: 'options',
             fields: []
@@ -117,9 +129,12 @@ const loadExistingOptions = async () => {
     }
 };
 
-onMounted(() => {
-    loadExistingOptions();
-});
+// Initialize form data when component loads
+const initializeFormData = (apiData: ApiData | null) => {
+    if (apiData && !formData.value.fields.length) {
+        loadExistingOptions(apiData);
+    }
+};
 </script>
 
 <template>
@@ -127,11 +142,12 @@ onMounted(() => {
     
     <AppLayout :breadcrumbs="breadcrumbItems">
         <APILayout :api_id="props.api_id" :api_type="props.api_type">
-            <template #default="{ apiData, loadingApiData, apiError }:
+            <template #default="{ apiData, loadingApiData, apiError, updateApiData }:
             {
                 apiData: ApiData | null, 
                 loadingApiData: boolean, 
-                apiError: string 
+                apiError: string,
+                updateApiData: (updatedApiData: ApiData) => void
             }">
                 <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                     <div class="">
@@ -139,7 +155,7 @@ onMounted(() => {
                         <!-- Save Button -->
                         <div class="flex justify-end mb-4">
                             <Button 
-                                @click="handleSave" 
+                                @click="() => handleSave(apiData, updateApiData)" 
                                 :disabled="isSaving"
                                 class="flex items-center gap-2"
                             >
@@ -178,8 +194,13 @@ onMounted(() => {
 
                         <!-- Form Builder -->
                         <template v-else>
+                            <!-- Initialize form data when apiData is available -->
+                            <div v-if="apiData && !formData.fields.length" style="display: none;">
+                                {{ initializeFormData(apiData) }}
+                            </div>
                             <FormBuilder 
                                 :form-data="formData"
+                                :allowFormNameEdit="false"
                                 @update:form-data="handleFormChange"
                             />
 
