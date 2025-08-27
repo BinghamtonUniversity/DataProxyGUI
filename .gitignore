@@ -24,3 +24,6 @@ yarn-error.log
 /.zed
 package-lock.json
 .github
+composer.json
+package-lock.json
+package.json
