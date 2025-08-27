@@ -961,16 +961,8 @@
       title="Form Preview"
       @close="closePreviewModal">
       <div class="space-y-6">
-        <div class="text-sm text-on-surface-variant">
-          Test your form fields below:
-        </div>
         <!-- Interactive Form Preview -->
-        <FormViewer 
-          ref="formViewerRef"
-          :key="previewKey"
-          :form-config="formConfigForPreview"
-          v-model="previewFormData" />
-        <!-- Collapsible JSON Output -->
+           <!-- Collapsible JSON Output -->
         <div class="mt-6">
           <button @click="showPreviewJson = !showPreviewJson" class="w-full flex items-center justify-between px-4 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium hover:bg-surface-container-high transition-all duration-200">
             <span>Show Form Data JSON</span>
@@ -982,25 +974,14 @@
             <pre class="text-xs text-on-surface-variant">{{ JSON.stringify(previewFormData, null, 2) }}</pre>
           </div>
         </div>
+        <FormViewer 
+          ref="formViewerRef"
+          :key="previewKey"
+          :form-config="formConfigForPreview"
+          v-model="previewFormData" />
+      
       </div>
-      <template #footer>
-        <button
-          @click="handlePreviewSubmit"
-          class="md3-button-filled-primary">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-          </svg>
-          Submit Form
-        </button>
-        <button
-          @click="closePreviewModal"
-          class="md3-button-outlined-secondary">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-          Close
-        </button>
-      </template>
+
     </AlertModal>
   </div>
 </template> 
