@@ -3,10 +3,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
 
   <div :class="formbuilderTheme.container">
-    <div :class="formbuilderTheme.headerContainer">
+    <!-- <div :class="formbuilderTheme.headerContainer">
       <h1 :class="formbuilderTheme.header">FormBuilder</h1>
       <p :class="formbuilderTheme.subheader">Drag field types above the canvas. Reorder fields. Configure field properties.</p>
-    </div>
+    </div> -->
     <div class="flex flex-row gap-6">
       <!-- Left: Form Configuration Sidebar -->
   <div class="w-80 shrink-0 px-4 py-4">
@@ -1008,6 +1008,17 @@
 <script setup>
 
 import { ref, computed, watch, nextTick, onMounted } from 'vue';
+
+// Define props
+const props = defineProps({
+  formData: {
+    type: Object,
+    default: () => ({ name: 'my-form', fields: [] })
+  }
+});
+
+// Define emits
+const emit = defineEmits(['update:formData']);
 import AlertModal from '../AlertModal.vue';
 import FormViewer from '../formviewer/FormViewer.vue';
 import ConditionalLogic from '../formbuilder/components/ConditionalLogic.vue';
@@ -1096,13 +1107,13 @@ function getFieldTypesByCategory(category) {
   return fieldTypes.filter(type => type.category === category);
 }
 
-const fields = ref([]);
+const fields = ref(props.formData.fields || []);
 
 
 const selectedFieldIndex = ref(null);
 const isJsonModalOpen = ref(false);
 const isPreviewModalOpen = ref(false);
-const formName = ref('my-form');
+const formName = ref(props.formData.name || 'options');
 const previewFormData = ref({});
 const previewKey = ref(0);
 const dragOverIndex = ref(null);
@@ -2115,6 +2126,14 @@ watch(
   }
 );
 
+// Watch for changes in formName and fields to emit updates
+watch([formName, fields], () => {
+  emit('update:formData', {
+    name: formName.value,
+    fields: fields.value
+  });
+}, { deep: true });
+
 // Ensure all fields have updateKey property on mount
 onMounted(() => {
   const currentFields = getCurrentFields();
@@ -2124,7 +2143,13 @@ onMounted(() => {
     }
   });
   
-
+  // Initialize with props data
+  if (props.formData.fields && props.formData.fields.length > 0) {
+    fields.value = [...props.formData.fields];
+  }
+  if (props.formData.name) {
+    formName.value = props.formData.name;
+  }
 });
 
 
