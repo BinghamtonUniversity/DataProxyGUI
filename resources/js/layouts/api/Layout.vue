@@ -113,7 +113,5 @@ onMounted(fetchApiData)
             </section>
         </div>
     </div>
-
-        
     </div>
 </template>

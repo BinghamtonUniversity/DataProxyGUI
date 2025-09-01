@@ -16,7 +16,7 @@ import {
   useVueTable,
 } from '@tanstack/vue-table'
 import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
-import { h, ref } from 'vue'
+import { h, ref, computed } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 
 import { Head } from '@inertiajs/vue3'
@@ -57,7 +57,6 @@ interface Props {
     api_type: string;
 }
 
-
 const props = defineProps<Props>()
 const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 
@@ -84,6 +83,14 @@ const newRouteError = ref('')
 const isEditMode = ref(false)
 const editingRouteIndex = ref<number | null>(null)
 
+// Table state
+const sorting = ref<SortingState>([])
+const columnFilters = ref<ColumnFiltersState>([])
+const columnVisibility = ref<VisibilityState>({})
+const rowSelection = ref({})
+
+// Reactive API data reference
+const currentApiData = ref<ApiData | null>(null)
 
 const openNewRouteDialog = () => {
   newRouteForm.value = {
@@ -140,15 +147,13 @@ const submitNewRoute = async (
                     : route
                 ) || []
             }
-            } else {
+        } else {
             // Add new route to apiData
             updatedApiData = {
                 ...apiData,
                 version_urls: [...(apiData.version_urls || []), newRoute]
             }
         }
-
-        // console.log('Updated API Data:', updatedApiData)
 
         const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/code`, {
             method: 'PUT',
@@ -170,7 +175,6 @@ const submitNewRoute = async (
         closeNewRouteDialog()
     } catch (err: any) {
         console.error('Error saving route:', err)
-
         newRouteError.value = err.message || 'Error saving route'
     } finally {
         newRouteLoading.value = false
@@ -277,40 +281,16 @@ const columns: ColumnDef<RouteData>[] = [
       ])
     },
   },
-//   {
-//     id: 'actions',
-//     enableHiding: false,
-//     cell: ({ row }) => {
-//       return h('div', { class: 'flex items-center gap-2' }, [
-//         h(Button, {
-//           variant: 'ghost',
-//           size: 'sm',
-//           onClick: () => row.toggleExpanded(),
-//         }, () => [
-//           row.getIsExpanded() ? h(EyeOff, { class: 'h-4 w-4' }) : h(Eye, { class: 'h-4 w-4' }),
-//           h('span', { class: 'ml-1' }, row.getIsExpanded() ? 'Hide' : 'Details')
-//         ]),
-//         h(Button, {
-//           variant: 'ghost',
-//           size: 'sm',
-//           onClick: () => openEditRouteDialog(row.original, row.index),
-//         }, () => 'Edit')
-//       ])
-//     },
-//   },
 ]
 
-// Table state
-const sorting = ref<SortingState>([])
-const columnFilters = ref<ColumnFiltersState>([])
-const columnVisibility = ref<VisibilityState>({})
-const rowSelection = ref({})
+// Create single computed table instance
+const table = computed(() => {
+  if (!currentApiData.value?.version_urls) {
+    return null
+  }
 
-
-// Create table instance
-const createTable = (data: RouteData[]) => {
   return useVueTable({
-    data,
+    data: currentApiData.value.version_urls,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -327,7 +307,20 @@ const createTable = (data: RouteData[]) => {
       get rowSelection() { return rowSelection.value },
     },
   })
-}
+})
+
+// Computed properties for common table operations
+const headerGroups = computed(() => table.value?.getHeaderGroups() || [])
+const tableRows = computed(() => table.value?.getRowModel().rows || [])
+const hidableColumns = computed(() => table.value?.getAllColumns().filter(column => column.getCanHide()) || [])
+const pathFilterValue = computed({
+  get: () => table.value?.getColumn('path')?.getFilterValue() as string || '',
+  set: (value: string) => table.value?.getColumn('path')?.setFilterValue(value)
+})
+const selectedRowsCount = computed(() => table.value?.getFilteredSelectedRowModel().rows.length || 0)
+const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.length || 0)
+const canPreviousPage = computed(() => table.value?.getCanPreviousPage() || false)
+const canNextPage = computed(() => table.value?.getCanNextPage() || false)
 </script>
 
 <template>
@@ -343,6 +336,9 @@ const createTable = (data: RouteData[]) => {
                 updateApiData: (updatedApiData: ApiData) => void,
                 refreshApiData: () => void
             }">
+                <!-- Update currentApiData when apiData changes -->
+                {{ (() => { currentApiData = apiData; return '' })() }}
+
                 <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
                     <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
                         
@@ -366,25 +362,14 @@ const createTable = (data: RouteData[]) => {
                         </template>
 
                         <!-- Data Table -->
-                        <template v-else-if="apiData?.version_urls">
-                                <div v-if="(() => {
-                                    const table = createTable(apiData.version_urls)
-                                    return true
-                                })()" class="w-full">        
-
+                        <template v-else-if="apiData?.version_urls && table">
+                            <div class="w-full">        
                                 <!-- Table Controls -->
                                 <div class="flex items-center py-4">
                                     <Input
                                         class="max-w-sm"
                                         placeholder="Filter by path"
-                                        :model-value="(() => {
-                                            const table = createTable(apiData.version_urls)
-                                            return table.getColumn('path')?.getFilterValue() as string
-                                        })()"
-                                        @update:model-value="(() => {
-                                            const table = createTable(apiData.version_urls)
-                                            table.getColumn('path')?.setFilterValue($event)
-                                        })"
+                                        v-model="pathFilterValue"
                                     />
                                     
                                     <Dialog v-model:open="newRouteDialogOpen">
@@ -464,10 +449,7 @@ const createTable = (data: RouteData[]) => {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuCheckboxItem
-                                               v-for="column in (() => {
-                                                    const table = createTable(apiData.version_urls)
-                                                    return table.getAllColumns().filter((column) => column.getCanHide())
-                                                })()"
+                                                v-for="column in hidableColumns"
                                                 :key="column.id"
                                                 class="capitalize"
                                                 :model-value="column.getIsVisible()"
@@ -482,10 +464,7 @@ const createTable = (data: RouteData[]) => {
                                 <div class="rounded-md border">
                                     <Table>
                                         <TableHeader>
-                                            <TableRow v-for="headerGroup in (() => {
-                                                const table = createTable(apiData.version_urls)
-                                                return table.getHeaderGroups()
-                                            })()" :key="headerGroup.id">
+                                            <TableRow v-for="headerGroup in headerGroups" :key="headerGroup.id">
                                                 <TableHead v-for="header in headerGroup.headers" :key="header.id">
                                                     <FlexRender 
                                                         v-if="!header.isPlaceholder" 
@@ -496,24 +475,19 @@ const createTable = (data: RouteData[]) => {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            <template v-if="(() => {
-                                                const table = createTable(apiData.version_urls)
-                                                return table.getRowModel().rows?.length
-                                            })()">
-                                                
-                                                    <TableRow v-for="(row, index) in (() => {
-                                                        const table = createTable(apiData.version_urls)
-                                                        return table.getRowModel().rows
-                                                            })()" 
-                                                            :key="row.id" 
-                                                            :data-state="row.getIsSelected() && 'selected'"
-                                                            class="cursor-pointer hover:bg-muted/50"
-                                                            @click="openEditRouteDialog(row.original, index)">
-                                                        <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
-                                                            <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
-                                                        </TableCell>
-                                                    </TableRow>                                                    
-                                                </template>
+                                            <template v-if="tableRows.length">
+                                                <TableRow 
+                                                    v-for="(row, index) in tableRows" 
+                                                    :key="row.id" 
+                                                    :data-state="row.getIsSelected() && 'selected'"
+                                                    class="cursor-pointer hover:bg-muted/50"
+                                                    @click="openEditRouteDialog(row.original, index)"
+                                                >
+                                                    <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
+                                                        <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
+                                                    </TableCell>
+                                                </TableRow>                                                    
+                                            </template>
                                       
                                             <TableRow v-else>
                                                 <TableCell :colspan="columns.length" class="h-24 text-center">
@@ -527,41 +501,22 @@ const createTable = (data: RouteData[]) => {
                                 <!-- Pagination -->
                                 <div class="flex items-center justify-end space-x-2 py-4">
                                     <div class="flex-1 text-sm text-muted-foreground">
-                                        {{ (() => {
-                                            const table = createTable(apiData.version_urls)
-                                            return table.getFilteredSelectedRowModel().rows.length
-                                        })() }} of
-                                        {{ (() => {
-                                            const table = createTable(apiData.version_urls)
-                                            return table.getFilteredRowModel().rows.length
-                                        })() }} row(s) selected.
+                                        {{ selectedRowsCount }} of {{ totalRowsCount }} row(s) selected.
                                     </div>
                                     <div class="space-x-2">
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            :disabled="!(() => {
-                                                const table = createTable(apiData.version_urls)
-                                                return table.getCanPreviousPage()
-                                            })()"
-                                            @click="(() => {
-                                                const table = createTable(apiData.version_urls)
-                                                table.previousPage()
-                                            })"
+                                            :disabled="!canPreviousPage"
+                                            @click="table?.previousPage()"
                                         >
                                             Previous
                                         </Button>
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            :disabled="!(() => {
-                                                const table = createTable(apiData.version_urls)
-                                                return table.getCanNextPage()
-                                            })()"
-                                            @click="(() => {
-                                                const table = createTable(apiData.version_urls)
-                                                table.nextPage()
-                                            })"
+                                            :disabled="!canNextPage"
+                                            @click="table?.nextPage()"
                                         >
                                             Next
                                         </Button>

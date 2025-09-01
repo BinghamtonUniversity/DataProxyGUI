@@ -62,7 +62,6 @@ const handleEditApi = () => {
           class="block w-full text-left"
           :href="`/apis/${props.api.api_type}/${props.api.id}/routes`"
           as="button"
-          prefetch
         >
           View details
         </Link>
