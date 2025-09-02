@@ -11,6 +11,7 @@ import Routes from '@/components/apiEdit/Routes.vue'
 import Resources from '@/components/apiEdit/Resources.vue'
 import Functions from '@/components/apiEdit/Functions.vue'
 import Models from '@/components/apiEdit/Models.vue'
+import Options from '@/components/apiEdit/Options.vue'
 
 
 interface Props {
@@ -52,6 +53,12 @@ const tabs = [
         id: 'models', 
         title: 'Models', 
         component: Models,
+        routeName: 'apiEdit.index'
+    },
+    { 
+        id: 'options', 
+        title: 'Options', 
+        component: Options,
         routeName: 'apiEdit.index'
     }
 ]
