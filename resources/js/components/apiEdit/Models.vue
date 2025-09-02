@@ -14,7 +14,7 @@ import {
   useVueTable,
 } from '@tanstack/vue-table'
 import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
-import { h, ref, computed } from 'vue'
+import { h, ref, computed, watch } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 
 import { type ApiData, ModelData } from '@/types'
@@ -63,41 +63,124 @@ const props = defineProps<Props>()
 const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 
 // --- Dialog State and Handlers ---
-const isEditDialogOpen = ref(false)
-const selectedModel = ref<ModelData | null>(null)
+const newModelDialogOpen = ref(false)
+const newModelForm = ref({
+  name: '',
+  content: '',
+  inheritance: 'models.Model',
+  class_meta: [] as { name: string; value: string }[]
+})
+const newModelLoading = ref(false)
+const newModelError = ref('')
+const isEditMode = ref(false)
+const editingModelIndex = ref<number | null>(null)
+const saveLoading = ref(false)
+const saveError = ref('')
 
 
-const openEditDialog = (model: ModelData) => {
-  // Create a deep copy to prevent modifying the original data directly
-  selectedModel.value = JSON.parse(JSON.stringify(model))
-  isEditDialogOpen.value = true
+const openNewModelDialog = () => {
+  newModelForm.value = {
+    name: '',
+    content: '',
+    inheritance: 'models.Model',
+    class_meta: []
+  }
+  newModelError.value = ''
+  isEditMode.value = false
+  editingModelIndex.value = null
+  newModelDialogOpen.value = true
 }
 
-const addMetaProperty = () => {
-  if (selectedModel.value) {
-    if (!selectedModel.value.class_meta) {
-      selectedModel.value.class_meta = [];
-    }
-    selectedModel.value.class_meta.push({ name: '', value: '' });
-  }
-};
+const closeNewModelDialog = () => {
+  newModelDialogOpen.value = false
+  newModelError.value = ''
+  isEditMode.value = false
+  editingModelIndex.value = null
+}
 
-const removeMetaProperty = (index: number) => {
-  if (selectedModel.value && selectedModel.value.class_meta) {
-    selectedModel.value.class_meta.splice(index, 1);
-  }
-};
+const addNewModelMetaProperty = () => {
+  newModelForm.value.class_meta.push({ name: '', value: '' })
+}
 
-const handleSaveChanges = async () => {
-  if (selectedModel.value) {
-    try {
-      // await api call
-      console.log('Saving changes for model:', selectedModel.value)
-    } catch (e) {
-      // handle error
-    }
+const removeNewModelMetaProperty = (index: number) => {
+  newModelForm.value.class_meta.splice(index, 1)
+}
+
+const submitNewModel = async (e: Event) => {
+  e.preventDefault()
+  newModelLoading.value = true
+  newModelError.value = ''
+  
+  if (!props.apiData) {
+    newModelError.value = 'API data not available'
+    newModelLoading.value = false
+    return
   }
-  isEditDialogOpen.value = false
+  
+  try {
+    const newModel = {
+      name: newModelForm.value.name,
+      content: newModelForm.value.content,
+      inheritance: newModelForm.value.inheritance,
+      class_meta: newModelForm.value.class_meta.filter(meta => meta.name.trim() && meta.value.trim())
+    }
+    
+    let updatedApiData
+
+    if (isEditMode.value && editingModelIndex.value !== null) {
+      // Edit existing model
+      updatedApiData = {
+        ...props.apiData,
+        version_models: props.apiData.version_models?.map((model, index) => 
+          index === editingModelIndex.value 
+            ? { ...model, ...newModel }
+            : model
+        ) || []
+      }
+    } else {
+      // Add new model
+      updatedApiData = {
+        ...props.apiData,
+        version_models: [...(props.apiData.version_models || []), newModel]
+      }
+    }
+    // console.log('Updated API Data:', updatedApiData)
+    const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/code`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(updatedApiData)
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+    }
+
+    const responseData = await response.json()
+    props.updateApiData(responseData || updatedApiData)
+
+    closeNewModelDialog()
+  } catch (err: any) {
+    console.error('Error saving model:', err)
+    newModelError.value = err.message || 'Error saving model'
+  } finally {
+    newModelLoading.value = false
+  }
+}
+
+const openEditModelDialog = (model: ModelData, index: number) => {
+  isEditMode.value = true
+  editingModelIndex.value = index
+  newModelForm.value = {
+    name: model.name || '',
+    content: model.content || '',
+    inheritance: model.inheritance || 'models.Model',
+    class_meta: model.class_meta ? JSON.parse(JSON.stringify(model.class_meta)) : []
+  }
+  newModelDialogOpen.value = true
 }
 
 // --- Table Definition ---
@@ -211,9 +294,9 @@ const table = computed(() => {
 const headerGroups = computed(() => table.value?.getHeaderGroups() || [])
 const tableRows = computed(() => table.value?.getRowModel().rows || [])
 const hidableColumns = computed(() => table.value?.getAllColumns().filter(column => column.getCanHide()) || [])
-const pathFilterValue = computed({
-  get: () => table.value?.getColumn('path')?.getFilterValue() as string || '',
-  set: (value: string) => table.value?.getColumn('path')?.setFilterValue(value)
+const nameFilterValue = computed({
+  get: () => table.value?.getColumn('name')?.getFilterValue() as string || '',
+  set: (value: string) => table.value?.getColumn('name')?.setFilterValue(value)
 })
 const selectedRowsCount = computed(() => table.value?.getFilteredSelectedRowModel().rows.length || 0)
 const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.length || 0)
@@ -248,18 +331,113 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
             <!-- Data Table -->
             <template v-else-if="apiData?.version_models && table">
               
-
                 <!-- Table Controls -->
                 <div class="flex items-center py-4">
                     <Input
                         class="max-w-sm"
                         placeholder="Filter by model name..."
-                        v-model="pathFilterValue"
+                        v-model="nameFilterValue"
                     />
+                    <Dialog v-model:open="newModelDialogOpen">
+                      <DialogTrigger as-child>
+                        <Button class="ml-4 text-green-600" variant="outline" @click="openNewModelDialog">
+                          <Plus class="mr-2 h-4 w-4" />
+                          New Model
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent class="sm:max-w-4xl">
+                        <form @submit="submitNewModel" class="space-y-6">
+                          <DialogHeader>
+                            <DialogTitle>{{ isEditMode ? 'Edit Model' : 'Create New Model' }}</DialogTitle>
+                          </DialogHeader>
+                          <div class="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-6">
+                            <!-- Basic Model Info -->
+                            <div class="grid grid-cols-4 items-center gap-4">
+                              <Label for="new-model-name" class="text-right">Name</Label>
+                              <Input id="new-model-name" v-model="newModelForm.name" required placeholder="Model name" class="col-span-3" />
+                            </div>
+                            <div class="grid grid-cols-4 items-center gap-4">
+                              <Label for="new-model-inheritance" class="text-right">Inheritance</Label>
+                              <Input id="new-model-inheritance" v-model="newModelForm.inheritance" placeholder="models.Model" class="col-span-3" />
+                            </div>
+                            
+                            <!-- Meta Properties Section -->
+                            <div class="flex flex-col gap-4 border-t pt-4">
+                              <h3 class="text-lg font-medium">Meta Properties</h3>
+                              <div v-if="newModelForm.class_meta.length > 0" class="space-y-3">
+                                <div class="grid grid-cols-9 items-center gap-2">
+                                  <Label class="col-span-4 text-sm font-semibold">Name</Label>
+                                  <Label class="col-span-4 text-sm font-semibold">Value</Label>
+                                </div>
+                                <div v-for="(meta, index) in newModelForm.class_meta" :key="index" class="grid grid-cols-9 items-center gap-2">
+                                  <Input 
+                                    v-model="meta.name" 
+                                    placeholder="Name" 
+                                    class="col-span-3"
+                                  />
+                                  <Input 
+                                    v-model="meta.value" 
+                                    placeholder="Value" 
+                                    class="col-span-4"
+                                  />
+                                  <Button 
+                                    type="button" 
+                                    variant="destructive" 
+                                    size="sm"
+                                    @click="removeNewModelMetaProperty(index)"
+                                    class="col-span-1"
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+                              </div>
+                              <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
+                                No meta properties defined.
+                              </div>
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm"
+                                @click="addNewModelMetaProperty"
+                                class="self-start"
+                              >
+                                + Add Meta Property
+                              </Button>
+                            </div>
+
+                            <!-- Content Editor -->
+                            <div class="grid grid-cols-4 items-start gap-4">
+                              <Label for="new-model-content" class="text-right pt-2">Content</Label>
+                              <Editor 
+                                id="new-model-content" 
+                                v-model:code="newModelForm.content" 
+                                :language="props.api_type === 'python' || props.api_type === 'php' ? props.api_type : undefined"
+                                class="col-span-6"
+                              />
+                              
+                            </div> 
+                          </div>
+
+                          <!-- Error Display -->
+                          <div v-if="newModelError" class="text-red-600 text-sm">
+                            {{ newModelError }}
+                          </div>
+
+                          <DialogFooter class="gap-2">
+                            <DialogClose as-child>
+                              <Button variant="secondary" type="button" @click="closeNewModelDialog" :disabled="newModelLoading">
+                                Cancel
+                              </Button>
+                            </DialogClose>
+                            <Button type="submit" variant="default" :disabled="newModelLoading">
+                              <span v-if="newModelLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
+                              <span v-else>{{ isEditMode ? 'Save Changes' : 'Create Model' }}</span>
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
                     
-                    <Button class="ml-4 text-green-600" variant="outline">
-                        New Model
-                    </Button>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
@@ -302,7 +480,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         :key="row.id" 
                                         :data-state="row.getIsSelected() && 'selected'"
                                         class="cursor-pointer hover:bg-muted/50"
-                                        @click="openEditDialog(row.original)"
+                                        @click="openEditModelDialog(row.original, index)"
                                     >
                                         <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                                             <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
@@ -358,79 +536,6 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
     </div>
 
     <!-- Edit Model Dialog -->
-    <Dialog v-model:open="isEditDialogOpen">
-        <DialogContent class="sm:max-w-2xl">
-            <form @submit.prevent="handleSaveChanges">
-                <DialogHeader>
-                    <DialogTitle>Edit Model: {{ selectedModel?.name }}</DialogTitle>
-                </DialogHeader>
-                    <div v-if="selectedModel" class="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
-                        <div class="grid grid-cols-4 items-center gap-4">
-                            <Label for="model-name" class="text-right">Name</Label>
-                            <Input id="model-name" v-model="selectedModel.name" class="col-span-3" />
-                        </div>
-                        <div class="grid grid-cols-4 items-center gap-4">
-                            <Label for="model-inheritance" class="text-right">Inheritance</Label>
-                            <Input id="model-inheritance" v-model="selectedModel.inheritance" class="col-span-3" />
-                        </div>
-                        
-                        <!-- Meta Properties Section -->
-                        <div class="flex flex-col gap-2 border-t pt-4 mt-4">
-                            <h3 class="text-lg font-medium">Meta Properties</h3>
-                            <div v-if="selectedModel.class_meta && selectedModel.class_meta.length > 0" class="space-y-3 pr-1">
-                                <div class="grid grid-cols-9 items-center gap-2">
-                                    <Label class="col-span-4 text-sm font-semibold">Name</Label>
-                                    <Label class="col-span-4 text-sm font-semibold">Value</Label>
-                                </div>
-                                <div v-for="(meta, index) in selectedModel.class_meta" :key="index" class="grid grid-cols-9 items-center gap-2">
-                                    <Input 
-                                        v-model="meta.name" 
-                                        placeholder="Name" 
-                                        class="col-span-3"
-                                    />
-                                    <Input 
-                                        v-model="meta.value" 
-                                        placeholder="Value" 
-                                        class="col-span-4"
-                                    />
-                                    <Button 
-                                        type="button" 
-                                        variant="destructive" 
-                                        size="sm"
-                                        @click="removeMetaProperty(index)"
-                                        class="col-span-1"
-                                    >
-                                        x
-                                    </Button>
-                                </div>
-                            </div>
-                            <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
-                                No meta properties defined.
-                            </div>
-                            <Button 
-                                type="button" 
-                                variant="outline" 
-                                size="sm"
-                                @click="addMetaProperty"
-                                class="mt-2 self-start"
-                            >
-                                +
-                            </Button>
-                        </div>
-                            <div class="grid grid-cols-4 items-start gap-4">
-                            <Label for="model-content" class="text-right pt-2">Content</Label>
-                            <Editor id="model-content" v-model="selectedModel.content" class="col-span-6" :code="selectedModel.content" :language="props.api_type === 'python' || props.api_type === 'php' ? props.api_type : undefined" />
-                        </div>
-                    </div>
-
-                    <DialogFooter class="pt-6">
-                        <DialogClose as-child>
-                            <Button variant="secondary" type="button">Cancel</Button>
-                        </DialogClose>
-                        <Button type="submit">Save Changes</Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-    </Dialog>
+    
         
 </template>

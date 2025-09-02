@@ -79,7 +79,7 @@ export interface ApiData {
   version_urls: RouteData[]; 
   options: any[]; 
   version_files: any[]; 
-  resources: Record<string, any>; 
+  resources: ResourceData[]; 
   created_at: string; 
   updated_at: string; 
   created_by: number; 
