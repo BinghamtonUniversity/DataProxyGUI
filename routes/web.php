@@ -98,5 +98,10 @@ Route::get('/formbuilder-example', function () {
     return Inertia::render('FormBuilderExample');
 })->middleware(['auth', 'verified'])->name('formbuilder.example');
 
+
+Route::get('/datagrid-example', function () {
+    return Inertia::render('DataGridExample');
+})->middleware(['auth', 'verified'])->name('datagrid.example');
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

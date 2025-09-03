@@ -1012,26 +1012,28 @@ import ConditionalLogic from '../formbuilder/components/ConditionalLogic.vue';
 import { getThemeClasses } from '../Theme.js';
 
 // Import all dynamic field components
-import TextField from '../fields/TextField.vue';
-import TextAreaField from '../fields/TextAreaField.vue';
-import EmailField from '../fields/EmailField.vue';
-import TelField from '../fields/TelField.vue';
-import URLField from '../fields/URLField.vue';
-import DateField from '../fields/DateField.vue';
-import NumberField from '../fields/NumberField.vue';
-import CurrencyField from '../fields/CurrencyField.vue';
-import PasswordField from '../fields/PasswordField.vue';
-import ColorField from '../fields/ColorField.vue';
-import RangeField from '../fields/RangeField.vue';
-import SelectField from '../fields/SelectField.vue';
-import ComboboxField from '../fields/ComboboxField.vue';
-import RadioField from '../fields/RadioField.vue';
-import CheckboxField from '../fields/CheckboxField.vue';
-import SwitchField from '../fields/SwitchField.vue';
-import FieldsetField from '../fields/FieldsetField.vue';
-import ArrayField from '../fields/ArrayField.vue';
-import HiddenField from '../fields/HiddenField.vue';
-import OutputField from '../fields/OutputField.vue';
+import {
+  TextField,
+  TextAreaField,
+  TelField,
+  EmailField,
+  PasswordField,
+  URLField,
+  DateField,
+  NumberField,
+  CurrencyField,
+  ColorField,
+  HiddenField,
+  SelectField,
+  RadioField,
+  ComboboxField,
+  RangeField,
+  CheckboxField,
+  SwitchField,
+  FieldsetField,
+  ArrayField,
+  OutputField
+} from '../fields';
 
 
 const fieldTypes = [

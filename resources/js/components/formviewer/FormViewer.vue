@@ -106,26 +106,28 @@
 <script setup>
 import { ref, watch, onMounted, computed, nextTick } from 'vue';
 import { shouldShowField, shouldEditField, shouldParseField, resolveFieldProperties } from '../fields/conditionalLogic.js';
-import TextField from '../fields/TextField.vue';
-import TextAreaField from '../fields/TextAreaField.vue';
-import TelField from '../fields/TelField.vue';
-import EmailField from '../fields/EmailField.vue';
-import PasswordField from '../fields/PasswordField.vue';
-import URLField from '../fields/URLField.vue';
-import DateField from '../fields/DateField.vue';
-import NumberField from '../fields/NumberField.vue';
-import CurrencyField from '../fields/CurrencyField.vue';
-import ColorField from '../fields/ColorField.vue';
-import HiddenField from '../fields/HiddenField.vue';
-import SelectField from '../fields/SelectField.vue';
-import RadioField from '../fields/RadioField.vue';
-import ComboboxField from '../fields/ComboboxField.vue';
-import RangeField from '../fields/RangeField.vue';
-import CheckboxField from '../fields/CheckboxField.vue';
-import SwitchField from '../fields/SwitchField.vue';
-import FieldsetField from '../fields/FieldsetField.vue';
-import ArrayField from '../fields/ArrayField.vue';
-import OutputField from '../fields/OutputField.vue';
+import {
+  TextField,
+  TextAreaField,
+  TelField,
+  EmailField,
+  PasswordField,
+  URLField,
+  DateField,
+  NumberField,
+  CurrencyField,
+  ColorField,
+  HiddenField,
+  SelectField,
+  RadioField,
+  ComboboxField,
+  RangeField,
+  CheckboxField,
+  SwitchField,
+  FieldsetField,
+  ArrayField,
+  OutputField
+} from '../fields';
 
 const props = defineProps({
   formConfig: {
@@ -648,18 +650,20 @@ const initializeFormData = () => {
   console.log('Before merging with initial data:', newData);
   
   // Merge with initial data, but preserve fieldset objects
-  Object.keys(props.initialData).forEach(key => {
-    const field = props.formConfig.fields.find(f => f && f.name === key);
-    if (field && field.type === 'fieldset') {
-      // Don't overwrite fieldset objects with strings
-      if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
-        newData[key] = { ...newData[key], ...props.initialData[key] };
-        console.log(`initializeFormData: Merging fieldset ${key} with initial data: ${JSON.stringify(newData[key])}`);
+  if (props.initialData && typeof props.initialData === 'object') {
+    Object.keys(props.initialData).forEach(key => {
+      const field = props.formConfig.fields.find(f => f && f.name === key);
+      if (field && field.type === 'fieldset') {
+        // Don't overwrite fieldset objects with strings
+        if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
+          newData[key] = { ...newData[key], ...props.initialData[key] };
+          console.log(`initializeFormData: Merging fieldset ${key} with initial data: ${JSON.stringify(newData[key])}`);
+        }
+      } else {
+        newData[key] = props.initialData[key];
       }
-    } else {
-      newData[key] = props.initialData[key];
-    }
-  });
+    });
+  }
   
   console.log('Final formData after initialization:', newData);
   formData.value = newData;
