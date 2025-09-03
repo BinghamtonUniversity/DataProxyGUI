@@ -53,8 +53,8 @@
         @blur="handleBlur"
         @focus="handleFocus"
       >
-        <!-- Placeholder option -->
-        <option v-if="!multiple && placeholder" value="" disabled class="text-gray-500">
+        <!-- Placeholder option - only show when no value is selected -->
+        <option v-if="shouldShowPlaceholder" value="" disabled class="text-gray-500">
           {{ placeholder }}
         </option>
         
@@ -123,8 +123,8 @@
       @blur="handleBlur"
       @focus="handleFocus"
     >
-      <!-- Placeholder option -->
-      <option v-if="!multiple && placeholder" value="" disabled class="text-gray-500">
+      <!-- Placeholder option - only show when no value is selected -->
+      <option v-if="shouldShowPlaceholder" value="" disabled class="text-gray-500">
         {{ placeholder }}
       </option>
       
@@ -313,6 +313,12 @@ const isDisabled = computed(() => {
   return props.disabled || !props.edit;
 });
 
+const shouldShowPlaceholder = computed(() => {
+  return !props.multiple && 
+         props.placeholder && 
+         (internalValue.value === undefined || internalValue.value === null || internalValue.value === '');
+});
+
 const processedOptions = computed(() => {
   return props.options.map(option => {
     // Handle optgroup format
@@ -498,8 +504,13 @@ watch(() => props.value, (newValue) => {
   if (props.multiple) {
     internalValue.value = Array.isArray(newValue) ? newValue : [];
   } else {
-    // If newValue is undefined, null, or empty string, default to false
-    internalValue.value = (newValue === undefined || newValue === null || newValue === '') ? false : newValue;
+    // Only set the value if it's explicitly provided
+    if (newValue !== undefined && newValue !== null && newValue !== '') {
+      internalValue.value = newValue;
+    } else {
+      // Keep placeholder visible by not setting a default value
+      internalValue.value = '';
+    }
   }
 }, { immediate: true });
 
@@ -509,6 +520,26 @@ watch(() => props.validate, () => {
 
 // Lifecycle
 onMounted(() => {
+  console.log('SelectField mounted:', {
+    name: props.name,
+    value: props.value,
+    options: props.options,
+    placeholder: props.placeholder
+  });
+  
+  // Only set a value if explicitly provided in props
+  if (props.value !== undefined && props.value !== null && props.value !== '') {
+    internalValue.value = props.value;
+    console.log('Setting value from props:', props.value);
+  } else {
+    // Keep placeholder visible by not setting a default value
+    internalValue.value = '';
+    console.log('No value provided, keeping placeholder visible');
+  }
+  
+  console.log('Final internalValue:', internalValue.value);
+  
+  // Only validate if we have a value
   if (internalValue.value !== '' && internalValue.value !== null && internalValue.value !== undefined) {
     validate();
   }

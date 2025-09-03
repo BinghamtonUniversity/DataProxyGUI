@@ -627,7 +627,7 @@ const initializeFormData = () => {
       if (field.multiple) {
         newData[field.name] = [];
       } else {
-        newData[field.name] = '';
+        newData[field.name] = field.value || '';
       }
     } else if (field.array) {
       const minItems = field.array.min || 1;
@@ -635,7 +635,7 @@ const initializeFormData = () => {
         if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
           return false;
         } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {
-          return field.multiple ? [] : '';
+          return field.multiple ? [] : (field.value || '');
         } else {
           return '';
         }

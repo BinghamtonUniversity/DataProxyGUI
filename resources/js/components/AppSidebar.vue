@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Users, Database, File, Calendar, History } from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutGrid, Users, Database, File, Calendar, History, Building2, Globe } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -13,6 +13,11 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: '/dashboard',
         icon: LayoutGrid,
+    },
+    {
+        title: 'Environments',
+        href: '/environments',
+        icon: Building2,
     },
     {
         title: 'Users',
@@ -77,6 +82,11 @@ const footerNavItems: NavItem[] = [
                 title: 'Formbuilder Example',
                 href: '/formbuilder-example',
                 icon: LayoutGrid,
+            },
+            {
+                title: 'Environments',
+                href: '/environments',
+                icon: Globe,
             },
         ]
     },
