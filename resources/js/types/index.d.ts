@@ -91,5 +91,44 @@ export interface ApiVersionFunction {
     content: string;
 }
 
+export interface Api {
+  id: number
+  name: string
+  description: string
+  tags: string
+  api_type: string
+  user_id: number
+  created_at: string
+  updated_at: string
+  created_by_id: number
+  updated_by_id: number
+  deleted_at: string | null
+}
+
+interface ApiInstanceRouteUserMap {
+  verb: string,
+  route: string,
+  api_user: number
+}
+
+interface ApiInstanceResource {
+  name: string,
+  resource: number
+}
+
+export interface ApiInstance {
+  id: number
+  name: string
+  route: string
+  route_user_map: ApiInstanceRouteUserMap[]
+  resources: ApiInstanceResource[] 
+  options?: string // TODO: JSON
+  public: number
+  created_at: string
+  updated_at: string
+  api_id: number
+  api_version_id: number
+  environment_id: number
+}
 
 export type BreadcrumbItemType = BreadcrumbItem;

@@ -20,7 +20,7 @@ import { h, ref, onMounted, computed } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, Api } from '@/types'
+import { type BreadcrumbItem, ApiInstance} from '@/types'
 import { Head } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -29,6 +29,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuItem
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import {
@@ -44,91 +45,194 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Label } from '@/components/ui/label'
 
 
+
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: 'APIs',
-    href: '/apis',
+    title: 'API Instances',
+    href: '/api_instances',
   },
 ]
 
-const apis = ref<Api[]>([])
+const api_instances = ref<ApiInstance[]>([])
 const loading = ref(true)
 const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 
-//new API
-const newApiDialogOpen = ref(false)
-const newApiForm = ref({
+//new API Instance
+const newApiInstanceDialogOpen = ref(false)
+const newApiInstanceForm = ref({
+  id: '',
+  environment_id: '',
+  api_id: '',
+  api_version_id: '',
   name: '',
-  description: '',
-  tags: ''
+  route: '',
+  route_user_map: [
+    {
+      api_user: '',
+      verb: '',
+      route: ''
+    }
+  ],
+  resources: [
+    {
+      name: '',
+      resource: ''
+    }
+  ]
 })
-const newApiLoading = ref(false)
-const newApiError = ref('')
+const newApiInstanceLoading = ref(false)
+const newApiInstanceError = ref('')
 
-//edit API
+// Edit API Instance
 const isEditMode = ref(false)
-const editingApiId = ref<number|null>(null)
+const editingApiInstanceId = ref<number|null>(null)
 
-const openNewApiDialog = () => {
-  newApiForm.value = { name: '', description: '', tags: '' }
-  newApiError.value = ''
-  newApiDialogOpen.value = true
+const openNewApiInstanceDialog = () => {
+  newApiInstanceForm.value = {
+    id: '',
+    environment_id: '',
+    api_id: '',
+    api_version_id: '',
+    name: '',
+    route: '',
+    route_user_map: [
+      {
+        api_user: '',
+        verb: '',
+        route: ''
+      }
+    ],
+    resources: [
+      {
+        name: '',
+        resource: ''
+      }
+    ]
+  }
+  newApiInstanceError.value = ''
+  newApiInstanceDialogOpen.value = true
 }
 
-const closeNewApiDialog = () => {
-  newApiDialogOpen.value = false
-  newApiError.value = ''
-  newApiForm.value = { name: '', description: '', tags: '' }
+const closeNewApiInstanceDialog = () => {
+  newApiInstanceDialogOpen.value = false
+  newApiInstanceError.value = ''
+  newApiInstanceForm.value = {
+    id: '',
+    environment_id: '',
+    api_id: '',
+    api_version_id: '',
+    name: '',
+    route: '',
+    route_user_map: [
+      {
+        api_user: '',
+        verb: '',
+        route: ''
+      }
+    ],
+    resources: [
+      {
+        name: '',
+        resource: ''
+      }
+    ]
+  }
   isEditMode.value = false
-  editingApiId.value = null
+  editingApiInstanceId.value = null
 }
 
-const submitNewApi = async (e: Event) => {
+const submitNewApiInstance = async (e: Event) => {
   e.preventDefault()
-  newApiLoading.value = true
-  newApiError.value = ''
+  newApiInstanceLoading.value = true
+  newApiInstanceError.value = ''
   try {
-    let url = `${djangoBaseUrl}/api/apis`
+    let url = `${djangoBaseUrl}/api/api_instances`
     let method = 'POST'
-    if (isEditMode.value && editingApiId.value) {
-      url = `${djangoBaseUrl}/api/apis/${editingApiId.value}`
+    if (isEditMode.value && editingApiInstanceId.value) {
+      url = `${djangoBaseUrl}/api/api_instances/${editingApiInstanceId.value}`
       method = 'PUT'
     }
-    const body = isEditMode.value && editingApiId.value
-      ? { ...newApiForm.value, id: editingApiId.value }
-      : {... newApiForm.value, api_type: 'python'}
-    const response = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    if (!response.ok) throw new Error('Failed to save API')
-    closeNewApiDialog()
-    await fetchApis()
-    // refresh  API list here
+    const body = isEditMode.value && editingApiInstanceId.value
+      ? { ...newApiInstanceForm.value, id: editingApiInstanceId.value }
+      : { ...newApiInstanceForm.value }
+
+    console.log('Submitting API Instance:', { url, method, body })
+    // const response = await fetch(url, {
+    //   method,
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(body),
+    // })
+    // if (!response.ok) throw new Error('Failed to save API Instance')
+    closeNewApiInstanceDialog()
+    await fetchApiInstances() // do i need this?
+    // refresh API Instance list here
   } catch (err: any) {
-    newApiError.value = err.message || 'Error saving API'
+    newApiInstanceError.value = err.message || 'Error saving API Instance'
   } finally {
-    newApiLoading.value = false
+    newApiInstanceLoading.value = false
     isEditMode.value = false
-    editingApiId.value = null
+    editingApiInstanceId.value = null
   }
 }
 
-const openEditApiDialog = (api: Api) => {
+const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
   isEditMode.value = true
-  editingApiId.value = api.id
-  newApiForm.value = {
-    name: api.name,
-    description: api.description,
-    tags: api.tags,
+  editingApiInstanceId.value = apiInstance.id
+  newApiInstanceForm.value = {
+    id: apiInstance.id?.toString() || '',
+    environment_id: apiInstance.environment_id?.toString() || '',
+    api_id: apiInstance.api_id?.toString() || '',
+    api_version_id: apiInstance.api_version_id?.toString() || '',
+    name: apiInstance.name || '',
+    route: apiInstance.route || '',
+    route_user_map: apiInstance.route_user_map?.map(item => ({
+      api_user: item.api_user?.toString() || '',
+      verb: item.verb || '',
+      route: item.route || ''
+    })) || [],
+    resources: apiInstance.resources?.map(item => ({
+      name: item.name || '',
+      resource: item.resource?.toString() || ''
+    })) || [
+      {
+        name: '',
+        resource: ''
+      }
+    ]
   }
-  newApiDialogOpen.value = true
+  newApiInstanceDialogOpen.value = true
 }
 
+// Helper functions for managing array fields
+const addRouteUserMap = () => {
+  newApiInstanceForm.value.route_user_map.push({
+    api_user: '',
+    verb: '',
+    route: ''
+  })
+}
+
+const removeRouteUserMap = (index: number) => {
+  if (newApiInstanceForm.value.route_user_map.length > 0) {
+    newApiInstanceForm.value.route_user_map.splice(index, 1)
+  }
+}
+
+const addResource = () => {
+  newApiInstanceForm.value.resources.push({
+    name: '',
+    resource: ''
+  })
+}
+
+const removeResource = (index: number) => {
+  if (newApiInstanceForm.value.resources.length > 1) {
+    newApiInstanceForm.value.resources.splice(index, 1)
+  }
+}
 
 // Define table columns
-const columns: ColumnDef<Api>[] = [
+const columns: ColumnDef<ApiInstance>[] = [
   {
     id: 'select',
     header: ({ table }) => h(Checkbox, {
@@ -165,21 +269,37 @@ const columns: ColumnDef<Api>[] = [
     cell: ({ row }) => h('div', { class: 'font-medium' }, row.getValue('name')),
   },
   {
-    accessorKey: 'api_type',
-    header: 'Type',
+    accessorKey: 'route',
+    header: 'Slug',
     cell: ({ row }) => {
-      const type = row.getValue('api_type') as string
+      const type = row.getValue('route') as string
       return h('div', { 
         class: 'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300' 
       }, type)
     },
   },
   {
-    accessorKey: 'tags',
-    header: 'Tags',
+    accessorKey: 'environment_id',
+    header: 'Environment',
     cell: ({ row }) => {
-      const tags = row.getValue('tags') as string
-      return h('div', { class: 'truncate max-w-32' }, tags || 'No tags')
+      const env_id = row.getValue('environment_id') as number
+      return h('div', { class: 'truncate max-w-32' }, env_id || 'No environment' )
+    },
+  },
+  {
+    accessorKey: 'api_id',
+    header: 'API ID',
+    cell: ({ row }) => {
+      const api_id = row.getValue('environment_id') as number
+      return h('div', { class: 'truncate max-w-32' }, api_id || 'No API ID' )
+    },
+  },
+  {
+    accessorKey: 'api_version_id',
+    header: 'API Version ID',
+    cell: ({ row }) => {
+      const api_version_id = row.getValue('api_version_id') as number
+      return h('div', { class: 'truncate max-w-32' }, api_version_id || 'No Version ID' )
     },
   },
   {
@@ -196,24 +316,41 @@ const columns: ColumnDef<Api>[] = [
     },
   },
   {
-    accessorKey: 'created_by_id',
-    header: 'Created By',
-    cell: ({ row }) => h('div', { class: 'text-sm' }, `User ${row.getValue('created_by_id')}`),
+    id: 'resources',
+    header: 'Resources',
+    cell: ({ row }) => {
+      const resources = row.original.resources || []
+      
+      if (resources.length === 0) {
+        return h('div', { class: 'text-gray-500 text-sm' }, 'No resources')
+      }
+      
+      return h('div', { class: 'flex flex-wrap gap-1' }, [
+        ...resources.map(res => 
+          h('span', { 
+            key: res.name,
+            class: 'inline-flex items-center rounded px-2 py-1 text-xs bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-300 font-medium'
+          }, res.name)
+        ),
+      ])
+    },
   },
+
   {
     id: 'actions',
     enableHiding: false,
     cell: ({ row }) => {
-      const api = row.original
-      return h(TableActions<Api>, {
-        item: api,
-        // Optional: customize the view details link
-        // viewDetailsHref: `/custom/path/${api.id}`,
-        onEdit: () => openEditApiDialog(api),
-        // onDelete: () => handleDeleteApi(api),
-      })
-    },
-  }
+        const instance = row.original
+        return h(TableActions<ApiInstance>, {
+            item: instance,
+            viewDetailsHref: `/api-instances/${instance.id}/details`,
+            editLabel: 'Edit Instance',
+            deleteLabel: 'Delete Instance',
+            // onEdit: () => openEditInstanceDialog(instance),
+            // onDelete: () => handleDeleteInstance(instance),
+        })
+        }
+    }
 ]
 
 // // Table state
@@ -223,14 +360,13 @@ const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
 const expanded = ref<ExpandedState>({})
 
-
 const table = computed(() => {
-  if (!apis.value || apis.value.length === 0) {
+  if (!api_instances.value || api_instances.value.length === 0) {
     return null
   }
 
   return useVueTable({
-    data: apis.value,
+    data: api_instances.value,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -265,13 +401,13 @@ const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.le
 const canPreviousPage = computed(() => table.value?.getCanPreviousPage() || false)
 const canNextPage = computed(() => table.value?.getCanNextPage() || false)
 
-const fetchApis = async () => {
+const fetchApiInstances = async () => {
   loading.value = true
   try {
-    const response = await fetch(`${djangoBaseUrl}/api/apis`)
-    apis.value = await response.json()
+    const response = await fetch(`${djangoBaseUrl}/api/api_instances`)
+    api_instances.value = await response.json()
   } catch (e) {
-    apis.value = []
+    api_instances.value = []
     console.error('Error fetching APIs:', e)
   } finally {
     loading.value = false
@@ -279,7 +415,7 @@ const fetchApis = async () => {
 }
 
 // Fetch data on mount
-onMounted(fetchApis)
+onMounted(fetchApiInstances)
 </script>
 
 <template>
@@ -300,55 +436,17 @@ onMounted(fetchApis)
         </template>
         
         <!-- Data Table -->
-        <template v-else-if="apis?.length && table">
+        <template v-else-if="api_instances?.length && table">
           <div class="w-full">
             <!-- Table Controls -->
             <div class="flex items-center py-4">
-              <Input
+                <Input
                 class="max-w-sm"
                 placeholder="Filter by name..."
                 v-model="nameFilterValue"
               />
-              
-              <Dialog v-model:open="newApiDialogOpen">
-                <DialogTrigger as-child>
-                  <Button class="ml-4 text-green-600" variant="outline" @click="openNewApiDialog">
-                    <Plus class="mr-2 h-4 w-4" />
-                    New API
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <form @submit="submitNewApi" class="space-y-6">
-                    <DialogHeader>
-                      <DialogTitle>{{ isEditMode ? 'Edit API' : 'Create New API' }}</DialogTitle>
-                    </DialogHeader>
-                    <div class="grid gap-4">
-                      <div>
-                        <Label for="api-name" class="mb-1">Name</Label>
-                        <Input id="api-name" v-model="newApiForm.name" required placeholder="API Name" />
-                      </div>
-                      <div>
-                        <Label for="api-description" class="mb-1">Description</Label>
-                        <Input id="api-description" v-model="newApiForm.description" placeholder="Description" />
-                      </div>
-                      <div>
-                        <Label for="api-tags" class="mb-1">Tags</Label>
-                        <Input id="api-tags" v-model="newApiForm.tags" placeholder="Tags (comma separated)" />
-                      </div>
-                      <div v-if="newApiError" class="text-red-600 text-sm">{{ newApiError }}</div>
-                    </div>
-                    <DialogFooter class="gap-2">
-                      <DialogClose as-child>
-                        <Button variant="secondary" type="button" @click="closeNewApiDialog">Cancel</Button>
-                      </DialogClose>
-                      <Button type="submit" variant="default" :disabled="newApiLoading">
-                        <span v-if="newApiLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
-                        <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
+                
+             
 
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
@@ -395,14 +493,15 @@ onMounted(fetchApis)
                       <TableRow v-if="row.getIsExpanded()" class="bg-muted/50">
                         <TableCell :colspan="row.getAllCells().length" class="p-4">
                           <div class="space-y-2">
-                            <h4 class="font-semibold">API Details</h4>
+                            <h4 class="font-semibold">API Instance Details</h4>
                             <div class="grid grid-cols-2 gap-4 text-sm">
-                              <div><strong>Description:</strong> {{ row.original.description || 'No description' }}</div>
-                              <div><strong>User ID:</strong> {{ row.original.user_id }}</div>
-                              <div><strong>Created:</strong> {{ new Date(row.original.created_at).toLocaleString() }}</div>
-                              <div><strong>Updated:</strong> {{ new Date(row.original.updated_at).toLocaleString() }}</div>
-                              <div><strong>Updated By:</strong> User {{ row.original.updated_by_id }}</div>
-                              <div><strong>Status:</strong> {{ row.original.deleted_at ? 'Deleted' : 'Active' }}</div>
+                              <div><strong>ID:</strong> {{ row.original.id }}</div>
+                              <div><strong>Name:</strong> {{ row.original.name }}</div>
+                              <div><strong>Slug:</strong> {{ row.original.route }}</div>
+                              <div><strong>Environment:</strong> {{ row.original.environment_id }}</div>
+                              <div><strong>API:</strong> {{ row.original.api_id }}</div>
+                              <div><strong>API Version:</strong> {{ row.original.api_version_id }}</div>
+                              <div><strong>Created At:</strong> {{ new Date(row.original.created_at).toLocaleString() }}</div>
                             </div>
                           </div>
                         </TableCell>
