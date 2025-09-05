@@ -15,12 +15,12 @@ import {
   getSortedRowModel,
   useVueTable,
 } from '@tanstack/vue-table'
-import { ArrowUpDown, ChevronDown } from 'lucide-vue-next'
-import { h, ref, onMounted } from 'vue'
+import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
+import { h, ref, onMounted, computed } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem } from '@/types'
+import { type BreadcrumbItem, Api } from '@/types'
 import { Head } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -39,25 +39,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import ApiTableActions from '../components/ApiTableActions.vue'
+import TableActions from '../components/TableActions.vue'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 
-
-
-interface Api {
-  id: number
-  name: string
-  description: string
-  tags: string
-  api_type: string
-  user_id: number
-  created_at: string
-  updated_at: string
-  created_by_id: number
-  updated_by_id: number
-  deleted_at: string | null
-}
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -220,44 +205,65 @@ const columns: ColumnDef<Api>[] = [
     enableHiding: false,
     cell: ({ row }) => {
       const api = row.original
-      return h(ApiTableActions, {
-        api,
-        // onExpand: row.toggleExpanded,
+      return h(TableActions<Api>, {
+        item: api,
+        // Optional: customize the view details link
+        // viewDetailsHref: `/custom/path/${api.id}`,
         onEdit: () => openEditApiDialog(api),
+        // onDelete: () => handleDeleteApi(api),
       })
     },
-  },
+  }
 ]
 
-// Table state
+// // Table state
 const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
 const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
 const expanded = ref<ExpandedState>({})
 
-// Create table instance
-const table = useVueTable({
-  get data() { return apis.value },
-  columns,
-  getCoreRowModel: getCoreRowModel(),
-  getPaginationRowModel: getPaginationRowModel(),
-  getSortedRowModel: getSortedRowModel(),
-  getFilteredRowModel: getFilteredRowModel(),
-  getExpandedRowModel: getExpandedRowModel(),
-  onSortingChange: updaterOrValue => valueUpdater(updaterOrValue, sorting),
-  onColumnFiltersChange: updaterOrValue => valueUpdater(updaterOrValue, columnFilters),
-  onColumnVisibilityChange: updaterOrValue => valueUpdater(updaterOrValue, columnVisibility),
-  onRowSelectionChange: updaterOrValue => valueUpdater(updaterOrValue, rowSelection),
-  // onExpandedChange: updaterOrValue => valueUpdater(updaterOrValue, expanded),
-  state: {
-    get sorting() { return sorting.value },
-    get columnFilters() { return columnFilters.value },
-    get columnVisibility() { return columnVisibility.value },
-    get rowSelection() { return rowSelection.value },
-    get expanded() { return expanded.value },
-  },
+
+const table = computed(() => {
+  if (!apis.value || apis.value.length === 0) {
+    return null
+  }
+
+  return useVueTable({
+    data: apis.value,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    onSortingChange: updaterOrValue => valueUpdater(updaterOrValue, sorting),
+    onColumnFiltersChange: updaterOrValue => valueUpdater(updaterOrValue, columnFilters),
+    onColumnVisibilityChange: updaterOrValue => valueUpdater(updaterOrValue, columnVisibility),
+    onRowSelectionChange: updaterOrValue => valueUpdater(updaterOrValue, rowSelection),
+    // onExpandedChange: updaterOrValue => valueUpdater(updaterOrValue, expanded),
+    state: {
+      get sorting() { return sorting.value },
+      get columnFilters() { return columnFilters.value },
+      get columnVisibility() { return columnVisibility.value },
+      get rowSelection() { return rowSelection.value },
+      // get expanded() { return expanded.value },
+    },
+  })
 })
+
+// Computed properties
+const headerGroups = computed(() => table.value?.getHeaderGroups() || [])
+const tableRows = computed(() => table.value?.getRowModel().rows || [])
+const hidableColumns = computed(() => table.value?.getAllColumns().filter(column => column.getCanHide()) || [])
+const nameFilterValue = computed({
+  get: () => table.value?.getColumn('name')?.getFilterValue() as string || '',
+  set: (value: string) => table.value?.getColumn('name')?.setFilterValue(value)
+})
+const selectedRowsCount = computed(() => table.value?.getFilteredSelectedRowModel().rows.length || 0)
+const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.length || 0)
+const canPreviousPage = computed(() => table.value?.getCanPreviousPage() || false)
+const canNextPage = computed(() => table.value?.getCanNextPage() || false)
 
 const fetchApis = async () => {
   loading.value = true
@@ -282,6 +288,8 @@ onMounted(fetchApis)
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
       <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
+        
+        <!-- Loading State -->
         <template v-if="loading">
           <div class="flex items-center justify-center h-32">
             <div class="text-center">
@@ -290,55 +298,58 @@ onMounted(fetchApis)
             </div>
           </div>
         </template>
-        <template v-else>
+        
+        <!-- Data Table -->
+        <template v-else-if="apis?.length && table">
           <div class="w-full">
             <!-- Table Controls -->
             <div class="flex items-center py-4">
               <Input
                 class="max-w-sm"
                 placeholder="Filter by name..."
-                :model-value="table.getColumn('name')?.getFilterValue() as string"
-                @update:model-value="table.getColumn('name')?.setFilterValue($event)"
+                v-model="nameFilterValue"
               />
+              
               <Dialog v-model:open="newApiDialogOpen">
-              <DialogTrigger as-child>
-                <Button class="ml-4 text-green-600" variant="outline" @click="openNewApiDialog">
-                  New API
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <form @submit="submitNewApi" class="space-y-6">
-                  <DialogHeader>
-                    <DialogTitle>{{ isEditMode ? 'Edit API' : 'Create New API' }}</DialogTitle>
+                <DialogTrigger as-child>
+                  <Button class="ml-4 text-green-600" variant="outline" @click="openNewApiDialog">
+                    <Plus class="mr-2 h-4 w-4" />
+                    New API
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <form @submit="submitNewApi" class="space-y-6">
+                    <DialogHeader>
+                      <DialogTitle>{{ isEditMode ? 'Edit API' : 'Create New API' }}</DialogTitle>
+                    </DialogHeader>
+                    <div class="grid gap-4">
+                      <div>
+                        <Label for="api-name" class="mb-1">Name</Label>
+                        <Input id="api-name" v-model="newApiForm.name" required placeholder="API Name" />
+                      </div>
+                      <div>
+                        <Label for="api-description" class="mb-1">Description</Label>
+                        <Input id="api-description" v-model="newApiForm.description" placeholder="Description" />
+                      </div>
+                      <div>
+                        <Label for="api-tags" class="mb-1">Tags</Label>
+                        <Input id="api-tags" v-model="newApiForm.tags" placeholder="Tags (comma separated)" />
+                      </div>
+                      <div v-if="newApiError" class="text-red-600 text-sm">{{ newApiError }}</div>
+                    </div>
+                    <DialogFooter class="gap-2">
+                      <DialogClose as-child>
+                        <Button variant="secondary" type="button" @click="closeNewApiDialog">Cancel</Button>
+                      </DialogClose>
+                      <Button type="submit" variant="default" :disabled="newApiLoading">
+                        <span v-if="newApiLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
+                        <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
 
-                  </DialogHeader>
-                  <div class="grid gap-4">
-                    <div>
-                      <Label for="api-name" class="mb-1">Name</Label>
-                      <Input id="api-name" v-model="newApiForm.name" required placeholder="API Name" />
-                    </div>
-                    <div>
-                      <Label for="api-description" class="mb-1">Description</Label>
-                      <Input id="api-description" v-model="newApiForm.description" placeholder="Description" />
-                    </div>
-                    <div>
-                      <Label for="api-tags" class="mb-1">Tags</Label>
-                      <Input id="api-tags" v-model="newApiForm.tags" placeholder="Tags (comma separated)" />
-                    </div>
-                    <div v-if="newApiError" class="text-red-600 text-sm">{{ newApiError }}</div>
-                  </div>
-                  <DialogFooter class="gap-2">
-                    <DialogClose as-child>
-                      <Button variant="secondary" type="button" @click="closeNewApiDialog">Cancel</Button>
-                    </DialogClose>
-                    <Button type="submit" variant="default" :disabled="newApiLoading">
-                      <span v-if="newApiLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
-                      <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
                   <Button variant="outline" class="ml-auto">
@@ -347,7 +358,7 @@ onMounted(fetchApis)
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuCheckboxItem
-                    v-for="column in table.getAllColumns().filter((column) => column.getCanHide())"
+                    v-for="column in hidableColumns"
                     :key="column.id"
                     class="capitalize"
                     :model-value="column.getIsVisible()"
@@ -363,7 +374,7 @@ onMounted(fetchApis)
             <div class="rounded-md border">
               <Table>
                 <TableHeader>
-                  <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
+                  <TableRow v-for="headerGroup in headerGroups" :key="headerGroup.id">
                     <TableHead v-for="header in headerGroup.headers" :key="header.id">
                       <FlexRender 
                         v-if="!header.isPlaceholder" 
@@ -374,8 +385,8 @@ onMounted(fetchApis)
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <template v-if="table.getRowModel().rows?.length">
-                    <template v-for="row in table.getRowModel().rows" :key="row.id">
+                  <template v-if="tableRows.length">
+                    <template v-for="row in tableRows" :key="row.id">
                       <TableRow :data-state="row.getIsSelected() && 'selected'">
                         <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                           <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
@@ -410,27 +421,35 @@ onMounted(fetchApis)
             <!-- Pagination -->
             <div class="flex items-center justify-end space-x-2 py-4">
               <div class="flex-1 text-sm text-muted-foreground">
-                {{ table.getFilteredSelectedRowModel().rows.length }} of
-                {{ table.getFilteredRowModel().rows.length }} row(s) selected.
+                {{ selectedRowsCount }} of {{ totalRowsCount }} row(s) selected.
               </div>
               <div class="space-x-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  :disabled="!table.getCanPreviousPage()"
-                  @click="table.previousPage()"
+                  :disabled="!canPreviousPage"
+                  @click="table?.previousPage()"
                 >
                   Previous
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  :disabled="!table.getCanNextPage()"
-                  @click="table.nextPage()"
+                  :disabled="!canNextPage"
+                  @click="table?.nextPage()"
                 >
                   Next
                 </Button>
               </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- No Data State -->
+        <template v-else>
+          <div class="flex items-center justify-center h-32">
+            <div class="text-center">
+              <p>No APIs available.</p>
             </div>
           </div>
         </template>

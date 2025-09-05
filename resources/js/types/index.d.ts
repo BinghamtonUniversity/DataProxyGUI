@@ -69,7 +69,7 @@ export interface ResourceData{
 }
 
 
-export interface ApiData {
+export interface ApiData { // TO:DO -- API Version Data
   id: number;
   api: number; 
   summary: string | null;
@@ -80,7 +80,7 @@ export interface ApiData {
   version_urls: RouteData[]; 
   options: any[]; 
   version_files: any[]; 
-  resources: Record<string, any>; 
+  resources: ResourceData[]; 
   created_at: string; 
   updated_at: string; 
   created_by: number; 
@@ -92,5 +92,74 @@ export interface ApiVersionFunction {
     content: string;
 }
 
+export interface Api {
+  id: number
+  name: string
+  description: string
+  tags: string
+  api_type: string
+  user_id: number
+  created_at: string
+  updated_at: string
+  created_by_id: number
+  updated_by_id: number
+  deleted_at: string | null
+}
+
+interface ApiInstanceRouteUserMap {
+  verb: string,
+  route: string,
+  api_user: number
+}
+
+interface ApiInstanceResource {
+  name: string,
+  resource: number
+}
+
+export interface ApiInstance {
+  id: number
+  name: string
+  route: string
+  route_user_map: ApiInstanceRouteUserMap[]
+  resources: ApiInstanceResource[] 
+  options?: string // TODO: JSON
+  public: number
+  created_at: string
+  updated_at: string
+  api_id: number
+  api_version_id: number
+  environment_id: number
+}
+
+export interface Environment {
+  id: number,
+  domain: string,
+  name: string,
+  type: string,
+  created_at: string,
+  updated_at: string,
+  deleted_at: string | null
+}
+
+export interface ApiUser {
+  id: number,
+  is_active: number,
+  created_at: string,
+  environment_id: number,
+  app_name: string,
+  app_secret: string,
+  api_key: string
+}
+
+export interface Resource {
+  id: number,
+  name: string,
+  config: string,
+  type: string,
+  created_at: string,
+  updated_at: string,
+  resource_type: string,
+}
 
 export type BreadcrumbItemType = BreadcrumbItem;

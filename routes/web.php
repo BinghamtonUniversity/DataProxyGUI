@@ -16,6 +16,10 @@ Route::get('/apis', function () {
     return Inertia::render('Apis');
 })->middleware(['auth', 'verified'])->name('apis');
 
+Route::get('/api_instances', function () {
+    return Inertia::render('ApiInstances');
+})->middleware(['auth', 'verified'])->name('api_instances');
+
 Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->group(function () {
     // Single route that handles all tabs with optional tab parameter
     Route::get('/{tab?}', function ($api_type, $api_id, $tab = 'routes') {
