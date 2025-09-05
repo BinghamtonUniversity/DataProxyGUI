@@ -35,7 +35,15 @@
         <div v-if="$slots.footer" :class="modalClasses.footer">
           <slot name="footer"></slot>
         </div>
-
+        
+        <!-- Default footer with close button if no custom footer -->
+        <div v-else :class="modalClasses.footer">
+          <button 
+            @click="closeModal"
+            :class="modalClasses.secondaryButton">
+            Close
+          </button>
+        </div>
       </div>
     </div>
   </div>

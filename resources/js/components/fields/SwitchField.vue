@@ -46,7 +46,7 @@
            @focus="handleFocus"
          >
            <span
-             class="inline-block h-5 w-5 transform rounded-full transition-all duration-200 ease-in-out shadow-md border border-gray-200"
+             class="inline-block h-5 w-5 transform rounded-full bg-white transition-all duration-200 ease-in-out shadow-md border border-gray-200"
              :class="internalValue ? 'translate-x-6' : 'translate-x-1'"
            ></span>
          </button>

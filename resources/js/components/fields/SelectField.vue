@@ -27,7 +27,11 @@
     <!-- Input Field -->
     <div v-if="!inFieldset" class="flex items-stretch w-full">
       <!-- Pre (icon) -->
-  
+      <span 
+        class="inline-flex items-center justify-center px-3 border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm font-normal rounded-l-md min-w-[44px]"
+      >
+        <i class="fa-solid fa-chevron-down text-base"></i>
+      </span>
       
       <!-- Main Select -->
       <select
@@ -40,21 +44,28 @@
         :autocomplete="autocomplete"
         :autofocus="autofocus"
         :name="name"
-        class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md"
+        class="flex-1 min-w-0 py-2 px-3 text-sm border bg-white dark:!bg-gray-800 text-gray-900 dark:!text-white transition-colors duration-200"
         :class="[
+          // Border classes
+          'border-l-0',
+          'border-t border-b border-gray-300 dark:!border-gray-600',
+          // Border radius classes
+          'rounded-r-md',
           // Focus states
           'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
           // Disabled states
-          !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 opacity-75' : 'hover:border-gray-400 dark:hover:border-gray-500',
+          !edit ? 'cursor-not-allowed bg-gray-100 dark:!bg-gray-700 text-gray-500 dark:!text-gray-400' : 'hover:border-gray-400 dark:hover:border-gray-500',
           // Error states
-          localError ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : ''
+          (localError || (props.errors && props.errors.length > 0)) ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : '',
+          // Readonly states
+          !edit ? 'bg-gray-100 dark:!bg-gray-700' : ''
         ]"
         @change="handleChange"
         @blur="handleBlur"
         @focus="handleFocus"
       >
-        <!-- Placeholder option - only show when no value is selected -->
-        <option v-if="shouldShowPlaceholder" value="" disabled class="text-gray-500">
+        <!-- Placeholder option -->
+        <option v-if="!multiple && placeholder" value="" disabled class="text-gray-500">
           {{ placeholder }}
         </option>
         
@@ -110,12 +121,12 @@
       :autocomplete="autocomplete"
       :autofocus="autofocus"
       :name="name"
-      class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md"
+      class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md"
       :class="[
         // Focus states
         'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
         // Disabled states
-        !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 opacity-75' : 'hover:border-gray-400 dark:hover:border-gray-500',
+        !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : 'hover:border-gray-400 dark:hover:border-gray-500',
         // Error states
         localError ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : ''
       ]"
@@ -123,8 +134,8 @@
       @blur="handleBlur"
       @focus="handleFocus"
     >
-      <!-- Placeholder option - only show when no value is selected -->
-      <option v-if="shouldShowPlaceholder" value="" disabled class="text-gray-500">
+      <!-- Placeholder option -->
+      <option v-if="!multiple && placeholder" value="" disabled class="text-gray-500">
         {{ placeholder }}
       </option>
       
@@ -313,12 +324,6 @@ const isDisabled = computed(() => {
   return props.disabled || !props.edit;
 });
 
-const shouldShowPlaceholder = computed(() => {
-  return !props.multiple && 
-         props.placeholder && 
-         (internalValue.value === undefined || internalValue.value === null || internalValue.value === '');
-});
-
 const processedOptions = computed(() => {
   return props.options.map(option => {
     // Handle optgroup format
@@ -504,13 +509,8 @@ watch(() => props.value, (newValue) => {
   if (props.multiple) {
     internalValue.value = Array.isArray(newValue) ? newValue : [];
   } else {
-    // Only set the value if it's explicitly provided
-    if (newValue !== undefined && newValue !== null && newValue !== '') {
-      internalValue.value = newValue;
-    } else {
-      // Keep placeholder visible by not setting a default value
-      internalValue.value = '';
-    }
+    // If newValue is undefined, null, or empty string, default to false
+    internalValue.value = (newValue === undefined || newValue === null || newValue === '') ? false : newValue;
   }
 }, { immediate: true });
 
@@ -520,26 +520,6 @@ watch(() => props.validate, () => {
 
 // Lifecycle
 onMounted(() => {
-  console.log('SelectField mounted:', {
-    name: props.name,
-    value: props.value,
-    options: props.options,
-    placeholder: props.placeholder
-  });
-  
-  // Only set a value if explicitly provided in props
-  if (props.value !== undefined && props.value !== null && props.value !== '') {
-    internalValue.value = props.value;
-    console.log('Setting value from props:', props.value);
-  } else {
-    // Keep placeholder visible by not setting a default value
-    internalValue.value = '';
-    console.log('No value provided, keeping placeholder visible');
-  }
-  
-  console.log('Final internalValue:', internalValue.value);
-  
-  // Only validate if we have a value
   if (internalValue.value !== '' && internalValue.value !== null && internalValue.value !== undefined) {
     validate();
   }

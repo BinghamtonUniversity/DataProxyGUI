@@ -3,7 +3,7 @@
     <!-- Label -->
     <label v-if="label" :for="fieldId" class="block text-sm font-medium text-gray-900 dark:text-white mb-2" :class="{ 'text-red-500': localError }">
       {{ label }}
-      <span v-if="required" class="text-red-500 ml-1">*</span>
+      <span class="text-red-500 ml-1">*</span>
       <span
         v-if="info"
         class="relative cursor-pointer ml-1"
@@ -48,7 +48,7 @@
         :autocomplete="autocomplete"
         :autofocus="autofocus"
         :name="name"
-        class="flex-1 min-w-0 py-2 px-3 text-sm border dark:!bg-gray-800 text-gray-900 dark:!text-white transition-colors duration-200"
+        class="flex-1 min-w-0 py-2 px-3 text-sm border bg-white dark:!bg-gray-800 text-gray-900 dark:!text-white transition-colors duration-200"
         :class="[
           // Border classes
           'border-l-0',

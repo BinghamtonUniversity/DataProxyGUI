@@ -47,7 +47,7 @@
         :autocomplete="autocomplete"
         :autofocus="autofocus"
         :name="name"
-        class="flex-1 min-w-0 py-2 px-3 text-sm border dark:!bg-gray-800 text-gray-900 dark:!text-white transition-colors duration-200"
+        class="flex-1 min-w-0 py-2 px-3 text-sm border bg-white dark:!bg-gray-800 text-gray-900 dark:!text-white transition-colors duration-200"
         :class="[
           // Border classes
           'border-l-0',
