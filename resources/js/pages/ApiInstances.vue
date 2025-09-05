@@ -15,12 +15,12 @@ import {
   getSortedRowModel,
   useVueTable,
 } from '@tanstack/vue-table'
-import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
-import { h, ref, onMounted, computed } from 'vue'
+import { ArrowUpDown, ChevronDown, Plus, Check } from 'lucide-vue-next'
+import { h, ref, onMounted, onUnmounted, computed, reactive } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, ApiInstance} from '@/types'
+import { type BreadcrumbItem, ApiInstance, Environment, ApiUser, Api, Resource} from '@/types'
 import { Head } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -44,8 +44,6 @@ import TableActions from '../components/TableActions.vue'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 
-
-
 const breadcrumbs: BreadcrumbItem[] = [
   {
     title: 'API Instances',
@@ -54,11 +52,18 @@ const breadcrumbs: BreadcrumbItem[] = [
 ]
 
 const api_instances = ref<ApiInstance[]>([])
+const environments = ref<Environment[]>([])
+const apis = ref<Api[]>([])
+const api_users = ref<ApiUser[]>([]) // TO:DO - Use after view details tabs
+// const resources = ref<Resource[]>([])
+
 const loading = ref(true)
 const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 
 //new API Instance
 const newApiInstanceDialogOpen = ref(false)
+
+//TO-DO: Should send route_user_map and resources as JSON strings here or in Details page??
 const newApiInstanceForm = ref({
   id: '',
   environment_id: '',
@@ -86,6 +91,12 @@ const newApiInstanceError = ref('')
 // Edit API Instance
 const isEditMode = ref(false)
 const editingApiInstanceId = ref<number|null>(null)
+
+// Dropdown state
+const dropdownOpen = reactive({
+  environment: false,
+  api: false
+})
 
 const openNewApiInstanceDialog = () => {
   newApiInstanceForm.value = {
@@ -164,8 +175,7 @@ const submitNewApiInstance = async (e: Event) => {
     // })
     // if (!response.ok) throw new Error('Failed to save API Instance')
     closeNewApiInstanceDialog()
-    await fetchApiInstances() // do i need this?
-    // refresh API Instance list here
+    await fetchApiInstances()
   } catch (err: any) {
     newApiInstanceError.value = err.message || 'Error saving API Instance'
   } finally {
@@ -203,7 +213,7 @@ const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
   newApiInstanceDialogOpen.value = true
 }
 
-// Helper functions for managing array fields
+// MOVE THESE to Details Page ?? Helper functions for managing array fields
 const addRouteUserMap = () => {
   newApiInstanceForm.value.route_user_map.push({
     api_user: '',
@@ -228,6 +238,57 @@ const addResource = () => {
 const removeResource = (index: number) => {
   if (newApiInstanceForm.value.resources.length > 1) {
     newApiInstanceForm.value.resources.splice(index, 1)
+  }
+}
+
+// Dropdown functionality
+const toggleDropdown = (type: keyof typeof dropdownOpen) => {
+  // Close all dropdowns first
+  Object.keys(dropdownOpen).forEach(key => {
+    dropdownOpen[key as keyof typeof dropdownOpen] = false
+  })
+  // Open the requested dropdown
+  dropdownOpen[type] = !dropdownOpen[type]
+}
+
+const selectEnvironment = (env: Environment) => {
+  newApiInstanceForm.value.environment_id = env.id.toString()
+  dropdownOpen.environment = false
+}
+
+const selectApi = (api: Api) => {
+  newApiInstanceForm.value.api_id = api.id.toString()
+  dropdownOpen.api = false
+}
+
+const getSelectedEnvironmentName = () => {
+  if (!newApiInstanceForm.value.environment_id || !environments.value) return ''
+  const selected = environments.value.find(env => env.id.toString() === newApiInstanceForm.value.environment_id)
+  return selected ? `${selected.name} - ${selected.type}` : ''
+}
+
+const getSelectedApiName = () => {
+  if (!newApiInstanceForm.value.api_id || !apis.value) return ''
+  const selected = apis.value.find(api => api.id.toString() === newApiInstanceForm.value.api_id)
+  return selected ? selected.name : ''
+}
+
+// Close dropdowns when clicking outside
+const handleClickOutside = (event: Event) => {
+  const target = event.target as Element
+  const dropdownElements = document.querySelectorAll('.relative')
+  let clickedInside = false
+  
+  dropdownElements.forEach(element => {
+    if (element.contains(target)) {
+      clickedInside = true
+    }
+  })
+  
+  if (!clickedInside) {
+    Object.keys(dropdownOpen).forEach(key => {
+      dropdownOpen[key as keyof typeof dropdownOpen] = false
+    })
   }
 }
 
@@ -290,7 +351,7 @@ const columns: ColumnDef<ApiInstance>[] = [
     accessorKey: 'api_id',
     header: 'API ID',
     cell: ({ row }) => {
-      const api_id = row.getValue('environment_id') as number
+      const api_id = row.getValue('api_id') as number
       return h('div', { class: 'truncate max-w-32' }, api_id || 'No API ID' )
     },
   },
@@ -335,7 +396,6 @@ const columns: ColumnDef<ApiInstance>[] = [
       ])
     },
   },
-
   {
     id: 'actions',
     enableHiding: false,
@@ -346,14 +406,14 @@ const columns: ColumnDef<ApiInstance>[] = [
             viewDetailsHref: `/api-instances/${instance.id}/details`,
             editLabel: 'Edit Instance',
             deleteLabel: 'Delete Instance',
-            // onEdit: () => openEditInstanceDialog(instance),
+            onEdit: () => openEditApiInstanceDialog(instance),
             // onDelete: () => handleDeleteInstance(instance),
         })
         }
     }
 ]
 
-// // Table state
+// Table state
 const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
 const columnVisibility = ref<VisibilityState>({})
@@ -377,13 +437,11 @@ const table = computed(() => {
     onColumnFiltersChange: updaterOrValue => valueUpdater(updaterOrValue, columnFilters),
     onColumnVisibilityChange: updaterOrValue => valueUpdater(updaterOrValue, columnVisibility),
     onRowSelectionChange: updaterOrValue => valueUpdater(updaterOrValue, rowSelection),
-    // onExpandedChange: updaterOrValue => valueUpdater(updaterOrValue, expanded),
     state: {
       get sorting() { return sorting.value },
       get columnFilters() { return columnFilters.value },
       get columnVisibility() { return columnVisibility.value },
       get rowSelection() { return rowSelection.value },
-      // get expanded() { return expanded.value },
     },
   })
 })
@@ -414,14 +472,65 @@ const fetchApiInstances = async () => {
   }
 }
 
-// Fetch data on mount
-onMounted(fetchApiInstances)
+const fetchAllData = async () => {
+  loading.value = true
+  try {
+    const [
+      apiInstancesResponse,
+      environmentsResponse,
+      apisResponse,
+      apiUserResponse
+    ] = await Promise.all([
+      fetch(`${djangoBaseUrl}/api/api_instances`),
+      fetch(`${djangoBaseUrl}/api/environments`),
+      fetch(`${djangoBaseUrl}/api/apis`),
+      fetch(`${djangoBaseUrl}/api/api_users`),
+    ])
+
+    if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
+    if (!environmentsResponse.ok) throw new Error('Failed to fetch environments')
+    if (!apisResponse.ok) throw new Error('Failed to fetch APIs')
+    if (!apiUserResponse.ok) throw new Error('Failed to fetch API users')
+
+    const [
+      apiInstancesData,
+      environmentsData,
+      apisData,
+      apiUserData
+    ] = await Promise.all([
+      apiInstancesResponse.json(),
+      environmentsResponse.json(),
+      apisResponse.json(),
+      apiUserResponse.json(),
+    ])
+
+    api_instances.value = apiInstancesData
+    environments.value = environmentsData
+    apis.value = apisData
+    api_users.value = apiUserData
+
+  } catch (error) {
+    console.error('Error fetching data:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Lifecycle hooks
+onMounted(() => { 
+  fetchAllData()
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
   <Head title="APIs" />
   
-  <AppLayout :breadcrumbs="breadcrumbs">
+    <AppLayout :breadcrumbs="breadcrumbs">
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
       <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
         
@@ -445,8 +554,121 @@ onMounted(fetchApiInstances)
                 placeholder="Filter by name..."
                 v-model="nameFilterValue"
               />
-                
-             
+                <Dialog v-model:open="newApiInstanceDialogOpen">
+                    <DialogTrigger as-child>
+                    <Button class="ml-4 text-green-600" variant="outline" @click="openNewApiInstanceDialog">
+                        <Plus class="mr-2 h-4 w-4" />
+                        New API Instance
+                    </Button>
+                    </DialogTrigger>
+                    <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <form @submit="submitNewApiInstance" class="space-y-6">
+                        <DialogHeader>
+                        <DialogTitle>{{ isEditMode ? 'Edit API Instance' : 'Create New API Instance' }}</DialogTitle>
+                        </DialogHeader>
+                        <div class="grid gap-6">
+                        <!-- Environment Selection -->
+                        <div class="relative">
+                            <Label for="environment-id" class="mb-1">Environment</Label>
+                            <div class="relative">
+                            <button
+                                type="button"
+                                class="w-full px-3 py-2 text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flex items-center justify-between"
+                                @click="toggleDropdown('environment')"
+                            >
+                                <span class="block truncate">
+                                {{ getSelectedEnvironmentName() || 'Select Environment' }}
+                                </span>
+                                <ChevronDown class="h-4 w-4 text-gray-400" :class="{ 'rotate-180': dropdownOpen.environment }" />
+                            </button>
+                            
+                            <div
+                                v-show="dropdownOpen.environment"
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
+                            >
+                                <div
+                                v-for="env in environments"
+                                :key="env.id"
+                                class="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center"
+                                @click="selectEnvironment(env)"
+                                >
+                                <span class="block truncate">{{ env.name }} - {{ env.type }}</span>
+                                <Check
+                                    v-if="newApiInstanceForm.environment_id === env.id.toString()"
+                                    class="h-4 w-4 text-blue-600 ml-auto"
+                                />
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+
+                        <!-- API Selection -->
+                        <div class="relative">
+                            <Label for="api-id" class="mb-1">API</Label>
+                            <div class="relative">
+                            <button
+                                type="button"
+                                class="w-full px-3 py-2 text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flex items-center justify-between"
+                                @click="toggleDropdown('api')"
+                            >
+                                <span class="block truncate">
+                                {{ getSelectedApiName() || 'Select API' }}
+                                </span>
+                                <ChevronDown class="h-4 w-4 text-gray-400" :class="{ 'rotate-180': dropdownOpen.api }" />
+                            </button>
+                            
+                            <div
+                                v-show="dropdownOpen.api"
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
+                            >
+                                <div
+                                v-for="api in apis"
+                                :key="api.id"
+                                class="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center"
+                                @click="selectApi(api)"
+                                >
+                                <span class="block truncate">{{ api.name }}</span>
+                                <Check
+                                    v-if="newApiInstanceForm.api_id === api.id.toString()"
+                                    class="h-4 w-4 text-blue-600 ml-auto"
+                                />
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+
+                        <!-- API Version -->
+                        <div>
+                            <Label for="api-version" class="mb-1">API Version</Label>
+                            <Input id="api-version" v-model="newApiInstanceForm.api_version_id" placeholder="API Version" />
+                        </div>
+
+                        <!-- Name -->
+                        <div>
+                            <Label for="instance-name" class="mb-1">Name</Label>
+                            <Input id="instance-name" v-model="newApiInstanceForm.name" required placeholder="API Instance Name" />
+                        </div>
+
+                        <!-- Route/Slug -->
+                        <div>
+                            <Label for="instance-route" class="mb-1">Slug</Label>
+                            <Input id="instance-route" v-model="newApiInstanceForm.route" required placeholder="Route/Slug" />
+                        </div>
+
+                        <div v-if="newApiInstanceError" class="text-red-600 text-sm">{{ newApiInstanceError }}</div>
+                        </div>
+                        <DialogFooter class="gap-2">
+                        <DialogClose as-child>
+                            <Button variant="secondary" type="button" @click="closeNewApiInstanceDialog">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit" variant="default" :disabled="newApiInstanceLoading">
+                            <span v-if="newApiInstanceLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
+                            <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
+                        </Button>
+                        </DialogFooter>
+                    </form>
+                    </DialogContent>
+                </Dialog>
 
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
@@ -484,7 +706,7 @@ onMounted(fetchApiInstances)
                 </TableHeader>
                 <TableBody>
                   <template v-if="tableRows.length">
-                    <template v-for="row in tableRows" :key="row.id">
+                    <template v-for="row in tableRows" :key="row.id" >
                       <TableRow :data-state="row.getIsSelected() && 'selected'">
                         <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                           <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
@@ -552,7 +774,14 @@ onMounted(fetchApiInstances)
             </div>
           </div>
         </template>
+        
       </div>
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+.rotate-180 {
+  transform: rotate(180deg);
+}
+</style>

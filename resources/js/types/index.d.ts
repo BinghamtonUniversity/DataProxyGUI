@@ -68,7 +68,7 @@ export interface ResourceData{
 }
 
 
-export interface ApiData {
+export interface ApiData { // TO:DO -- API Version Data
   id: number;
   api: number; 
   summary: string | null;
@@ -129,6 +129,36 @@ export interface ApiInstance {
   api_id: number
   api_version_id: number
   environment_id: number
+}
+
+export interface Environment {
+  id: number,
+  domain: string,
+  name: string,
+  type: string,
+  created_at: string,
+  updated_at: string,
+  deleted_at: string | null
+}
+
+export interface ApiUser {
+  id: number,
+  is_active: number,
+  created_at: string,
+  environment_id: number,
+  app_name: string,
+  app_secret: string,
+  api_key: string
+}
+
+export interface Resource {
+  id: number,
+  name: string,
+  config: string,
+  type: string,
+  created_at: string,
+  updated_at: string,
+  resource_type: string,
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;
