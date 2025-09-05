@@ -39,7 +39,7 @@
       :name="name"
       :rows="rows"
       :cols="cols"
-      class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md resize-y"
+      class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md resize-y"
       :class="[
         // Focus states
         'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',

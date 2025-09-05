@@ -1,9 +1,12 @@
+
 <template>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
+
   <div :class="formbuilderTheme.container">
-    <div :class="formbuilderTheme.headerContainer">
+    <!-- <div :class="formbuilderTheme.headerContainer">
       <h1 :class="formbuilderTheme.header">FormBuilder</h1>
       <p :class="formbuilderTheme.subheader">Drag field types above the canvas. Reorder fields. Configure field properties.</p>
-    </div>
+    </div> -->
     <div class="flex flex-row gap-6">
       <!-- Left: Form Configuration Sidebar -->
   <div class="w-80 shrink-0 px-4 py-4">
@@ -41,6 +44,8 @@
                 name="formName"
                 placeholder="Enter form name"
                 class="w-full"
+                :edit="allowFormNameEdit"
+                
               />
             </div>
             <div class="text-xs text-on-surface-variant">
@@ -153,20 +158,33 @@
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                       </svg>
-                      <span class="text-sm font-medium">{{ element.label }} (pos: {{ previewPosition }})</span>
+                      <span class="text-sm font-medium">
+                        {{ previewElement?.type === 'field-reorder' ? 'Moving' : 'Adding' }} {{ element.label }} (pos: {{ previewPosition }})
+                      </span>
                     </div>
                   </div>
                   <!-- Regular Field -->
                   <div
                     v-else
+                    draggable="true"
+                    @dragstart="onFieldDragStart($event, getOriginalIndex(index))"
                     @click="selectField(getOriginalIndex(index))"
                     :class="[
                       formbuilderTheme.fieldCard,
-                      'field-card cursor-pointer',
+                      'field-card cursor-pointer group relative',
                       selectedFieldIndex === getOriginalIndex(index)
                         ? formbuilderTheme.fieldCardSelected
                         : formbuilderTheme.fieldCardUnselected
                     ]">
+                    <!-- Drag Handle -->
+                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <div class="w-6 h-6 bg-surface-container-high rounded-lg flex items-center justify-center cursor-move">
+                        <svg class="w-4 h-4 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+                        </svg>
+                      </div>
+                    </div>
+                    
                     <!-- Field Preview -->
                     <div class="space-y-3">
 
@@ -239,7 +257,7 @@
                 <span :class="formbuilderTheme.sectionTitle">{{ selectedField.label }}</span>
                 <button
                   @click="removeField(selectedFieldIndex)"
-                  class="inline-flex items-center gap-2 px-3 py-1.5 text-error hover:text-error hover:bg-error-8 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2 text-sm font-medium">
+                  class="inline-flex items-center gap-2 px-3 py-1.5 text-error hover:text-error hover:bg-error-8 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2 text-sm font-medium mb-4">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                   </svg>
@@ -251,7 +269,7 @@
               <div v-if="selectedField.type === 'fieldset'" class="mb-4">
                 <button
                   @click="manageSection(selectedFieldIndex)"
-                  class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-on-primary rounded-xl hover:bg-primary-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm font-medium">
+                  class="w-full flex items-center justify-center gap-2 px-4 py-3  text-on-primary rounded-xl hover:bg-primary-high transition-all ring-2 ring-secondary bg-blue duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm font-medium">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                   </svg>
@@ -265,7 +283,7 @@
                 <div class="mb-4">
                   <button
                     @click="toggleConfigSection('basic')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -348,6 +366,7 @@
                       :rows="2"
                       placeholder="Enter instructions"
                       class="w-full"
+                      :required="false"
                     />   
                     <!-- More Information -->
                     
@@ -358,6 +377,7 @@
                       :rows="2"
                       placeholder="Enter additional information"
                       class="w-full"
+                      :required="false"
                     />
 
                     <!-- TODO -->
@@ -377,7 +397,7 @@
                 <div class="mb-4">
                   <button
                     @click="toggleConfigSection('display')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6z"></path>
@@ -495,7 +515,7 @@
                 <div v-if="selectedField.type === 'select' || selectedField.type === 'combobox' || selectedField.type === 'radio' || selectedField.type === 'checkbox' || selectedField.type === 'switch'" class="mb-4">
                   <button
                     @click="toggleConfigSection('options')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
@@ -518,19 +538,22 @@
                     </div>
                     <!-- Options List -->
                     <div>
-                      <label class="block text-xs text-on-surface-variant mb-2 font-medium">Options</label>
+
                       <div class="space-y-2">
                         <template v-if="selectedField.type === 'checkbox' || selectedField.type === 'switch'">
                           <div v-for="(option, index) in selectedField.options || []" :key="index" class="flex gap-2">
-                            <TextField
+                              <TextField
                               v-model:value="option.label"
                               :name="`optionLabel_${index}`"
+                              :label="index === 0 ? 'False Label' : 'True Label'"
                               :placeholder="index === 0 ? 'False Label' : 'True Label'"
+                              :required="false"
                               class="flex-1"
                             />
                             <TextField
                               v-model:value="option.value"
                               :name="`optionValue_${index}`"
+                              :label="index === 0 ? 'False Value' : 'True Value'"
                               :placeholder="index === 0 ? 'False Value' : 'True Value'"
                               class="flex-1"
                             />
@@ -579,7 +602,7 @@
                 <div v-if="selectedField.type === 'range'" class="mb-4">
                   <button
                     @click="toggleConfigSection('range')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path>
@@ -623,7 +646,7 @@
                 <div class="mb-4">
                   <button
                     @click="toggleConfigSection('conditions')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -641,8 +664,8 @@
                         name="showField"
                         label="Show"
                         :options="[
-                          { label: 'Always', value: true },
-                          { label: 'Never', value: false },
+                          { label: 'Always', value: 'true' },
+                          { label: 'Never', value: 'false' },
                           { label: 'Use same settings  as Edit', value: 'edit' },
                           { label: 'Use same settings  as Parse', value: 'parse' },
                           { label: 'Conditionally', value: 'conditional' }
@@ -662,8 +685,8 @@
                         name="editField"
                         label="Edit"
                         :options="[
-                          { label: 'Always', value: true },
-                          { label: 'Never', value: false },
+                          { label: 'Always', value: 'true' },
+                          { label: 'Never', value: 'false' },
                           { label: 'Use same settings  as Show', value: 'show' },
                           { label: 'Use same settings  as Parse', value: 'parse' },
                           { label: 'Conditionally', value: 'conditional' }
@@ -683,8 +706,8 @@
                         name="parseField"
                         label="Parse"
                         :options="[
-                          { label: 'Always', value: true },
-                          { label: 'Never', value: false },
+                          { label: 'Always', value: 'true' },
+                          { label: 'Never', value: 'false' },
                           { label: 'Use same settings  as Show', value: 'show' },
                           { label: 'Use same settings  as Edit', value: 'edit' },
                           { label: 'Conditionally', value: 'conditional' }
@@ -704,8 +727,8 @@
                         name="requiredField"
                         label="Required"
                         :options="[
-                          { label: 'Always', value: true },
-                          { label: 'Never', value: false },
+                          { label: 'Always', value: 'true' },
+                          { label: 'Never', value: 'false' },
                           { label: 'Use same settings as Show', value: 'show' },
                           { label: 'Use same settings  as Edit', value: 'edit' },
                           { label: 'Use same settings  as Parse', value: 'parse' },
@@ -724,10 +747,10 @@
                 </div>
                 
                 <!-- Validation Configuration -->
-                <div class="mb-4">
+                <div v-if="selectedField.type != 'fieldset'" class="mb-4">
                   <button
                     @click="toggleConfigSection('validation')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:bg-surface-container-high transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -738,7 +761,9 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                   </button>
-                  <div class="config-section-content space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.validation ? 'expanded' : 'collapsed'">
+                  <div class="config-section-content  space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.validation ? 'expanded' : 'collapsed'">
+                    <!-- Enable Validation -->
+                     <div class="flex items-center gap-4">
                     <SwitchField
                         v-model:value="selectedField.enableValidate"
                         name="fieldEnableValidation"
@@ -750,28 +775,28 @@
                           { label: 'Validate', value: true }
                         ]"
                       />
+                    </div>
                     <!-- Validation Configuration (only show if validation is enabled) -->
-                    <div v-if="selectedField.enableValidate" class="space-y-3 pl-4 border-l-2 border-primary-20">
+                    <div v-if="selectedField.enableValidate" class=" space-y-3 pl-4 border-l-2 border-primary-20">
                       <!-- Validation Type -->
-                      <div>
-                        <SelectField
-                          v-model:value="selectedField.validationType"
-                          name="fieldValidationType"
-                          :options="[
-                            { label: 'None', value: 'none' },
-                            { label: 'Matches', value: 'matches' },
-                            { label: 'Matches - Field/Value (NEW)', value: 'matchesfieldvalue' },
-                            { label: 'Date', value: 'date' },
-                            { label: 'Valid URL', value: 'valid_url' },
-                            { label: 'Valid Email', value: 'valid_email' },
-                            { label: 'Length', value: 'length' },
-                            { label: 'Numeric', value: 'numeric' },
-                            { label: 'Pattern', value: 'pattern' }
-                          ]"
-                          placeholder="Select validation type"
-                          class="w-full">
-                        </SelectField>
-                      </div>
+                      <SelectField
+                        v-model:value="selectedField.validationType"
+                        name="fieldValidationType"
+                        :options="[
+                          { label: 'None', value: 'none' },
+                          { label: 'Matches', value: 'matches' },
+                          { label: 'Matches - Field/Value (NEW)', value: 'matchesfieldvalue' },
+                          { label: 'Date', value: 'date' },
+                          { label: 'Valid URL', value: 'valid_url' },
+                          { label: 'Valid Email', value: 'valid_email' },
+                          { label: 'Length', value: 'length' },
+                          { label: 'Numeric', value: 'numeric' },
+                          { label: 'Pattern', value: 'pattern' }
+                        ]"
+                        placeholder="Select validation type"
+                        class="w-full">
+                      </SelectField>
+
                       
                       <!-- Pattern Configuration (only for pattern type) -->
                       <div v-if="selectedField.validationType === 'pattern'" class="space-y-3">
@@ -938,16 +963,8 @@
       title="Form Preview"
       @close="closePreviewModal">
       <div class="space-y-6">
-        <div class="text-sm text-on-surface-variant">
-          Test your form fields below:
-        </div>
         <!-- Interactive Form Preview -->
-        <FormViewer 
-          ref="formViewerRef"
-          :key="previewKey"
-          :form-config="formConfigForPreview"
-          v-model="previewFormData" />
-        <!-- Collapsible JSON Output -->
+           <!-- Collapsible JSON Output -->
         <div class="mt-6">
           <button @click="showPreviewJson = !showPreviewJson" class="w-full flex items-center justify-between px-4 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium hover:bg-surface-container-high transition-all duration-200">
             <span>Show Form Data JSON</span>
@@ -959,57 +976,64 @@
             <pre class="text-xs text-on-surface-variant">{{ JSON.stringify(previewFormData, null, 2) }}</pre>
           </div>
         </div>
+        <FormViewer 
+          ref="formViewerRef"
+          :key="previewKey"
+          :form-config="formConfigForPreview"
+          v-model="previewFormData" />
+      
       </div>
-      <template #footer>
-        <button
-          @click="handlePreviewSubmit"
-          class="md3-button-filled-primary">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-          </svg>
-          Submit Form
-        </button>
-        <button
-          @click="closePreviewModal"
-          class="md3-button-outlined-secondary">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-          Close
-        </button>
-      </template>
+
     </AlertModal>
   </div>
 </template> 
 
 <script setup>
+
 import { ref, computed, watch, nextTick, onMounted } from 'vue';
+
+// Define props
+const props = defineProps({
+  formData: {
+    type: Object,
+    default: () => ({ name: 'my-form', fields: [] })
+  },
+  allowFormNameEdit: {
+    type: Boolean,
+    default: true
+  }
+});
+
+// Define emits
+const emit = defineEmits(['update:formData']);
 import AlertModal from '../AlertModal.vue';
 import FormViewer from '../formviewer/FormViewer.vue';
 import ConditionalLogic from '../formbuilder/components/ConditionalLogic.vue';
 import { getThemeClasses } from '../Theme.js';
 
 // Import all dynamic field components
-import TextField from '../fields/TextField.vue';
-import TextAreaField from '../fields/TextAreaField.vue';
-import EmailField from '../fields/EmailField.vue';
-import TelField from '../fields/TelField.vue';
-import URLField from '../fields/URLField.vue';
-import DateField from '../fields/DateField.vue';
-import NumberField from '../fields/NumberField.vue';
-import CurrencyField from '../fields/CurrencyField.vue';
-import PasswordField from '../fields/PasswordField.vue';
-import ColorField from '../fields/ColorField.vue';
-import RangeField from '../fields/RangeField.vue';
-import SelectField from '../fields/SelectField.vue';
-import ComboboxField from '../fields/ComboboxField.vue';
-import RadioField from '../fields/RadioField.vue';
-import CheckboxField from '../fields/CheckboxField.vue';
-import SwitchField from '../fields/SwitchField.vue';
-import FieldsetField from '../fields/FieldsetField.vue';
-import ArrayField from '../fields/ArrayField.vue';
-import HiddenField from '../fields/HiddenField.vue';
-import OutputField from '../fields/OutputField.vue';
+import {
+  TextField,
+  TextAreaField,
+  TelField,
+  EmailField,
+  PasswordField,
+  URLField,
+  DateField,
+  NumberField,
+  CurrencyField,
+  ColorField,
+  HiddenField,
+  SelectField,
+  RadioField,
+  ComboboxField,
+  RangeField,
+  CheckboxField,
+  SwitchField,
+  FieldsetField,
+  ArrayField,
+  OutputField
+} from '../fields';
 
 
 const fieldTypes = [
@@ -1072,13 +1096,13 @@ function getFieldTypesByCategory(category) {
   return fieldTypes.filter(type => type.category === category);
 }
 
-const fields = ref([]);
+const fields = ref(props.formData.fields || []);
 
 
 const selectedFieldIndex = ref(null);
 const isJsonModalOpen = ref(false);
 const isPreviewModalOpen = ref(false);
-const formName = ref('my-form');
+const formName = ref(props.formData.name || 'options');
 const previewFormData = ref({});
 const previewKey = ref(0);
 const dragOverIndex = ref(null);
@@ -1101,6 +1125,11 @@ const currentFieldsWithPreviews = computed(() => {
   }
 
   const result = [];
+  
+  // If we're dragging an existing field (field reorder), hide it from the canvas
+  const isFieldReorder = previewElement.value?.type === 'field-reorder';
+  const draggedFieldIndex = isFieldReorder ? previewElement.value?.fieldIndex : null;
+  
   for (let i = 0; i <= (currentFields?.length || 0); i++) {
     if (i === previewPosition.value) {
       result.push({
@@ -1110,6 +1139,10 @@ const currentFieldsWithPreviews = computed(() => {
       });
     }
     if (i < (currentFields?.length || 0)) {
+      // Skip the field being dragged during reorder
+      if (isFieldReorder && i === draggedFieldIndex) {
+        continue;
+      }
       result.push(currentFields[i]);
     }
   }
@@ -1123,20 +1156,32 @@ function getOriginalIndex(previewIndex) {
   }
 
   const currentFields = getCurrentFields();
+  const isFieldReorder = previewElement.value?.type === 'field-reorder';
+  const draggedFieldIndex = isFieldReorder ? previewElement.value?.fieldIndex : null;
+  
   let originalIndex = 0;
+  let visibleIndex = 0;
+  
   for (let i = 0; i <= currentFields.length; i++) {
-    if (i === previewIndex) {
-      if (i === previewPosition.value) {
+    if (i === previewPosition.value) {
+      if (visibleIndex === previewIndex) {
         // This is a preview element, return the index of the next real field
         return originalIndex;
       }
-      originalIndex++;
+      visibleIndex++;
     }
     if (i < currentFields.length) {
-      if (i === previewIndex) {
-        return originalIndex - 1;
+      // Skip the field being dragged during reorder
+      if (isFieldReorder && i === draggedFieldIndex) {
+        originalIndex++;
+        continue;
+      }
+      
+      if (visibleIndex === previewIndex) {
+        return originalIndex;
       }
       originalIndex++;
+      visibleIndex++;
     }
   }
   return previewIndex;
@@ -1147,7 +1192,7 @@ const configSections = ref({
   display: false,
   options: false,
   range: false,
-  conditions: true,
+  conditions: false,
   validation: false
 });
 
@@ -1188,7 +1233,7 @@ function getFieldProps(field) {
     label: field.label,
     placeholder: field.placeholder,
     value: field.value,
-    required: field.required,
+    required: false,
     help: field.help,
     info: field.info,    
   };
@@ -1250,6 +1295,30 @@ function onDragStart(event, type) {
   event.dataTransfer.effectAllowed = 'copy';
   isDragging.value = true;
   previewElement.value = type;
+}
+
+function onFieldDragStart(event, fieldIndex) {
+  const currentFields = getCurrentFields();
+  const field = currentFields[fieldIndex];
+  
+  // Store the field data and mark it as a field reorder operation
+  const dragData = {
+    type: 'field-reorder',
+    fieldIndex: fieldIndex,
+    field: field
+  };
+  
+  event.dataTransfer.setData('application/json', JSON.stringify(dragData));
+  event.dataTransfer.effectAllowed = 'move';
+  isDragging.value = true;
+  previewElement.value = { 
+    type: 'field-reorder', 
+    label: field.label || 'Field',
+    fieldIndex: fieldIndex 
+  };
+  
+  // Prevent the click event from firing
+  event.stopPropagation();
 }
 
 function onDragEnter(event) {
@@ -1360,7 +1429,34 @@ function createAndAddField(event, position) {
 
   if (typeData) {
     try {
-      const type = JSON.parse(typeData);
+      const dragData = JSON.parse(typeData);
+      
+      // Handle field reordering
+      if (dragData.type === 'field-reorder') {
+        const currentFields = getCurrentFields();
+        const sourceIndex = dragData.fieldIndex;
+        
+        // Don't do anything if dropping on the same position
+        if (sourceIndex === position) {
+          return;
+        }
+        
+        // Remove the field from its original position
+        const [movedField] = currentFields.splice(sourceIndex, 1);
+        
+        // Adjust the target position if we removed an element before it
+        const adjustedPosition = sourceIndex < position ? position - 1 : position;
+        
+        // Insert the field at the new position
+        currentFields.splice(adjustedPosition, 0, movedField);
+        
+        // Update selection to the new position
+        selectedFieldIndex.value = adjustedPosition;
+        return;
+      }
+      
+      // Handle new field creation (existing logic)
+      const type = dragData;
       let defaultType = 'text';
       let defaultLabel = 'New Field';
       switch (type.category) {
@@ -1390,14 +1486,14 @@ function createAndAddField(event, position) {
         label: defaultLabel,
         name: `${defaultType}_${Date.now()}`,
         placeholder: '',
-        value: (defaultType === 'checkbox' || defaultType === 'switch') ? false : '',
+        value: (type.category === 'boolean') ? 'false' : '',
         help: '',
         info: '',
         updateKey: 0,
-        show: true,
-        edit: true,
-        parse: true,
-        required: false,
+        show: 'true',
+        edit: 'true',
+        parse: 'true',
+        required: 'false',
         width: '12',
         offset: '0',
         options: (defaultType === 'checkbox' || defaultType === 'switch')
@@ -1465,9 +1561,6 @@ function showPreviewModal() {
   previewFormData.value = {};
   // Increment key to force re-render
   previewKey.value++;
-
-  console.log('Fields array:', fields.value);
-  console.log('Form config for preview:', formConfigForPreview.value);
 
   isPreviewModalOpen.value = true;
 }
@@ -1632,7 +1725,6 @@ function getFieldJson(field) {
     type: field.type,
     placeholder: field.placeholder,
     value: field.value,
-    required: field.required,
     help: field.help,
     info: field.info,
   };
@@ -1714,16 +1806,40 @@ function getFieldJson(field) {
 
   // Add conditions
   if (field.show !== undefined) {
-    base.show = field.show;
+    if (field.show === 'true') {
+      base.show = true;
+    } else if (field.show === 'false') {
+      base.show = false;
+    } else {
+      base.show = field.show;
+    }
   }
   if (field.edit !== undefined) {
-    base.edit = field.edit;
+    if (field.edit === 'true') {
+      base.edit = true;
+    } else if (field.edit === 'false') {
+      base.edit = false;
+    } else {
+      base.edit = field.edit;
+    }
   }
   if (field.parse !== undefined) {
-    base.parse = field.parse;
+    if (field.parse === 'true') {
+      base.parse = true;
+    } else if (field.parse === 'false') {
+      base.parse = false;
+    } else {
+      base.parse = field.parse;
+    }
   }
   if (field.required !== undefined) {
-    base.required = field.required;
+    if (field.required === 'true') {
+      base.required = true;
+    } else if (field.required == 'false') {
+      base.required = false;
+    } else {
+      base.required = field.required;
+    }
   }
 
   // Add conditional logic groups
@@ -1999,6 +2115,14 @@ watch(
   }
 );
 
+// Watch for changes in formName and fields to emit updates
+watch([formName, fields], () => {
+  emit('update:formData', {
+    name: formName.value,
+    fields: fields.value
+  });
+}, { deep: true });
+
 // Ensure all fields have updateKey property on mount
 onMounted(() => {
   const currentFields = getCurrentFields();
@@ -2008,7 +2132,13 @@ onMounted(() => {
     }
   });
   
-
+  // Initialize with props data
+  if (props.formData.fields && props.formData.fields.length > 0) {
+    fields.value = [...props.formData.fields];
+  }
+  if (props.formData.name) {
+    formName.value = props.formData.name;
+  }
 });
 
 

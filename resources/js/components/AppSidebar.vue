@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, AppWindow, Layers } from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutGrid, Users, Database, File, Calendar, History, Building2, Globe } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -15,43 +15,81 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'APIS',
-        href: '/apis',
-        icon: Layers,
+        title: 'Environments',
+        href: '/environments',
+        icon: Building2,
     },
     {
-        title: 'API Instances',
-        href: '/api_instances',
-        icon: AppWindow,
+        title: 'Users',
+        href: '/users',
+        icon: Users,
     },
+    {
+        title: 'APIS',
+        href: '/apis',
+        icon: Folder,
+    },
+    {
+        title: 'Api Instances',
+        href: '/api-instances',
+        icon: Database,
+    },
+    {
+        title: 'Resources',
+        href: '/resources',
+        icon: File,
+    },
+    {
+        title: 'Schedules',
+        href: '/schedules',
+        icon: Calendar,
+    },{
+        title: 'Activity Logs',
+        href: '/activity-logs',
+        icon: History,
+    },
+
     // {
     //     title: 'Editor',
     //     href: '/editor',
     //     icon: BookOpen,
     // },
-    {
-        title: 'Datatable Example',
-        href: '/datatable-example',
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Types Example',
-        href: '/types-example',
-        icon: Folder,
-    },
-    {
-        title: 'FormViewer Example',
-        href: '/formviewer-example',
-        icon: BookOpen,
-    },
-    {
-        title: 'Formbuilder Example',
-        href: '/formbuilder-example',
-        icon: LayoutGrid,
-    }
+
 ];
 
 const footerNavItems: NavItem[] = [
+    {
+        title: 'Development',
+        href: '#',
+        icon: Folder,
+        children: [
+            {
+                title: 'DataGrid Example',
+                href: '/datagrid-example',
+                icon: LayoutGrid,
+            },
+            {
+                title: 'Types Example',
+                href: '/types-example',
+                icon: Folder,
+            },
+            {
+                title: 'FormViewer Example',
+                href: '/formviewer-example',
+                icon: BookOpen,
+            },
+            {
+                title: 'Formbuilder Example',
+                href: '/formbuilder-example',
+                icon: LayoutGrid,
+            },
+            {
+                title: 'Environments',
+                href: '/environments',
+                icon: Globe,
+            },
+        ]
+    },
     {
         title: 'Github Repo',
         href: 'https://github.com/BinghamtonUniversity/DataProxyGUI',
