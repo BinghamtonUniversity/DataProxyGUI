@@ -32,11 +32,6 @@ const mainNavItems: NavItem[] = [
     {
         title: 'API Instances',
         href: '/api_instances',
-        icon: Folder,
-    },
-    {
-        title: 'Api Instances',
-        href: '/api-instances',
         icon: Database,
     },
     {
