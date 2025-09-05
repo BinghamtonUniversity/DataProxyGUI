@@ -106,26 +106,28 @@
 <script setup>
 import { ref, watch, onMounted, computed, nextTick } from 'vue';
 import { shouldShowField, shouldEditField, shouldParseField, resolveFieldProperties } from '../fields/conditionalLogic.js';
-import TextField from '../fields/TextField.vue';
-import TextAreaField from '../fields/TextAreaField.vue';
-import TelField from '../fields/TelField.vue';
-import EmailField from '../fields/EmailField.vue';
-import PasswordField from '../fields/PasswordField.vue';
-import URLField from '../fields/URLField.vue';
-import DateField from '../fields/DateField.vue';
-import NumberField from '../fields/NumberField.vue';
-import CurrencyField from '../fields/CurrencyField.vue';
-import ColorField from '../fields/ColorField.vue';
-import HiddenField from '../fields/HiddenField.vue';
-import SelectField from '../fields/SelectField.vue';
-import RadioField from '../fields/RadioField.vue';
-import ComboboxField from '../fields/ComboboxField.vue';
-import RangeField from '../fields/RangeField.vue';
-import CheckboxField from '../fields/CheckboxField.vue';
-import SwitchField from '../fields/SwitchField.vue';
-import FieldsetField from '../fields/FieldsetField.vue';
-import ArrayField from '../fields/ArrayField.vue';
-import OutputField from '../fields/OutputField.vue';
+import {
+  TextField,
+  TextAreaField,
+  TelField,
+  EmailField,
+  PasswordField,
+  URLField,
+  DateField,
+  NumberField,
+  CurrencyField,
+  ColorField,
+  HiddenField,
+  SelectField,
+  RadioField,
+  ComboboxField,
+  RangeField,
+  CheckboxField,
+  SwitchField,
+  FieldsetField,
+  ArrayField,
+  OutputField
+} from '../fields';
 
 const props = defineProps({
   formConfig: {
@@ -169,6 +171,12 @@ const props = defineProps({
   showDefaultActions: {
     type: Boolean,
     default: true
+  },
+  // Custom cancel action - can be 'reset', 'close', or a custom function
+  cancelAction: {
+    type: String,
+    default: 'reset',
+    validator: (value) => ['reset', 'close'].includes(value)
   }
 });
 
@@ -202,7 +210,7 @@ const defaultActions = computed(() => [
   },
   {
     type: 'cancel',
-    action: 'cancel',
+    action: props.cancelAction,
     label: 'Cancel',
     modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors'
   }
@@ -544,7 +552,13 @@ const handleAction = async (action) => {
       await submitForm();
       break;
     case 'cancel':
-      resetForm();
+      if (actionName === 'close') {
+        // Emit close event for parent to handle
+        emit('action', { type: 'close', action: 'close', formData: formData.value });
+      } else {
+        // Default to reset behavior
+        resetForm();
+      }
       break;
     default:
       // Emit custom action for parent to handle
@@ -620,12 +634,12 @@ const initializeFormData = () => {
         console.log(`initializeFormData: Setting fieldset ${field.name} to empty object`);
       }
     } else if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
-      newData[field.name] = field.defaultValue || false;
+      newData[field.name] = field.value || false;
     } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {
       if (field.multiple) {
         newData[field.name] = [];
       } else {
-        newData[field.name] = '';
+        newData[field.name] = field.value || '';
       }
     } else if (field.array) {
       const minItems = field.array.min || 1;
@@ -633,7 +647,7 @@ const initializeFormData = () => {
         if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
           return false;
         } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {
-          return field.multiple ? [] : '';
+          return field.multiple ? [] : (field.value || '');
         } else {
           return '';
         }
@@ -648,18 +662,20 @@ const initializeFormData = () => {
   console.log('Before merging with initial data:', newData);
   
   // Merge with initial data, but preserve fieldset objects
-  Object.keys(props.initialData).forEach(key => {
-    const field = props.formConfig.fields.find(f => f && f.name === key);
-    if (field && field.type === 'fieldset') {
-      // Don't overwrite fieldset objects with strings
-      if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
-        newData[key] = { ...newData[key], ...props.initialData[key] };
-        console.log(`initializeFormData: Merging fieldset ${key} with initial data: ${JSON.stringify(newData[key])}`);
+  if (props.initialData && typeof props.initialData === 'object') {
+    Object.keys(props.initialData).forEach(key => {
+      const field = props.formConfig.fields.find(f => f && f.name === key);
+      if (field && field.type === 'fieldset') {
+        // Don't overwrite fieldset objects with strings
+        if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
+          newData[key] = { ...newData[key], ...props.initialData[key] };
+          console.log(`initializeFormData: Merging fieldset ${key} with initial data: ${JSON.stringify(newData[key])}`);
+        }
+      } else {
+        newData[key] = props.initialData[key];
       }
-    } else {
-      newData[key] = props.initialData[key];
-    }
-  });
+    });
+  }
   
   console.log('Final formData after initialization:', newData);
   formData.value = newData;

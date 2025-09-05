@@ -219,12 +219,12 @@ const containerClass = computed(() => getFieldContainerClass(props, props.inFiel
 
 const inputClass = computed(() => [
   'w-full px-3 py-2 text-sm border rounded-md transition-colors duration-200',
-  'bg-white dark:!bg-gray-800 text-gray-900 dark:!text-white',
+  'dark:!bg-gray-800 text-gray-900 dark:!text-white',
   'border-gray-300 dark:!border-gray-600',
   'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
   'placeholder-gray-500 dark:placeholder-gray-400',
   // Disabled states
-  !props.edit ? 'cursor-not-allowed bg-gray-100 dark:!bg-gray-700 text-gray-500 dark:!text-gray-400' : 'hover:border-gray-400 dark:hover:border-gray-500',
+  !props.edit ? 'cursor-not-allowed bg-gray-100 dark:!bg-gray-700 text-gray-500 dark:!text-gray-400 border-gray-200 dark:!border-gray-600 opacity-75' : 'hover:border-gray-400 dark:hover:border-gray-500',
   // Error states
   (localError.value || (props.errors && props.errors.length > 0)) ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : '',
   // Readonly states
