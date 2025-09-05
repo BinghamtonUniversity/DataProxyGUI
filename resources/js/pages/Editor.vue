@@ -15,7 +15,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   save: [code: string]
-  'update:code': [code: string] 
 }>()
 
 const language = ref(props.language ?? 'python')
@@ -33,7 +32,6 @@ watch(() => props.language, (val) => {
 // Track changes to show unsaved status
 watch(code, (newCode) => {
   hasUnsavedChanges.value = newCode !== props.code
-  emit('update:code', newCode)
 })
 
 declare global {

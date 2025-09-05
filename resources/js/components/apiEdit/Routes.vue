@@ -82,7 +82,7 @@ const columnFilters = ref<ColumnFiltersState>([])
 const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
 
-// console.log('Routes component mounted')
+console.log('Routes component mounted')
 
 const openNewRouteDialog = () => {
   newRouteForm.value = {

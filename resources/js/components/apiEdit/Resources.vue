@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useVueTable,
 } from '@tanstack/vue-table'
-import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
+import { ArrowUpDown, ChevronDown } from 'lucide-vue-next'
 import { h, ref, computed } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 
@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
-  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -38,7 +38,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogTrigger,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -57,115 +56,32 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 
-const newResourceDialogOpen = ref(false)
-const newResourceForm = ref({
-  name: '',
-  type: 'Model',
-  model_name: ''
-})
-const newResourceLoading = ref(false)
-const newResourceError = ref('')
-const isEditMode = ref(false)
-const editingResourceIndex = ref<number | null>(null)
+const isEditDialogOpen = ref(false)
+const selectedResource = ref<ResourceData | null>(null)
 
-// New Resource Dialog handlers
-const openNewResourceDialog = () => {
-  newResourceForm.value = {
-    name: '',
-    type: 'Model',
-    model_name: ''
-  }
-  newResourceError.value = ''
-  isEditMode.value = false
-  editingResourceIndex.value = null
-  newResourceDialogOpen.value = true
+const openEditDialog = (resource: ResourceData) => {
+  selectedResource.value = JSON.parse(JSON.stringify(resource))
+  isEditDialogOpen.value = true
 }
 
-const closeNewResourceDialog = () => {
-  newResourceDialogOpen.value = false
-  newResourceError.value = ''
-  isEditMode.value = false
-  editingResourceIndex.value = null
-}
-
-const submitNewResource = async (e: Event) => {
-  e.preventDefault()
-  newResourceLoading.value = true
-  newResourceError.value = ''
-  
-  if (!props.apiData) {
-    newResourceError.value = 'API data not available'
-    newResourceLoading.value = false
-    return
+const handleSaveChanges = () => {
+  if (selectedResource.value) {
+    console.log('Saving changes for resource:', selectedResource.value)
+    // TODO: make an API call to persist the changes.
+    // updateApiData here to update the local state
+    // if (props.apiData && props.apiData.resources) {
+    //   const updatedResources = props.apiData.resources.map(resource => 
+    //     resource.name === selectedResource.value?.name ? selectedResource.value : resource
+    //   )
+    //   props.updateApiData({
+    //     ...props.apiData,
+    //     resources: updatedResources
+    //   })
+    // }
   }
-  
-  try {
-    const newResource = {
-      name: newResourceForm.value.name,
-      type: newResourceForm.value.type,
-      model_name: newResourceForm.value.model_name
-    }
-    
-    let updatedApiData
-
-    if (isEditMode.value && editingResourceIndex.value !== null) {
-      // Edit existing resource
-      updatedApiData = {
-        ...props.apiData,
-        resources: props.apiData.resources?.map((resource, index) => 
-          index === editingResourceIndex.value 
-            ? { ...resource, ...newResource }
-            : resource
-        ) || []
-      }
-    } else {
-      // Add new resource
-      updatedApiData = {
-        ...props.apiData,
-        resources: [...(props.apiData.resources || []), newResource]
-      }
-    }
-    // console.log('Updated API Data:', updatedApiData)
-    const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/code`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(updatedApiData)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
-
-    const responseData = await response.json()
-    props.updateApiData(responseData || updatedApiData)
-
-    closeNewResourceDialog()
-  } catch (err: any) {
-    console.error('Error saving resource:', err)
-    newResourceError.value = err.message || 'Error saving resource'
-  } finally {
-    newResourceLoading.value = false
-  }
+  isEditDialogOpen.value = false
 }
-
-// Edit resource handler
-const openEditResourceDialog = (resource: any, index: number) => {
-  isEditMode.value = true
-  editingResourceIndex.value = index
-  newResourceForm.value = {
-    name: resource.name || '',
-    type: resource.type || 'Model',
-    model_name: resource.model_name || ''
-  }
-  newResourceDialogOpen.value = true
-}
-
 
 // Table state
 const sorting = ref<SortingState>([])
@@ -298,66 +214,28 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                             v-model="nameFilterValue"
                         />
                         
-                        <Dialog v-model:open="newResourceDialogOpen">
-                            <DialogTrigger as-child>
-                                <Button class="ml-4 text-green-600" variant="outline" @click="openNewResourceDialog">
-                                <Plus class="mr-2 h-4 w-4" />
-                                New Resource
+                        <Button class="ml-4 text-green-600" variant="outline">
+                            New Resource
+                        </Button>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <Button variant="outline" class="ml-auto">
+                                    Columns <ChevronDown class="ml-2 h-4 w-4" />
                                 </Button>
-                            </DialogTrigger>
-                            <DialogContent class="sm:max-w-md">
-                                <form @submit="submitNewResource" class="space-y-6">
-                                <DialogHeader>
-                                    <DialogTitle>{{ isEditMode ? 'Edit Resource' : 'Create New Resource' }}</DialogTitle>
-                                </DialogHeader>
-                                <div class="grid gap-4">
-                                    <div>
-                                    <Label for="resource-name" class="mb-1">Name</Label>
-                                    <Input id="resource-name" v-model="newResourceForm.name" required placeholder="Resource name" />
-                                    </div>
-                                    <div>
-                                    <Label for="resource-type" class="mb-1">Type</Label>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger as-child>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            class="w-full justify-between"
-                                        >
-                                            {{ newResourceForm.type || 'Select type' }}
-                                            <ChevronDown class="ml-1 h-4 w-4" />
-                                        </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="start" class="w-full">
-                                        <DropdownMenuItem
-                                            v-for="type in ['Model', 'Password']"
-                                            :key="type"
-                                            @click="newResourceForm.type = type"
-                                            :class="['w-full', {'font-semibold text-blue-600': newResourceForm.type === type }]"
-                                        >
-                                            {{ type }}
-                                        </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                    </div>
-                                    <div>
-                                    <Label for="model-name" class="mb-1">Model Name</Label>
-                                    <Input id="model-name" v-model="newResourceForm.model_name" required placeholder="Model name" />
-                                    </div>
-                                    <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
-                                </div>
-                                <DialogFooter class="gap-2">
-                                    <DialogClose as-child>
-                                    <Button variant="secondary" type="button" @click="closeNewResourceDialog">Cancel</Button>
-                                    </DialogClose>
-                                    <Button type="submit" variant="default" :disabled="newResourceLoading">
-                                    <span v-if="newResourceLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
-                                    <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
-                                    </Button>
-                                </DialogFooter>
-                                </form>
-                            </DialogContent>
-                            </Dialog>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuCheckboxItem
+                                    v-for="column in hidableColumns"
+                                    :key="column.id"
+                                    class="capitalize"
+                                    :model-value="column.getIsVisible()"
+                                    @update:model-value="(value) => column.toggleVisibility(!!value)"
+                                >
+                                    {{ column.id.replace('_', ' ') }}
+                                </DropdownMenuCheckboxItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
 
                     <!-- Data Table -->
@@ -377,11 +255,11 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                             <TableBody>
                                 <template v-if="tableRows.length">
                                     <TableRow 
-                                        v-for="(row,index) in tableRows" 
+                                        v-for="row in tableRows" 
                                         :key="row.id" 
                                         :data-state="row.getIsSelected() && 'selected'"
                                         class="cursor-pointer hover:bg-muted/50"
-                                        @click="openEditResourceDialog(row.original, index)"
+                                        @click="openEditDialog(row.original)"
                                     >
                                         <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                                             <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
@@ -432,6 +310,38 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                     </div>
                 </div>
             </template>
-        </div>        
+        </div>
+
+        <!-- Edit Resource Dialog -->
+        <Dialog v-model:open="isEditDialogOpen">
+            <DialogContent class="sm:max-w-xl">
+                <form @submit.prevent="handleSaveChanges">
+                    <DialogHeader>
+                        <DialogTitle>Edit Resource: {{ selectedResource?.name }}</DialogTitle>
+                    </DialogHeader>
+                        <div v-if="selectedResource" class="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
+                            <div class="grid grid-cols-4 items-center gap-4">
+                                <Label for="resource-name" class="text-right">Name</Label>
+                                <Input id="resource-name" v-model="selectedResource.name" class="col-span-3" />
+                            </div>
+                            <div class="grid grid-cols-4 items-center gap-4">
+                                <Label for="resource-type" class="text-right">Type</Label>
+                                <Input id="resource-type" v-model="selectedResource.type" class="col-span-3" />
+                            </div>
+                            <div class="grid grid-cols-4 items-center gap-4">
+                                <Label for="resource-modelName" class="text-right">Model Name</Label>
+                                <Input id="resource-modelName" v-model="selectedResource.model_name" class="col-span-3" />
+                            </div>
+                        </div>
+
+                        <DialogFooter class="pt-6">
+                            <DialogClose as-child>
+                                <Button variant="secondary" type="button">Cancel</Button>
+                            </DialogClose>
+                            <Button type="submit">Save Changes</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+        </Dialog>
     </div>
 </template>
