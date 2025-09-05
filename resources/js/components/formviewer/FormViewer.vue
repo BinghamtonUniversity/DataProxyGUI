@@ -171,6 +171,12 @@ const props = defineProps({
   showDefaultActions: {
     type: Boolean,
     default: true
+  },
+  // Custom cancel action - can be 'reset', 'close', or a custom function
+  cancelAction: {
+    type: String,
+    default: 'reset',
+    validator: (value) => ['reset', 'close'].includes(value)
   }
 });
 
@@ -204,7 +210,7 @@ const defaultActions = computed(() => [
   },
   {
     type: 'cancel',
-    action: 'cancel',
+    action: props.cancelAction,
     label: 'Cancel',
     modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors'
   }
@@ -546,7 +552,13 @@ const handleAction = async (action) => {
       await submitForm();
       break;
     case 'cancel':
-      resetForm();
+      if (actionName === 'close') {
+        // Emit close event for parent to handle
+        emit('action', { type: 'close', action: 'close', formData: formData.value });
+      } else {
+        // Default to reset behavior
+        resetForm();
+      }
       break;
     default:
       // Emit custom action for parent to handle

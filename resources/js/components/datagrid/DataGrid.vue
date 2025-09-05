@@ -163,9 +163,15 @@
                 </button>
                 <div v-if="openMenuId === (row.id || row.name || idx)" :class="currentTheme.dropdown">
                   <slot name="row-actions" :row="row" :close-menu="closeMenu">
-                    <!-- Default row actions if no custom actions provided -->
-                    <button @click="emitAction('single-edit', row); closeMenu()" :class="currentTheme.dropdownItem">Edit</button>
-                    <button @click="emitAction('single-delete', row); closeMenu()" :class="currentTheme.dropdownItemDanger">Delete</button>
+                    <!-- Configurable row actions -->
+                    <button 
+                      v-for="action in rowActions" 
+                      :key="action.type"
+                      @click="emitAction(action.type, row); closeMenu()" 
+                      :class="[currentTheme.dropdownItem, action.colorClass]"
+                    >
+                      {{ action.label }}
+                    </button>
                   </slot>
                 </div>
               </div>
@@ -226,6 +232,14 @@ const props = defineProps({
   showEdit: { type: Boolean, default: true },
   showDelete: { type: Boolean, default: true },
   customActions: { type: Array, default: () => [] },
+  rowActions: { 
+    type: Array, 
+    default: () => [
+      { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
+      { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
+    ]
+    // Each action should have: { type: string, label: string, icon?: string, colorClass?: string }
+  },
   formConfig: {
     type: Object,
     default: () => ({

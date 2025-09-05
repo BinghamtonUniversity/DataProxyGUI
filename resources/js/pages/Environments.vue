@@ -127,11 +127,23 @@ const formConfig = {
 };
 
 // Format timestamp for display
-const formatTimestamp = (timestamp: string) => {
-    if (!timestamp) return '';
+const formatTimestamp = (timestamp: string | null | undefined) => {
+    if (!timestamp || timestamp === null || timestamp === undefined) {
+        console.log('formatTimestamp: No timestamp provided:', timestamp);
+        return '';
+    }
+    
     try {
-        return new Date(timestamp).toLocaleString();
-    } catch {
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) {
+            console.log('formatTimestamp: Invalid date:', timestamp);
+            return '';
+        }
+        const formatted = date.toLocaleString();
+        console.log('formatTimestamp: Successfully formatted:', timestamp, '->', formatted);
+        return formatted;
+    } catch (error) {
+        console.log('formatTimestamp: Error formatting timestamp:', timestamp, error);
         return timestamp;
     }
 };
@@ -139,6 +151,11 @@ const formatTimestamp = (timestamp: string) => {
 // Clean form data for API submission
 const cleanFormData = (formData: any) => {
     const cleaned = { ...formData };
+    
+    // Remove server-managed fields that shouldn't be sent to API
+    delete cleaned.created_at;
+    delete cleaned.updated_at;
+    delete cleaned.id; // Remove ID for new records
     
     // Remove empty strings and convert to null if needed
     Object.keys(cleaned).forEach(key => {
@@ -190,7 +207,15 @@ const openNewModal = () => {
 const openEditModal = (row?: any) => {
     if (row) {
         modalMode.value = 'edit';
-        editingRow.value = { ...row };
+        // Create a clean copy for editing, preserving original data
+        editingRow.value = { 
+            id: row.id,
+            name: row.name,
+            domain: row.domain,
+            type: row.type
+            // Don't include created_at, updated_at as they're server-managed
+        };
+        console.log('Opening edit modal with data:', editingRow.value);
         showModal.value = true;
     } else {
         warning('Please select exactly one row to edit.', 'Selection Required');
@@ -224,13 +249,17 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const newEnv = await response.json();
+            console.log('Server response for create:', newEnv);
             
-            // Add to local state with formatted timestamps
-            environments.value.push({
+            // Add to local state with server-provided data and formatted timestamps
+            const formattedNewEnv = {
                 ...newEnv,
+                // Use server-provided timestamps, not user input
                 created_at: formatTimestamp(newEnv.created_at),
                 updated_at: formatTimestamp(newEnv.updated_at)
-            });
+            };
+            console.log('Formatted new environment:', formattedNewEnv);
+            environments.value.push(formattedNewEnv);
             
             success(`Environment "${formValues.name}" added successfully!`, 'Environment Added');
         } else if (modalMode.value === 'edit' && editingRow.value) {
@@ -251,15 +280,19 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const updatedEnv = await response.json();
+            console.log('Server response for edit:', updatedEnv);
             
-            // Update local state
+            // Update local state with server-provided data
             const index = environments.value.findIndex((env: any) => env.id === editingRow.value.id);
             if (index !== -1) {
-                environments.value[index] = {
+                const formattedEnv = {
                     ...updatedEnv,
+                    // Use server-provided timestamps, not user input
                     created_at: formatTimestamp(updatedEnv.created_at),
                     updated_at: formatTimestamp(updatedEnv.updated_at)
                 };
+                console.log('Formatted environment for update:', formattedEnv);
+                environments.value[index] = formattedEnv;
             }
             
             success(`Environment "${formValues.name}" updated successfully!`, 'Environment Updated');
@@ -270,6 +303,43 @@ const handleFormSubmit = async (formValues: any) => {
         console.error('Form submission error:', err);
     } finally {
         submitting.value = false;
+    }
+};
+
+// Handle DataGrid action events
+const handleAction = (actionData: { type: string; payload: any }) => {
+    console.log('DataGrid action:', actionData);
+    
+    switch (actionData.type) {
+        case 'single-edit':
+            openEditModal(actionData.payload);
+            break;
+        case 'single-delete':
+            handleDelete([actionData.payload.id || actionData.payload.name]);
+            break;
+        case 'view':
+            // Handle view action if needed
+            console.log('View environment:', actionData.payload);
+            break;
+        case 'duplicate':
+            // Handle duplicate action if needed
+            console.log('Duplicate environment:', actionData.payload);
+            break;
+        default:
+            console.log('Unknown action type:', actionData.type);
+    }
+};
+
+// Handle FormViewer action events
+const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
+    console.log('FormViewer action:', actionData);
+    
+    switch (actionData.type) {
+        case 'close':
+            closeModal();
+            break;
+        default:
+            console.log('Unknown FormViewer action type:', actionData.type);
     }
 };
 
@@ -323,6 +393,7 @@ onMounted(() => {
 </script>
 
 <template>
+
     <Head title="Environments" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
@@ -345,9 +416,15 @@ onMounted(() => {
                 :showNew="true"
                 :showEdit="true"
                 :showDelete="true"
+                :rowActions="[
+                    { type: 'view', label: 'View', icon: 'eye', colorClass: 'text-green-600 hover:bg-green-50' },
+                    { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
+                    { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
+                ]"
                 @create="openNewModal"
                 @edit="openEditModal"
                 @delete="handleDelete"
+                @action="handleAction"
                          >
              </DataGrid>
 
@@ -357,28 +434,16 @@ onMounted(() => {
                 :title="modalMode === 'new' ? 'Add New Environment' : 'Edit Environment'"
                 @close="closeModal"
             >
-                                 <FormViewer 
-                     :formConfig="formConfig" 
-                     :initialData="editingRow"
-                     @submit="handleFormSubmit"
-                     :disabled="submitting"
-                 />
+                                                                   <FormViewer 
+                      :formConfig="formConfig" 
+                      :initialData="editingRow"
+                      :cancelAction="'close'"
+                      @submit="handleFormSubmit"
+                      @action="handleFormAction"
+                      :disabled="submitting"
+                  />
                 
-                                 <template #footer>
-                     <div class="flex justify-end space-x-3">
-                         <button 
-                             @click="closeModal"
-                             :disabled="submitting"
-                             class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors disabled:opacity-50"
-                         >
-                             Cancel
-                         </button>
-                         <div v-if="submitting" class="flex items-center px-4 py-2">
-                             <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                             <span class="text-sm text-gray-600 dark:text-gray-300">Saving...</span>
-                         </div>
-                     </div>
-                 </template>
+                          
             </AlertModal>
             
             <!-- Global Toaster -->
