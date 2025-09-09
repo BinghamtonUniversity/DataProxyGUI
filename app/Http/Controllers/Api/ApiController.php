@@ -227,11 +227,31 @@ class ApiController extends Controller
             $resource = $matches[1];
             $action = strtolower($matches[2]);
             
-            // Get request and id from parameters
-            $request = $parameters[0] ?? null;
-            $id = $parameters[1] ?? null;
+            // Get current request instance for all actions that need it
+            $request = request();
             
-            return $this->handleResource($resource, $action, $request, $id);
+            switch ($action) {
+                case 'index':
+                    // No parameters needed
+                    return $this->handleResource($resource, $action, null, null);
+                    
+                case 'store':
+                    // No ID needed, just request
+                    return $this->handleResource($resource, $action, $request, null);
+                    
+                case 'update':
+                    // ID is the first parameter, request is current request
+                    $id = $parameters[0] ?? null;
+                    return $this->handleResource($resource, $action, $request, $id);
+                    
+                case 'destroy':
+                    // ID is the first parameter, no request needed
+                    $id = $parameters[0] ?? null;
+                    return $this->handleResource($resource, $action, null, $id);
+                    
+                default:
+                    throw new \BadMethodCallException("Unknown action: {$action}");
+            }
         }
 
         // If method doesn't match pattern, throw error
