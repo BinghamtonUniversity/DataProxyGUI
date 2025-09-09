@@ -158,49 +158,83 @@ class ApiController extends Controller
             'status' => $result['status']
         ], $result['status']);
     }
-
-    // Specific methods for apis (if you need custom logic)
-    public function apisIndex(): JsonResponse
+    /**
+     * Generic resource controller - handles all CRUD operations dynamically
+     * 
+     * @param string $resource The resource name (e.g., 'environments', 'users', 'apis')
+     * @param string $action The action to perform (index, store, update, destroy)
+     * @param Request|null $request The request object (for store/update operations)
+     * @param mixed $id The resource ID (for update/destroy operations)
+     * @return JsonResponse
+     */
+    public function handleResource(string $resource, string $action, Request $request = null, $id = null): JsonResponse
     {
-        return $this->index('apis');
+        // Validate resource name
+        $allowedResources = ['environments', 'users', 'apis'];
+        if (!in_array($resource, $allowedResources)) {
+            return response()->json([
+                'error' => "Resource '{$resource}' not supported",
+                'allowed_resources' => $allowedResources
+            ], 400);
+        }
+
+        // Validate action
+        $allowedActions = ['index', 'store', 'update', 'destroy'];
+        if (!in_array($action, $allowedActions)) {
+            return response()->json([
+                'error' => "Action '{$action}' not supported",
+                'allowed_actions' => $allowedActions
+            ], 400);
+        }
+
+        // Route to appropriate method
+        switch ($action) {
+            case 'index':
+                return $this->index($resource);
+            case 'store':
+                if (!$request) {
+                    return response()->json(['error' => 'Request object required for store action'], 400);
+                }
+                return $this->store($request, $resource);
+            case 'update':
+                if (!$request || !$id) {
+                    return response()->json(['error' => 'Request object and ID required for update action'], 400);
+                }
+                return $this->update($request, $resource, $id);
+            case 'destroy':
+                if (!$id) {
+                    return response()->json(['error' => 'ID required for destroy action'], 400);
+                }
+                return $this->destroy($resource, $id);
+            default:
+                return response()->json(['error' => 'Invalid action'], 400);
+        }
     }
 
-    public function apisStore(Request $request): JsonResponse
+    /**
+     * Magic method to handle dynamic resource calls
+     * This allows calling methods like: environmentsIndex(), usersStore(), etc.
+     * 
+     * @param string $method
+     * @param array $parameters
+     * @return JsonResponse
+     */
+    public function __call(string $method, array $parameters): JsonResponse
     {
-        return $this->store($request, 'apis');
-    }
+        // Parse method name to extract resource and action
+        // Pattern: {resource}{Action} (e.g., environmentsIndex, usersStore)
+        if (preg_match('/^([a-z]+)(Index|Store|Update|Destroy)$/', $method, $matches)) {
+            $resource = $matches[1];
+            $action = strtolower($matches[2]);
+            
+            // Get request and id from parameters
+            $request = $parameters[0] ?? null;
+            $id = $parameters[1] ?? null;
+            
+            return $this->handleResource($resource, $action, $request, $id);
+        }
 
-    public function apisUpdate(Request $request, $id): JsonResponse
-    {
-        return $this->update($request, 'apis', $id);
-    }
-
-    public function apisDestroy($id): JsonResponse
-    {
-        return $this->destroy('apis', $id);
-    }
-
-
-
-
-    // Specific methods for users (if you need custom logic)
-    public function usersIndex(): JsonResponse
-    {
-        return $this->index('users');
-    }
-
-    public function usersStore(Request $request): JsonResponse
-    {
-        return $this->store($request, 'users');
-    }
-
-    public function usersUpdate(Request $request, $id): JsonResponse
-    {
-        return $this->update($request, 'users', $id);
-    }
-
-    public function usersDestroy($id): JsonResponse
-    {
-        return $this->destroy('users', $id);
+        // If method doesn't match pattern, throw error
+        throw new \BadMethodCallException("Method {$method} not found");
     }
 }

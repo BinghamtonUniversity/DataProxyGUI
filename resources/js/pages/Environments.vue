@@ -168,13 +168,28 @@ const cleanFormData = (formData: any) => {
     return cleaned;
 };
 
+// Get CSRF token from meta tag
+const getCsrfToken = () => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    return token;
+};
+
 // Fetch environments from API
 const fetchEnvironments = async () => {
     try {
         loading.value = true;
         error.value = null;
         console.log(`${apiBaseUrl}/environments`);
-        const response = await fetch(`${apiBaseUrl}/environments`);
+        
+        const response = await fetch(`${apiBaseUrl}/environments`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -240,7 +255,9 @@ const handleFormSubmit = async (formValues: any) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken() || '',
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify(cleanedData)
             });
 
@@ -271,7 +288,9 @@ const handleFormSubmit = async (formValues: any) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken() || '',
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify(cleanedData)
             });
 
@@ -355,7 +374,9 @@ const handleDelete = async (selectedRowIds?: number[]) => {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
-                    }
+                        'X-CSRF-TOKEN': getCsrfToken() || '',
+                    },
+                    credentials: 'same-origin'
                 });
 
                 if (!response.ok) {
