@@ -14,8 +14,8 @@ const apiBaseUrl = '/api';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Environments',
-        href: '/environments',
+        title: 'Users',
+        href: '/users',
     },
 ];
 
@@ -26,127 +26,105 @@ const editingRow = ref<any>(null);
 const submitting = ref(false);
 
 // Data state
-const environments = ref<any[]>([]);
+const users = ref<any[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
 // Toaster
 const { success, error: showError, warning, info } = useToaster();
 
-// Form configuration for environments
+// Form configuration for users
 const formConfig = {
-    label: 'Envrionments',
-    description: 'A list of environments with their information.',
-    name: "my-form",
+    label: 'Users',
+    description: 'A list of users with their information.',
+    name: "users-form",
     files: false,
     fields: [
+        {
+            name: "unique_id",
+            label: "Unique ID",
+            type: "text",
+            placeholder: "Enter the unique ID",
+            value: "",
+            help: "Unique identifier for the user",
+            info: "Unique identifier for the user",
+            width: "12",
+            offset: "0",
+            required: true
+        },
         {
             name: "name",
             label: "Name",
             type: "text",
-            placeholder: "Enter the name of the environment",
+            placeholder: "Enter the user's name",
             value: "",
-            help: "Name of the environment",
-            info: "Name of the environment",
+            help: "Full name of the user",
+            info: "Full name of the user",
             width: "12",
             offset: "0",
             required: true
         },
         {
-            name: "domain",
-            label: "Domain",
+            name: "username",
+            label: "Username",
             type: "text",
-            placeholder: "Enter the domain of the environment",
+            placeholder: "Enter the username",
             value: "",
-            help: "Domain of the environment",
-            info: "Domain of the environment",
+            help: "Username for login",
+            info: "Username for login",
             width: "12",
             offset: "0",
-            required: true
-        },
-        {
-            name: "type",
-            label: "Type",
-            type: "select",
-            placeholder: "Select the type of the environment",
-            value: "test",
-            help: "Type of the environment",
-            info: "Type of the environment",
-            width: "12",
-            offset: "0",
-            options: [
-                {
-                    label: "Test",
-                    value: "test"
-                },
-                {
-                    label: "Dev",
-                    value: "dev"
-                },
-                {
-                    label: "Prod",
-                    value: "prod"
-                }
-            ],
-            multiple: false,
-            show: true,
-            edit: true,
-            parse: true,
-            required: true
-        },
-        {
-            name: "created_at",
-            label: "Created",
-            type: "text",
-            placeholder: "",
-            value: "",
-            help: "",
-            info: "",
-            width: "12",
-            offset: "0",
-            show: false,
-            edit: false,
-            parse: false,
             required: false
         },
         {
-            name: "updated_at",
-            label: "Updated",
-            type: "text",
-            placeholder: "",
+            name: "email",
+            label: "Email",
+            type: "email",
+            placeholder: "Enter the email address",
             value: "",
-            help: "",
-            info: "",
+            help: "Email address of the user",
+            info: "Email address of the user",
             width: "12",
             offset: "0",
-            show: false,
-            edit: false,
-            parse: false,
+            required: false
+        },
+        {
+            name: "admin",
+            label: "Admin",
+            type: "checkbox",
+            placeholder: "",
+            value: false,
+            help: "Whether the user is an admin",
+            info: "Whether the user is an admin",
+            width: "12",
+            offset: "0",
+            required: false
+        },
+        {
+            name: "active",
+            label: "Active",
+            type: "checkbox",
+            placeholder: "",
+            value: true,
+            help: "Whether the user is active",
+            info: "Whether the user is active",
+            width: "12",
+            offset: "0",
+            required: false
+        },
+        {
+            name: "developer",
+            label: "Developer",
+            type: "checkbox",
+            placeholder: "",
+            value: false,
+            help: "Whether the user is a developer",
+            info: "Whether the user is a developer",
+            width: "12",
+            offset: "0",
             required: false
         }
     ]
-};
-
-// Format timestamp for display
-const formatTimestamp = (timestamp: string | null | undefined) => {
-    if (!timestamp || timestamp === null || timestamp === undefined) {
-        console.log('formatTimestamp: No timestamp provided:', timestamp);
-        return '';
-    }
-    
-    try {
-        const date = new Date(timestamp);
-        if (isNaN(date.getTime())) {
-            console.log('formatTimestamp: Invalid date:', timestamp);
-            return '';
-        }
-        const formatted = date.toLocaleString();
-        console.log('formatTimestamp: Successfully formatted:', timestamp, '->', formatted);
-        return formatted;
-    } catch (error) {
-        console.log('formatTimestamp: Error formatting timestamp:', timestamp, error);
-        return timestamp;
-    }
 };
 
 // Clean form data for API submission
@@ -154,8 +132,6 @@ const cleanFormData = (formData: any) => {
     const cleaned = { ...formData };
     
     // Remove server-managed fields that shouldn't be sent to API
-    delete cleaned.created_at;
-    delete cleaned.updated_at;
     delete cleaned.id; // Remove ID for new records
     
     // Remove empty strings and convert to null if needed
@@ -168,30 +144,25 @@ const cleanFormData = (formData: any) => {
     return cleaned;
 };
 
-// Fetch environments from API
-const fetchEnvironments = async () => {
+// Fetch users from API
+const fetchUsers = async () => {
     try {
         loading.value = true;
         error.value = null;
-        console.log(`${apiBaseUrl}/environments`);
-        const response = await fetch(`${apiBaseUrl}/environments`);
+        
+        const response = await fetch(`${apiBaseUrl}/users`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
-        // Format timestamps for display
-        environments.value = data.map((env: any) => ({
-            ...env,
-            created_at: formatTimestamp(env.created_at),
-            updated_at: formatTimestamp(env.updated_at)
-        }));
+        users.value = data;
         
     } catch (err: any) {
-        error.value = err.message || 'Failed to fetch environments';
-        showError('Failed to fetch environments. Please try again.', 'Error');
-        console.error('Error fetching environments:', err);
+        error.value = err.message || 'Failed to fetch users';
+        showError('Failed to fetch users. Please try again.', 'Error');
+        console.error('Error fetching users:', err);
     } finally {
         loading.value = false;
     }
@@ -211,10 +182,13 @@ const openEditModal = (row?: any) => {
         // Create a clean copy for editing, preserving original data
         editingRow.value = { 
             id: row.id,
+            unique_id: row.unique_id,
             name: row.name,
-            domain: row.domain,
-            type: row.type
-            // Don't include created_at, updated_at as they're server-managed
+            username: row.username,
+            email: row.email,
+            admin: row.admin,
+            active: row.active,
+            developer: row.developer
         };
         console.log('Opening edit modal with data:', editingRow.value);
         showModal.value = true;
@@ -233,9 +207,9 @@ const handleFormSubmit = async (formValues: any) => {
         submitting.value = true;
         
         if (modalMode.value === 'new') {
-            // Create new environment via API
+            // Create new user via API
             const cleanedData = cleanFormData(formValues);
-            const response = await fetch(`${apiBaseUrl}/environments`, {
+            const response = await fetch(`${apiBaseUrl}/users`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -249,24 +223,17 @@ const handleFormSubmit = async (formValues: any) => {
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
 
-            const newEnv = await response.json();
-            console.log('Server response for create:', newEnv);
+            const newUser = await response.json();
+            console.log('Server response for create:', newUser);
             
-            // Add to local state with server-provided data and formatted timestamps
-            const formattedNewEnv = {
-                ...newEnv,
-                // Use server-provided timestamps, not user input
-                created_at: formatTimestamp(newEnv.created_at),
-                updated_at: formatTimestamp(newEnv.updated_at)
-            };
-            console.log('Formatted new environment:', formattedNewEnv);
-            environments.value.push(formattedNewEnv);
+            // Add to local state with server-provided data
+            users.value.push(newUser);
             
-            success(`Environment "${formValues.name}" added successfully!`, 'Environment Added');
+            success(`User "${formValues.name}" added successfully!`, 'User Added');
         } else if (modalMode.value === 'edit' && editingRow.value) {
-            // Update existing environment via API
+            // Update existing user via API
             const cleanedData = cleanFormData(formValues);
-            const response = await fetch(`${apiBaseUrl}/environments/${editingRow.value.id}`, {
+            const response = await fetch(`${apiBaseUrl}/users/${editingRow.value.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -280,27 +247,20 @@ const handleFormSubmit = async (formValues: any) => {
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
 
-            const updatedEnv = await response.json();
-            console.log('Server response for edit:', updatedEnv);
+            const updatedUser = await response.json();
+            console.log('Server response for edit:', updatedUser);
             
             // Update local state with server-provided data
-            const index = environments.value.findIndex((env: any) => env.id === editingRow.value.id);
+            const index = users.value.findIndex((user: any) => user.id === editingRow.value.id);
             if (index !== -1) {
-                const formattedEnv = {
-                    ...updatedEnv,
-                    // Use server-provided timestamps, not user input
-                    created_at: formatTimestamp(updatedEnv.created_at),
-                    updated_at: formatTimestamp(updatedEnv.updated_at)
-                };
-                console.log('Formatted environment for update:', formattedEnv);
-                environments.value[index] = formattedEnv;
+                users.value[index] = updatedUser;
             }
             
-            success(`Environment "${formValues.name}" updated successfully!`, 'Environment Updated');
+            success(`User "${formValues.name}" updated successfully!`, 'User Updated');
         }
         closeModal();
     } catch (err: any) {
-        showError(err.message || 'Failed to save environment. Please try again.', 'Error');
+        showError(err.message || 'Failed to save user. Please try again.', 'Error');
         console.error('Form submission error:', err);
     } finally {
         submitting.value = false;
@@ -320,11 +280,11 @@ const handleAction = (actionData: { type: string; payload: any }) => {
             break;
         case 'view':
             // Handle view action if needed
-            console.log('View environment:', actionData.payload);
+            console.log('View user:', actionData.payload);
             break;
         case 'duplicate':
             // Handle duplicate action if needed
-            console.log('Duplicate environment:', actionData.payload);
+            console.log('Duplicate user:', actionData.payload);
             break;
         default:
             console.log('Unknown action type:', actionData.type);
@@ -346,12 +306,12 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
 
 const handleDelete = async (selectedRowIds?: number[]) => {
     if (selectedRowIds && selectedRowIds.length > 0) {
-        const envsToDelete = environments.value.filter(env => selectedRowIds.includes(env.id));
+        const usersToDelete = users.value.filter(user => selectedRowIds.includes(user.id));
         
         try {
-            // Delete environments via API
-            for (const env of envsToDelete) {
-                const response = await fetch(`${apiBaseUrl}/environments/${env.id}`, {
+            // Delete users via API
+            for (const user of usersToDelete) {
+                const response = await fetch(`${apiBaseUrl}/users/${user.id}`, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
@@ -360,59 +320,66 @@ const handleDelete = async (selectedRowIds?: number[]) => {
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || `Failed to delete environment ${env.name}. Status: ${response.status}`);
+                    throw new Error(errorData.message || `Failed to delete user ${user.name}. Status: ${response.status}`);
                 }
             }
             
             // Remove from local state after successful API calls
-            envsToDelete.forEach(env => {
-                const index = environments.value.findIndex(e => e.id === env.id);
+            usersToDelete.forEach(user => {
+                const index = users.value.findIndex(u => u.id === user.id);
                 if (index !== -1) {
-                    environments.value.splice(index, 1);
+                    users.value.splice(index, 1);
                 }
             });
             
             // Show success message
-            if (envsToDelete.length === 1) {
-                success(`Environment "${envsToDelete[0].name}" deleted successfully!`, 'Environment Deleted');
+            if (usersToDelete.length === 1) {
+                success(`User "${usersToDelete[0].name}" deleted successfully!`, 'User Deleted');
             } else {
-                success(`${envsToDelete.length} environments deleted successfully!`, 'Environments Deleted');
+                success(`${usersToDelete.length} users deleted successfully!`, 'Users Deleted');
             }
         } catch (err: any) {
-            showError(err.message || 'Failed to delete environments. Please try again.', 'Error');
+            showError(err.message || 'Failed to delete users. Please try again.', 'Error');
             console.error('Delete error:', err);
         }
     } else {
-        warning('Please select at least one environment to delete.', 'Selection Required');
+        warning('Please select at least one user to delete.', 'Selection Required');
     }
 };
 
 // Fetch data on component mount
 onMounted(() => {
-    fetchEnvironments();
+    fetchUsers();
 });
 </script>
 
 <template>
-
-    <Head title="Environments" />
+    <Head title="Users" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
-
 
             <!-- Loading State -->
             <div v-if="loading" class="flex justify-center items-center py-12">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span class="ml-3 text-gray-600 dark:text-gray-300">Loading environments...</span>
+                <span class="ml-3 text-gray-600 dark:text-gray-300">Loading users...</span>
             </div>
 
-   
+            <!-- Error State -->
+            <div v-else-if="error" class="flex justify-center items-center py-12">
+                <div class="text-red-600 dark:text-red-400">
+                    <p class="text-lg font-semibold">Error loading users</p>
+                    <p class="text-sm">{{ error }}</p>
+                    <button @click="fetchUsers" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        Try Again
+                    </button>
+                </div>
+            </div>
 
             <!-- DataGrid -->
             <DataGrid 
                 v-else
                 :formConfig="formConfig"
-                :formData="environments"
+                :formData="users"
                 theme="default"
                 :showNew="true"
                 :showEdit="true"
@@ -426,25 +393,23 @@ onMounted(() => {
                 @edit="openEditModal"
                 @delete="handleDelete"
                 @action="handleAction"
-                         >
-             </DataGrid>
+            >
+            </DataGrid>
 
-            <!-- Modal for New/Edit Environment -->
+            <!-- Modal for New/Edit User -->
             <AlertModal 
                 :isOpen="showModal"
-                :title="modalMode === 'new' ? 'Add New Environment' : 'Edit Environment'"
+                :title="modalMode === 'new' ? 'Add New User' : 'Edit User'"
                 @close="closeModal"
             >
-                                                                   <FormViewer 
-                      :formConfig="formConfig" 
-                      :initialData="editingRow"
-                      :cancelAction="'close'"
-                      @submit="handleFormSubmit"
-                      @action="handleFormAction"
-                      :disabled="submitting"
-                  />
-                
-                          
+                <FormViewer 
+                    :formConfig="formConfig" 
+                    :initialData="editingRow"
+                    :cancelAction="'close'"
+                    @submit="handleFormSubmit"
+                    @action="handleFormAction"
+                    :disabled="submitting"
+                />
             </AlertModal>
             
             <!-- Global Toaster -->

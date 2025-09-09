@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'django' => [
+        'base_url' => env('VITE_DJANGO_BASEURL'),
+        'api_user' => env('API_USER'),
+        'api_password' => env('API_PASSWORD'),
+    ],
+
 ];
