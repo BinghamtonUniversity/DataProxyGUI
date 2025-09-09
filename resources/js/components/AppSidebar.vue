@@ -88,6 +88,11 @@ const footerNavItems: NavItem[] = [
                 href: '/environments',
                 icon: Globe,
             },
+            {
+                title: 'Users',
+                href: '/users',
+                icon: Users,
+            },
         ]
     },
     {

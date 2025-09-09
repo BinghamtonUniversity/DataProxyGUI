@@ -111,5 +111,24 @@ Route::get('/environments', function () {
     return Inertia::render('Environments');
 })->middleware(['auth', 'verified'])->name('environments');
 
+Route::get('/users', function () {
+    return Inertia::render('Users');
+})->middleware(['auth', 'verified'])->name('users');
+
+// API Routes - Single controller handles all resources
+Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
+    // Environments
+    Route::get('/environments', [App\Http\Controllers\Api\ApiController::class, 'environmentsIndex']);
+    Route::post('/environments', [App\Http\Controllers\Api\ApiController::class, 'environmentsStore']);
+    Route::put('/environments/{id}', [App\Http\Controllers\Api\ApiController::class, 'environmentsUpdate']);
+    Route::delete('/environments/{id}', [App\Http\Controllers\Api\ApiController::class, 'environmentsDestroy']);
+    
+    // Users
+    Route::get('/users', [App\Http\Controllers\Api\ApiController::class, 'usersIndex']);
+    Route::post('/users', [App\Http\Controllers\Api\ApiController::class, 'usersStore']);
+    Route::put('/users/{id}', [App\Http\Controllers\Api\ApiController::class, 'usersUpdate']);
+    Route::delete('/users/{id}', [App\Http\Controllers\Api\ApiController::class, 'usersDestroy']);
+});
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
