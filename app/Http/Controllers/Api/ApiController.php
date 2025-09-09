@@ -159,26 +159,29 @@ class ApiController extends Controller
         ], $result['status']);
     }
 
-    // Specific methods for environments (if you need custom logic)
-    public function environmentsIndex(): JsonResponse
+    // Specific methods for apis (if you need custom logic)
+    public function apisIndex(): JsonResponse
     {
-        return $this->index('environments');
+        return $this->index('apis');
     }
 
-    public function environmentsStore(Request $request): JsonResponse
+    public function apisStore(Request $request): JsonResponse
     {
-        return $this->store($request, 'environments');
+        return $this->store($request, 'apis');
     }
 
-    public function environmentsUpdate(Request $request, $id): JsonResponse
+    public function apisUpdate(Request $request, $id): JsonResponse
     {
-        return $this->update($request, 'environments', $id);
+        return $this->update($request, 'apis', $id);
     }
 
-    public function environmentsDestroy($id): JsonResponse
+    public function apisDestroy($id): JsonResponse
     {
-        return $this->destroy('environments', $id);
+        return $this->destroy('apis', $id);
     }
+
+
+
 
     // Specific methods for users (if you need custom logic)
     public function usersIndex(): JsonResponse

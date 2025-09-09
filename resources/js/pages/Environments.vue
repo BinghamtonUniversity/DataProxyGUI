@@ -173,7 +173,7 @@ const fetchEnvironments = async () => {
     try {
         loading.value = true;
         error.value = null;
-        
+        console.log(`${apiBaseUrl}/environments`);
         const response = await fetch(`${apiBaseUrl}/environments`);
         
         if (!response.ok) {

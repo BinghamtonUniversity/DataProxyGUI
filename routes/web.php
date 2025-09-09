@@ -128,6 +128,11 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
     Route::post('/users', [App\Http\Controllers\Api\ApiController::class, 'usersStore']);
     Route::put('/users/{id}', [App\Http\Controllers\Api\ApiController::class, 'usersUpdate']);
     Route::delete('/users/{id}', [App\Http\Controllers\Api\ApiController::class, 'usersDestroy']);
+
+    Route::get('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisIndex']);
+    Route::post('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisStore']);
+    Route::put('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisUpdate']);
+    Route::delete('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisDestroy']);
 });
 
 require __DIR__.'/settings.php';

@@ -268,7 +268,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
 const fetchApis = async () => {
   loading.value = true
   try {
-    const response = await fetch(`${djangoBaseUrl}/api/apis`)
+    const response = await fetch(`/api/apis`)
     apis.value = await response.json()
   } catch (e) {
     apis.value = []
