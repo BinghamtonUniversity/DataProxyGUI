@@ -115,24 +115,17 @@ Route::get('/users', function () {
     return Inertia::render('Users');
 })->middleware(['auth', 'verified'])->name('users');
 
-// API Routes - Single controller handles all resources
+// API Routes - Generic resource controller
 Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
-    // Environments
-    Route::get('/environments', [App\Http\Controllers\Api\ApiController::class, 'environmentsIndex']);
-    Route::post('/environments', [App\Http\Controllers\Api\ApiController::class, 'environmentsStore']);
-    Route::put('/environments/{id}', [App\Http\Controllers\Api\ApiController::class, 'environmentsUpdate']);
-    Route::delete('/environments/{id}', [App\Http\Controllers\Api\ApiController::class, 'environmentsDestroy']);
+    // Generic resource routes - automatically handles all CRUD operations
+    $resources = ['environments', 'users', 'apis'];
     
-    // Users
-    Route::get('/users', [App\Http\Controllers\Api\ApiController::class, 'usersIndex']);
-    Route::post('/users', [App\Http\Controllers\Api\ApiController::class, 'usersStore']);
-    Route::put('/users/{id}', [App\Http\Controllers\Api\ApiController::class, 'usersUpdate']);
-    Route::delete('/users/{id}', [App\Http\Controllers\Api\ApiController::class, 'usersDestroy']);
-
-    Route::get('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisIndex']);
-    Route::post('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisStore']);
-    Route::put('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisUpdate']);
-    Route::delete('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisDestroy']);
+    foreach ($resources as $resource) {
+        Route::get("/{$resource}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Index"]);
+        Route::post("/{$resource}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Store"]);
+        Route::put("/{$resource}/{id}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Update"]);
+        Route::delete("/{$resource}/{id}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Destroy"]);
+    }
 });
 
 require __DIR__.'/settings.php';
