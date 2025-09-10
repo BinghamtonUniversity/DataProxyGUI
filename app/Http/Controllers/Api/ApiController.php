@@ -269,6 +269,56 @@ class ApiController extends Controller
         ], $result['status']);
     }
 
+    public function apiInstancesStore(Request $request): JsonResponse
+    {
+        Log::info('ApiInstancesStore called');
+
+        $requestData = $request->all();
+        
+        $result = $this->makeDjangoRequest('POST', "api_instances", $requestData);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to POST API Instance details",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function apiInstancesUpdate(Request $request, string $api_instance_id): JsonResponse
+    {
+        Log::info('ApiInstancesStore called', ['api_instance_id' => $api_instance_id]);
+
+        $endpoint = "api_instances/{$api_instance_id}";
+
+        $requestData = $request->all();
+        
+        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to PUT API Instance details",
+            'api_id' => $api_instance_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
     // ===========================================
     // API Users
     // ===========================================

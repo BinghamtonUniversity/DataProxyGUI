@@ -126,14 +126,18 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
         Route::put("/{$resource}/{id}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Update"]);
         Route::delete("/{$resource}/{id}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Destroy"]);
     }
-
+    //APIs
     Route::get('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisIndex']);
     Route::post('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisStore']);
     Route::put('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisUpdate']);
     Route::delete('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisDestroy']);
 
+    //API Instances
     Route::get('/api_instances', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesIndex']);
+    Route::post('/api_instances', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesStore']);
+    Route::put('/api_instances/{id}', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesUpdate']);
 
+    //API Users
     Route::get('/api_users', [App\Http\Controllers\Api\ApiController::class, 'apiUsersIndex']);
     
 

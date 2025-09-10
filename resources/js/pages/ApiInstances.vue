@@ -72,19 +72,19 @@ const newApiInstanceForm = ref({
   name: '',
   route: '',
   public: 0,
-  route_user_map: [
-    {
-      api_user: '',
-      verb: '',
-      route: ''
-    }
-  ],
-  resources: [
-    {
-      name: '',
-      resource: ''
-    }
-  ]
+  // route_user_map: [
+  //   {
+  //     api_user: '',
+  //     verb: '',
+  //     route: ''
+  //   }
+  // ],
+  // resources: [
+  //   {
+  //     name: '',
+  //     resource: ''
+  //   }
+  // ]
 })
 const newApiInstanceLoading = ref(false)
 const newApiInstanceError = ref('')
@@ -107,19 +107,19 @@ const openNewApiInstanceDialog = () => {
     name: '',
     route: '',
     public: 0,
-    route_user_map: [
-      {
-        api_user: '',
-        verb: '',
-        route: ''
-      }
-    ],
-    resources: [
-      {
-        name: '',
-        resource: ''
-      }
-    ]
+    // route_user_map: [
+    //   {
+    //     api_user: '',
+    //     verb: '',
+    //     route: ''
+    //   }
+    // ],
+    // resources: [
+    //   {
+    //     name: '',
+    //     resource: ''
+    //   }
+    // ]
   }
   newApiInstanceError.value = ''
   newApiInstanceDialogOpen.value = true
@@ -135,19 +135,19 @@ const closeNewApiInstanceDialog = () => {
     name: '',
     route: '',
     public: 0,
-    route_user_map: [
-      {
-        api_user: '',
-        verb: '',
-        route: ''
-      }
-    ],
-    resources: [
-      {
-        name: '',
-        resource: ''
-      }
-    ]
+    // route_user_map: [
+    //   {
+    //     api_user: '',
+    //     verb: '',
+    //     route: ''
+    //   }
+    // ],
+    // resources: [
+    //   {
+    //     name: '',
+    //     resource: ''
+    //   }
+    // ]
   }
   isEditMode.value = false
   editingApiInstanceId.value = null
@@ -158,11 +158,11 @@ const submitNewApiInstance = async (e: Event) => {
   newApiInstanceLoading.value = true
   newApiInstanceError.value = ''
   try {
-    let url = `${djangoBaseUrl}/api/api_instances`
-    let method = 'POST'
+    let url = `/api/api_instances`
+    let request_method = 'POST'
     if (isEditMode.value && editingApiInstanceId.value) {
-      url = `${djangoBaseUrl}/api/api_instances/${editingApiInstanceId.value}`
-      method = 'PUT'
+      url = `/api/api_instances/${editingApiInstanceId.value}`
+      request_method = 'PUT'
     }
 
     const body = isEditMode.value && editingApiInstanceId.value
@@ -170,8 +170,12 @@ const submitNewApiInstance = async (e: Event) => {
       : { ...newApiInstanceForm.value }
     // console.log('Submitting API Instance:', body)
     const response = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
+      method: request_method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': getCsrfToken() || '',
+      },
       body: JSON.stringify(body),
     })
 
@@ -198,51 +202,51 @@ const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
     name: apiInstance.name || '',
     route: apiInstance.route || '',
     public: apiInstance.public || 0,
-    route_user_map: apiInstance.route_user_map?.map(item => ({
-      api_user: item.api_user?.toString() || '',
-      verb: item.verb || '',
-      route: item.route || ''
-    })) || [],
-    resources: apiInstance.resources?.map(item => ({
-      name: item.name || '',
-      resource: item.resource?.toString() || ''
-    })) || [
-      {
-        name: '',
-        resource: ''
-      }
-    ]
+    // route_user_map: apiInstance.route_user_map?.map(item => ({
+    //   api_user: item.api_user?.toString() || '',
+    //   verb: item.verb || '',
+    //   route: item.route || ''
+    // })) || [],
+    // resources: apiInstance.resources?.map(item => ({
+    //   name: item.name || '',
+    //   resource: item.resource?.toString() || ''
+    // })) || [
+    //   {
+    //     name: '',
+    //     resource: ''
+    //   }
+    // ]
   }
   newApiInstanceDialogOpen.value = true
 }
 
 // MOVE THESE to Details Page ?? Helper functions for managing array fields
-const addRouteUserMap = () => {
-  newApiInstanceForm.value.route_user_map.push({
-    api_user: '',
-    verb: '',
-    route: ''
-  })
-}
+// const addRouteUserMap = () => {
+//   newApiInstanceForm.value.route_user_map.push({
+//     api_user: '',
+//     verb: '',
+//     route: ''
+//   })
+// }
 
-const removeRouteUserMap = (index: number) => {
-  if (newApiInstanceForm.value.route_user_map.length > 0) {
-    newApiInstanceForm.value.route_user_map.splice(index, 1)
-  }
-}
+// const removeRouteUserMap = (index: number) => {
+//   if (newApiInstanceForm.value.route_user_map.length > 0) {
+//     newApiInstanceForm.value.route_user_map.splice(index, 1)
+//   }
+// }
 
-const addResource = () => {
-  newApiInstanceForm.value.resources.push({
-    name: '',
-    resource: ''
-  })
-}
+// const addResource = () => {
+//   newApiInstanceForm.value.resources.push({
+//     name: '',
+//     resource: ''
+//   })
+// }
 
-const removeResource = (index: number) => {
-  if (newApiInstanceForm.value.resources.length > 1) {
-    newApiInstanceForm.value.resources.splice(index, 1)
-  }
-}
+// const removeResource = (index: number) => {
+//   if (newApiInstanceForm.value.resources.length > 1) {
+//     newApiInstanceForm.value.resources.splice(index, 1)
+//   }
+// }
 
 // Dropdown functionality
 const toggleDropdown = (type: keyof typeof dropdownOpen) => {
@@ -465,11 +469,11 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
 const fetchApiInstances = async () => {
   loading.value = true
   try {
-    const response = await fetch(`${djangoBaseUrl}/api/api_instances`)
+    const response = await fetch(`/api/api_instances`)
     api_instances.value = await response.json()
   } catch (e) {
     api_instances.value = []
-    console.error('Error fetching APIs:', e)
+    console.error('Error fetching API Instances:', e)
   } finally {
     loading.value = false
   }
