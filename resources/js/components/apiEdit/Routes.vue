@@ -15,7 +15,7 @@ import {
 } from '@tanstack/vue-table'
 import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
 import { h, ref, computed } from 'vue'
-import { valueUpdater } from '@/lib/utils'
+import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
 import { type ApiData, RouteData } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -143,14 +143,15 @@ const submitNewRoute = async (e: Event) => {
             }
         }
 
-        const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/code`, {
+        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
             },
             body: JSON.stringify(updatedApiData)
-        });
+        })
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
