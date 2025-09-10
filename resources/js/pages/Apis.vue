@@ -42,7 +42,7 @@ import {
 import TableActions from '../components/TableActions.vue'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-
+import { getCsrfToken } from '@/lib/utils'
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -88,20 +88,28 @@ const submitNewApi = async (e: Event) => {
   newApiLoading.value = true
   newApiError.value = ''
   try {
-    let url = `${djangoBaseUrl}/api/apis`
-    let method = 'POST'
+    let url = `/api/apis`
+    let request_method = 'POST'
+    console.log(request_method)
+    
     if (isEditMode.value && editingApiId.value) {
-      url = `${djangoBaseUrl}/api/apis/${editingApiId.value}`
-      method = 'PUT'
+      url = `/api/apis/${editingApiId.value}`
+      request_method = 'PUT'
     }
     const body = isEditMode.value && editingApiId.value
       ? { ...newApiForm.value, id: editingApiId.value }
       : {... newApiForm.value, api_type: 'python'}
+
     const response = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
+      method: request_method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': getCsrfToken() || '',
+      },
       body: JSON.stringify(body),
     })
+
     if (!response.ok) throw new Error('Failed to save API')
     closeNewApiDialog()
     await fetchApis()

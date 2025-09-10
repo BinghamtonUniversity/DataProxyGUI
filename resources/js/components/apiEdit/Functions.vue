@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
     api_id: string
@@ -59,11 +60,12 @@ const handleSave = async (updatedCode: string) => {
             )
         }
 
-        const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/code`, {
+        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
             },
             body: JSON.stringify(updatedApiData)
         })

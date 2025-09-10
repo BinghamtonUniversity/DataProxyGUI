@@ -18,3 +18,8 @@ export function valueUpdater<T extends Record<string, any>>(
     ref.value = updaterOrValue
   }
 }
+
+export const getCsrfToken = () => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    return token;
+};

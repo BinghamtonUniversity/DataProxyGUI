@@ -43,6 +43,7 @@ import {
 import TableActions from '../components/TableActions.vue'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { getCsrfToken } from '@/lib/utils'
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -65,12 +66,12 @@ const newApiInstanceDialogOpen = ref(false)
 
 //TO-DO: Should send route_user_map and resources as JSON strings here or in Details page??
 const newApiInstanceForm = ref({
-  id: '',
   environment_id: '',
   api_id: '',
   api_version_id: '',
   name: '',
   route: '',
+  public: 0,
   route_user_map: [
     {
       api_user: '',
@@ -100,12 +101,12 @@ const dropdownOpen = reactive({
 
 const openNewApiInstanceDialog = () => {
   newApiInstanceForm.value = {
-    id: '',
     environment_id: '',
     api_id: '',
     api_version_id: '',
     name: '',
     route: '',
+    public: 0,
     route_user_map: [
       {
         api_user: '',
@@ -128,12 +129,12 @@ const closeNewApiInstanceDialog = () => {
   newApiInstanceDialogOpen.value = false
   newApiInstanceError.value = ''
   newApiInstanceForm.value = {
-    id: '',
     environment_id: '',
     api_id: '',
     api_version_id: '',
     name: '',
     route: '',
+    public: 0,
     route_user_map: [
       {
         api_user: '',
@@ -163,17 +164,18 @@ const submitNewApiInstance = async (e: Event) => {
       url = `${djangoBaseUrl}/api/api_instances/${editingApiInstanceId.value}`
       method = 'PUT'
     }
+
     const body = isEditMode.value && editingApiInstanceId.value
       ? { ...newApiInstanceForm.value, id: editingApiInstanceId.value }
       : { ...newApiInstanceForm.value }
+    // console.log('Submitting API Instance:', body)
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
 
-    console.log('Submitting API Instance:', { url, method, body })
-    // const response = await fetch(url, {
-    //   method,
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(body),
-    // })
-    // if (!response.ok) throw new Error('Failed to save API Instance')
+    if (!response.ok) throw new Error('Failed to save API Instance')
     closeNewApiInstanceDialog()
     await fetchApiInstances()
   } catch (err: any) {
@@ -185,16 +187,17 @@ const submitNewApiInstance = async (e: Event) => {
   }
 }
 
+
 const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
   isEditMode.value = true
   editingApiInstanceId.value = apiInstance.id
   newApiInstanceForm.value = {
-    id: apiInstance.id?.toString() || '',
     environment_id: apiInstance.environment_id?.toString() || '',
     api_id: apiInstance.api_id?.toString() || '',
     api_version_id: apiInstance.api_version_id?.toString() || '',
     name: apiInstance.name || '',
     route: apiInstance.route || '',
+    public: apiInstance.public || 0,
     route_user_map: apiInstance.route_user_map?.map(item => ({
       api_user: item.api_user?.toString() || '',
       verb: item.verb || '',
@@ -481,10 +484,10 @@ const fetchAllData = async () => {
       apisResponse,
       apiUserResponse
     ] = await Promise.all([
-      fetch(`${djangoBaseUrl}/api/api_instances`),
-      fetch(`${djangoBaseUrl}/api/environments`),
-      fetch(`${djangoBaseUrl}/api/apis`),
-      fetch(`${djangoBaseUrl}/api/api_users`),
+      fetch(`/api/api_instances`),
+      fetch(`/api/environments`),
+      fetch(`/api/apis`),
+      fetch(`/api/api_users`),
     ])
 
     if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')

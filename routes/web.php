@@ -20,23 +20,23 @@ Route::get('/api_instances', function () {
     return Inertia::render('ApiInstances');
 })->middleware(['auth', 'verified'])->name('api_instances');
 
-Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->group(function () {
-    // Single route that handles all tabs with optional tab parameter
-    Route::get('/{tab?}', function ($api_type, $api_id, $tab = 'routes') {
-        // Validate tab parameter
-        $validTabs = ['routes', 'resources', 'functions', 'files', 'models', 'options'];
+// Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->group(function () {
+//     // Single route that handles all tabs with optional tab parameter
+//     Route::get('/{tab?}', function ($api_type, $api_id, $tab = 'routes') {
+//         // Validate tab parameter
+//         $validTabs = ['routes', 'resources', 'functions', 'files', 'models', 'options'];
         
-        if (!in_array($tab, $validTabs)) {
-            abort(404);
-        }
+//         if (!in_array($tab, $validTabs)) {
+//             abort(404);
+//         }
 
-        return Inertia::render('apiEdit/Layout', [
-            'api_type' => $api_type,
-            'api_id' => $api_id,
-            'activeTab' => $tab,
-        ]);
-    })->name('apiEdit.index')->where('tab', 'routes|resources|functions|files|models|options');
-});
+//         return Inertia::render('apiEdit/Layout', [
+//             'api_type' => $api_type,
+//             'api_id' => $api_id,
+//             'activeTab' => $tab,
+//         ]);
+//     })->name('apiEdit.index')->where('tab', 'routes|resources|functions|files|models|options');
+// });
 
 // Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->group(function () {
 //     Route::get('/routes', function ($api_type, $api_id) {
@@ -118,7 +118,7 @@ Route::get('/users', function () {
 // API Routes - Generic resource controller
 Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
     // Generic resource routes - automatically handles all CRUD operations
-    $resources = ['environments', 'users', 'apis'];
+    $resources = ['environments', 'users'];
     
     foreach ($resources as $resource) {
         Route::get("/{$resource}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Index"]);
@@ -126,6 +126,53 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
         Route::put("/{$resource}/{id}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Update"]);
         Route::delete("/{$resource}/{id}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Destroy"]);
     }
+
+    Route::get('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisIndex']);
+    Route::post('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisStore']);
+    Route::put('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisUpdate']);
+    Route::delete('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisDestroy']);
+
+    Route::get('/api_instances', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesIndex']);
+
+    Route::get('/api_users', [App\Http\Controllers\Api\ApiController::class, 'apiUsersIndex']);
+    
+
+});
+
+
+
+Route::middleware(['auth', 'verified'])->prefix('/apis/{api_type}/{api_id}')->group(function () {
+    
+    // ============================================
+    // Web Routes (Inertia.js - for page rendering)
+    // ============================================
+    
+    // Main page route - renders the Inertia component
+    Route::get('/{tab?}', function ($api_type, $api_id, $tab = 'routes') {
+        // Validate tab parameter
+        $validTabs = ['routes', 'resources', 'functions', 'files', 'models', 'options'];
+        
+        if (!in_array($tab, $validTabs)) {
+            abort(404);
+        }
+
+        return Inertia::render('apiEdit/Layout', [
+            'api_type' => $api_type,
+            'api_id' => $api_id,
+            'activeTab' => $tab,
+        ]);
+    })->name('apiEdit.index')->where('tab', 'routes|resources|functions|files|models|options');   
+});
+
+// ============================================
+// API Routes (JSON responses - for AJAX calls)
+// ============================================
+    
+Route::middleware(['auth', 'verified'])->prefix('/ajax/apis')->group(function () {
+    Route::get('/{api_id}/versions/latest', [App\Http\Controllers\Api\ApiController::class, 'ApiEditIndex'])
+        ->name('api.edit.index');
+    Route::put('/{api_id}/code', [App\Http\Controllers\Api\ApiController::class, 'ApiEditUpdate'])
+        ->name('api.edit.update');
 });
 
 require __DIR__.'/settings.php';
