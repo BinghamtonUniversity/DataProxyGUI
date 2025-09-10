@@ -212,6 +212,41 @@ class ApiController extends Controller
     }
 
     /**
+     * Get the latest version of a specific API
+     */
+    public function getLatestApiVersion($id): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions/latest");
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch latest version for API {$id}",
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    /**
+     * Update API code/configuration
+     */
+    public function updateApiCode(Request $request, $id): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('PUT', "apis/{$id}/code", $request->all());
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to update API code for API {$id}",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    /**
      * Magic method to handle dynamic resource calls
      * This allows calling methods like: environmentsIndex(), usersStore(), etc.
      * 

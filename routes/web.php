@@ -126,6 +126,10 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
         Route::put("/{$resource}/{id}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Update"]);
         Route::delete("/{$resource}/{id}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Destroy"]);
     }
+    
+    // Special API routes for version handling
+    Route::get('/apis/{id}/versions/latest', [App\Http\Controllers\Api\ApiController::class, 'getLatestApiVersion']);
+    Route::put('/apis/{id}/code', [App\Http\Controllers\Api\ApiController::class, 'updateApiCode']);
 });
 
 require __DIR__.'/settings.php';

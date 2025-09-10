@@ -140,6 +140,15 @@ const cleanFormData = (formData: any) => {
     // Remove server-managed fields that shouldn't be sent to API
     delete cleaned.id; // Remove ID for new records
     
+    // Convert checkbox fields to proper booleans
+    const booleanFields = ['admin', 'active', 'developer'];
+    booleanFields.forEach(field => {
+        if (cleaned[field] !== undefined && cleaned[field] !== null) {
+            // Convert string 'true'/'false' or actual boolean to boolean
+            cleaned[field] = cleaned[field] === true || cleaned[field] === 'true' || cleaned[field] === 1;
+        }
+    });
+    
     // Remove empty strings and convert to null if needed
     Object.keys(cleaned).forEach(key => {
         if (cleaned[key] === '') {
