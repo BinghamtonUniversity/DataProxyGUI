@@ -20,68 +20,6 @@ Route::get('/api_instances', function () {
     return Inertia::render('ApiInstances');
 })->middleware(['auth', 'verified'])->name('api_instances');
 
-// Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->group(function () {
-//     // Single route that handles all tabs with optional tab parameter
-//     Route::get('/{tab?}', function ($api_type, $api_id, $tab = 'routes') {
-//         // Validate tab parameter
-//         $validTabs = ['routes', 'resources', 'functions', 'files', 'models', 'options'];
-        
-//         if (!in_array($tab, $validTabs)) {
-//             abort(404);
-//         }
-
-//         return Inertia::render('apiEdit/Layout', [
-//             'api_type' => $api_type,
-//             'api_id' => $api_id,
-//             'activeTab' => $tab,
-//         ]);
-//     })->name('apiEdit.index')->where('tab', 'routes|resources|functions|files|models|options');
-// });
-
-// Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->group(function () {
-//     Route::get('/routes', function ($api_type, $api_id) {
-//         return Inertia::render('apiEdit/Routes', [
-//             'api_type' => $api_type,
-//             'api_id' => $api_id,
-//         ]);
-//     })->name('apiEdit.routes');
-
-//     Route::get('/resources', function ($api_type, $api_id) {
-//         return Inertia::render('apiEdit/Resources',[
-//             'api_type' => $api_type,
-//             'api_id' => $api_id,
-//         ]);
-//     })->name('apiEdit.resources');
-
-//     Route::get('/functions', function ($api_type, $api_id) {
-//         return Inertia::render('apiEdit/Functions',[
-//             'api_type' => $api_type,
-//             'api_id' => $api_id,
-//         ]);
-//     })->name('apiEdit.functions');
-
-//     Route::get('/files', function ($api_type, $api_id ) {
-//         return Inertia::render('apiEdit/Files', [
-//             'api_type' => $api_type,
-//             'api_id' => $api_id,
-//         ]);
-//     })->name('apiEdit.files');
-
-//     Route::get('/models', function ($api_type, $api_id ) {
-//         return Inertia::render('apiEdit/Models', [
-//             'api_type' => $api_type,
-//             'api_id' => $api_id,
-//         ]);
-//     })->name('apiEdit.models');
-
-//     Route::get('/options', function ($api_type, $api_id) {
-//         return Inertia::render('apiEdit/Options', [
-//             'api_type' => $api_type,
-//             'api_id' => $api_id,
-//         ]);
-//     })->name('apiEdit.options');
-// });
-
 // Route::get('/editor', function () {
 //     return Inertia::render('Editor');
 // })->middleware(['auth', 'verified'])->name('editor');
@@ -144,13 +82,8 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
 });
 
 
-
-Route::middleware(['auth', 'verified'])->prefix('/apis/{api_type}/{api_id}')->group(function () {
-    
-    // ============================================
-    // Web Routes (Inertia.js - for page rendering)
-    // ============================================
-    
+// API Edit Routes (Inertia pages for editing APIs)
+Route::middleware(['auth', 'verified'])->prefix('/apis/{api_type}/{api_id}')->group(function () {    
     // Main page route - renders the Inertia component
     Route::get('/{tab?}', function ($api_type, $api_id, $tab = 'routes') {
         // Validate tab parameter
@@ -169,14 +102,43 @@ Route::middleware(['auth', 'verified'])->prefix('/apis/{api_type}/{api_id}')->gr
 });
 
 // ============================================
-// API Routes (JSON responses - for AJAX calls)
-// ============================================
-    
+// API Latest Version - (JSON responses - AJAX calls)
+// ============================================  
 Route::middleware(['auth', 'verified'])->prefix('/ajax/apis')->group(function () {
     Route::get('/{api_id}/versions/latest', [App\Http\Controllers\Api\ApiController::class, 'ApiEditIndex'])
         ->name('api.edit.index');
     Route::put('/{api_id}/code', [App\Http\Controllers\Api\ApiController::class, 'ApiEditUpdate'])
         ->name('api.edit.update');
+});
+
+
+// API Instance Edit Routes (Inertia pages for editing API Instances)
+Route::middleware(['auth', 'verified'])->prefix('/api_instances/{instance_id}')->group(function () {    
+    // Main page route - renders the Inertia component
+    Route::get('/{tab?}', function ($instance_id, $tab = 'main') {
+        // Validate tab parameter
+        $validTabs = ['main', 'resources', 'permissions', 'options'];
+        
+        if (!in_array($tab, $validTabs)) {
+            abort(404);
+        }
+
+        return Inertia::render('apiInstanceEdit/Layout', [
+            'instance_id' => $instance_id,
+            'activeTab' => $tab,
+        ]);
+    })->name('apiInstanceEdit.index')->where('tab', 'main|resources|permissions|options');   
+});
+
+// ============================================
+// API Instance Details - (JSON responses - AJAX calls)
+// ============================================
+    
+Route::middleware(['auth', 'verified'])->prefix('/ajax/api_instances')->group(function () {
+    Route::get('/{instance_id}', [App\Http\Controllers\Api\ApiController::class, 'ApiInstancesEditIndex'])
+        ->name('api_instances.edit.index');
+    Route::put('/{instance_id}', [App\Http\Controllers\Api\ApiController::class, 'ApiInstancesEditUpdate'])
+        ->name('api_instances.edit.update');
 });
 
 require __DIR__.'/settings.php';

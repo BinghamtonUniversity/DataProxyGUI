@@ -216,7 +216,7 @@ const columns: ColumnDef<Api>[] = [
       return h(TableActions<Api>, {
         item: api,
         // Optional: customize the view details link
-        // viewDetailsHref: `/custom/path/${api.id}`,
+        // viewDetailsHref: `/apis/${props.item.api_type}/${props.item.id}/routes`,
         onEdit: () => openEditApiDialog(api),
         // onDelete: () => handleDeleteApi(api),
       })

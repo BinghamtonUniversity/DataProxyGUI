@@ -410,7 +410,7 @@ const columns: ColumnDef<ApiInstance>[] = [
         const instance = row.original
         return h(TableActions<ApiInstance>, {
             item: instance,
-            viewDetailsHref: `/api-instances/${instance.id}/details`,
+            viewDetailsHref: `/api_instances/${instance.id}/main`,
             editLabel: 'Edit Instance',
             deleteLabel: 'Delete Instance',
             onEdit: () => openEditApiInstanceDialog(instance),

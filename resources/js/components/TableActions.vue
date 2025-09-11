@@ -27,7 +27,7 @@ const props = withDefaults(defineProps<Props<T>>(), {
   showViewDetails: true,
   showEdit: true,
   showDelete: true,
-  editLabel: 'Edit',
+  editLabel: (p) => p.item?.api_type ? 'Edit API' : 'Edit',
   deleteLabel: 'Delete'
 })
 

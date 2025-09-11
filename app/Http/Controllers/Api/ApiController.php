@@ -318,6 +318,33 @@ class ApiController extends Controller
             'status' => $result['status']
         ], $result['status']);
     }
+    // ===========================================
+    // API Instance by ID - AJAX call for fetching single instance
+    // ===========================================
+    public function ApiInstancesEditIndex(Request $request, string $instance_id): JsonResponse
+    {
+        Log::info('ApiInstancesEditIndex called', ['instance_id' => $instance_id]);
+
+        $endpoint = "api_instances/{$instance_id}";
+        
+        $result = $this->makeDjangoRequest('GET', $endpoint);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch API details",
+            'api_id' => $instance_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
 
     // ===========================================
     // API Users
