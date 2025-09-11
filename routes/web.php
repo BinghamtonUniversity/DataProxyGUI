@@ -77,7 +77,21 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
 
     //API Users
     Route::get('/api_users', [App\Http\Controllers\Api\ApiController::class, 'apiUsersIndex']);
-    
+
+    //API Versions
+    Route::get('/apis/{id}/api_versions', [App\Http\Controllers\Api\ApiController::class, 'apiVersionsIndex']);
+
+});
+
+// Resources
+
+Route::middleware(['auth', 'verified'])->prefix('resources')->group(function () {
+    Route::get('/', [App\Http\Controllers\Api\ApiController::class, 'resourcesIndex']);
+    Route::get('/{id}', [App\Http\Controllers\Api\ApiController::class, 'resourcesShow']);
+    Route::get('/type/{type}', [App\Http\Controllers\Api\ApiController::class, 'resourcesByTypeIndex']);
+    Route::post('/', [App\Http\Controllers\Api\ApiController::class, 'resourcesStore']);
+    Route::put('/{id}', [App\Http\Controllers\Api\ApiController::class, 'resourcesUpdate']);
+    Route::delete('/{id}', [App\Http\Controllers\Api\ApiController::class, 'resourcesDestroy']);
 
 });
 

@@ -40,14 +40,14 @@ class ApiController extends Controller
         $headers = array_merge($defaultHeaders, $headers);
        
         $fullUrl = "{$this->djangoBaseUrl}/api/{$endpoint}";
-        Log::info('Making Django request', [
-            'method' => $method,
-            'full_url' => $fullUrl,
-            'endpoint' => $endpoint,
-            'headers' => $headers,
-            'data' => $data,
-            'django_base_url' => $this->djangoBaseUrl
-        ]);
+        // Log::info('Making Django request', [
+        //     'method' => $method,
+        //     'full_url' => $fullUrl,
+        //     'endpoint' => $endpoint,
+        //     'headers' => $headers,
+        //     'data' => $data,
+        //     'django_base_url' => $this->djangoBaseUrl
+        // ]);
 
         try {
             $response = Http::withBasicAuth($this->apiUser, $this->apiPassword)
@@ -71,12 +71,12 @@ class ApiController extends Controller
             }
 
             // Add response debugging
-            Log::info('Django response received', [
-                'status' => $response->status(),
-                'successful' => $response->successful(),
-                // 'body' => $response->body(),
-                'headers' => $response->headers()
-            ]);
+            // Log::info('Django response received', [
+            //     'status' => $response->status(),
+            //     'successful' => $response->successful(),
+            //     // 'body' => $response->body(),
+            //     'headers' => $response->headers()
+            // ]);
 
             return [
                 'success' => $response->successful(),
@@ -276,11 +276,11 @@ class ApiController extends Controller
         $requestData = $request->all();
         
         $result = $this->makeDjangoRequest('POST', "api_instances", $requestData);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
+        // Log::info('Django request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -328,11 +328,11 @@ class ApiController extends Controller
         $endpoint = "api_instances/{$instance_id}";
         
         $result = $this->makeDjangoRequest('GET', $endpoint);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
+        // Log::info('Django request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -362,6 +362,26 @@ class ApiController extends Controller
             'status' => $result['status']
         ], $result['status']);
     }
+
+    // ===========================================
+    // API Versions
+    // ===========================================
+    public function apiVersionsIndex($instance_id): JsonResponse
+    {
+        $endpoint = "apis/{$instance_id}/versions";
+
+        $result = $this->makeDjangoRequest('GET', $endpoint);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch api versions for api {$instance_id}",
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
     // ===========================================
     // API Latest Version
     // ===========================================
@@ -420,7 +440,24 @@ class ApiController extends Controller
     }
 
 
+    // ===========================================
+    // Resources -- TO:DO - Move to separate controller and make djangorequest util function
+    // ===========================================
+    public function resourcesByTypeIndex($type): JsonResponse
+    {
+        $endpoint = "resources/type/{$type}";
 
+        $result = $this->makeDjangoRequest('GET', $endpoint);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch resources of type {$type}",
+            'status' => $result['status']
+        ], $result['status']);
+    }
 
     /**
      * Generic resource controller - handles all CRUD operations dynamically

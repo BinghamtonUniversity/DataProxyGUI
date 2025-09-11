@@ -2,7 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, ApiData, ApiInstance } from '@/types'
+import { type BreadcrumbItem, ApiData, ApiInstance, ApiUser, Resource } from '@/types'
 import Heading from '@/components/Heading.vue'
 import { Button } from '@/components/ui/button'
 
@@ -58,11 +58,15 @@ const tabs = [
 
 // Data fetching logic - runs once when component mounts
 const apiInstanceData = ref<ApiInstance | null>(null)
-const loadingApiInstanceData = ref(true)
+const apiUsers = ref<ApiUser | null>(null)
+const resources = ref<Resource | null>(null)
+
+
+const loading = ref(true)
 const apiInstanceError = ref('')
 
 const fetchApiInstanceData = async () => {
-    loadingApiInstanceData.value = true
+    loading.value = true
     apiInstanceError.value = ''
     try {
         const response = await fetch(`/ajax/api_instances/${props.instance_id}`)
@@ -73,8 +77,59 @@ const fetchApiInstanceData = async () => {
         apiInstanceError.value = e.message || 'Error fetching API Instance data'
         apiInstanceData.value = null
     } finally {
-        loadingApiInstanceData.value = false
+        loading.value = false
     }
+}
+
+const fetchAllData = async () => {
+  loading.value = true
+  try {
+    const [
+      apiInstancesResponse,
+      apiUsersResponse,
+      resourcesResponse,
+    //   apisResponse,
+      // apiVersionsResponse
+    ] = await Promise.all([
+      fetch(`/api/api_instances`),
+      fetch(`/api/api_users`),
+      fetch(`/resources/type/dev`), // TO:DO - Change to dynamic type if needed
+    //   fetch(`/api/environments`),
+    //   fetch(`/api/apis`),
+      
+    ])
+
+    if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
+    if (!apiUsersResponse.ok) throw new Error('Failed to fetch environments')
+    if (!resourcesResponse.ok) throw new Error('Failed to fetch resources')
+    // if (!apisResponse.ok) throw new Error('Failed to fetch APIs')
+    // if (!apiVersionsResponse.ok) throw new Error('Failed to fetch API users')
+
+    const [
+      apiInstancesData,
+      apiUsersData,
+      resourcesData,
+      // apisData,
+      // apiVersionsData
+    ] = await Promise.all([
+      apiInstancesResponse.json(),
+      apiUsersResponse.json(),
+      resourcesResponse.json(),
+      //   apisResponse.json(),
+      // apiVersionsResponse.json(),
+    ])
+
+    apiInstanceData.value = apiInstancesData
+    apiUsers.value = apiUsersData
+    resources.value = resourcesData
+    // apis.value = apisData
+    // api_versions.value = apiVersionsData
+
+  } catch (error) {
+    console.error('Error fetching data:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 const updateApiInstanceData = (updatedApiInstanceData: ApiInstance) => {
@@ -103,14 +158,15 @@ const activeComponent = computed(() => {
 const componentProps = computed(() => ({
     instance_id: props.instance_id,
     apiInstanceData: apiInstanceData.value,
-    loadingApiInstanceData: loadingApiInstanceData.value,
+    apiUsers: apiUsers.value,
+    loading: loading.value,
     apiInstanceError: apiInstanceError.value,
     updateApiInstanceData,
     refreshApiInstanceData
 }))
 
 // // Fetch data on mount
-onMounted(() => fetchApiInstanceData())
+onMounted(() => fetchAllData())
 
 </script>
 

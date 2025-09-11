@@ -20,7 +20,7 @@ import { h, ref, onMounted, onUnmounted, computed, reactive } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, ApiInstance, Environment, ApiUser, Api, Resource} from '@/types'
+import { type BreadcrumbItem, ApiInstance, Environment, ApiUser, Api, Resource, ApiData} from '@/types'
 import { Head } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -55,7 +55,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const api_instances = ref<ApiInstance[]>([])
 const environments = ref<Environment[]>([])
 const apis = ref<Api[]>([])
-const api_users = ref<ApiUser[]>([]) // TO:DO - Use after view details tabs
+// const api_versions = ref<ApiData[]>([]) // TO:DO - Use after view details tabs
 // const resources = ref<Resource[]>([])
 
 const loading = ref(true)
@@ -486,35 +486,35 @@ const fetchAllData = async () => {
       apiInstancesResponse,
       environmentsResponse,
       apisResponse,
-      apiUserResponse
+      // apiVersionsResponse
     ] = await Promise.all([
       fetch(`/api/api_instances`),
       fetch(`/api/environments`),
       fetch(`/api/apis`),
-      fetch(`/api/api_users`),
+      // fetch(`/api/api_versions`),
     ])
 
     if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
     if (!environmentsResponse.ok) throw new Error('Failed to fetch environments')
     if (!apisResponse.ok) throw new Error('Failed to fetch APIs')
-    if (!apiUserResponse.ok) throw new Error('Failed to fetch API users')
+    // if (!apiVersionsResponse.ok) throw new Error('Failed to fetch API users')
 
     const [
       apiInstancesData,
       environmentsData,
       apisData,
-      apiUserData
+      // apiVersionsData
     ] = await Promise.all([
       apiInstancesResponse.json(),
       environmentsResponse.json(),
       apisResponse.json(),
-      apiUserResponse.json(),
+      // apiVersionsResponse.json(),
     ])
 
     api_instances.value = apiInstancesData
     environments.value = environmentsData
     apis.value = apisData
-    api_users.value = apiUserData
+    // api_versions.value = apiVersionsData
 
   } catch (error) {
     console.error('Error fetching data:', error)
