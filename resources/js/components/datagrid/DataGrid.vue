@@ -49,16 +49,41 @@
     </div>
     <!-- Built-in search bar below header -->
     <div :class="currentTheme.searchContainer">
-      <input
+      <TextField
+        :required="false"
+        :value="searchQuery"
+        @update:value="searchQuery = $event"
+        @input="onSearchInput"
+        @change="onSearchInput"
+        @keydown="handleSearchKeydown"
+        name="searchQuery"
+        label="Search"
+        placeholder="Search (e.g. column_name:contains:string)"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <!-- <input
         v-model="searchQuery"
         @input="onSearchInput"
         class="input-field w-full"
         placeholder="Search (e.g. column_name:contains:string)"
         autocomplete="off"
         spellcheck="false"
-      />
+      /> -->
       <div v-if="showSuggestions && suggestions.length" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded shadow mt-1 absolute z-20 w-full max-w-xl">
-        <div v-for="(s, i) in suggestions" :key="i" @mousedown.prevent="applySuggestion(s)" class="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">{{ s }}</div>
+        <div 
+          v-for="(s, i) in suggestions" 
+          :key="i" 
+          @mousedown.prevent="applySuggestion(s)" 
+          :class="[
+            'px-4 py-2 cursor-pointer transition-colors',
+            i === selectedSuggestionIndex 
+              ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100' 
+              : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+          ]"
+        >
+          {{ s }}
+        </div>
       </div>
     </div>
     <div class="overflow-x-auto">
@@ -218,6 +243,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { getThemeClasses, getDynamicColor } from '../Theme.js';
+import TextField from '../fields/TextField.vue';
 
 const props = defineProps({
   columns: Array,
@@ -263,6 +289,7 @@ const openMenuId = ref(null);
 
 const showSuggestions = ref(false);
 const suggestions = ref([]);
+const selectedSuggestionIndex = ref(-1);
 const columnKeys = computed(() => computedColumns.value?.map(col => col.key) || []);
 const operators = ['contains', 'startsWith', 'endsWith', '='];
 
@@ -313,17 +340,34 @@ watch(() => computedColumns.value, initFilters, { immediate: true });
 function onSearchInput() {
   const value = searchQuery.value;
   const last = value.split(/\s+/).pop();
+  selectedSuggestionIndex.value = -1; // Reset selection when typing
   if (!last) {
     showSuggestions.value = false;
     suggestions.value = [];
     return;
   }
   if (!last.includes(':')) {
-    suggestions.value = columnKeys.value.filter(k => k.startsWith(last)).map(k => k + ':');
+    // Suggest both column keys and labels
+    const keySuggestions = computedColumns.value
+      .filter(c => c.key.startsWith(last))
+      .map(c => c.key + ':');
+    const labelSuggestions = computedColumns.value
+      .filter(c => c.label.toLowerCase().startsWith(last.toLowerCase()))
+      .map(c => c.label + ':');
+    
+    suggestions.value = [...keySuggestions, ...labelSuggestions];
     showSuggestions.value = !!suggestions.value.length;
   } else if (last.split(':').length === 2) {
-    suggestions.value = operators.filter(op => op.startsWith(last.split(':')[1])).map(op => last.split(':')[0] + ':' + op + ':');
-    showSuggestions.value = !!suggestions.value.length;
+    const [col, op] = last.split(':');
+    // Check if the column part matches any key or label
+    const foundColumn = computedColumns.value.find(c => c.key === col || c.label === col);
+    if (foundColumn) {
+      suggestions.value = operators.filter(operator => operator.startsWith(op)).map(operator => col + ':' + operator + ':');
+      showSuggestions.value = !!suggestions.value.length;
+    } else {
+      showSuggestions.value = false;
+      suggestions.value = [];
+    }
   } else {
     showSuggestions.value = false;
     suggestions.value = [];
@@ -335,28 +379,74 @@ function applySuggestion(s) {
   searchQuery.value = parts.join(' ');
   showSuggestions.value = false;
   suggestions.value = [];
+  selectedSuggestionIndex.value = -1;
+}
+
+function handleSearchKeydown(event) {
+  if (!showSuggestions.value || suggestions.value.length === 0) {
+    return;
+  }
+
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault();
+      selectedSuggestionIndex.value = Math.min(selectedSuggestionIndex.value + 1, suggestions.value.length - 1);
+      break;
+    case 'ArrowUp':
+      event.preventDefault();
+      selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1);
+      break;
+    case 'Tab':
+      event.preventDefault();
+      if (suggestions.value.length > 0) {
+        // If no suggestion is selected, use the first one
+        const suggestionIndex = selectedSuggestionIndex.value >= 0 ? selectedSuggestionIndex.value : 0;
+        applySuggestion(suggestions.value[suggestionIndex]);
+      }
+      break;
+    case 'Enter':
+      event.preventDefault();
+      if (suggestions.value.length > 0) {
+        // If no suggestion is selected, use the first one
+        const suggestionIndex = selectedSuggestionIndex.value >= 0 ? selectedSuggestionIndex.value : 0;
+        applySuggestion(suggestions.value[suggestionIndex]);
+      }
+      break;
+    case 'Escape':
+      showSuggestions.value = false;
+      suggestions.value = [];
+      selectedSuggestionIndex.value = -1;
+      break;
+  }
 }
 
 const filteredRows = computed(() => {
   // Basic search: support column:operator:value and free text
   let result = computedRows.value;
+
   const query = searchQuery.value.trim();
   if (query) {
     const tokens = query.split(/\s+/);
     tokens.forEach(token => {
       const [col, op, ...rest] = token.split(':');
       const value = rest.join(':');
-      if (computedColumns.value.some(c => c.key === col) && op && value) {
+      
+      // Find the column by key or label
+      const foundColumn = computedColumns.value.find(c => c.key === col || c.label === col);
+      
+      if (foundColumn && op && value) {
+        // Column-specific search with operator
         result = result.filter(row => {
-          const cell = String(row[col] ?? '').toLowerCase();
+          const cell = String(row[foundColumn.key] ?? '').toLowerCase();
           const val = value.toLowerCase();
+          
           if (op === 'contains') return cell.includes(val);
           if (op === 'startsWith') return cell.startsWith(val);
           if (op === 'endsWith') return cell.endsWith(val);
           if (op === '=') return cell === val;
           return true;
         });
-      } else if (computedColumns.value.some(c => c.key === col) && op && !value) {
+      } else if (foundColumn && op && !value) {
         // If only column:operator is typed, don't filter yet
         return;
       } else {
