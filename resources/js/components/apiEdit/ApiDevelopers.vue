@@ -414,6 +414,14 @@ const handleDelete = async (selectedRowIds?: number[]) => {
     }
 };
 
+// Handle CSV upload
+const handleCSVUpload = (uploadedData: any[]) => {
+    console.log('CSV Upload received:', uploadedData);
+    // Here you can implement logic to process the uploaded CSV data
+    // For example, you might want to validate the data or send it to the server
+    alert(`CSV uploaded with ${uploadedData.length} rows. Check console for data.`);
+};
+
 // Fetch data on component mount
 onMounted(() => {
     fetchApiDevelopers();
@@ -455,6 +463,9 @@ onMounted(() => {
                 :count="25"
                 :search="true"
                 :filter="true"
+                :upload="true"
+                :download="true"
+                :columns="true"
                 theme="default"
                 :showNew="true"
                 :showEdit="false"
@@ -465,6 +476,7 @@ onMounted(() => {
                 @create="openNewModal"
                 @delete="handleDelete"
                 @action="handleAction"
+                @upload="handleCSVUpload"
             >
             </DataGrid>
 

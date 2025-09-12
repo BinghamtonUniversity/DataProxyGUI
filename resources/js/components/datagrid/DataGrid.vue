@@ -13,29 +13,115 @@
         </p>
       </div>
       <!-- Custom actions slot for external action buttons -->
-      <div class="flex items-center gap-2">
-        <slot name="actions">
-          <!-- Default actions if no custom actions provided -->
-          <button v-if="showNew" @click="onCreate" :class="currentTheme.newButton">New</button>
+      <div class="flex flex-col items-end gap-2">
+        <!-- Main action buttons -->
+        <div class="flex items-center gap-2">
+          <slot name="actions">
+            <!-- Default actions if no custom actions provided -->
+            <button v-if="showNew" @click="onCreate" :class="currentTheme.newButton">New</button>
+            <button
+              v-if="showEdit"
+              @click="onEdit"
+              :disabled="selectedRows.length === 0"
+              :title="selectedRows.length === 0 ? 'Please select at least one row' : ''"
+              :class="currentTheme.editButton"
+            >
+              Edit
+            </button>
+            <button
+              v-if="showDelete"
+              @click="onDelete"
+              :disabled="selectedRows.length === 0"
+              :title="selectedRows.length === 0 ? 'Please select a row' : ''"
+              :class="currentTheme.deleteButton"
+            >
+              Delete
+            </button>
+          </slot>
+        </div>
+        
+        <!-- Icon-only utility buttons (Download, Upload, Columns) -->
+        <div v-if="upload || download || columns" class="flex items-center border border-gray-200 dark:border-gray-700 rounded-md">
+          <input
+            v-if="upload"
+            ref="fileInput"
+            type="file"
+            accept=".csv"
+            @change="handleFileUpload"
+            class="hidden"
+          />
           <button
-            v-if="showEdit"
-            @click="onEdit"
-            :disabled="selectedRows.length === 0"
-            :title="selectedRows.length === 0 ? 'Please select at least one row' : ''"
-            :class="currentTheme.editButton"
+            v-if="download"
+            @click="downloadCSV"
+            class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
+            title="Download CSV"
           >
-            Edit
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
           </button>
           <button
-            v-if="showDelete"
-            @click="onDelete"
-            :disabled="selectedRows.length === 0"
-            :title="selectedRows.length === 0 ? 'Please select a row' : ''"
-            :class="currentTheme.deleteButton"
+            v-if="upload"
+            @click="$refs.fileInput.click()"
+            class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
+            title="Upload CSV"
           >
-            Delete
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+            </svg>
           </button>
-        </slot>
+          <!-- Column visibility toggle button -->
+          <div v-if="columns" class="relative column-selector-container">
+            <button
+              @click="toggleColumnSelector"
+              class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Toggle Column Visibility"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+            </button>
+            
+            <!-- Column selector dropdown -->
+            <div v-if="showColumnSelector" class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="text-sm font-medium text-gray-900 dark:text-white">Show Columns</h3>
+                  <div class="flex gap-2">
+                    <button
+                      @click="selectAllColumns"
+                      class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      @click="deselectAllColumns"
+                      class="text-xs text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+                <div class="space-y-2 max-h-48 overflow-y-auto">
+                  <label
+                    v-for="col in allColumns"
+                    :key="col.key"
+                    class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-1 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      :checked="visibleColumns.has(col.key)"
+                      @change="toggleColumnVisibility(col.key)"
+                      class="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
+                    />
+                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ col.label || col.key }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
         <template v-for="(action, idx) in customActions" :key="action.type || action.label || idx">
           <button
             :class="['px-4 py-2 rounded focus:outline-none', action.colorClass]"
@@ -251,20 +337,16 @@
         <button @click="lastPage" :disabled="currentPage === totalPages" class="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none disabled:opacity-50" aria-label="Last page">&raquo;</button>
       </div>
     </div>
-  </div>
+ 
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { getThemeClasses, getDynamicColor } from '../Theme.js';
 import TextField from '../fields/TextField.vue';
 
 const props = defineProps({
-  // Legacy props (deprecated)
-  columns: Array,
-  rows: Array,
   title: String,
-  
   // New prop names
   schema: {
     type: Object,
@@ -291,6 +373,18 @@ const props = defineProps({
     default: true
   },
   filter: {
+    type: Boolean,
+    default: true
+  },
+  upload: {
+    type: Boolean,
+    default: true
+  },
+  download: {
+    type: Boolean,
+    default: true
+  },
+  columns: {
     type: Boolean,
     default: true
   },
@@ -329,7 +423,7 @@ const props = defineProps({
     default: () => []
   }
 });
-const emit = defineEmits(['rowClick', 'action', 'create', 'edit', 'multiple-edit', 'delete']);
+const emit = defineEmits(['rowClick', 'action', 'create', 'edit', 'multiple-edit', 'delete', 'upload']);
 
 const searchQuery = ref('');
 const filters = ref({});
@@ -339,6 +433,13 @@ const openMenuId = ref(null);
 // Sorting state
 const sortColumn = ref(null);
 const sortDirection = ref('asc'); // 'asc' or 'desc'
+
+// File input ref
+const fileInput = ref(null);
+
+// Column visibility state
+const showColumnSelector = ref(false);
+const visibleColumns = ref(new Set());
 
 const showSuggestions = ref(false);
 const suggestions = ref([]);
@@ -355,7 +456,7 @@ const currentPage = ref(1);
 const currentTheme = computed(() => getThemeClasses('datatable', props.theme));
 
 // Generate columns from schema or formConfig (backward compatibility)
-const computedColumns = computed(() => {
+const allColumns = computed(() => {
   // Priority: schema > formConfig > columns
   const config = props.schema || props.formConfig;
   
@@ -372,6 +473,15 @@ const computedColumns = computed(() => {
   
   // Fall back to provided columns prop
   return props.columns || [];
+});
+
+// Filter columns based on visibility selection
+const computedColumns = computed(() => {
+  if (!props.columns || visibleColumns.value.size === 0) {
+    return allColumns.value;
+  }
+  
+  return allColumns.value.filter(col => visibleColumns.value.has(col.key));
 });
 
 // Use data or formData (backward compatibility) or rows prop
@@ -683,6 +793,138 @@ function getSortClass(columnKey) {
   }
   return 'text-blue-600 font-semibold';
 }
+
+// CSV Upload/Download functions
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    alert('Please select a CSV file.');
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csv = e.target.result;
+      const data = parseCSV(csv);
+      
+      if (data.length === 0) {
+        alert('CSV file is empty.');
+        return;
+      }
+      
+      // Emit upload event with parsed data
+      emit('upload', data);
+      
+      // Clear the file input
+      event.target.value = '';
+    } catch (error) {
+      console.error('Error parsing CSV:', error);
+      alert('Error parsing CSV file. Please check the format.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(csv) {
+  const lines = csv.split('\n').filter(line => line.trim());
+  if (lines.length === 0) return [];
+  
+  // Get headers from first line
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  
+  // Parse data rows
+  const data = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+    if (values.length === headers.length) {
+      const row = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+      data.push(row);
+    }
+  }
+  
+  return data;
+}
+
+function downloadCSV() {
+  if (computedRows.value.length === 0) {
+    alert('No data to download.');
+    return;
+  }
+  
+  const headers = computedColumns.value.map(col => col.label || col.key);
+  const csvContent = [
+    headers.join(','),
+    ...computedRows.value.map(row => 
+      headers.map(header => {
+        const col = computedColumns.value.find(c => (c.label || c.key) === header);
+        const value = row[col.key] || '';
+        // Escape commas and quotes in values
+        return `"${String(value).replace(/"/g, '""')}"`;
+      }).join(',')
+    )
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `datagrid-export-${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Column visibility functions
+function toggleColumnSelector() {
+  showColumnSelector.value = !showColumnSelector.value;
+}
+
+function toggleColumnVisibility(columnKey) {
+  if (visibleColumns.value.has(columnKey)) {
+    visibleColumns.value.delete(columnKey);
+  } else {
+    visibleColumns.value.add(columnKey);
+  }
+}
+
+function selectAllColumns() {
+  allColumns.value.forEach(col => {
+    visibleColumns.value.add(col.key);
+  });
+}
+
+function deselectAllColumns() {
+  visibleColumns.value.clear();
+}
+
+// Initialize visible columns on mount
+function initializeVisibleColumns() {
+  if (props.columns) {
+    // Start with all columns visible
+    allColumns.value.forEach(col => {
+      visibleColumns.value.add(col.key);
+    });
+  }
+}
+
+// Initialize on mount
+onMounted(() => {
+  initializeVisibleColumns();
+  
+  // Close column selector when clicking outside
+  document.addEventListener('click', (event) => {
+    if (showColumnSelector.value && !event.target.closest('.column-selector-container')) {
+      showColumnSelector.value = false;
+    }
+  });
+});
 function emitRowClick(row) {
   emit('rowClick', row);
 }
