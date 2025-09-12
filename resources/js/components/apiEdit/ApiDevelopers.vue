@@ -450,8 +450,11 @@ onMounted(() => {
             <!-- DataGrid -->
             <DataGrid 
                 v-else
-                :formConfig="dataGridConfig"
-                :formData="apiDevelopers"
+                :schema="dataGridConfig"
+                :data="apiDevelopers"
+                :count="25"
+                :search="true"
+                :filter="true"
                 theme="default"
                 :showNew="true"
                 :showEdit="false"

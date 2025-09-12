@@ -25,7 +25,7 @@
     </label>
 
     <!-- Input Field -->
-    <div class="flex items-stretch w-full">
+    <div class="flex items-stretch w-full" c>
       <!-- Pre (prefix) -->
       <span 
         v-if="pre"
@@ -218,6 +218,7 @@ const { handleChange, handleBlur, handleFocus, handleInput } = createEventHandle
 const containerClass = computed(() => getFieldContainerClass(props, props.inFieldset));
 
 const inputClass = computed(() => [
+  'bg-white dark:bg-gray-900',
   'w-full px-3 py-2 text-sm border rounded-md transition-colors duration-200',
   'dark:!bg-gray-800 text-gray-900 dark:!text-white',
   'border-gray-300 dark:!border-gray-600',

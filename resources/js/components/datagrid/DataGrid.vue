@@ -5,11 +5,11 @@
     <!-- Header with title and actions -->
     <div :class="currentTheme.header">
       <div>
-        <h2 v-if="formConfig.label || formConfig.title || title" :class="currentTheme.title">
-          {{ formConfig.label || formConfig.title || title }}
+        <h2 v-if="schema.label || schema.title || formConfig.label || formConfig.title || title" :class="currentTheme.title">
+          {{ schema.label || schema.title || formConfig.label || formConfig.title || title }}
         </h2>
-        <p v-if="formConfig.description" class="text-sm text-gray-600 dark:text-gray-300 mt-1">
-          {{ formConfig.description }}
+        <p v-if="schema.description || formConfig.description" class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+          {{ schema.description || formConfig.description }}
         </p>
       </div>
       <!-- Custom actions slot for external action buttons -->
@@ -47,8 +47,8 @@
         </template>
       </div>
     </div>
-    <!-- Built-in search bar below header -->
-    <div :class="currentTheme.searchContainer">
+    <!-- Built-in search bar below header (conditional) -->
+    <div v-if="search" :class="currentTheme.searchContainer">
       <TextField
         :required="false"
         :value="searchQuery"
@@ -62,14 +62,6 @@
         autocomplete="off"
         spellcheck="false"
       />
-      <!-- <input
-        v-model="searchQuery"
-        @input="onSearchInput"
-        class="input-field w-full"
-        placeholder="Search (e.g. column_name:contains:string)"
-        autocomplete="off"
-        spellcheck="false"
-      /> -->
       <div v-if="showSuggestions && suggestions.length" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded shadow mt-1 absolute z-20 w-full max-w-xl">
         <div 
           v-for="(s, i) in suggestions" 
@@ -93,12 +85,34 @@
             <th :class="[currentTheme.headerCell, currentTheme.borderRight, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']">
               <input type="checkbox" :checked="allSelected" @change="toggleSelectAll($event.target.checked)" />
             </th>
-            <th v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.headerCell, colIdx < computedColumns.length - 1 ? currentTheme.borderRight : '']">{{ col.label }}</th>
+            <th 
+              v-for="(col, colIdx) in computedColumns" 
+              :key="col.key" 
+              :class="[
+                currentTheme.headerCell, 
+                colIdx < computedColumns.length - 1 ? currentTheme.borderRight : '',
+                'cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'
+              ]"
+              @click="handleSort(col.key)"
+            >
+              <div class="flex items-center justify-between">
+                <span>{{ col.label }}</span>
+                <span 
+                  :class="[
+                    'ml-2 text-sm transition-colors',
+                    getSortClass(col.key)
+                  ]"
+                  :title="`Sort by ${col.label} ${sortColumn === col.key ? (sortDirection === 'asc' ? '(ascending)' : '(descending)') : ''}`"
+                >
+                  {{ getSortIcon(col.key) }}
+                </span>
+              </div>
+            </th>
             <th :class="[currentTheme.headerCell, 'text-right']"></th>
           </tr>
         </thead>
         <tbody>
-          <tr>
+          <tr v-if="filter">
             <td :class="[currentTheme.filterCell, currentTheme.borderRight]">
               <button @click="clearFilters" :class="currentTheme.clearButton" title="Clear all filters">Clear</button>
             </td>
@@ -246,9 +260,42 @@ import { getThemeClasses, getDynamicColor } from '../Theme.js';
 import TextField from '../fields/TextField.vue';
 
 const props = defineProps({
+  // Legacy props (deprecated)
   columns: Array,
   rows: Array,
   title: String,
+  
+  // New prop names
+  schema: {
+    type: Object,
+    default: () => ({
+      label: '',
+      title: '',
+      description: '',
+      fields: []
+    })
+  },
+  data: {
+    type: Array,
+    default: () => []
+  },
+  
+  // Configuration options
+  count: {
+    type: Number,
+    default: 25,
+    validator: (value) => value > 0
+  },
+  search: {
+    type: Boolean,
+    default: true
+  },
+  filter: {
+    type: Boolean,
+    default: true
+  },
+  
+  // Theme and actions
   theme: {
     type: String,
     default: 'default',
@@ -266,6 +313,8 @@ const props = defineProps({
     ]
     // Each action should have: { type: string, label: string, icon?: string, colorClass?: string }
   },
+  
+  // Backward compatibility - deprecated but still supported
   formConfig: {
     type: Object,
     default: () => ({
@@ -287,6 +336,10 @@ const filters = ref({});
 const selectedRows = ref([]);
 const openMenuId = ref(null);
 
+// Sorting state
+const sortColumn = ref(null);
+const sortDirection = ref('asc'); // 'asc' or 'desc'
+
 const showSuggestions = ref(false);
 const suggestions = ref([]);
 const selectedSuggestionIndex = ref(-1);
@@ -295,17 +348,19 @@ const operators = ['contains', 'startsWith', 'endsWith', '='];
 
 // Pagination state
 const pageSizes = [25, 50, 100];
-const pageSize = ref(pageSizes[0]);
+const pageSize = ref(props.count || pageSizes[0]);
 const currentPage = ref(1);
 
 // Get current theme classes from Theme component
 const currentTheme = computed(() => getThemeClasses('datatable', props.theme));
 
-// Generate columns from form configuration or use provided columns
+// Generate columns from schema or formConfig (backward compatibility)
 const computedColumns = computed(() => {
-  // If formConfig has fields, generate columns from them
-  if (props.formConfig?.fields && props.formConfig.fields.length > 0) {
-    return props.formConfig.fields.map(field => ({
+  // Priority: schema > formConfig > columns
+  const config = props.schema || props.formConfig;
+  
+  if (config?.fields && config.fields.length > 0) {
+    return config.fields.map(field => ({
       key: field.name,
       label: field.label || field.name,
       type: field.type,
@@ -319,23 +374,27 @@ const computedColumns = computed(() => {
   return props.columns || [];
 });
 
-// Use formData if available, otherwise use rows prop
+// Use data or formData (backward compatibility) or rows prop
 const computedRows = computed(() => {
+  if (props.data && props.data.length > 0) {
+    return props.data;
+  }
   if (props.formData && props.formData.length > 0) {
     return props.formData;
   }
   return props.rows || [];
 });
 
-// Always generate filters from computed columns
+// Generate filters from computed columns only if filter is enabled
 function initFilters() {
-  if (computedColumns.value && computedColumns.value.length > 0) {
+  if (props.filter && computedColumns.value && computedColumns.value.length > 0) {
     filters.value = Object.fromEntries(computedColumns.value.map(col => [col.key, '']));
   } else {
     filters.value = {};
   }
 }
 watch(() => computedColumns.value, initFilters, { immediate: true });
+watch(() => props.filter, initFilters, { immediate: true });
 
 function onSearchInput() {
   const value = searchQuery.value;
@@ -457,12 +516,33 @@ const filteredRows = computed(() => {
       }
     });
   }
-  // Per-column filters
-  Object.entries(filters.value).forEach(([key, val]) => {
-    if (val) {
-      result = result.filter(row => String(row[key] ?? '').toLowerCase().includes(val.toLowerCase()));
-    }
-  });
+  // Per-column filters (only if filter is enabled)
+  if (props.filter) {
+    Object.entries(filters.value).forEach(([key, val]) => {
+      if (val) {
+        result = result.filter(row => String(row[key] ?? '').toLowerCase().includes(val.toLowerCase()));
+      }
+    });
+  }
+  
+  // Apply sorting
+  if (sortColumn.value) {
+    result = [...result].sort((a, b) => {
+      const aVal = a[sortColumn.value];
+      const bVal = b[sortColumn.value];
+      
+      // Handle null/undefined values
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return sortDirection.value === 'asc' ? -1 : 1;
+      if (bVal == null) return sortDirection.value === 'asc' ? 1 : -1;
+      
+      // Smart type detection and comparison
+      const comparison = smartCompare(aVal, bVal);
+      
+      return sortDirection.value === 'asc' ? comparison : -comparison;
+    });
+  }
+  
   return result;
 });
 
@@ -527,7 +607,81 @@ function toggleRowSelect(row, checked) {
   }
 }
 function clearFilters() {
-  initFilters();
+  if (props.filter) {
+    initFilters();
+  }
+}
+
+// Smart comparison function for different data types
+function smartCompare(a, b) {
+  // Convert to strings for analysis
+  const aStr = String(a).trim();
+  const bStr = String(b).trim();
+  
+  // Check if values are numbers (including decimal numbers)
+  const aNum = parseFloat(aStr);
+  const bNum = parseFloat(bStr);
+  const aIsNum = !isNaN(aNum) && isFinite(aNum) && aStr !== '';
+  const bIsNum = !isNaN(bNum) && isFinite(bNum) && bStr !== '';
+  
+  // If both are numbers, compare numerically
+  if (aIsNum && bIsNum) {
+    return aNum - bNum;
+  }
+  
+  // Check if values are dates
+  const aDate = new Date(aStr);
+  const bDate = new Date(bStr);
+  const aIsDate = !isNaN(aDate.getTime()) && aStr !== '';
+  const bIsDate = !isNaN(bDate.getTime()) && bStr !== '';
+  
+  // If both are valid dates, compare by date
+  if (aIsDate && bIsDate) {
+    return aDate.getTime() - bDate.getTime();
+  }
+  
+  // If one is a number and the other isn't, numbers come first
+  if (aIsNum && !bIsNum) return -1;
+  if (!aIsNum && bIsNum) return 1;
+  
+  // If one is a date and the other isn't, dates come first
+  if (aIsDate && !bIsDate) return -1;
+  if (!aIsDate && bIsDate) return 1;
+  
+  // Default to case-insensitive string comparison
+  return aStr.toLowerCase().localeCompare(bStr.toLowerCase());
+}
+
+// Sorting functions
+function handleSort(columnKey) {
+  if (sortColumn.value === columnKey) {
+    // Same column - cycle through: asc → desc → none (reset)
+    if (sortDirection.value === 'asc') {
+      sortDirection.value = 'desc';
+    } else if (sortDirection.value === 'desc') {
+      // Reset to no sorting
+      sortColumn.value = null;
+      sortDirection.value = 'asc';
+    }
+  } else {
+    // New column, start with ascending
+    sortColumn.value = columnKey;
+    sortDirection.value = 'asc';
+  }
+}
+
+function getSortIcon(columnKey) {
+  if (sortColumn.value !== columnKey) {
+    return '⇅'; // Neutral sort icon (up and down arrows together)
+  }
+  return sortDirection.value === 'asc' ? '↑' : '↓';
+}
+
+function getSortClass(columnKey) {
+  if (sortColumn.value !== columnKey) {
+    return 'text-gray-400 hover:text-gray-600';
+  }
+  return 'text-blue-600 font-semibold';
 }
 function emitRowClick(row) {
   emit('rowClick', row);
