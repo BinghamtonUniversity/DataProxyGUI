@@ -12,6 +12,8 @@ import Resources from '@/components/apiEdit/Resources.vue'
 import Functions from '@/components/apiEdit/Functions.vue'
 import Models from '@/components/apiEdit/Models.vue'
 import Options from '@/components/apiEdit/Options.vue'
+import ApiDevelopers from '@/components/apiEdit/ApiDevelopers.vue'
+import BottomSheet from '@/components/BottomSheet.vue'
 
 
 interface Props {
@@ -69,6 +71,9 @@ const loadingApiData = ref(true)
 const apiError = ref('')
 const apiBaseUrl = '/api'
 
+// Modal state for API Developers
+const showApiDevelopersModal = ref(false)
+
 // Get CSRF token from meta tag
 const getCsrfToken = () => {
     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -106,6 +111,15 @@ const refreshApiData = () => {
     fetchApiData()
 }
 
+// Modal functions for API Developers
+const openApiDevelopersModal = () => {
+    showApiDevelopersModal.value = true
+}
+
+const closeApiDevelopersModal = () => {
+    showApiDevelopersModal.value = false
+}
+
 // Navigation helper
 const navigateToTab = (tabId: string) => {
     router.get(`/apis/${props.api_type}/${props.api_id}/${tabId}`, {}, {
@@ -140,7 +154,22 @@ onMounted(() => fetchApiData())
     
     <AppLayout :breadcrumbs="breadcrumbItems">
         <div class="px-4 py-6">
-            <Heading :title="`API - ${props.api_id}`" description="Manage your API settings" />
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">API - {{ props.api_id }}</h1>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Manage your API settings</p>
+                </div>
+                <Button 
+                    @click="openApiDevelopersModal"
+                    variant="outline"
+                    class="flex items-center gap-2"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                    </svg>
+                    Manage Developers
+                </Button>
+            </div>
 
             <div class="flex flex-col space-y-8">
                 <!-- Tab navigation -->
@@ -170,5 +199,23 @@ onMounted(() => fetchApiData())
                 </div>
             </div>
         </div>
+
+        <!-- API Developers Bottom Sheet Modal -->
+        <BottomSheet 
+            :isOpen="showApiDevelopersModal"
+            title="API Developers"
+            maxHeight="85vh"
+            @close="closeApiDevelopersModal"
+        >
+            <ApiDevelopers 
+                :api_id="props.api_id"
+                :api_type="props.api_type"
+                :apiData="apiData"
+                :loadingApiData="loadingApiData"
+                :apiError="apiError"
+                :updateApiData="updateApiData"
+                :refreshApiData="refreshApiData"
+            />
+        </BottomSheet>
     </AppLayout>
 </template>

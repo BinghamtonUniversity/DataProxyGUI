@@ -24,7 +24,7 @@ Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->gro
     // Single route that handles all tabs with optional tab parameter
     Route::get('/{tab?}', function ($api_type, $api_id, $tab = 'routes') {
         // Validate tab parameter
-        $validTabs = ['routes', 'resources', 'functions', 'files', 'models', 'options'];
+        $validTabs = ['routes', 'resources', 'functions', 'files', 'models', 'api_developers', 'options'];
         
         if (!in_array($tab, $validTabs)) {
             abort(404);
@@ -35,7 +35,7 @@ Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->gro
             'api_id' => $api_id,
             'activeTab' => $tab,
         ]);
-    })->name('apiEdit.index')->where('tab', 'routes|resources|functions|files|models|options');
+    })->name('apiEdit.index')->where('tab', 'routes|resources|functions|files|models|api_developers|options');
 });
 
 // Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->group(function () {
@@ -130,6 +130,12 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
     // Special API routes for version handling
     Route::get('/apis/{id}/versions/latest', [App\Http\Controllers\Api\ApiController::class, 'getLatestApiVersion']);
     Route::put('/apis/{id}/code', [App\Http\Controllers\Api\ApiController::class, 'updateApiCode']);
+    
+    // API Developer routes
+    Route::get('/apis/{id}/api_developers', [App\Http\Controllers\Api\ApiController::class, 'getApiDevelopers']);
+    Route::post('/apis/{id}/api_developers', [App\Http\Controllers\Api\ApiController::class, 'createApiDeveloper']);
+    Route::put('/apis/{api_id}/api_developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'updateApiDeveloper']);
+    Route::delete('/apis/{api_id}/api_developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'deleteApiDeveloper']);
 });
 
 require __DIR__.'/settings.php';
