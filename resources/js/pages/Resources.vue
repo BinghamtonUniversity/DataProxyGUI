@@ -26,12 +26,11 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -70,7 +69,12 @@ const newResourceDialogOpen = ref(false)
 const newResourceForm = ref({
   name: '',
   type: '',
-  resource_type: ''
+  resource_type: '',
+  config: {            
+    pass: '',
+    tns: '',
+    user: ''
+  }
 })
 const newResourceLoading = ref(false)
 const newResourceError = ref('')
@@ -93,7 +97,7 @@ const environmentTypes = computed(() => {
 })
 
 const openNewResourceDialog = () => {
-  newResourceForm.value = { name: '', type: '', resource_type: '' }
+  newResourceForm.value = { name: '', type: '', resource_type: '', config: { user: '', pass: '', tns: '' } }
   newResourceError.value = ''
   newResourceDialogOpen.value = true
 }
@@ -101,7 +105,7 @@ const openNewResourceDialog = () => {
 const closeNewResourceDialog = () => {
   newResourceDialogOpen.value = false
   newResourceError.value = ''
-  newResourceForm.value = { name: '', type: '', resource_type: '' }
+  newResourceForm.value = { name: '', type: '', resource_type: '', config: { user: '', pass: '', tns: '' } }
   isEditMode.value = false
   editingResourceId.value = null
 }
@@ -153,6 +157,11 @@ const openEditResourceDialog = (resource: Resource) => {
     name: resource.name,
     type: resource.type,
     resource_type: resource.resource_type,
+    config: {
+      user: resource.config?.user || '',
+      pass: resource.config?.pass || '',
+      tns: resource.config?.tns || ''
+    }
   }
   newResourceDialogOpen.value = true
 }
@@ -419,6 +428,23 @@ onMounted(() => fetchAllData())
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
+                      <!-- CONFIGURATION SECTION -->
+                    <div class="border-t pt-4 mt-4 space-y-4">
+                      <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration</h3>
+                      <div>
+                        <Label>User</Label>
+                        <Input v-model="newResourceForm.config.user" placeholder="Database Username" />
+                      </div>
+                      <div>
+                        <Label>Password</Label>
+                        <Input type="password" v-model="newResourceForm.config.pass" placeholder="Database Password" />
+                      </div>
+                      <div>
+                        <Label>TNS</Label>
+                        <Input v-model="newResourceForm.config.tns" rows="4" class="resize-none" placeholder="TNS connection string" />
+                      </div>
+                    </div>
+
                       <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
                     </div>
                     <DialogFooter class="gap-2">
@@ -489,6 +515,8 @@ onMounted(() => fetchAllData())
                                 <div><strong>Name:</strong> {{ row.original.name }}</div>
                                 <div><strong>Type:</strong> {{ row.original.type || "No Type" }}</div>
                                 <div><strong>Resource Type:</strong> {{ row.original.resource_type  || "No Resource Type"}}</div>
+                                <div><strong>User:</strong> {{ row.original.config?.user || "No User" }}</div>
+                                <div><strong>TNS:</strong> {{ row.original.config?.tns ? "Configured" : "Not Configured" }}</div>
                                 <div><strong>Created:</strong> {{ new Date(row.original.created_at).toLocaleString() }}</div>
                                 <div><strong>Updated:</strong> {{ new Date(row.original.updated_at).toLocaleString() }}</div>
                               </div>

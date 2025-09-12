@@ -152,10 +152,16 @@ export interface ApiUser {
   api_key: string
 }
 
+interface ResourceConfig {
+  tns: string,
+  pass: string,
+  user: string
+}
+
 export interface Resource {
   id: number,
   name: string,
-  config: string,
+  config: ResourceConfig | null,
   type: string,
   created_at: string,
   updated_at: string,
