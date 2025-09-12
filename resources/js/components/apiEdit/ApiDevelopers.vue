@@ -30,6 +30,7 @@ const editingRow = ref<any>(null);
 const submitting = ref(false);
 
 // Data state
+const allUsers = ref<any>([]);
 const apiDevelopers = ref<any[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
@@ -157,49 +158,34 @@ const cleanFormData = (formData: any) => {
     return cleaned;
 };
 
-// Fetch available developers (users with developer role)
-const fetchAvailableDevelopers = async () => {
-    try {
-        const response = await fetch(`${apiBaseUrl}/users`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            credentials: 'same-origin'
-        });
+// Fetch available users (users with developer role)
+const fetchAvailableUsers = async () => {
+    try {        
+        const users = allUsers.value;
+        // Filter users who are users
+
+        // Get currently assigned user IDs
+        const assignedUserIds = apiDevelopers.value.map(dev => dev.api_developer_id);
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const users = await response.json();
-        // Filter users who are developers
-        // const allDevelopers = users.filter((user: any) => user.developer === true);
-        const allDevelopers = users;
-        // Get currently assigned developer IDs
-        const assignedDeveloperIds = apiDevelopers.value.map(dev => dev.api_developer_id);
-        
-        // Filter out developers who are already assigned to this API
-        const availableDevelopers = allDevelopers.filter((dev: any) => !assignedDeveloperIds.includes(dev.id));
+        // Filter out users who are already assigned to this API
+        const availableUsers = users.filter((dev: any) => !assignedUserIds.includes(dev.id));
         
         // Update form config options for the dropdown
-        formConfig.fields[0].options = availableDevelopers.map((dev: any) => ({
+        formConfig.fields[0].options = availableUsers.map((dev: any) => ({
             label: `${dev.name} (${dev.username || dev.email})`,
             value: dev.id
         }));
         
-        return allDevelopers; // Return all developers for display purposes
+        return users; // Return all users for display purposes
     } catch (err: any) {
-        console.error('Error fetching developers:', err);
+        console.error('Error fetching users:', err);
         return [];
     }
 };
 
 
 // Fetch all developers for display purposes (not filtered by availability)
-const fetchAllDevelopers = async () => {
+const fetchAllUsers = async () => {
     try {
         const response = await fetch(`${apiBaseUrl}/users`, {
             method: 'GET',
@@ -216,16 +202,17 @@ const fetchAllDevelopers = async () => {
         }
         
         const users = await response.json();
-        return users.filter((user: any) => user.developer === true);
+        allUsers.value = users;
+        return users;
     } catch (err: any) {
-        console.error('Error fetching all developers:', err);
+        console.error('Error fetching all users:', err);
         return [];
     }
 };
 
 // Add developer names to the data for display
 const addDeveloperNames = async (data: any[]) => {
-    const developers = await fetchAllDevelopers();
+    const developers = await fetchAllUsers();
 
     return data.map(item => {
         // Handle both field name formats from server
@@ -283,7 +270,7 @@ const fetchApiDevelopers = async () => {
 const openNewModal = async () => {
     modalMode.value = 'new';
     // Fetch available developers before opening modal
-    await fetchAvailableDevelopers();
+    await fetchAvailableUsers();
     editingRow.value = null;
     showModal.value = true;
 };
@@ -332,7 +319,7 @@ const handleFormSubmit = async (formValues: any) => {
             console.log('Updated apiDevelopers array:', apiDevelopers.value);
             
             // Refresh available developers for the dropdown
-            await fetchAvailableDevelopers();
+            await fetchAvailableUsers();
             
             success(`Developer assigned to API successfully!`, 'Developer Assigned');
         }
@@ -410,7 +397,7 @@ const handleDelete = async (selectedRowIds?: number[]) => {
             });
             
             // Refresh available developers for the dropdown
-            await fetchAvailableDevelopers();
+            await fetchAvailableUsers();
             
             // Show success message
             if (developersToDelete.length === 1) {
