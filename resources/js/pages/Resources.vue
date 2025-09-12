@@ -20,16 +20,18 @@ import { h, ref, onMounted, computed } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, Resource } from '@/types'
+import { type BreadcrumbItem, Resource, Environment } from '@/types'
 import { Head } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
+  DropdownMenuItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -52,7 +54,16 @@ const breadcrumbs: BreadcrumbItem[] = [
 ]
 
 const resources = ref<Resource[]>([])
+const environments = ref<Environment[]>([])
 const loading = ref(true)
+
+// Resource type options
+const resourceTypeOptions = [
+  { value: 'mysql', label: 'MySQL' },
+  { value: 'oracle', label: 'Oracle' },
+  { value: 'password', label: 'Password' },
+  { value: 'value', label: 'Value' }
+]
 
 //new API
 const newResourceDialogOpen = ref(false)
@@ -67,6 +78,19 @@ const newResourceError = ref('')
 //edit API
 const isEditMode = ref(false)
 const editingResourceId = ref<number|null>(null)
+
+// Computed property to get environment types from environments array
+const environmentTypes = computed(() => {
+  const types = environments.value.map(env => ({
+    value: env.type,
+    label: env.type
+  }))
+  // Remove duplicates
+  const uniqueTypes = types.filter((type, index, self) => 
+    index === self.findIndex(t => t.value === type.value)
+  )
+  return uniqueTypes
+})
 
 const openNewResourceDialog = () => {
   newResourceForm.value = { name: '', type: '', resource_type: '' }
@@ -271,8 +295,40 @@ const fetchResources = async () => {
   }
 }
 
+const fetchAllData = async () => {
+  loading.value = true
+  try {
+    const [
+      resourcesResponse,
+      environmentsResponse,
+   
+    ] = await Promise.all([
+      fetch(`/ajax/resources`),
+      fetch(`/api/environments`),
+      
+    ])
+
+    if (!resourcesResponse.ok) throw new Error('Failed to fetch resources')
+    if (!environmentsResponse.ok) throw new Error('Failed to fetch environments')
+    const [
+      resourcesData,
+      environmentsData
+    ] = await Promise.all([
+      resourcesResponse.json(),
+      environmentsResponse.json(),
+    ])
+
+    resources.value = resourcesData
+    environments.value = environmentsData
+  } catch (error) {
+    console.error('Error fetching data:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
 // Fetch data on mount
-onMounted(() => fetchResources())
+onMounted(() => fetchAllData())
 </script>
 
 <template>
@@ -324,12 +380,44 @@ onMounted(() => fetchResources())
                         <Input id="api-name" v-model="newResourceForm.name" required placeholder="Resource Name" />
                       </div>
                       <div>
-                        <Label for="api-description" class="mb-1">Environment Type</Label>
-                        <Input id="api-description" v-model="newResourceForm.type" placeholder="Type" />
+                        <Label for="environment-type" class="mb-1">Environment Type</Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger as-child>
+                            <Button variant="outline" class="w-full justify-between">
+                              {{ newResourceForm.type || 'Select environment type' }}
+                              <ChevronDown class="ml-2 h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent class="w-full">
+                            <DropdownMenuItem 
+                              v-for="envType in environmentTypes" 
+                              :key="envType.value"
+                              @click="newResourceForm.type = envType.value"
+                            >
+                              {{ envType.label }}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                       <div>
-                        <Label for="api-tags" class="mb-1">Resource Type</Label>
-                        <Input id="api-tags" v-model="newResourceForm.resource_type" placeholder="Resource Type" />
+                        <Label for="resource-type" class="mb-1">Resource Type</Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger as-child>
+                            <Button variant="outline" class="w-full justify-between">
+                              {{ resourceTypeOptions.find(r => r.value === newResourceForm.resource_type)?.label || 'Select resource type' }}
+                              <ChevronDown class="ml-2 h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent class="w-full">
+                            <DropdownMenuItem 
+                              v-for="resourceType in resourceTypeOptions" 
+                              :key="resourceType.value"
+                              @click="newResourceForm.resource_type = resourceType.value"
+                            >
+                              {{ resourceType.label }}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                       <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
                     </div>
