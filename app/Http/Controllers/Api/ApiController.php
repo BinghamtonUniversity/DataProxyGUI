@@ -459,6 +459,28 @@ class ApiController extends Controller
         ], $result['status']);
     }
 
+    public function resourcesIndex(): JsonResponse
+    {
+        $endpoint = "resources";
+        Log::info('Fetching all resources', ['endpoint' => $endpoint]);
+        $result = $this->makeDjangoRequest('GET', $endpoint);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch resources",
+            'status' => $result['status']
+        ], $result['status']);
+    }
+    
+
     /**
      * Generic resource controller - handles all CRUD operations dynamically
      * 

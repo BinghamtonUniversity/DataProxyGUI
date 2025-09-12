@@ -85,7 +85,13 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
 
 // Resources
 
-Route::middleware(['auth', 'verified'])->prefix('resources')->group(function () {
+
+Route::get('/resources', function () {
+    return Inertia::render('Resources');
+})->middleware(['auth', 'verified'])->name('resources');
+
+
+Route::middleware(['auth', 'verified'])->prefix('ajax/resources')->group(function () {
     Route::get('/', [App\Http\Controllers\Api\ApiController::class, 'resourcesIndex']);
     Route::get('/{id}', [App\Http\Controllers\Api\ApiController::class, 'resourcesShow']);
     Route::get('/type/{type}', [App\Http\Controllers\Api\ApiController::class, 'resourcesByTypeIndex']);

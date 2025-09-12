@@ -119,6 +119,9 @@ interface ApiInstanceResource {
 
 export interface ApiInstance {
   id: number
+  api_id: number
+  api_version_id: number | null
+  environment_id: number
   name: string
   route: string
   route_user_map: ApiInstanceRouteUserMap[] | null,
@@ -127,9 +130,6 @@ export interface ApiInstance {
   public: number
   created_at: string
   updated_at: string
-  api_id: number
-  api_version_id: number | null
-  environment_id: number
 }
 
 export interface Environment {

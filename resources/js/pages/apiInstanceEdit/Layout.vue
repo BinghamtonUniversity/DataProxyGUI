@@ -91,9 +91,9 @@ const fetchAllData = async () => {
     //   apisResponse,
       // apiVersionsResponse
     ] = await Promise.all([
-      fetch(`/api/api_instances`),
+      fetch(`/ajax/api_instances/${props.instance_id}`),
       fetch(`/api/api_users`),
-      fetch(`/resources/type/dev`), // TO:DO - Change to dynamic type if needed
+      fetch(`/ajax/resources/type/dev`), // TO:DO - Change to dynamic type if needed
     //   fetch(`/api/environments`),
     //   fetch(`/api/apis`),
       
@@ -159,13 +159,13 @@ const componentProps = computed(() => ({
     instance_id: props.instance_id,
     apiInstanceData: apiInstanceData.value,
     apiUsers: apiUsers.value,
+    resources: resources.value,
     loading: loading.value,
     apiInstanceError: apiInstanceError.value,
     updateApiInstanceData,
     refreshApiInstanceData
 }))
-
-// // Fetch data on mount
+// Fetch data on mount
 onMounted(() => fetchAllData())
 
 </script>

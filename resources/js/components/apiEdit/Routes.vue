@@ -58,7 +58,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 
 // New Route Dialog
 const verbDropdownOpen = ref(false)
