@@ -10,6 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
     instance_id: string
@@ -39,7 +40,7 @@ const getResourceNameById = (resourceId: string) => {
 }
 
 // Add new resource to the instance
-const addResource = () => {
+const addResource = async() => {
   if (!props.apiInstanceData || !newResourceName.value || !selectedResourceId.value) return
   
   const newResource = {
@@ -51,7 +52,24 @@ const addResource = () => {
     ...props.apiInstanceData,
     resources: [...(props.apiInstanceData.resources || []), newResource]
   }
-  console.log(updatedData) //TO-DO: put ajax request
+console.log(updatedData) 
+
+  const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken() || '',
+        },
+        body: JSON.stringify(updatedData)
+    })
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+    }
+
+  const responseData = await response.json()
   props.updateApiInstanceData(updatedData)
   
   newResourceName.value = ''

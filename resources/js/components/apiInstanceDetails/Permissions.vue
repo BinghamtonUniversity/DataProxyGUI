@@ -130,24 +130,25 @@ const submitNewPermission = async (e: Event) => {
                 route_user_map: [...(props.apiInstanceData.route_user_map || []), newPermission]
             }
         }
+        console.log(updatedApiInstanceData)
 
-        // const response = await fetch(`/ajax/instances/${props.instance_id}/permissions`, {
-        //     method: 'PUT',
-        //     headers: {
-        //         'Content-Type': 'application/json',
-        //         'Accept': 'application/json',
-        //         'X-CSRF-TOKEN': getCsrfToken() || '',
-        //     },
-        //     body: JSON.stringify(updatedApiInstanceData)
-        // })
+        const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            body: JSON.stringify(updatedApiInstanceData)
+        })
 
-        // if (!response.ok) {
-        //     const errorData = await response.json().catch(() => ({}))
-        //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        // }
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        }
 
-        // const responseData = await response.json()
-        // props.updateApiInstanceData(responseData || updatedApiInstanceData)
+        const responseData = await response.json()
+        props.updateApiInstanceData(responseData || updatedApiInstanceData)
 
         closeNewPermissionDialog()
     } catch (err: any) {
@@ -265,8 +266,8 @@ const headerGroups = computed(() => table.value?.getHeaderGroups() || [])
 const tableRows = computed(() => table.value?.getRowModel().rows || [])
 const hidableColumns = computed(() => table.value?.getAllColumns().filter(column => column.getCanHide()) || [])
 const userFilterValue = computed({
-  get: () => table.value?.getColumn('user')?.getFilterValue() as string || '',
-  set: (value: string) => table.value?.getColumn('user')?.setFilterValue(value)
+  get: () => table.value?.getColumn('api_user')?.getFilterValue() as string || '',
+  set: (value: string) => table.value?.getColumn('api_user')?.setFilterValue(value)
 })
 const selectedRowsCount = computed(() => table.value?.getFilteredSelectedRowModel().rows.length || 0)
 const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.length || 0)
@@ -330,7 +331,8 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                                     variant="outline"
                                                     class="w-full justify-between"
                                                 >
-                                                    {{ newPermissionForm.user || 'Select user' }}
+                                                    {{ newPermissionForm.user ? apiUsers?.find(u => u.id === Number(newPermissionForm.user))?.app_name || 'Select user' : 'Select user' }}
+
                                                     <ChevronDown class="ml-1 h-4 w-4" />
                                                 </Button>
                                                 </DropdownMenuTrigger>
@@ -338,8 +340,8 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                                     <DropdownMenuItem
                                                         v-for="user in apiUsers"
                                                         :key="user.id"
-                                                        @click="newPermissionForm.user = user.app_name"
-                                                        :class="['w-full', {'font-semibold text-blue-600': newPermissionForm.user === user.app_name }]"
+                                                        @click="newPermissionForm.user = String(user.id)"
+                                                        :class="['w-full', {'font-semibold text-blue-600': Number(newPermissionForm.user) === user.id }]"
                                                     >
                                                         {{ user.app_name }}
                                                     </DropdownMenuItem>

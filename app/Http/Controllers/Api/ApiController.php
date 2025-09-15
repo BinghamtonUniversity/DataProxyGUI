@@ -40,14 +40,14 @@ class ApiController extends Controller
         $headers = array_merge($defaultHeaders, $headers);
        
         $fullUrl = "{$this->djangoBaseUrl}/api/{$endpoint}";
-        // Log::info('Making Django request', [
-        //     'method' => $method,
-        //     'full_url' => $fullUrl,
-        //     'endpoint' => $endpoint,
-        //     'headers' => $headers,
-        //     'data' => $data,
-        //     'django_base_url' => $this->djangoBaseUrl
-        // ]);
+        Log::info('Making Django request', [
+            'method' => $method,
+            'full_url' => $fullUrl,
+            'endpoint' => $endpoint,
+            'headers' => $headers,
+            'data' => $data,
+            'django_base_url' => $this->djangoBaseUrl
+        ]);
 
         try {
             $response = Http::withBasicAuth($this->apiUser, $this->apiPassword)
@@ -345,6 +345,30 @@ class ApiController extends Controller
         ], $result['status']);
     }
 
+    public function ApiInstancesEditUpdate(Request $request, string $instance_id): JsonResponse
+    {
+        Log::info('ApiInstancesEditUpdate called', ['instance_id' => $instance_id]);
+
+        $endpoint = "api_instances/{$instance_id}";
+        $requestData = $request->all();
+        
+        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to put API Instance details",
+            'api_id' => $instance_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
 
     // ===========================================
     // API Users
