@@ -14,7 +14,7 @@ import {
 interface Props {
     instance_id: string
     apiInstanceData: ApiInstance | null,
-    apiUsers: ApiUser | null,
+    apiUsers: ApiUser[] | null,
     resources: Resource[] | null,
     loading: boolean,
     apiInstanceError: string

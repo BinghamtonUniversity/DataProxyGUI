@@ -109,7 +109,7 @@ export interface Api {
 interface ApiInstanceRouteUserMap {
   verb: string,
   route: string,
-  api_user: number
+  api_user: string
 }
 
 interface ApiInstanceResource {
