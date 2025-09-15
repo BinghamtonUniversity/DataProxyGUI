@@ -114,7 +114,7 @@ interface ApiInstanceRouteUserMap {
 
 interface ApiInstanceResource {
   name: string,
-  resource: number
+  resource: string
 }
 
 export interface ApiInstance {

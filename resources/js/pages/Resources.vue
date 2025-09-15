@@ -127,15 +127,15 @@ const submitNewResource = async (e: Event) => {
       ? { ...newResourceForm.value, id: editingResourceId.value }
       : {... newResourceForm.value}
     console.log('Submitting Resource:', body)
-    // const response = await fetch(url, {
-    //   method: request_method,
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Accept': 'application/json',
-    //     'X-CSRF-TOKEN': getCsrfToken() || '',
-    //   },
-    //   body: JSON.stringify(body),
-    // })
+    const response = await fetch(url, {
+      method: request_method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': getCsrfToken() || '',
+      },
+      body: JSON.stringify(body),
+    })
 
     // if (!response.ok) throw new Error('Failed to save Resource')
     closeNewResourceDialog()

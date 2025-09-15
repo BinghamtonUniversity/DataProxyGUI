@@ -480,6 +480,23 @@ class ApiController extends Controller
         ], $result['status']);
     }
     
+    public function resourcesStore(Request $request): JsonResponse
+    {
+        Log::info('Store method called', [
+            'request_data' => $request->all()
+        ]);
+        $result = $this->makeDjangoRequest('POST', 'resources', $request->all());
+
+        if ($result['success']) {
+            return response()->json($result['data'], 201);
+        }
+       
+        return response()->json([
+            'error' => "Failed to create resource",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
 
     /**
      * Generic resource controller - handles all CRUD operations dynamically
