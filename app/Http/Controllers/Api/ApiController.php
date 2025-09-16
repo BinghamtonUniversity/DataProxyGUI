@@ -251,7 +251,7 @@ class ApiController extends Controller
      */
     public function getApiDevelopers($id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', "apis/{$id}/api_developers");
+        $result = $this->makeDjangoRequest('GET', "apis/{$id}/developers");
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -268,7 +268,7 @@ class ApiController extends Controller
      */
     public function createApiDeveloper(Request $request, $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('POST', "apis/{$id}/api_developers", $request->all());
+        $result = $this->makeDjangoRequest('POST', "apis/{$id}/developers", $request->all());
 
         if ($result['success']) {
             return response()->json($result['data'], 201);
@@ -286,7 +286,7 @@ class ApiController extends Controller
      */
     public function updateApiDeveloper(Request $request, $api_id, $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('PUT', "apis/{$api_id}/api_developers/{$id}", $request->all());
+        $result = $this->makeDjangoRequest('PUT', "apis/{$api_id}/developers/{$id}", $request->all());
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -304,7 +304,7 @@ class ApiController extends Controller
      */
     public function deleteApiDeveloper($api_id, $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('DELETE', "apis/{$api_id}/api_developers/{$id}");
+        $result = $this->makeDjangoRequest('DELETE', "apis/{$api_id}/developers/{$id}");
 
         if ($result['success']) {
             return response()->json([
