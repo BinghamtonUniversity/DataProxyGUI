@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
     api_id: string
@@ -59,11 +60,12 @@ const handleSave = async (updatedCode: string) => {
             )
         }
 
-        const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/code`, {
+        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
             },
             body: JSON.stringify(updatedApiData)
         })
@@ -115,7 +117,7 @@ const handleCreateNewView = async () => {
         // TO-DO:: PHP function template
         const newFunction: ApiVersionFunction = {
             name: newViewName.value.trim(),
-            content: ``
+            content: `# Define the function ${newViewName.value.trim()} here\n`,
         }
 
         const updatedApiData = {
@@ -123,11 +125,12 @@ const handleCreateNewView = async () => {
             version_views: [...props.apiData.version_views, newFunction]
         }
         console.log('Updated API Data:', updatedApiData)
-        const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/code`, {
+        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
             },
             body: JSON.stringify(updatedApiData)
         })

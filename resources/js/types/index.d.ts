@@ -109,27 +109,27 @@ export interface Api {
 interface ApiInstanceRouteUserMap {
   verb: string,
   route: string,
-  api_user: number
+  api_user: string
 }
 
 interface ApiInstanceResource {
   name: string,
-  resource: number
+  resource: string
 }
 
 export interface ApiInstance {
   id: number
+  api_id: number
+  api_version_id: number | null
+  environment_id: number
   name: string
   route: string
-  route_user_map: ApiInstanceRouteUserMap[]
-  resources: ApiInstanceResource[] 
+  route_user_map: ApiInstanceRouteUserMap[],
+  resources: ApiInstanceResource[],
   options?: string // TODO: JSON
   public: number
   created_at: string
   updated_at: string
-  api_id: number
-  api_version_id: number
-  environment_id: number
 }
 
 export interface Environment {
@@ -152,10 +152,16 @@ export interface ApiUser {
   api_key: string
 }
 
+interface ResourceConfig {
+  tns: string,
+  pass: string,
+  user: string
+}
+
 export interface Resource {
   id: number,
   name: string,
-  config: string,
+  config: ResourceConfig | null,
   type: string,
   created_at: string,
   updated_at: string,

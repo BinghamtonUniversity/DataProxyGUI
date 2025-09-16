@@ -84,15 +84,10 @@ const fetchApiData = async () => {
     loadingApiData.value = true
     apiError.value = ''
     try {
-        const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/versions/latest`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            credentials: 'same-origin'
-        })
+
+        const response = await fetch(`/ajax/apis/${props.api_id}/versions/latest`)
+        console.log('Fetch response:', response)
+
         if (!response.ok) throw new Error('Failed to fetch API data')
         apiData.value = await response.json()
     } catch (e: any) {

@@ -18,7 +18,7 @@ class ApiController extends Controller
     public function __construct()
     {
         $this->djangoBaseUrl = config('services.django.base_url');
-        $this->uniqueId = 'B00694089';
+        $this->uniqueId = 'B00840451';
         $this->apiUser = config('services.django.api_user');
         $this->apiPassword = config('services.django.api_password');
     }
@@ -38,27 +38,45 @@ class ApiController extends Controller
         }
 
         $headers = array_merge($defaultHeaders, $headers);
+       
+        $fullUrl = "{$this->djangoBaseUrl}/api/{$endpoint}";
+        Log::info('Making Django request', [
+            'method' => $method,
+            'full_url' => $fullUrl,
+            'endpoint' => $endpoint,
+            'headers' => $headers,
+            'data' => $data,
+            'django_base_url' => $this->djangoBaseUrl
+        ]);
 
         try {
             $response = Http::withBasicAuth($this->apiUser, $this->apiPassword)
-                           ->withHeaders($headers);
+                        ->withHeaders($headers);
 
             switch (strtoupper($method)) {
                 case 'GET':
-                    $response = $response->get("{$this->djangoBaseUrl}/api/{$endpoint}");
+                    $response = $response->get($fullUrl);
                     break;
                 case 'POST':
-                    $response = $response->post("{$this->djangoBaseUrl}/api/{$endpoint}", $data);
+                    $response = $response->post($fullUrl, $data);
                     break;
                 case 'PUT':
-                    $response = $response->put("{$this->djangoBaseUrl}/api/{$endpoint}", $data);
+                    $response = $response->put($fullUrl, $data);
                     break;
                 case 'DELETE':
-                    $response = $response->delete("{$this->djangoBaseUrl}/api/{$endpoint}");
+                    $response = $response->delete($fullUrl);
                     break;
                 default:
                     throw new \InvalidArgumentException("Unsupported HTTP method: {$method}");
             }
+
+            // Add response debugging
+            // Log::info('Django response received', [
+            //     'status' => $response->status(),
+            //     'successful' => $response->successful(),
+            //     // 'body' => $response->body(),
+            //     'headers' => $response->headers()
+            // ]);
 
             return [
                 'success' => $response->successful(),
@@ -71,7 +89,9 @@ class ApiController extends Controller
             Log::error("Django API request failed: {$e->getMessage()}", [
                 'method' => $method,
                 'endpoint' => $endpoint,
-                'data' => $data
+                'full_url' => $fullUrl,
+                'data' => $data,
+                'exception' => $e->getTraceAsString()
             ]);
 
             return [
@@ -82,7 +102,6 @@ class ApiController extends Controller
             ];
         }
     }
-
     /**
      * Generic index method for any resource
      */
@@ -105,12 +124,16 @@ class ApiController extends Controller
      */
     public function store(Request $request, string $resource): JsonResponse
     {
+        Log::info('Store method called', [
+            'resource' => $resource,
+            'request_data' => $request->all()
+        ]);
         $result = $this->makeDjangoRequest('POST', $resource, $request->all());
 
         if ($result['success']) {
             return response()->json($result['data'], 201);
         }
-
+       
         return response()->json([
             'error' => "Failed to create {$resource}",
             'details' => $result['data'],
@@ -158,6 +181,347 @@ class ApiController extends Controller
             'status' => $result['status']
         ], $result['status']);
     }
+
+    // ===========================================
+    // APIS
+    // ===========================================
+    public function apisIndex(): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', 'apis');
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch apis}",
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function apisStore(Request $request): JsonResponse
+    {
+        Log::info('Store method called', [
+            'request_data' => $request->all()
+        ]);
+        $result = $this->makeDjangoRequest('POST', 'apis', $request->all());
+
+        if ($result['success']) {
+            return response()->json($result['data'], 201);
+        }
+       
+        return response()->json([
+            'error' => "Failed to create apis",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function apisUpdate(Request $request, $id): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('PUT', "apis/{$id}", $request->all());
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to update apis",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function apisDestroy($id): JsonResponse
+    {
+        // Handle special case for environments DELETE endpoint
+        $endpoint = "apis/{$id}";
+        
+        $result = $this->makeDjangoRequest('DELETE', $endpoint);
+
+        if ($result['success']) {
+            return response()->json([
+                'message' => ucfirst('apis') . ' deleted successfully'
+            ]);
+        }
+
+        return response()->json([
+            'error' => "Failed to delete apis",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    // ===========================================
+    // API Instances
+    // ===========================================
+    public function apiInstancesIndex(): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', 'api_instances');
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch api instances}",
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function apiInstancesStore(Request $request): JsonResponse
+    {
+        Log::info('ApiInstancesStore called');
+
+        $requestData = $request->all();
+        
+        $result = $this->makeDjangoRequest('POST', "api_instances", $requestData);
+        // Log::info('Django request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to POST API Instance details",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function apiInstancesUpdate(Request $request, string $api_instance_id): JsonResponse
+    {
+        Log::info('ApiInstancesStore called', ['api_instance_id' => $api_instance_id]);
+
+        $endpoint = "api_instances/{$api_instance_id}";
+
+        $requestData = $request->all();
+        
+        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to PUT API Instance details",
+            'api_id' => $api_instance_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
+    // ===========================================
+    // API Instance by ID - AJAX call for fetching single instance
+    // ===========================================
+    public function ApiInstancesEditIndex(Request $request, string $instance_id): JsonResponse
+    {
+        Log::info('ApiInstancesEditIndex called', ['instance_id' => $instance_id]);
+
+        $endpoint = "api_instances/{$instance_id}";
+        
+        $result = $this->makeDjangoRequest('GET', $endpoint);
+        // Log::info('Django request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch API details",
+            'api_id' => $instance_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function ApiInstancesEditUpdate(Request $request, string $instance_id): JsonResponse
+    {
+        Log::info('ApiInstancesEditUpdate called', ['instance_id' => $instance_id]);
+
+        $endpoint = "api_instances/{$instance_id}";
+        $requestData = $request->all();
+        
+        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to put API Instance details",
+            'api_id' => $instance_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    // ===========================================
+    // API Users
+    // ===========================================
+    public function apiUsersIndex(): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', 'api_users');
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch api users}",
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    // ===========================================
+    // API Versions
+    // ===========================================
+    public function apiVersionsIndex($instance_id): JsonResponse
+    {
+        $endpoint = "apis/{$instance_id}/versions";
+
+        $result = $this->makeDjangoRequest('GET', $endpoint);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch api versions for api {$instance_id}",
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    // ===========================================
+    // API Latest Version
+    // ===========================================
+
+    /**
+     * APIEdit Index - Fetch API details with optional tab filtering
+     */
+    public function ApiEditIndex(Request $request, string $api_id): JsonResponse
+    {
+        Log::info('ApiEditIndex called', ['api_id' => $api_id]);
+
+        $endpoint = "apis/{$api_id}/versions/latest";
+        
+        $result = $this->makeDjangoRequest('GET', $endpoint);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch API details",
+            'api_id' => $api_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function ApiEditUpdate(Request $request, string $api_id): JsonResponse
+    {
+        Log::info('ApiEditStore called', ['api_id' => $api_id]);
+
+        $endpoint = "apis/{$api_id}/code";
+
+        $requestData = $request->all();
+        
+        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to PUT API details",
+            'api_id' => $api_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+
+    // ===========================================
+    // Resources -- TO:DO - Move to separate controller and make djangorequest util function
+    // ===========================================
+    public function resourcesByTypeIndex($type): JsonResponse
+    {
+        $endpoint = "resources/type/{$type}";
+
+        $result = $this->makeDjangoRequest('GET', $endpoint);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch resources of type {$type}",
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function resourcesIndex(): JsonResponse
+    {
+        $endpoint = "resources";
+        Log::info('Fetching all resources', ['endpoint' => $endpoint]);
+        $result = $this->makeDjangoRequest('GET', $endpoint);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch resources",
+            'status' => $result['status']
+        ], $result['status']);
+    }
+    
+    public function resourcesStore(Request $request): JsonResponse
+    {
+        Log::info('Store method called', [
+            'request_data' => $request->all()
+        ]);
+        $result = $this->makeDjangoRequest('POST', 'resources', $request->all());
+
+        if ($result['success']) {
+            return response()->json($result['data'], 201);
+        }
+       
+        return response()->json([
+            'error' => "Failed to create resource",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
     /**
      * Generic resource controller - handles all CRUD operations dynamically
      * 
