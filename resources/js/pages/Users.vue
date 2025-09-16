@@ -127,12 +127,27 @@ const formConfig = {
     ]
 };
 
+// Get CSRF token from meta tag
+const getCsrfToken = () => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    return token;
+};
+
 // Clean form data for API submission
 const cleanFormData = (formData: any) => {
     const cleaned = { ...formData };
     
     // Remove server-managed fields that shouldn't be sent to API
     delete cleaned.id; // Remove ID for new records
+    
+    // Convert checkbox fields to proper booleans
+    const booleanFields = ['admin', 'active', 'developer'];
+    booleanFields.forEach(field => {
+        if (cleaned[field] !== undefined && cleaned[field] !== null) {
+            // Convert string 'true'/'false' or actual boolean to boolean
+            cleaned[field] = cleaned[field] === true || cleaned[field] === 'true' || cleaned[field] === 1;
+        }
+    });
     
     // Remove empty strings and convert to null if needed
     Object.keys(cleaned).forEach(key => {
@@ -150,7 +165,15 @@ const fetchUsers = async () => {
         loading.value = true;
         error.value = null;
         
-        const response = await fetch(`${apiBaseUrl}/users`);
+        const response = await fetch(`${apiBaseUrl}/users`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -214,7 +237,9 @@ const handleFormSubmit = async (formValues: any) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken() || '',
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify(cleanedData)
             });
 
@@ -238,7 +263,9 @@ const handleFormSubmit = async (formValues: any) => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken() || '',
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify(cleanedData)
             });
 
@@ -315,7 +342,9 @@ const handleDelete = async (selectedRowIds?: number[]) => {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
-                    }
+                        'X-CSRF-TOKEN': getCsrfToken() || '',
+                    },
+                    credentials: 'same-origin'
                 });
 
                 if (!response.ok) {
@@ -378,8 +407,8 @@ onMounted(() => {
             <!-- DataGrid -->
             <DataGrid 
                 v-else
-                :formConfig="formConfig"
-                :formData="users"
+                :schema="formConfig"
+                :data="users"
                 theme="default"
                 :showNew="true"
                 :showEdit="true"

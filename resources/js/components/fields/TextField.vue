@@ -3,12 +3,12 @@
     <!-- Label -->
     <label v-if="label" :for="fieldId" class="block text-sm font-medium text-gray-900 dark:text-white mb-2" :class="{ 'text-red-500': localError }">
       {{ label }}
-      <span v-if="required" class="text-red-500 ml-1">*</span>
+      <span v-if="required === true || required === 'true'" class="text-red-500 ml-1">*</span>
       <span
         v-if="info"
         class="relative cursor-pointer ml-1"
-        @mouseenter="showInfo = true"
-        @mouseleave="showInfo = false"
+        @mouseenter="showInfo = true || showInfo === 'true'"
+        @mouseleave="showInfo = false || showInfo === 'false'"
       >
         <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 inline" fill="currentColor" viewBox="0 0 20 20">
           <circle cx="10" cy="10" r="9" fill="currentColor"/>
@@ -25,7 +25,7 @@
     </label>
 
     <!-- Input Field -->
-    <div class="flex items-stretch w-full">
+    <div class="flex items-stretch w-full" c>
       <!-- Pre (prefix) -->
       <span 
         v-if="pre"
@@ -218,6 +218,7 @@ const { handleChange, handleBlur, handleFocus, handleInput } = createEventHandle
 const containerClass = computed(() => getFieldContainerClass(props, props.inFieldset));
 
 const inputClass = computed(() => [
+  'bg-white dark:bg-gray-900',
   'w-full px-3 py-2 text-sm border rounded-md transition-colors duration-200',
   'dark:!bg-gray-800 text-gray-900 dark:!text-white',
   'border-gray-300 dark:!border-gray-600',

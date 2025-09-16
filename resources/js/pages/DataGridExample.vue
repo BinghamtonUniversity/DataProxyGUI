@@ -173,8 +173,8 @@ nextTick(() => {
             
             <DataGrid    
                 ref="dataGridRef"
-                :formConfig="formConfig"
-                :formData="formData"
+                :schema="formConfig"
+                :data="formData"
                 theme="default"
                 :showNew="true"
                 :showEdit="true"

@@ -20,9 +20,35 @@ Route::get('/api_instances', function () {
     return Inertia::render('ApiInstances');
 })->middleware(['auth', 'verified'])->name('api_instances');
 
-// Route::get('/editor', function () {
-//     return Inertia::render('Editor');
-// })->middleware(['auth', 'verified'])->name('editor');
+
+Route::middleware(['auth', 'verified'])->prefix('apis/{api_type}/{api_id}')->group(function () {
+    
+    // Developers page - separate from tab layout
+    Route::get('/developers', function ($api_type, $api_id) {
+        return Inertia::render('apiEdit/ApiDevelopersPage', [
+            'api_type' => $api_type,
+            'api_id' => $api_id,
+        ]);
+    })->name('apiEdit.developers');
+
+    // Single route that handles all tabs with optional tab parameter
+    Route::get('/{tab?}', function ($api_type, $api_id, $tab = 'routes') {
+        // Validate tab parameter
+        $validTabs = ['routes', 'resources', 'functions', 'files', 'models', 'options'];
+        
+        if (!in_array($tab, $validTabs)) {
+            abort(404);
+        }
+
+        return Inertia::render('apiEdit/Layout', [
+            'api_type' => $api_type,
+            'api_id' => $api_id,
+            'activeTab' => $tab,
+        ]);
+    })->name('apiEdit.index')->where('tab', 'routes|resources|functions|files|models|options');
+});
+
+
 
 Route::get('/formviewer-example', function () {
     return Inertia::render('FormViewerExample');
@@ -64,6 +90,7 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
         Route::put("/{$resource}/{id}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Update"]);
         Route::delete("/{$resource}/{id}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Destroy"]);
     }
+
     //APIs
     Route::get('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisIndex']);
     Route::post('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisStore']);
@@ -159,6 +186,14 @@ Route::middleware(['auth', 'verified'])->prefix('/ajax/api_instances')->group(fu
         ->name('api_instances.edit.index');
     Route::put('/{instance_id}', [App\Http\Controllers\Api\ApiController::class, 'ApiInstancesEditUpdate'])
         ->name('api_instances.edit.update');
+
+    
+    // API Developer routes
+    Route::get('/apis/{id}/developers', [App\Http\Controllers\Api\ApiController::class, 'getApiDevelopers']);
+    Route::post('/apis/{id}/developers', [App\Http\Controllers\Api\ApiController::class, 'createApiDeveloper']);
+    Route::put('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'updateApiDeveloper']);
+    Route::delete('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'deleteApiDeveloper']);
+
 });
 
 require __DIR__.'/settings.php';

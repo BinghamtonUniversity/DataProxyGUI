@@ -432,8 +432,8 @@ onMounted(() => {
             <!-- DataGrid -->
             <DataGrid 
                 v-else
-                :formConfig="formConfig"
-                :formData="environments"
+                :schema="formConfig"
+                :data="environments"
                 theme="default"
                 :showNew="true"
                 :showEdit="true"
