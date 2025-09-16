@@ -169,7 +169,17 @@
         <thead>
           <tr>
             <th :class="[currentTheme.headerCell, currentTheme.borderRight, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']">
-              <input type="checkbox" :checked="allSelected" @change="toggleSelectAll($event.target.checked)" />
+              <CheckboxField
+                :name="'select-all'"
+                :value="allSelected"
+                @update:value="toggleSelectAll($event)"
+                :required="false"
+                :inFieldset="true"
+                :options="[
+                  { label: '', value: 'false' },
+                  { label: '', value: 'true' }
+                ]"
+              />
             </th>
             <th 
               v-for="(col, colIdx) in computedColumns" 
@@ -220,13 +230,13 @@
                   </option>
                 </select>
               </span>
-              <span v-else>
-                <input
-                  class="input-field"
-                  :id="col.key + '-filter'"
+              <span v-else>     
+                <TextField
+                  :required="false"
+                  :value="filters[col.key]"
+                  @update:value="filters[col.key] = $event"
                   :name="col.key + '-filter'"
                   :placeholder="col.label"
-                  v-model="filters[col.key]"
                 />
               </span>
             </td>
@@ -243,7 +253,19 @@
             ]"
           >
             <td :class="[currentTheme.cell, currentTheme.borderRight, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']" @click.stop>
-              <input type="checkbox" :checked="selectedRows.includes(row.id || row.name)" @change="toggleRowSelect(row, $event.target.checked)" />
+              <CheckboxField
+                :name="'row-select-' + (row.id || row.name)"
+                :value="selectedRows.includes(row.id || row.name)"
+                @update:value="toggleRowSelect(row, $event)"
+                :show="true"
+                :edit="true"
+                :required="false"
+                :inFieldset="true"
+                :options="[
+                  { label: '', value: 'false' },
+                  { label: '', value: 'true' }
+                ]"
+              />
             </td>
             <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.cell, colIdx < computedColumns.length - 1 ? currentTheme.borderRight : '']">
               <!-- Render option badges if column has options -->
@@ -344,6 +366,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { getThemeClasses, getDynamicColor } from '../Theme.js';
 import TextField from '../fields/TextField.vue';
+import CheckboxField from '../fields/CheckboxField.vue';
 
 const props = defineProps({
   title: String,
@@ -700,7 +723,8 @@ const allSelected = computed(() => {
 });
 
 function toggleSelectAll(checked) {
-  if (checked) {
+  const isChecked = checked === 'true' || checked === true;
+  if (isChecked) {
     selectedRows.value = filteredRows.value.map(row => row.id || row.name);
   } else {
     selectedRows.value = [];
@@ -708,7 +732,8 @@ function toggleSelectAll(checked) {
 }
 function toggleRowSelect(row, checked) {
   const rowId = row.id || row.name;
-  if (checked) {
+  const isChecked = checked === 'true' || checked === true;
+  if (isChecked) {
     if (!selectedRows.value.includes(rowId)) {
       selectedRows.value.push(rowId);
     }

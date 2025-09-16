@@ -154,6 +154,8 @@ const cleanFormData = (formData: any) => {
             cleaned[key] = null;
         }
     });
+
+    cleaned.user_id = cleaned.api_developer_id;
     
     return cleaned;
 };
@@ -239,7 +241,7 @@ const fetchApiDevelopers = async () => {
         loading.value = true;
         error.value = null;
         
-        const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/api_developers`, {
+        const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/developers`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -291,7 +293,7 @@ const handleFormSubmit = async (formValues: any) => {
             const cleanedData = cleanFormData(formValues);
             console.log('Form values:', formValues);
             console.log('Cleaned data being sent:', cleanedData);
-            const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/api_developers`, {
+            const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/developers`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -369,11 +371,11 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
 const handleDelete = async (selectedRowIds?: number[]) => {
     if (selectedRowIds && selectedRowIds.length > 0) {
         const developersToDelete = apiDevelopers.value.filter(dev => selectedRowIds.includes(dev.id));
-        
+        console.log('Developers to delete:', developersToDelete);
         try {
             // Delete API developer assignments via API
             for (const dev of developersToDelete) {
-                const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/api_developers/${dev.id}`, {
+                const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/developers/${dev.api_developer_id}`, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
