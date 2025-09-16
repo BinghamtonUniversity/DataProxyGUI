@@ -44,6 +44,8 @@ import TableActions from '../components/TableActions.vue'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
+import { router } from '@inertiajs/vue3'
+
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -196,6 +198,17 @@ const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
     ]
   }
   newApiInstanceDialogOpen.value = true
+}
+
+const handleRowClick = (instance: ApiInstance, event: MouseEvent) => {
+  // Check if the click target is within the actions column
+  const target = event.target as HTMLElement
+  if (target.closest('[data-actions-cell]')) {
+    return // Don't handle row click if clicking on actions
+  }
+  
+  // console.log('View details for API:', instance)
+  router.visit(`/api_instances/${instance.id}/main`)
 }
 
 // MOVE THESE to Details Page ?? Helper functions for managing array fields
@@ -386,14 +399,15 @@ const columns: ColumnDef<ApiInstance>[] = [
     enableHiding: false,
     cell: ({ row }) => {
         const instance = row.original
-        return h(TableActions<ApiInstance>, {
+        return h('div', { 'data-actions-cell': true }, [ h(TableActions<ApiInstance>, {
             item: instance,
             viewDetailsHref: `/api_instances/${instance.id}/main`,
             editLabel: 'Edit Instance',
             deleteLabel: 'Delete Instance',
             onEdit: () => openEditApiInstanceDialog(instance),
             // onDelete: () => handleDeleteInstance(instance),
-        })
+          })
+        ])
         }
     }
 ]
@@ -692,7 +706,11 @@ onUnmounted(() => {
                 <TableBody>
                   <template v-if="tableRows.length">
                     <template v-for="row in tableRows" :key="row.id" >
-                      <TableRow :data-state="row.getIsSelected() && 'selected'">
+                      <TableRow 
+                      :data-state="row.getIsSelected() && 'selected'"
+                      @click="(event: MouseEvent) => handleRowClick(row.original, event)"
+                      class="cursor-pointer hover:bg-muted/50"
+                      >
                         <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                           <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
                         </TableCell>

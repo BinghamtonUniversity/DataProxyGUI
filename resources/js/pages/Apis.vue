@@ -43,6 +43,9 @@ import TableActions from '../components/TableActions.vue'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
+import { router } from '@inertiajs/vue3'
+
+
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -134,6 +137,16 @@ const openEditApiDialog = (api: Api) => {
   newApiDialogOpen.value = true
 }
 
+const handleRowClick = (api: Api, event: MouseEvent) => {
+  // Check if the click target is within the actions column
+  const target = event.target as HTMLElement
+  if (target.closest('[data-actions-cell]')) {
+    return // Don't handle row click if clicking on actions
+  }
+  
+  // console.log('View details for API:', api)
+  router.visit(`/apis/${api.api_type}/${api.id}/routes`)
+}
 
 // Define table columns
 const columns: ColumnDef<Api>[] = [
@@ -213,13 +226,14 @@ const columns: ColumnDef<Api>[] = [
     enableHiding: false,
     cell: ({ row }) => {
       const api = row.original
-      return h(TableActions<Api>, {
+      return h('div', { 'data-actions-cell': true }, [h(TableActions<Api>, {
         item: api,
         // Optional: customize the view details link
         // viewDetailsHref: `/apis/${props.item.api_type}/${props.item.id}/routes`,
         onEdit: () => openEditApiDialog(api),
         // onDelete: () => handleDeleteApi(api),
       })
+    ])
     },
   }
 ]
@@ -395,7 +409,11 @@ onMounted(fetchApis)
                 <TableBody>
                   <template v-if="tableRows.length">
                     <template v-for="row in tableRows" :key="row.id">
-                      <TableRow :data-state="row.getIsSelected() && 'selected'">
+                      <TableRow 
+                      :data-state="row.getIsSelected() && 'selected'"
+                      @click="(event: MouseEvent) => handleRowClick(row.original, event)"
+                      class="cursor-pointer hover:bg-muted/50"
+                      >
                         <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                           <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
                         </TableCell>
