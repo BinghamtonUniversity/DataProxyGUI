@@ -124,8 +124,8 @@ export interface ApiInstance {
   environment_id: number
   name: string
   route: string
-  route_user_map: ApiInstanceRouteUserMap[] | null,
-  resources: ApiInstanceResource[] |null,
+  route_user_map: ApiInstanceRouteUserMap[],
+  resources: ApiInstanceResource[],
   options?: string // TODO: JSON
   public: number
   created_at: string

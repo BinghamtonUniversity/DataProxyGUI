@@ -18,7 +18,7 @@ class ApiController extends Controller
     public function __construct()
     {
         $this->djangoBaseUrl = config('services.django.base_url');
-        $this->uniqueId = 'B00450942';
+        $this->uniqueId = 'B00840451';
         $this->apiUser = config('services.django.api_user');
         $this->apiPassword = config('services.django.api_password');
     }

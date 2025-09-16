@@ -20,7 +20,7 @@ import { h, ref, onMounted, onUnmounted, computed, reactive } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, ApiInstance, Environment, ApiUser, Api, Resource, ApiData} from '@/types'
+import { type BreadcrumbItem, ApiInstance, Environment, Api, ApiInstanceRouteUserMap, ApiInstanceResource} from '@/types'
 import { Head } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -64,27 +64,27 @@ const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 //new API Instance
 const newApiInstanceDialogOpen = ref(false)
 
-//TO-DO: Should send route_user_map and resources as JSON strings here or in Details page??
-const newApiInstanceForm = ref({
+interface NewApiInstanceForm {
+  environment_id: string
+  api_id: string
+  api_version_id: string
+  name: string
+  route: string
+  public: number
+  route_user_map: ApiInstanceRouteUserMap[]
+  resources: ApiInstanceResource[]
+}
+
+//TO-DO: Should send route_user_map and resources as empty JSON 
+const newApiInstanceForm = ref<NewApiInstanceForm>({
   environment_id: '',
   api_id: '',
   api_version_id: '',
   name: '',
   route: '',
   public: 0,
-  // route_user_map: [
-  //   {
-  //     api_user: '',
-  //     verb: '',
-  //     route: ''
-  //   }
-  // ],
-  // resources: [
-  //   {
-  //     name: '',
-  //     resource: ''
-  //   }
-  // ]
+  route_user_map: [],
+  resources: []
 })
 const newApiInstanceLoading = ref(false)
 const newApiInstanceError = ref('')
@@ -107,19 +107,8 @@ const openNewApiInstanceDialog = () => {
     name: '',
     route: '',
     public: 0,
-    // route_user_map: [
-    //   {
-    //     api_user: '',
-    //     verb: '',
-    //     route: ''
-    //   }
-    // ],
-    // resources: [
-    //   {
-    //     name: '',
-    //     resource: ''
-    //   }
-    // ]
+    route_user_map: [],
+    resources: []
   }
   newApiInstanceError.value = ''
   newApiInstanceDialogOpen.value = true
@@ -135,19 +124,8 @@ const closeNewApiInstanceDialog = () => {
     name: '',
     route: '',
     public: 0,
-    // route_user_map: [
-    //   {
-    //     api_user: '',
-    //     verb: '',
-    //     route: ''
-    //   }
-    // ],
-    // resources: [
-    //   {
-    //     name: '',
-    //     resource: ''
-    //   }
-    // ]
+    route_user_map: [],
+    resources: []
   }
   isEditMode.value = false
   editingApiInstanceId.value = null
@@ -168,7 +146,7 @@ const submitNewApiInstance = async (e: Event) => {
     const body = isEditMode.value && editingApiInstanceId.value
       ? { ...newApiInstanceForm.value, id: editingApiInstanceId.value }
       : { ...newApiInstanceForm.value }
-    // console.log('Submitting API Instance:', body)
+    console.log('Submitting API Instance:', body)
     const response = await fetch(url, {
       method: request_method,
       headers: {
@@ -202,20 +180,20 @@ const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
     name: apiInstance.name || '',
     route: apiInstance.route || '',
     public: apiInstance.public || 0,
-    // route_user_map: apiInstance.route_user_map?.map(item => ({
-    //   api_user: item.api_user?.toString() || '',
-    //   verb: item.verb || '',
-    //   route: item.route || ''
-    // })) || [],
-    // resources: apiInstance.resources?.map(item => ({
-    //   name: item.name || '',
-    //   resource: item.resource?.toString() || ''
-    // })) || [
-    //   {
-    //     name: '',
-    //     resource: ''
-    //   }
-    // ]
+    route_user_map: apiInstance.route_user_map?.map(item => ({
+      api_user: item.api_user?.toString() || '',
+      verb: item.verb || '',
+      route: item.route || ''
+    })) || [],
+    resources: apiInstance.resources?.map(item => ({
+      name: item.name || '',
+      resource: item.resource?.toString() || ''
+    })) || [
+      {
+        name: '',
+        resource: ''
+      }
+    ]
   }
   newApiInstanceDialogOpen.value = true
 }
