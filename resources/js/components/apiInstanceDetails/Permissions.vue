@@ -107,10 +107,11 @@ const submitNewPermission = async (e: Event) => {
     }
     
     try {
+        const normalizedRoute = newPermissionForm.value.route ?? "" 
         const newPermission: ApiInstanceRouteUserMap = {
             api_user: newPermissionForm.value.user,
             verb: newPermissionForm.value.verb,
-            route: newPermissionForm.value.route
+            route: normalizedRoute.trim()
         }
         
         let updatedApiInstanceData
@@ -354,7 +355,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         </div>
                                         <div>
                                             <Label for="permission-route" class="mb-1">Route</Label>
-                                            <Input id="permission-route" v-model="newPermissionForm.route" required placeholder="/api/endpoint" />
+                                            <Input id="permission-route" v-model="newPermissionForm.route" placeholder="/api/endpoint" />
                                         </div>
                                         <div v-if="newPermissionError" class="text-red-600 text-sm">{{ newPermissionError }}</div>
                                     </div>
