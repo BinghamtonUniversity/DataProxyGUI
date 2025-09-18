@@ -85,7 +85,7 @@ const handleSave = async (apiData: ApiData | null, updateApiData: (updatedApiDat
         updateApiData(updatedApiData);
 
         // Send the updated API data to the backend via Laravel API
-        const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/code`, {
+        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',

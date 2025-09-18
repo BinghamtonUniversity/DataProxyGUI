@@ -104,7 +104,7 @@
                 </div>
                 <div class="space-y-2 max-h-48 overflow-y-auto">
                   <label
-                    v-for="col in allColumns"
+                    v-for="col in allColumns.filter(c => c.showColumn !== false)"
                     :key="col.key"
                     class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-1 rounded"
                   >
@@ -174,7 +174,7 @@
                 :value="allSelected"
                 @update:value="toggleSelectAll($event)"
                 :required="false"
-                :inFieldset="true"
+              
                 :options="[
                   { label: '', value: 'false' },
                   { label: '', value: 'true' }
@@ -490,7 +490,8 @@ const allColumns = computed(() => {
       type: field.type,
       required: field.required || false,
       options: field.options || null,
-      width: field.width || field.columns || 12
+      width: field.width || field.columns || 12,
+      showColumn: field.showColumn !== false // Default to true if not specified
     }));
   }
   
@@ -498,13 +499,17 @@ const allColumns = computed(() => {
   return props.columns || [];
 });
 
-// Filter columns based on visibility selection
+// Filter columns based on visibility selection and showColumn property
 const computedColumns = computed(() => {
-  if (!props.columns || visibleColumns.value.size === 0) {
-    return allColumns.value;
+  // First filter by showColumn property
+  let filteredColumns = allColumns.value.filter(col => col.showColumn !== false);
+  
+  // Then apply user visibility selection if columns prop is enabled
+  if (props.columns && visibleColumns.value.size > 0) {
+    filteredColumns = filteredColumns.filter(col => visibleColumns.value.has(col.key));
   }
   
-  return allColumns.value.filter(col => visibleColumns.value.has(col.key));
+  return filteredColumns;
 });
 
 // Use data or formData (backward compatibility) or rows prop
@@ -921,7 +926,9 @@ function toggleColumnVisibility(columnKey) {
 
 function selectAllColumns() {
   allColumns.value.forEach(col => {
-    visibleColumns.value.add(col.key);
+    if (col.showColumn !== false) {
+      visibleColumns.value.add(col.key);
+    }
   });
 }
 
@@ -932,9 +939,11 @@ function deselectAllColumns() {
 // Initialize visible columns on mount
 function initializeVisibleColumns() {
   if (props.columns) {
-    // Start with all columns visible
+    // Start with all columns visible (only those with showColumn !== false)
     allColumns.value.forEach(col => {
-      visibleColumns.value.add(col.key);
+      if (col.showColumn !== false) {
+        visibleColumns.value.add(col.key);
+      }
     });
   }
 }

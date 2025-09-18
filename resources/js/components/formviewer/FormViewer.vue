@@ -106,6 +106,7 @@
 <script setup>
 import { ref, watch, onMounted, computed, nextTick } from 'vue';
 import { shouldShowField, shouldEditField, shouldParseField, resolveFieldProperties } from '../fields/conditionalLogic.js';
+import { validateField } from '../fields/validation.js';
 import {
   TextField,
   TextAreaField,
@@ -423,84 +424,14 @@ const getFieldLabel = (fieldName) => {
 };
 
 // Validation functions
-const validateField = (fieldName) => {
+const validateFieldLocal = (fieldName) => {
   const field = props.formConfig.fields.find(f => f.name === fieldName);
   if (!field) return true;
 
   const fieldValue = formData.value[fieldName];
-  const errors = [];
-
-  // Check required fields
-  if (field.required) {
-    if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
-      errors.push('This field is required');
-    } else if (Array.isArray(fieldValue) && fieldValue.length === 0) {
-      errors.push('This field is required');
-    } else if (typeof fieldValue === 'object' && Object.keys(fieldValue).length === 0) {
-      errors.push('This field is required');
-    }
-  }
-
-  // Check email format
-  if (field.type === 'email' && fieldValue && fieldValue !== '') {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(fieldValue)) {
-      errors.push('Please enter a valid email address');
-    }
-  }
-
-  // Check URL format
-  if (field.type === 'url' && fieldValue && fieldValue !== '') {
-    try {
-      new URL(fieldValue);
-    } catch {
-      errors.push('Please enter a valid URL');
-    }
-  }
-
-  // Check minimum length
-  if (field.minLength && fieldValue && fieldValue.length < field.minLength) {
-    errors.push(`Minimum length is ${field.minLength} characters`);
-  }
-
-  // Check maximum length
-  if (field.maxLength && fieldValue && fieldValue.length > field.maxLength) {
-    errors.push(`Maximum length is ${field.maxLength} characters`);
-  }
-
-  // Check minimum value for numbers
-  if (field.min !== undefined && fieldValue !== '' && !isNaN(fieldValue)) {
-    if (parseFloat(fieldValue) < field.min) {
-      errors.push(`Minimum value is ${field.min}`);
-    }
-  }
-
-  // Check maximum value for numbers
-  if (field.max !== undefined && fieldValue !== '' && !isNaN(fieldValue)) {
-    if (parseFloat(fieldValue) > field.max) {
-      errors.push(`Maximum value is ${field.max}`);
-    }
-  }
-
-  // Check checkbox/switch required validation
-  if ((field.type === 'checkbox' || field.type === 'switch') && field.required) {
-    if (fieldValue !== true) {
-      errors.push('This field is required');
-    }
-  }
-
-  // Check select/combobox required validation
-  if ((field.type === 'select' || field.type === 'combobox') && field.required) {
-    if (field.multiple) {
-      if (!Array.isArray(fieldValue) || fieldValue.length === 0) {
-        errors.push('Please select at least one option');
-      }
-    } else {
-      if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
-        errors.push('Please select an option');
-      }
-    }
-  }
+  
+  // Use the imported validation function
+  const errors = validateField(fieldValue, field, formData.value);
 
   // If there are errors, add them to validation errors
   if (errors.length > 0) {
@@ -524,7 +455,7 @@ const validateForm = () => {
   if (props.formConfig && props.formConfig.fields) {
     props.formConfig.fields.forEach(field => {
       if (field && field.name) {
-        validateField(field.name);
+        validateFieldLocal(field.name);
       }
     });
   }

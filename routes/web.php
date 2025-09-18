@@ -75,9 +75,17 @@ Route::get('/environments', function () {
     return Inertia::render('Environments');
 })->middleware(['auth', 'verified'])->name('environments');
 
+Route::get('/schedules', function () {
+    return Inertia::render('Schedules');
+})->middleware(['auth', 'verified'])->name('schedules');
+
 Route::get('/users', function () {
     return Inertia::render('Users');
 })->middleware(['auth', 'verified'])->name('users');
+
+Route::get('/cas_users', function () {
+    return Inertia::render('CasUsers');
+})->middleware(['auth', 'verified'])->name('cas_users');
 
 // API Routes - Generic resource controller
 Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
@@ -104,9 +112,17 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
 
     //API Users
     Route::get('/api_users', [App\Http\Controllers\Api\ApiController::class, 'apiUsersIndex']);
+    Route::post('/api_users', [App\Http\Controllers\Api\ApiController::class, 'apiUsersStore']);
+    Route::put('/api_users/{id}', [App\Http\Controllers\Api\ApiController::class, 'apiUsersUpdate']);
+    Route::delete('/api_users/{id}', [App\Http\Controllers\Api\ApiController::class, 'apiUsersDestroy']);
 
     //API Versions
     Route::get('/apis/{id}/api_versions', [App\Http\Controllers\Api\ApiController::class, 'apiVersionsIndex']);
+
+    Route::get('/apis/{id}/developers', [App\Http\Controllers\Api\ApiController::class, 'getApiDevelopers']);
+    Route::post('/apis/{id}/developers', [App\Http\Controllers\Api\ApiController::class, 'createApiDeveloper']);
+    Route::put('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'updateApiDeveloper']);
+    Route::delete('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'deleteApiDeveloper']);
 
 });
 
@@ -186,13 +202,6 @@ Route::middleware(['auth', 'verified'])->prefix('/ajax/api_instances')->group(fu
         ->name('api_instances.edit.index');
     Route::put('/{instance_id}', [App\Http\Controllers\Api\ApiController::class, 'ApiInstancesEditUpdate'])
         ->name('api_instances.edit.update');
-
-    
-    // API Developer routes
-    Route::get('/apis/{id}/developers', [App\Http\Controllers\Api\ApiController::class, 'getApiDevelopers']);
-    Route::post('/apis/{id}/developers', [App\Http\Controllers\Api\ApiController::class, 'createApiDeveloper']);
-    Route::put('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'updateApiDeveloper']);
-    Route::delete('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'deleteApiDeveloper']);
 
 });
 
