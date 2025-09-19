@@ -373,6 +373,29 @@ const handleDelete = async (selectedRowIds?: number[]) => {
     }
 };
 
+// Handle custom actions from DataGrid
+const handleCustomAction = (actionData: { action: string; selectedRows: any[]; selectedData: any[] }) => {
+    console.log('Custom action triggered:', actionData);
+    
+    switch (actionData.action) {
+        case 'create':
+            openNewModal();
+            break;
+        case 'edit':
+            // Export functionality
+            openEditModal(actionData.selectedData[0]);
+            break;
+        case 'delete':
+            // Handle bulk delete
+            if (actionData.selectedRows.length > 0) {
+                handleDelete(actionData.selectedRows);
+            }
+            break;
+        default:
+            info(`Please implement the ${actionData.action} function`, 'Action Not Implemented');
+    }
+};
+
 // Fetch data on component mount
 onMounted(async () => {
     await fetchEnvironments(); // Load environments first for dropdown
@@ -408,17 +431,18 @@ onMounted(async () => {
                 :schema="formConfig"
                 :data="users"
                 theme="default"
-                :showNew="true"
-                :showEdit="true"
-                :showDelete="true"
+                :actions="[
+                    {name: 'create', type: 'success', min: 0, label: ' New', loc: 'left'},
+                    '|',
+                    {name: 'edit', type: 'primary', min: 1, max: 1, label: ' Edit', loc: 'right'},
+                    '|',
+                    {name: 'delete', type: 'danger', min: 1, max: 25, label: ' Delete', loc: 'right'}
+                ]"
                 :rowActions="[
                     { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
                     { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
                 ]"
-                @create="openNewModal"
-                @edit="openEditModal"
-                @delete="handleDelete"
-                @action="handleAction"
+                @customAction="handleCustomAction"
             >
             </DataGrid>
 
