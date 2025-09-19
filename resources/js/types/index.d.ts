@@ -130,6 +130,9 @@ export interface ApiInstance {
   public: number
   created_at: string
   updated_at: string
+  api: Api
+  api_version: ApiData
+  environment: Environment
 }
 
 export interface Environment {

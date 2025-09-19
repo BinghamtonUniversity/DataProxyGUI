@@ -355,7 +355,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         </div>
                                         <div>
                                             <Label for="permission-route" class="mb-1">Route</Label>
-                                            <Input id="permission-route" v-model="newPermissionForm.route" placeholder="/api/endpoint" />
+                                            <Input id="permission-route" v-model="newPermissionForm.route" required placeholder="/api/endpoint" />
                                         </div>
                                         <div v-if="newPermissionError" class="text-red-600 text-sm">{{ newPermissionError }}</div>
                                     </div>

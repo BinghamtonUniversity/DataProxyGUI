@@ -8,8 +8,9 @@ import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuContent,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
 import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
@@ -134,7 +135,7 @@ const updateResource = (index: number, field: 'name' | 'resource', value: string
           <div 
             v-for="(resourceItem, index) in apiInstanceData.resources" 
             :key="index"
-            class="flex items-center gap-4 p-3 border rounded-md bg-gray-50"
+            class="flex items-end gap-4"
           >
             <div class="flex-1">
               <Label :for="`resource-name-${index}`" class="text-sm font-medium">Name:</Label>
@@ -152,7 +153,7 @@ const updateResource = (index: number, field: 'name' | 'resource', value: string
                 <DropdownMenuTrigger as-child>
                   <Button variant="outline" class="w-full mt-1 justify-between">
                     {{ getResourceNameById(resourceItem.resource) }}
-                    <span class="ml-2">▼</span>
+                    <ChevronDown class="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent class="w-full">

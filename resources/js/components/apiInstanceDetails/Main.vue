@@ -47,9 +47,9 @@ updateLocalData()
 
 // Computed properties for read-only fields
 const readOnlyData = computed(() => ({
-    api_id: props.apiInstanceData?.api_id || null,
-    api_version_id: props.apiInstanceData?.api_version_id || null,
-    environment_id: props.apiInstanceData?.environment_id || null
+    api: props.apiInstanceData?.api.name,
+    api_version: props.apiInstanceData?.api_version.stable === false ? 'Latest working version' : props.apiInstanceData?.api_version.summary ?? undefined,
+    environment: props.apiInstanceData?.environment.name
 }))
 
 // Save function
@@ -108,7 +108,7 @@ const saveChanges = () => {
                     <Label for="api" class="mb-1">API</Label>
                     <Input 
                         id="api" 
-                        :value="readOnlyData.api_id" 
+                        v-model="readOnlyData.api" 
                         readonly
                         disabled
                         class="w-full bg-gray-50"
@@ -119,7 +119,7 @@ const saveChanges = () => {
                     <Label for="api-version" class="mb-1">API Version</Label>
                     <Input 
                         id="api-version" 
-                        :value="readOnlyData.api_version_id" 
+                        v-model="readOnlyData.api_version" 
                         readonly
                         disabled
                         class="w-full bg-gray-50"
@@ -130,7 +130,7 @@ const saveChanges = () => {
                     <Label for="environment" class="mb-1">Environment</Label>
                     <Input 
                         id="environment" 
-                        :value="readOnlyData.environment_id" 
+                        v-model="readOnlyData.environment" 
                         readonly
                         disabled
                         class="w-full bg-gray-50"
