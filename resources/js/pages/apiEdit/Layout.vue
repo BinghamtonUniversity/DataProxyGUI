@@ -74,6 +74,10 @@ const apiBaseUrl = '/api'
 // Modal state for API Developers
 const showApiDevelopersModal = ref(false)
 
+// Dropdown state for Developers button
+const showDevelopersDropdown = ref(false)
+const dropdownRef = ref<HTMLElement | null>(null)
+
 // Get CSRF token from meta tag
 const getCsrfToken = () => {
     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -115,6 +119,48 @@ const closeApiDevelopersModal = () => {
     showApiDevelopersModal.value = false
 }
 
+// Dropdown functions for Developers button
+const toggleDevelopersDropdown = () => {
+    showDevelopersDropdown.value = !showDevelopersDropdown.value
+    console.log('Toggle developers dropdown', showDevelopersDropdown.value)
+}
+
+const handleDevelopersAction = (action: string) => {
+    showDevelopersDropdown.value = false
+    
+    switch (action) {
+        case 'export':
+            console.log('Export developers')
+            // Implement export functionality
+            break
+        case 'import':
+            console.log('Import developers')
+            // Implement import functionality
+            break
+        case 'versions':
+            console.log('Show versions')
+            // Navigate to versions or show versions modal
+            break
+        case 'instances':
+            console.log('Show instances')
+            // Navigate to instances or show instances modal
+            break
+        case 'publish':
+            console.log('Publish new version')
+            // Implement publish functionality
+            break
+        default:
+            console.log('Unknown action:', action)
+    }
+}
+
+// Save function
+const handleSave = () => {
+    console.log('Save API data')
+    // Implement save functionality
+    // This could save the current API configuration, settings, etc.
+}
+
 // Navigation helper
 const navigateToTab = (tabId: string) => {
     router.get(`/apis/${props.api_type}/${props.api_id}/${tabId}`, {}, {
@@ -141,7 +187,19 @@ const componentProps = computed(() => ({
 }))
 
 // Fetch data on mount
-onMounted(() => fetchApiData())
+onMounted(() => {
+    fetchApiData()
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (event) => {
+        const target = event.target as HTMLElement
+        
+        // Check if click is outside the dropdown container
+        if (dropdownRef.value && !dropdownRef.value.contains(target)) {
+            showDevelopersDropdown.value = false
+        }
+    })
+})
 </script>
 
 <template>
@@ -154,6 +212,75 @@ onMounted(() => fetchApiData())
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">API - {{ props.api_id }}</h1>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Manage your API settings</p>
                 </div>
+                
+                
+            </div>
+            <div class="flex justify-end items-center gap-2 mb-6">
+                <!-- Save Button -->
+                <Button 
+                    @click="handleSave"
+                    variant="outline"
+                    class="flex items-center gap-2"
+                >   
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                    </svg>
+                    Save
+                </Button>
+                
+                <!-- Dropdown Button -->
+                <div ref="dropdownRef" class="relative">
+                    <Button 
+                        @click="toggleDevelopersDropdown"
+                        variant="outline"
+                        class="flex items-center gap-2"
+                    >   
+                     Options
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </Button>
+                    
+                    <!-- Dropdown Menu -->
+                    <div v-if="showDevelopersDropdown" class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
+                        <div class="py-1">
+                            <button 
+                                @click="handleDevelopersAction('export')"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                Export
+                            </button>
+                            <button 
+                                @click="handleDevelopersAction('import')"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                Import
+                            </button>
+                            <div class="border-t border-gray-200 dark:border-gray-700"></div>
+                            <button 
+                                @click="handleDevelopersAction('versions')"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                Versions
+                            </button>
+                            <button 
+                                @click="handleDevelopersAction('instances')"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                Instances
+                            </button>
+                            <div class="border-t border-gray-200 dark:border-gray-700"></div>
+                            <button 
+                                @click="handleDevelopersAction('publish')"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                Publish (new version)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end items-center mb-6">
                 <Button 
                     @click="openApiDevelopersModal"
                     variant="outline"

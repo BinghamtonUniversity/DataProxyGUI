@@ -72,7 +72,7 @@
         :key="action.type"
         @click="handleAction(action)"
         type="button"
-        :class="action.modifiers"
+        :class="getActionClasses(action)"
         :disabled="action.disabled || isSubmitting"
       >
         <span v-if="action.type === 'save' && isSubmitting">Submitting...</span>
@@ -164,9 +164,16 @@ const props = defineProps({
     default: 'Submit'
   },
   // Custom actions to override defaults
+  // Format: [{ type: 'save', action: 'save', label: 'Save', modifiers: 'btn btn-success' }]
+  // If custom actions are provided, they will replace the default Submit/Cancel buttons
   actions: {
     type: Array,
-    default: () => []
+    default: () => [],
+    validator: (actions) => {
+      return actions.every(action => {
+        return action && typeof action === 'object' && action.type && action.action && action.label;
+      });
+    }
   },
   // Whether to show default actions when no custom actions are provided
   showDefaultActions: {
@@ -181,7 +188,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:modelValue', 'submit', 'reset', 'validation-error', 'validation-success', 'action']);
+const emit = defineEmits(['update:modelValue', 'submit', 'reset', 'validation-error', 'validation-success', 'action', 'customAction']);
 
 const formData = ref({});
 const validationErrors = ref([]);
@@ -220,7 +227,11 @@ const defaultActions = computed(() => [
 // Merge default and custom actions
 const mergedActions = computed(() => {
   if (props.actions && props.actions.length > 0) {
-    return props.actions;
+    // Use custom actions, but ensure they have proper structure
+    return props.actions.map(action => ({
+      ...action,
+      disabled: action.disabled || (action.type === 'save' && isSubmitting.value)
+    }));
   }
   
   if (props.showDefaultActions) {
@@ -423,6 +434,17 @@ const getFieldLabel = (fieldName) => {
   return fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
 };
 
+// Get action classes - use custom modifiers or default classes
+const getActionClasses = (action) => {
+  // If custom actions have modifiers, use them
+  if (props.actions && props.actions.length > 0 && action.modifiers) {
+    return action.modifiers;
+  }
+  
+  // Otherwise use the default modifiers from the action object
+  return action.modifiers || 'px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors';
+};
+
 // Validation functions
 const validateFieldLocal = (fieldName) => {
   const field = props.formConfig.fields.find(f => f.name === fieldName);
@@ -494,6 +516,7 @@ const handleAction = async (action) => {
     default:
       // Emit custom action for parent to handle
       emit('action', { type, action: actionName, formData: formData.value });
+      emit('customAction', { type, action: actionName, formData: formData.value });
       break;
   }
 };
