@@ -16,7 +16,7 @@
         <div 
           v-for="(field, index) in formConfig.fields.filter(field => field && typeof field === 'object' && field.name)" 
           :key="field?.name || index" 
-          v-show="shouldShowField(field, debugFormData || {})"
+          v-show="shouldShowField(field, formData.value || {})"
           :class="[
             getFieldLayoutClasses(field),
             'field-wrapper',
@@ -29,7 +29,7 @@
             :field="field"
             :value="formData[field.name] || []"
             :disabled="disabled || field.disabled"
-            :edit="edit && shouldEditField(field, formData)"
+            :edit="edit && shouldEditField(field, formData.value || {})"
             @update:value="(value) => handleFieldChange(field.name, value)"
             @validation-error="(data) => handleValidationError(field.name, data)"
             @validation-success="(data) => handleValidationSuccess(field.name, data)"
@@ -39,9 +39,9 @@
             :is="getFieldComponent(field.type)"
             v-bind="field.type === 'fieldset' ? {
               ...field,
-              show: shouldShowField(field, debugFormData || {}),
-              edit: shouldEditField(field, debugFormData || {}),
-              formData: debugFormData || {}
+              show: shouldShowField(field, formData.value || {}),
+              edit: shouldEditField(field, formData.value || {}),
+              formData: formData.value || {}
             } : field.type === 'output' ? { field } : {
               ...field,
               errors: fieldErrors[field.name] || []
@@ -72,7 +72,7 @@
         :key="action.type"
         @click="handleAction(action)"
         type="button"
-        :class="action.modifiers"
+        :class="getActionClasses(action)"
         :disabled="action.disabled || isSubmitting"
       >
         <span v-if="action.type === 'save' && isSubmitting">Submitting...</span>
@@ -106,6 +106,7 @@
 <script setup>
 import { ref, watch, onMounted, computed, nextTick } from 'vue';
 import { shouldShowField, shouldEditField, shouldParseField, resolveFieldProperties } from '../fields/conditionalLogic.js';
+import { validateField } from '../fields/validation.js';
 import {
   TextField,
   TextAreaField,
@@ -163,9 +164,16 @@ const props = defineProps({
     default: 'Submit'
   },
   // Custom actions to override defaults
+  // Format: [{ type: 'save', action: 'save', label: 'Save', modifiers: 'btn btn-success' }]
+  // If custom actions are provided, they will replace the default Submit/Cancel buttons
   actions: {
     type: Array,
-    default: () => []
+    default: () => [],
+    validator: (actions) => {
+      return actions.every(action => {
+        return action && typeof action === 'object' && action.type && action.action && action.label;
+      });
+    }
   },
   // Whether to show default actions when no custom actions are provided
   showDefaultActions: {
@@ -180,7 +188,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:modelValue', 'submit', 'reset', 'validation-error', 'validation-success', 'action']);
+const emit = defineEmits(['update:modelValue', 'submit', 'reset', 'validation-error', 'validation-success', 'action', 'customAction']);
 
 const formData = ref({});
 const validationErrors = ref([]);
@@ -219,7 +227,11 @@ const defaultActions = computed(() => [
 // Merge default and custom actions
 const mergedActions = computed(() => {
   if (props.actions && props.actions.length > 0) {
-    return props.actions;
+    // Use custom actions, but ensure they have proper structure
+    return props.actions.map(action => ({
+      ...action,
+      disabled: action.disabled || (action.type === 'save' && isSubmitting.value)
+    }));
   }
   
   if (props.showDefaultActions) {
@@ -422,85 +434,26 @@ const getFieldLabel = (fieldName) => {
   return fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
 };
 
+// Get action classes - use custom modifiers or default classes
+const getActionClasses = (action) => {
+  // If custom actions have modifiers, use them
+  if (props.actions && props.actions.length > 0 && action.modifiers) {
+    return action.modifiers;
+  }
+  
+  // Otherwise use the default modifiers from the action object
+  return action.modifiers || 'px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors';
+};
+
 // Validation functions
-const validateField = (fieldName) => {
+const validateFieldLocal = (fieldName) => {
   const field = props.formConfig.fields.find(f => f.name === fieldName);
   if (!field) return true;
 
   const fieldValue = formData.value[fieldName];
-  const errors = [];
-
-  // Check required fields
-  if (field.required) {
-    if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
-      errors.push('This field is required');
-    } else if (Array.isArray(fieldValue) && fieldValue.length === 0) {
-      errors.push('This field is required');
-    } else if (typeof fieldValue === 'object' && Object.keys(fieldValue).length === 0) {
-      errors.push('This field is required');
-    }
-  }
-
-  // Check email format
-  if (field.type === 'email' && fieldValue && fieldValue !== '') {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(fieldValue)) {
-      errors.push('Please enter a valid email address');
-    }
-  }
-
-  // Check URL format
-  if (field.type === 'url' && fieldValue && fieldValue !== '') {
-    try {
-      new URL(fieldValue);
-    } catch {
-      errors.push('Please enter a valid URL');
-    }
-  }
-
-  // Check minimum length
-  if (field.minLength && fieldValue && fieldValue.length < field.minLength) {
-    errors.push(`Minimum length is ${field.minLength} characters`);
-  }
-
-  // Check maximum length
-  if (field.maxLength && fieldValue && fieldValue.length > field.maxLength) {
-    errors.push(`Maximum length is ${field.maxLength} characters`);
-  }
-
-  // Check minimum value for numbers
-  if (field.min !== undefined && fieldValue !== '' && !isNaN(fieldValue)) {
-    if (parseFloat(fieldValue) < field.min) {
-      errors.push(`Minimum value is ${field.min}`);
-    }
-  }
-
-  // Check maximum value for numbers
-  if (field.max !== undefined && fieldValue !== '' && !isNaN(fieldValue)) {
-    if (parseFloat(fieldValue) > field.max) {
-      errors.push(`Maximum value is ${field.max}`);
-    }
-  }
-
-  // Check checkbox/switch required validation
-  if ((field.type === 'checkbox' || field.type === 'switch') && field.required) {
-    if (fieldValue !== true) {
-      errors.push('This field is required');
-    }
-  }
-
-  // Check select/combobox required validation
-  if ((field.type === 'select' || field.type === 'combobox') && field.required) {
-    if (field.multiple) {
-      if (!Array.isArray(fieldValue) || fieldValue.length === 0) {
-        errors.push('Please select at least one option');
-      }
-    } else {
-      if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
-        errors.push('Please select an option');
-      }
-    }
-  }
+  
+  // Use the imported validation function
+  const errors = validateField(fieldValue, field, formData.value);
 
   // If there are errors, add them to validation errors
   if (errors.length > 0) {
@@ -524,7 +477,7 @@ const validateForm = () => {
   if (props.formConfig && props.formConfig.fields) {
     props.formConfig.fields.forEach(field => {
       if (field && field.name) {
-        validateField(field.name);
+        validateFieldLocal(field.name);
       }
     });
   }
@@ -563,6 +516,7 @@ const handleAction = async (action) => {
     default:
       // Emit custom action for parent to handle
       emit('action', { type, action: actionName, formData: formData.value });
+      emit('customAction', { type, action: actionName, formData: formData.value });
       break;
   }
 };
@@ -634,7 +588,10 @@ const initializeFormData = () => {
         console.log(`initializeFormData: Setting fieldset ${field.name} to empty object`);
       }
     } else if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
-      newData[field.name] = field.value || false;
+      // Normalize boolean-like defaults ('true'/'false' strings) to booleans
+      const raw = field.value;
+      const normalized = raw === true || raw === 'true' ? true : false;
+      newData[field.name] = normalized;
     } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {
       if (field.multiple) {
         newData[field.name] = [];

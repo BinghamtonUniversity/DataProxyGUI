@@ -85,7 +85,7 @@ const handleSave = async (apiData: ApiData | null, updateApiData: (updatedApiDat
         updateApiData(updatedApiData);
 
         // Send the updated API data to the backend via Laravel API
-        const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/code`, {
+        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -214,18 +214,7 @@ const initializeFormData = (apiData: ApiData | null) => {
                     @update:form-data="handleFormChange"
                 />
 
-                <!-- Form Preview -->
-                <Card class="mt-6">
-                    <CardHeader>
-                        <CardTitle>Form Configuration Preview</CardTitle>
-                        <CardDescription>
-                            This is the JSON configuration that will be saved to the database.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-auto text-sm">{{ JSON.stringify(formData, null, 2) }}</pre>
-                    </CardContent>
-                </Card>
+ 
             </template>
         </div>
     </div>

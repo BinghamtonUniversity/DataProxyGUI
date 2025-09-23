@@ -3,7 +3,8 @@
 <template>
   <div :class="currentTheme.container">
     <!-- Header with title and actions -->
-    <div :class="currentTheme.header">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+      <!-- Title and Description -->
       <div>
         <h2 v-if="schema.label || schema.title || formConfig.label || formConfig.title || title" :class="currentTheme.title">
           {{ schema.label || schema.title || formConfig.label || formConfig.title || title }}
@@ -12,36 +13,76 @@
           {{ schema.description || formConfig.description }}
         </p>
       </div>
-      <!-- Custom actions slot for external action buttons -->
-      <div class="flex flex-col items-end gap-2">
-        <!-- Main action buttons -->
+      
+      <!-- Action buttons row -->
+      <div v-if="processedActions.length > 0 || showNew || showEdit || showDelete" class="flex items-center justify-between gap-4 mt-4">
+        <!-- Left positioned actions -->
         <div class="flex items-center gap-2">
-          <slot name="actions">
-            <!-- Default actions if no custom actions provided -->
+          <template v-if="processedActions.length > 0">
+            <template v-for="(action, index) in leftActions" :key="`left-${index}`">
+              <div v-if="action.type === 'separator'" class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
+              <button
+                v-else
+                @click="handleCustomAction(action)"
+                :disabled="action.disabled"
+                :title="getActionTooltip(action)"
+                :class="action.buttonClass"
+              >
+                {{ action.label }}
+              </button>
+            </template>
+          </template>
+          <template v-else>
             <button v-if="showNew" @click="onCreate" :class="currentTheme.newButton">New</button>
-            <button
-              v-if="showEdit"
-              @click="onEdit"
-              :disabled="selectedRows.length === 0"
-              :title="selectedRows.length === 0 ? 'Please select at least one row' : ''"
-              :class="currentTheme.editButton"
-            >
-              Edit
-            </button>
-            <button
-              v-if="showDelete"
-              @click="onDelete"
-              :disabled="selectedRows.length === 0"
-              :title="selectedRows.length === 0 ? 'Please select a row' : ''"
-              :class="currentTheme.deleteButton"
-            >
-              Delete
-            </button>
-          </slot>
+          </template>
         </div>
         
-        <!-- Icon-only utility buttons (Download, Upload, Columns) -->
-        <div v-if="upload || download || columns" class="flex items-center border border-gray-200 dark:border-gray-700 rounded-md">
+        <!-- Right positioned actions -->
+        <div class="flex items-center gap-2">
+          <slot name="actions">
+            <template v-if="processedActions.length > 0">
+              <template v-for="(action, index) in rightActions" :key="`right-${index}`">
+                <div v-if="action.type === 'separator'" class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
+                <button
+                  v-else
+                  @click="handleCustomAction(action)"
+                  :disabled="action.disabled"
+                  :title="getActionTooltip(action)"
+                  :class="action.buttonClass"
+                >
+                  {{ action.label }}
+                </button>
+              </template>
+            </template>
+            <template v-else>
+              <button
+                v-if="showEdit"
+                @click="onEdit"
+                :disabled="selectedRows.length === 0"
+                :title="selectedRows.length === 0 ? 'Please select at least one row' : ''"
+                :class="currentTheme.editButton"
+              >
+                Edit
+              </button>
+              <button
+                v-if="showDelete"
+                @click="onDelete"
+                :disabled="selectedRows.length === 0"
+                :title="selectedRows.length === 0 ? 'Please select a row' : ''"
+                :class="currentTheme.deleteButton"
+              >
+                Delete
+              </button>
+            </template>
+          </slot>
+        </div>
+      </div>
+      
+
+      
+      <!-- Icon-only utility buttons (Download, Upload, Columns) -->
+      <div v-if="upload || download || columns" class="flex items-center justify-end  mt-4">
+        <div class="flex border border-gray-200 dark:border-gray-700 rounded-md">
           <input
             v-if="upload"
             ref="fileInput"
@@ -104,7 +145,7 @@
                 </div>
                 <div class="space-y-2 max-h-48 overflow-y-auto">
                   <label
-                    v-for="col in allColumns"
+                    v-for="col in allColumns.filter(c => c.showColumn !== false)"
                     :key="col.key"
                     class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-1 rounded"
                   >
@@ -117,20 +158,10 @@
                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ col.label || col.key }}</span>
                   </label>
                 </div>
-              </div>
+              </div></div>
             </div>
           </div>
         </div>
-      </div>
-        <template v-for="(action, idx) in customActions" :key="action.type || action.label || idx">
-          <button
-            :class="['px-4 py-2 rounded focus:outline-none', action.colorClass]"
-            @click="$emit('action', { type: action.type || action.label, payload: selectedRows })"
-            :disabled="action.disabled || false"
-          >
-            {{ action.label }}
-          </button>
-        </template>
       </div>
     </div>
     <!-- Built-in search bar below header (conditional) -->
@@ -174,7 +205,7 @@
                 :value="allSelected"
                 @update:value="toggleSelectAll($event)"
                 :required="false"
-                :inFieldset="true"
+              
                 :options="[
                   { label: '', value: 'false' },
                   { label: '', value: 'true' }
@@ -422,6 +453,16 @@ const props = defineProps({
   showEdit: { type: Boolean, default: true },
   showDelete: { type: Boolean, default: true },
   customActions: { type: Array, default: () => [] },
+  actions: { 
+    type: Array, 
+    default: () => [],
+    validator: (actions) => {
+      return actions.every(action => {
+        if (typeof action === 'string') return action === '|'; // Separator
+        return action && typeof action === 'object' && action.name && action.type && action.label;
+      });
+    }
+  },
   rowActions: { 
     type: Array, 
     default: () => [
@@ -446,7 +487,7 @@ const props = defineProps({
     default: () => []
   }
 });
-const emit = defineEmits(['rowClick', 'action', 'create', 'edit', 'multiple-edit', 'delete', 'upload']);
+const emit = defineEmits(['rowClick', 'rowActionHandler', 'create', 'edit', 'multiple-edit', 'delete', 'upload', 'actionHandler']);
 
 const searchQuery = ref('');
 const filters = ref({});
@@ -478,6 +519,76 @@ const currentPage = ref(1);
 // Get current theme classes from Theme component
 const currentTheme = computed(() => getThemeClasses('datatable', props.theme));
 
+// Process actions configuration
+const processedActions = computed(() => {
+  if (!props.actions || props.actions.length === 0) {
+    return [];
+  }
+  
+  return props.actions.map(action => {
+    if (typeof action === 'string' && action === '|') {
+      return { type: 'separator' };
+    }
+    
+    return {
+      ...action,
+      min: action.min !== undefined ? action.min : 1,
+      max: action.max !== undefined ? action.max : 1,
+      loc: action.loc || 'right',
+      disabled: isActionDisabled(action),
+      buttonClass: getActionButtonClass(action)
+    };
+  });
+});
+
+// Separate actions by location
+const leftActions = computed(() => {
+  return processedActions.value.filter(action => action.loc === 'left');
+});
+
+const rightActions = computed(() => {
+  return processedActions.value.filter(action => action.loc === 'right');
+});
+
+// Check if action should be disabled based on selection requirements
+const isActionDisabled = (action) => {
+  const selectedCount = selectedRows.value.length;
+  
+  if (action.min !== undefined && selectedCount < action.min) {
+    return true;
+  }
+  
+  if (action.max !== undefined && selectedCount > action.max) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Get button class based on action type
+const getActionButtonClass = (action) => {
+  const baseClass = 'px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
+  const disabledClass = 'opacity-50 cursor-not-allowed';
+  
+  // Add disabled styling if action is disabled
+  const disabledStyle = action.disabled ? disabledClass : '';
+  
+  switch (action.type) {
+    case 'success':
+      return `${baseClass} ${disabledStyle} bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+    case 'primary':
+      return `${baseClass} ${disabledStyle} bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+    case 'danger':
+      return `${baseClass} ${disabledStyle} bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+    case 'warning':
+      return `${baseClass} ${disabledStyle} bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+    case 'info':
+      return `${baseClass} ${disabledStyle} bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+    default:
+      return `${baseClass} ${disabledStyle} bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+  }
+};
+
 // Generate columns from schema or formConfig (backward compatibility)
 const allColumns = computed(() => {
   // Priority: schema > formConfig > columns
@@ -490,7 +601,8 @@ const allColumns = computed(() => {
       type: field.type,
       required: field.required || false,
       options: field.options || null,
-      width: field.width || field.columns || 12
+      width: field.width || field.columns || 12,
+      showColumn: field.showColumn !== false // Default to true if not specified
     }));
   }
   
@@ -498,13 +610,17 @@ const allColumns = computed(() => {
   return props.columns || [];
 });
 
-// Filter columns based on visibility selection
+// Filter columns based on visibility selection and showColumn property
 const computedColumns = computed(() => {
-  if (!props.columns || visibleColumns.value.size === 0) {
-    return allColumns.value;
+  // First filter by showColumn property
+  let filteredColumns = allColumns.value.filter(col => col.showColumn !== false);
+  
+  // Then apply user visibility selection if columns prop is enabled
+  if (props.columns && visibleColumns.value.size > 0) {
+    filteredColumns = filteredColumns.filter(col => visibleColumns.value.has(col.key));
   }
   
-  return allColumns.value.filter(col => visibleColumns.value.has(col.key));
+  return filteredColumns;
 });
 
 // Use data or formData (backward compatibility) or rows prop
@@ -921,7 +1037,9 @@ function toggleColumnVisibility(columnKey) {
 
 function selectAllColumns() {
   allColumns.value.forEach(col => {
-    visibleColumns.value.add(col.key);
+    if (col.showColumn !== false) {
+      visibleColumns.value.add(col.key);
+    }
   });
 }
 
@@ -932,9 +1050,11 @@ function deselectAllColumns() {
 // Initialize visible columns on mount
 function initializeVisibleColumns() {
   if (props.columns) {
-    // Start with all columns visible
+    // Start with all columns visible (only those with showColumn !== false)
     allColumns.value.forEach(col => {
-      visibleColumns.value.add(col.key);
+      if (col.showColumn !== false) {
+        visibleColumns.value.add(col.key);
+      }
     });
   }
 }
@@ -954,7 +1074,7 @@ function emitRowClick(row) {
   emit('rowClick', row);
 }
 function emitAction(type, payload) {
-  emit('action', { type, payload });
+  emit('rowActionHandler', { type, payload });
 }
 function toggleMenu(id) {
   console.log('Toggle menu for ID:', id, 'Current openMenuId:', openMenuId.value);
@@ -992,6 +1112,41 @@ function onDelete() {
   emit('delete', selectedRows.value);
   // Default logic: placeholder
   // console.log('OnDelete triggered', selectedRows.value);
+}
+
+// Get tooltip text for action button
+function getActionTooltip(action) {
+  const selectedCount = selectedRows.value.length;
+  
+  if (action.min !== undefined && selectedCount < action.min) {
+    return `Please select at least ${action.min} row${action.min > 1 ? 's' : ''}`;
+  }
+  
+  if (action.max !== undefined && selectedCount > action.max) {
+    return `Please select at most ${action.max} row${action.max > 1 ? 's' : ''}`;
+  }
+  
+  return action.label;
+}
+
+// Handle custom actions
+function handleCustomAction(action) {
+  // Check if the action has a custom handler
+  const hasCustomHandler = emit('actionHandler', {
+    action: action.name,
+    selectedRows: selectedRows.value,
+    selectedData: selectedRows.value.map(id => computedRows.value.find(row => (row.id || row.name) === id))
+  });
+  
+  // If no custom handler is implemented, show info toast
+  if (!hasCustomHandler) {
+    // Import toaster if available, otherwise use console
+    if (typeof window !== 'undefined' && window.toastr) {
+      window.toastr.info(`Please implement the ${action.name} function`, 'Action Not Implemented');
+    } else {
+      console.info(`Please implement the ${action.name} function`);
+    }
+  }
 }
 
 const visiblePages = computed(() => {
