@@ -1723,17 +1723,27 @@ function getFieldJson(field) {
     name: field.name,
     label: field.label,
     type: field.type,
-    placeholder: field.placeholder,
-    value: field.value,
-    help: field.help,
-    info: field.info,
   };
 
-  // Add display properties
-  if (field.width) {
+  // Only include optional fields if they have meaningful values
+  if (field.placeholder && field.placeholder.trim() !== '') {
+    base.placeholder = field.placeholder;
+  }
+  if (field.value !== null && field.value !== undefined && field.value !== '') {
+    base.value = field.value;
+  }
+  if (field.help && field.help.trim() !== '') {
+    base.help = field.help;
+  }
+  if (field.info && field.info.trim() !== '') {
+    base.info = field.info;
+  }
+
+  // Add display properties (only include if not default values)
+  if (field.width && field.width !== '12') {
     base.width = field.width;
   }
-  if (field.offset) {
+  if (field.offset && field.offset !== '0') {
     base.offset = field.offset;
   }
   if (field.forceRow) {
@@ -1749,12 +1759,20 @@ function getFieldJson(field) {
     case 'combobox':
     case 'radio':
       base.options = field.options || [];
-      base.multiple = field.multiple || false;
+      if (field.multiple) {
+        base.multiple = field.multiple;
+      }
       break;
     case 'range':
-      base.min = field.min || 0;
-      base.max = field.max || 100;
-      base.step = field.step || 1;
+      if (field.min !== undefined && field.min !== 0) {
+        base.min = field.min;
+      }
+      if (field.max !== undefined && field.max !== 100) {
+        base.max = field.max;
+      }
+      if (field.step !== undefined && field.step !== 1) {
+        base.step = field.step;
+      }
       break;
     case 'fieldset':
       if (field.fields && Array.isArray(field.fields) && field.fields.length > 0) {
@@ -1804,10 +1822,10 @@ function getFieldJson(field) {
     }
   }
 
-  // Add conditions
+  // Add conditions (only include if not default true values)
   if (field.show !== undefined) {
     if (field.show === 'true') {
-      base.show = true;
+      // Don't include default true value
     } else if (field.show === 'false') {
       base.show = false;
     } else {
@@ -1816,7 +1834,7 @@ function getFieldJson(field) {
   }
   if (field.edit !== undefined) {
     if (field.edit === 'true') {
-      base.edit = true;
+      // Don't include default true value
     } else if (field.edit === 'false') {
       base.edit = false;
     } else {
@@ -1825,7 +1843,7 @@ function getFieldJson(field) {
   }
   if (field.parse !== undefined) {
     if (field.parse === 'true') {
-      base.parse = true;
+      // Don't include default true value
     } else if (field.parse === 'false') {
       base.parse = false;
     } else {
@@ -1836,13 +1854,13 @@ function getFieldJson(field) {
     if (field.required === 'true') {
       base.required = true;
     } else if (field.required == 'false') {
-      base.required = false;
+      // Don't include default false value
     } else {
       base.required = field.required;
     }
   }
 
-  // Add conditional logic groups
+  // Add conditional logic groups (overrides the above conditions)
   if (field.show === 'conditional' && field.showGroups) {
     base.show = field.showGroups;
   }

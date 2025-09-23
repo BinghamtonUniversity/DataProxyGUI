@@ -14,8 +14,8 @@ const apiBaseUrl = '/api';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Users',
-        href: '/users',
+        title: 'CAS Users',
+        href: '/cas_users',
     },
 ];
 
@@ -33,58 +33,93 @@ const error = ref<string | null>(null);
 // Toaster
 const { success, error: showError, warning, info } = useToaster();
 
-// Form configuration for API users
+// Form configuration for users
 const formConfig = {
-    label: 'API Users',
-    description: 'A list of API users with their credentials and environment settings.',
-    name: "api-users-form",
+    label: 'Users',
+    description: 'A list of users with their information.',
+    name: "users-form",
     files: false,
     fields: [
         {
-            name: "app_name",
-            label: "Name",
+            name: "unique_id",
+            label: "Unique ID",
             type: "text",
-            placeholder: "Enter the app name",
+            placeholder: "Enter the unique ID",
             value: "",
-            help: "Unique name for the API application",
-            info: "Unique identifier for the API application",
+            help: "Unique identifier for the user",
+            info: "Unique identifier for the user",
             width: "12",
             offset: "0",
             required: true
         },
         {
-            name: "app_secret",
-            label: "Secret",
-            type: "password",
-            placeholder: "Enter the app secret",
+            name: "name",
+            label: "Name",
+            type: "text",
+            placeholder: "Enter the user's name",
             value: "",
-            help: "Secret key for API authentication",
-            info: "Secret key used for API authentication",
+            help: "Full name of the user",
+            info: "Full name of the user",
             width: "12",
             offset: "0",
-            showColumn: false // Hide this column from the DataGrid display
+            required: true
         },
         {
-            name: "environment_id",
-            label: "Environment",
-            type: "select",
-            placeholder: "Select environment",
+            name: "username",
+            label: "Username",
+            type: "text",
+            placeholder: "Enter the username",
             value: "",
-            help: "Environment where this API user is active",
-            info: "Select the environment for this API user",
+            help: "Username for login",
+            info: "Username for login",
             width: "12",
             offset: "0",
-            required: true,
-            options: [] // Will be populated with available environments
+            required: false
         },
         {
-            name: "is_active",
+            name: "email",
+            label: "Email",
+            type: "email",
+            placeholder: "Enter the email address",
+            value: "",
+            help: "Email address of the user",
+            info: "Email address of the user",
+            width: "12",
+            offset: "0",
+            required: false
+        },
+        {
+            name: "admin",
+            label: "Admin",
+            type: "checkbox",
+            placeholder: "",
+            value: false,
+            help: "Whether the user is an admin",
+            info: "Whether the user is an admin",
+            width: "12",
+            offset: "0",
+            required: false
+        },
+        {
+            name: "active",
             label: "Active",
             type: "checkbox",
             placeholder: "",
             value: true,
-            help: "Whether the API user is active",
-            info: "Whether the API user is currently active",
+            help: "Whether the user is active",
+            info: "Whether the user is active",
+            width: "12",
+            offset: "0",
+            required: false
+        },
+        {
+            name: "developer",
+            label: "Developer",
+            type: "checkbox",
+            placeholder: "",
+            value: false,
+            help: "Whether the user is a developer",
+            info: "Whether the user is a developer",
             width: "12",
             offset: "0",
             required: false
@@ -104,12 +139,9 @@ const cleanFormData = (formData: any) => {
     
     // Remove server-managed fields that shouldn't be sent to API
     delete cleaned.id; // Remove ID for new records
-    delete cleaned.created_at; // Remove timestamp fields
-    delete cleaned.updated_at;
-    delete cleaned.encrypted_app_secret; // Don't send encrypted secret
     
     // Convert checkbox fields to proper booleans
-    const booleanFields = ['is_active'];
+    const booleanFields = ['admin', 'active', 'developer'];
     booleanFields.forEach(field => {
         if (cleaned[field] !== undefined && cleaned[field] !== null) {
             // Convert string 'true'/'false' or actual boolean to boolean
@@ -127,45 +159,13 @@ const cleanFormData = (formData: any) => {
     return cleaned;
 };
 
-// Fetch environments for the dropdown
-const fetchEnvironments = async () => {
-    try {
-        const response = await fetch(`${apiBaseUrl}/environments`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            credentials: 'same-origin'
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const environments = await response.json();
-        
-        // Update form config options for the environment dropdown
-        formConfig.fields[2].options = environments.map((env: any) => ({
-            label: env.name || env.environment_name || `Environment ${env.id}`,
-            value: env.id
-        }));
-        
-        return environments;
-    } catch (err: any) {
-        console.error('Error fetching environments:', err);
-        return [];
-    }
-};
-
-// Fetch API users from API
+// Fetch users from API
 const fetchUsers = async () => {
     try {
         loading.value = true;
         error.value = null;
         
-        const response = await fetch(`${apiBaseUrl}/api_users`, {
+        const response = await fetch(`${apiBaseUrl}/users`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -183,9 +183,9 @@ const fetchUsers = async () => {
         users.value = data;
         
     } catch (err: any) {
-        error.value = err.message || 'Failed to fetch API users';
-        showError('Failed to fetch API users. Please try again.', 'Error');
-        console.error('Error fetching API users:', err);
+        error.value = err.message || 'Failed to fetch users';
+        showError('Failed to fetch users. Please try again.', 'Error');
+        console.error('Error fetching users:', err);
     } finally {
         loading.value = false;
     }
@@ -205,10 +205,13 @@ const openEditModal = (row?: any) => {
         // Create a clean copy for editing, preserving original data
         editingRow.value = { 
             id: row.id,
-            app_name: row.app_name,
-            app_secret: null,
-            environment_id: row.environment_id,
-            is_active: row.is_active
+            unique_id: row.unique_id,
+            name: row.name,
+            username: row.username,
+            email: row.email,
+            admin: row.admin,
+            active: row.active,
+            developer: row.developer
         };
         console.log('Opening edit modal with data:', editingRow.value);
         showModal.value = true;
@@ -227,9 +230,9 @@ const handleFormSubmit = async (formValues: any) => {
         submitting.value = true;
         
         if (modalMode.value === 'new') {
-            // Create new API user via API
+            // Create new user via API
             const cleanedData = cleanFormData(formValues);
-            const response = await fetch(`${apiBaseUrl}/api_users`, {
+            const response = await fetch(`${apiBaseUrl}/users`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -251,11 +254,11 @@ const handleFormSubmit = async (formValues: any) => {
             // Add to local state with server-provided data
             users.value.push(newUser);
             
-            success(`API User "${formValues.app_name}" added successfully!`, 'API User Added');
+            success(`User "${formValues.name}" added successfully!`, 'User Added');
         } else if (modalMode.value === 'edit' && editingRow.value) {
-            // Update existing API user via API
+            // Update existing user via API
             const cleanedData = cleanFormData(formValues);
-            const response = await fetch(`${apiBaseUrl}/api_users/${editingRow.value.id}`, {
+            const response = await fetch(`${apiBaseUrl}/users/${editingRow.value.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -280,7 +283,7 @@ const handleFormSubmit = async (formValues: any) => {
                 users.value[index] = updatedUser;
             }
             
-            success(`API User "${formValues.app_name}" updated successfully!`, 'API User Updated');
+            success(`User "${formValues.name}" updated successfully!`, 'User Updated');
         }
         closeModal();
     } catch (err: any) {
@@ -333,9 +336,9 @@ const handleDelete = async (selectedRowIds?: number[]) => {
         const usersToDelete = users.value.filter(user => selectedRowIds.includes(user.id));
         
         try {
-            // Delete API users via API
+            // Delete users via API
             for (const user of usersToDelete) {
-                const response = await fetch(`${apiBaseUrl}/api_users/${user.id}`, {
+                const response = await fetch(`${apiBaseUrl}/users/${user.id}`, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
@@ -346,7 +349,7 @@ const handleDelete = async (selectedRowIds?: number[]) => {
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || `Failed to delete API user ${user.app_name}. Status: ${response.status}`);
+                    throw new Error(errorData.message || `Failed to delete user ${user.name}. Status: ${response.status}`);
                 }
             }
             
@@ -360,9 +363,9 @@ const handleDelete = async (selectedRowIds?: number[]) => {
             
             // Show success message
             if (usersToDelete.length === 1) {
-                success(`API User "${usersToDelete[0].app_name}" deleted successfully!`, 'API User Deleted');
+                success(`User "${usersToDelete[0].name}" deleted successfully!`, 'User Deleted');
             } else {
-                success(`${usersToDelete.length} API users deleted successfully!`, 'API Users Deleted');
+                success(`${usersToDelete.length} users deleted successfully!`, 'Users Deleted');
             }
         } catch (err: any) {
             showError(err.message || 'Failed to delete users. Please try again.', 'Error');
@@ -373,33 +376,8 @@ const handleDelete = async (selectedRowIds?: number[]) => {
     }
 };
 
-// Handle custom actions from DataGrid
-const handleCustomAction = (actionData: { action: string; selectedRows: any[]; selectedData: any[] }) => {
-    console.log('Custom action triggered:', actionData);
-    
-    switch (actionData.action) {
-        case 'create':
-            openNewModal();
-            break;
-        case 'edit':
-        case 'single-edit':
-            // Export functionality
-            openEditModal(actionData.selectedData[0]);
-            break;
-        case 'delete':
-            // Handle bulk delete
-            if (actionData.selectedRows.length > 0) {
-                handleDelete(actionData.selectedRows);
-            }
-            break;
-        default:
-            info(`Please implement the ${actionData.action} function`, 'Action Not Implemented');
-    }
-};
-
 // Fetch data on component mount
-onMounted(async () => {
-    await fetchEnvironments(); // Load environments first for dropdown
+onMounted(() => {
     fetchUsers();
 });
 </script>
@@ -412,13 +390,13 @@ onMounted(async () => {
             <!-- Loading State -->
             <div v-if="loading" class="flex justify-center items-center py-12">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span class="ml-3 text-gray-600 dark:text-gray-300">Loading API users...</span>
+                <span class="ml-3 text-gray-600 dark:text-gray-300">Loading users...</span>
             </div>
 
             <!-- Error State -->
             <div v-else-if="error" class="flex justify-center items-center py-12">
                 <div class="text-red-600 dark:text-red-400">
-                    <p class="text-lg font-semibold">Error loading API users</p>
+                    <p class="text-lg font-semibold">Error loading users</p>
                     <p class="text-sm">{{ error }}</p>
                     <button @click="fetchUsers" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                         Try Again
@@ -432,26 +410,25 @@ onMounted(async () => {
                 :schema="formConfig"
                 :data="users"
                 theme="default"
-                :actions="[
-                    {name: 'create', type: 'success', min: 0, label: ' New', loc: 'left'},
-                    '|',
-                    {name: 'edit', type: 'primary', min: 1, max: 1, label: ' Edit', loc: 'right'},
-                    '|',
-                    {name: 'delete', type: 'danger', min: 1, max: 25, label: ' Delete', loc: 'right'}
-                ]"
+                :showNew="true"
+                :showEdit="true"
+                :showDelete="true"
                 :rowActions="[
+                    { type: 'view', label: 'View', icon: 'eye', colorClass: 'text-green-600 hover:bg-green-50' },
                     { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
                     { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
                 ]"
-                @actionHandler="handleCustomAction"
-                @rowActionHandler="handleAction"
+                @create="openNewModal"
+                @edit="openEditModal"
+                @delete="handleDelete"
+                @action="handleAction"
             >
             </DataGrid>
 
-            <!-- Modal for New/Edit API User -->
+            <!-- Modal for New/Edit User -->
             <AlertModal 
                 :isOpen="showModal"
-                :title="modalMode === 'new' ? 'Add New API User' : 'Edit API User'"
+                :title="modalMode === 'new' ? 'Add New User' : 'Edit User'"
                 @close="closeModal"
             >
                 <FormViewer 

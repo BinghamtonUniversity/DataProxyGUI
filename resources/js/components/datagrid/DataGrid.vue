@@ -3,62 +3,196 @@
 <template>
   <div :class="currentTheme.container">
     <!-- Header with title and actions -->
-    <div :class="currentTheme.header">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+      <!-- Title and Description -->
       <div>
-        <h2 v-if="formConfig.label || formConfig.title || title" :class="currentTheme.title">
-          {{ formConfig.label || formConfig.title || title }}
+        <h2 v-if="schema.label || schema.title || formConfig.label || formConfig.title || title" :class="currentTheme.title">
+          {{ schema.label || schema.title || formConfig.label || formConfig.title || title }}
         </h2>
-        <p v-if="formConfig.description" class="text-sm text-gray-600 dark:text-gray-300 mt-1">
-          {{ formConfig.description }}
+        <p v-if="schema.description || formConfig.description" class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+          {{ schema.description || formConfig.description }}
         </p>
       </div>
-      <!-- Custom actions slot for external action buttons -->
-      <div class="flex items-center gap-2">
-        <slot name="actions">
-          <!-- Default actions if no custom actions provided -->
-          <button v-if="showNew" @click="onCreate" :class="currentTheme.newButton">New</button>
+      
+      <!-- Action buttons row -->
+      <div v-if="processedActions.length > 0 || showNew || showEdit || showDelete" class="flex items-center justify-between gap-4 mt-4">
+        <!-- Left positioned actions -->
+        <div class="flex items-center gap-2">
+          <template v-if="processedActions.length > 0">
+            <template v-for="(action, index) in leftActions" :key="`left-${index}`">
+              <div v-if="action.type === 'separator'" class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
+              <button
+                v-else
+                @click="handleCustomAction(action)"
+                :disabled="action.disabled"
+                :title="getActionTooltip(action)"
+                :class="action.buttonClass"
+              >
+                {{ action.label }}
+              </button>
+            </template>
+          </template>
+          <template v-else>
+            <button v-if="showNew" @click="onCreate" :class="currentTheme.newButton">New</button>
+          </template>
+        </div>
+        
+        <!-- Right positioned actions -->
+        <div class="flex items-center gap-2">
+          <slot name="actions">
+            <template v-if="processedActions.length > 0">
+              <template v-for="(action, index) in rightActions" :key="`right-${index}`">
+                <div v-if="action.type === 'separator'" class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
+                <button
+                  v-else
+                  @click="handleCustomAction(action)"
+                  :disabled="action.disabled"
+                  :title="getActionTooltip(action)"
+                  :class="action.buttonClass"
+                >
+                  {{ action.label }}
+                </button>
+              </template>
+            </template>
+            <template v-else>
+              <button
+                v-if="showEdit"
+                @click="onEdit"
+                :disabled="selectedRows.length === 0"
+                :title="selectedRows.length === 0 ? 'Please select at least one row' : ''"
+                :class="currentTheme.editButton"
+              >
+                Edit
+              </button>
+              <button
+                v-if="showDelete"
+                @click="onDelete"
+                :disabled="selectedRows.length === 0"
+                :title="selectedRows.length === 0 ? 'Please select a row' : ''"
+                :class="currentTheme.deleteButton"
+              >
+                Delete
+              </button>
+            </template>
+          </slot>
+        </div>
+      </div>
+      
+
+      
+      <!-- Icon-only utility buttons (Download, Upload, Columns) -->
+      <div v-if="upload || download || columns" class="flex items-center justify-end  mt-4">
+        <div class="flex border border-gray-200 dark:border-gray-700 rounded-md">
+          <input
+            v-if="upload"
+            ref="fileInput"
+            type="file"
+            accept=".csv"
+            @change="handleFileUpload"
+            class="hidden"
+          />
           <button
-            v-if="showEdit"
-            @click="onEdit"
-            :disabled="selectedRows.length === 0"
-            :title="selectedRows.length === 0 ? 'Please select at least one row' : ''"
-            :class="currentTheme.editButton"
+            v-if="download"
+            @click="downloadCSV"
+            class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
+            title="Download CSV"
           >
-            Edit
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
           </button>
           <button
-            v-if="showDelete"
-            @click="onDelete"
-            :disabled="selectedRows.length === 0"
-            :title="selectedRows.length === 0 ? 'Please select a row' : ''"
-            :class="currentTheme.deleteButton"
+            v-if="upload"
+            @click="$refs.fileInput.click()"
+            class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
+            title="Upload CSV"
           >
-            Delete
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+            </svg>
           </button>
-        </slot>
-        <template v-for="(action, idx) in customActions" :key="action.type || action.label || idx">
-          <button
-            :class="['px-4 py-2 rounded focus:outline-none', action.colorClass]"
-            @click="$emit('action', { type: action.type || action.label, payload: selectedRows })"
-            :disabled="action.disabled || false"
-          >
-            {{ action.label }}
-          </button>
-        </template>
+          <!-- Column visibility toggle button -->
+          <div v-if="columns" class="relative column-selector-container">
+            <button
+              @click="toggleColumnSelector"
+              class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Toggle Column Visibility"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+            </button>
+            
+            <!-- Column selector dropdown -->
+            <div v-if="showColumnSelector" class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="text-sm font-medium text-gray-900 dark:text-white">Show Columns</h3>
+                  <div class="flex gap-2">
+                    <button
+                      @click="selectAllColumns"
+                      class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      @click="deselectAllColumns"
+                      class="text-xs text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+                <div class="space-y-2 max-h-48 overflow-y-auto">
+                  <label
+                    v-for="col in allColumns.filter(c => c.showColumn !== false)"
+                    :key="col.key"
+                    class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-1 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      :checked="visibleColumns.has(col.key)"
+                      @change="toggleColumnVisibility(col.key)"
+                      class="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
+                    />
+                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ col.label || col.key }}</span>
+                  </label>
+                </div>
+              </div></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    <!-- Built-in search bar below header -->
-    <div :class="currentTheme.searchContainer">
-      <input
-        v-model="searchQuery"
+    <!-- Built-in search bar below header (conditional) -->
+    <div v-if="search" :class="currentTheme.searchContainer">
+      <TextField
+        :required="false"
+        :value="searchQuery"
+        @update:value="searchQuery = $event"
         @input="onSearchInput"
-        class="input-field w-full"
+        @change="onSearchInput"
+        @keydown="handleSearchKeydown"
+        name="searchQuery"
+        label="Search"
         placeholder="Search (e.g. column_name:contains:string)"
         autocomplete="off"
         spellcheck="false"
       />
       <div v-if="showSuggestions && suggestions.length" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded shadow mt-1 absolute z-20 w-full max-w-xl">
-        <div v-for="(s, i) in suggestions" :key="i" @mousedown.prevent="applySuggestion(s)" class="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">{{ s }}</div>
+        <div 
+          v-for="(s, i) in suggestions" 
+          :key="i" 
+          @mousedown.prevent="applySuggestion(s)" 
+          :class="[
+            'px-4 py-2 cursor-pointer transition-colors',
+            i === selectedSuggestionIndex 
+              ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100' 
+              : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+          ]"
+        >
+          {{ s }}
+        </div>
       </div>
     </div>
     <div class="overflow-x-auto">
@@ -66,14 +200,46 @@
         <thead>
           <tr>
             <th :class="[currentTheme.headerCell, currentTheme.borderRight, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']">
-              <input type="checkbox" :checked="allSelected" @change="toggleSelectAll($event.target.checked)" />
+              <CheckboxField
+                :name="'select-all'"
+                :value="allSelected"
+                @update:value="toggleSelectAll($event)"
+                :required="false"
+              
+                :options="[
+                  { label: '', value: 'false' },
+                  { label: '', value: 'true' }
+                ]"
+              />
             </th>
-            <th v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.headerCell, colIdx < computedColumns.length - 1 ? currentTheme.borderRight : '']">{{ col.label }}</th>
+            <th 
+              v-for="(col, colIdx) in computedColumns" 
+              :key="col.key" 
+              :class="[
+                currentTheme.headerCell, 
+                colIdx < computedColumns.length - 1 ? currentTheme.borderRight : '',
+                'cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'
+              ]"
+              @click="handleSort(col.key)"
+            >
+              <div class="flex items-center justify-between">
+                <span>{{ col.label }}</span>
+                <span 
+                  :class="[
+                    'ml-2 text-sm transition-colors',
+                    getSortClass(col.key)
+                  ]"
+                  :title="`Sort by ${col.label} ${sortColumn === col.key ? (sortDirection === 'asc' ? '(ascending)' : '(descending)') : ''}`"
+                >
+                  {{ getSortIcon(col.key) }}
+                </span>
+              </div>
+            </th>
             <th :class="[currentTheme.headerCell, 'text-right']"></th>
           </tr>
         </thead>
         <tbody>
-          <tr>
+          <tr v-if="filter">
             <td :class="[currentTheme.filterCell, currentTheme.borderRight]">
               <button @click="clearFilters" :class="currentTheme.clearButton" title="Clear all filters">Clear</button>
             </td>
@@ -95,13 +261,13 @@
                   </option>
                 </select>
               </span>
-              <span v-else>
-                <input
-                  class="input-field"
-                  :id="col.key + '-filter'"
+              <span v-else>     
+                <TextField
+                  :required="false"
+                  :value="filters[col.key]"
+                  @update:value="filters[col.key] = $event"
                   :name="col.key + '-filter'"
                   :placeholder="col.label"
-                  v-model="filters[col.key]"
                 />
               </span>
             </td>
@@ -118,7 +284,19 @@
             ]"
           >
             <td :class="[currentTheme.cell, currentTheme.borderRight, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']" @click.stop>
-              <input type="checkbox" :checked="selectedRows.includes(row.id || row.name)" @change="toggleRowSelect(row, $event.target.checked)" />
+              <CheckboxField
+                :name="'row-select-' + (row.id || row.name)"
+                :value="selectedRows.includes(row.id || row.name)"
+                @update:value="toggleRowSelect(row, $event)"
+                :show="true"
+                :edit="true"
+                :required="false"
+                :inFieldset="true"
+                :options="[
+                  { label: '', value: 'false' },
+                  { label: '', value: 'true' }
+                ]"
+              />
             </td>
             <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.cell, colIdx < computedColumns.length - 1 ? currentTheme.borderRight : '']">
               <!-- Render option badges if column has options -->
@@ -212,17 +390,60 @@
         <button @click="lastPage" :disabled="currentPage === totalPages" class="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none disabled:opacity-50" aria-label="Last page">&raquo;</button>
       </div>
     </div>
-  </div>
+ 
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { getThemeClasses, getDynamicColor } from '../Theme.js';
+import TextField from '../fields/TextField.vue';
+import CheckboxField from '../fields/CheckboxField.vue';
 
 const props = defineProps({
-  columns: Array,
-  rows: Array,
   title: String,
+  // New prop names
+  schema: {
+    type: Object,
+    default: () => ({
+      label: '',
+      title: '',
+      description: '',
+      fields: []
+    })
+  },
+  data: {
+    type: Array,
+    default: () => []
+  },
+  
+  // Configuration options
+  count: {
+    type: Number,
+    default: 25,
+    validator: (value) => value > 0
+  },
+  search: {
+    type: Boolean,
+    default: true
+  },
+  filter: {
+    type: Boolean,
+    default: true
+  },
+  upload: {
+    type: Boolean,
+    default: true
+  },
+  download: {
+    type: Boolean,
+    default: true
+  },
+  columns: {
+    type: Boolean,
+    default: true
+  },
+  
+  // Theme and actions
   theme: {
     type: String,
     default: 'default',
@@ -232,6 +453,16 @@ const props = defineProps({
   showEdit: { type: Boolean, default: true },
   showDelete: { type: Boolean, default: true },
   customActions: { type: Array, default: () => [] },
+  actions: { 
+    type: Array, 
+    default: () => [],
+    validator: (actions) => {
+      return actions.every(action => {
+        if (typeof action === 'string') return action === '|'; // Separator
+        return action && typeof action === 'object' && action.name && action.type && action.label;
+      });
+    }
+  },
   rowActions: { 
     type: Array, 
     default: () => [
@@ -240,6 +471,8 @@ const props = defineProps({
     ]
     // Each action should have: { type: string, label: string, icon?: string, colorClass?: string }
   },
+  
+  // Backward compatibility - deprecated but still supported
   formConfig: {
     type: Object,
     default: () => ({
@@ -254,37 +487,122 @@ const props = defineProps({
     default: () => []
   }
 });
-const emit = defineEmits(['rowClick', 'action', 'create', 'edit', 'multiple-edit', 'delete']);
+const emit = defineEmits(['rowClick', 'rowActionHandler', 'create', 'edit', 'multiple-edit', 'delete', 'upload', 'actionHandler']);
 
 const searchQuery = ref('');
 const filters = ref({});
 const selectedRows = ref([]);
 const openMenuId = ref(null);
 
+// Sorting state
+const sortColumn = ref(null);
+const sortDirection = ref('asc'); // 'asc' or 'desc'
+
+// File input ref
+const fileInput = ref(null);
+
+// Column visibility state
+const showColumnSelector = ref(false);
+const visibleColumns = ref(new Set());
+
 const showSuggestions = ref(false);
 const suggestions = ref([]);
+const selectedSuggestionIndex = ref(-1);
 const columnKeys = computed(() => computedColumns.value?.map(col => col.key) || []);
 const operators = ['contains', 'startsWith', 'endsWith', '='];
 
 // Pagination state
 const pageSizes = [25, 50, 100];
-const pageSize = ref(pageSizes[0]);
+const pageSize = ref(props.count || pageSizes[0]);
 const currentPage = ref(1);
 
 // Get current theme classes from Theme component
 const currentTheme = computed(() => getThemeClasses('datatable', props.theme));
 
-// Generate columns from form configuration or use provided columns
-const computedColumns = computed(() => {
-  // If formConfig has fields, generate columns from them
-  if (props.formConfig?.fields && props.formConfig.fields.length > 0) {
-    return props.formConfig.fields.map(field => ({
+// Process actions configuration
+const processedActions = computed(() => {
+  if (!props.actions || props.actions.length === 0) {
+    return [];
+  }
+  
+  return props.actions.map(action => {
+    if (typeof action === 'string' && action === '|') {
+      return { type: 'separator' };
+    }
+    
+    return {
+      ...action,
+      min: action.min !== undefined ? action.min : 1,
+      max: action.max !== undefined ? action.max : 1,
+      loc: action.loc || 'right',
+      disabled: isActionDisabled(action),
+      buttonClass: getActionButtonClass(action)
+    };
+  });
+});
+
+// Separate actions by location
+const leftActions = computed(() => {
+  return processedActions.value.filter(action => action.loc === 'left');
+});
+
+const rightActions = computed(() => {
+  return processedActions.value.filter(action => action.loc === 'right');
+});
+
+// Check if action should be disabled based on selection requirements
+const isActionDisabled = (action) => {
+  const selectedCount = selectedRows.value.length;
+  
+  if (action.min !== undefined && selectedCount < action.min) {
+    return true;
+  }
+  
+  if (action.max !== undefined && selectedCount > action.max) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Get button class based on action type
+const getActionButtonClass = (action) => {
+  const baseClass = 'px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
+  const disabledClass = 'opacity-50 cursor-not-allowed';
+  
+  // Add disabled styling if action is disabled
+  const disabledStyle = action.disabled ? disabledClass : '';
+  
+  switch (action.type) {
+    case 'success':
+      return `${baseClass} ${disabledStyle} bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+    case 'primary':
+      return `${baseClass} ${disabledStyle} bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+    case 'danger':
+      return `${baseClass} ${disabledStyle} bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+    case 'warning':
+      return `${baseClass} ${disabledStyle} bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+    case 'info':
+      return `${baseClass} ${disabledStyle} bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+    default:
+      return `${baseClass} ${disabledStyle} bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed`;
+  }
+};
+
+// Generate columns from schema or formConfig (backward compatibility)
+const allColumns = computed(() => {
+  // Priority: schema > formConfig > columns
+  const config = props.schema || props.formConfig;
+  
+  if (config?.fields && config.fields.length > 0) {
+    return config.fields.map(field => ({
       key: field.name,
       label: field.label || field.name,
       type: field.type,
       required: field.required || false,
       options: field.options || null,
-      width: field.width || field.columns || 12
+      width: field.width || field.columns || 12,
+      showColumn: field.showColumn !== false // Default to true if not specified
     }));
   }
   
@@ -292,38 +610,72 @@ const computedColumns = computed(() => {
   return props.columns || [];
 });
 
-// Use formData if available, otherwise use rows prop
+// Filter columns based on visibility selection and showColumn property
+const computedColumns = computed(() => {
+  // First filter by showColumn property
+  let filteredColumns = allColumns.value.filter(col => col.showColumn !== false);
+  
+  // Then apply user visibility selection if columns prop is enabled
+  if (props.columns && visibleColumns.value.size > 0) {
+    filteredColumns = filteredColumns.filter(col => visibleColumns.value.has(col.key));
+  }
+  
+  return filteredColumns;
+});
+
+// Use data or formData (backward compatibility) or rows prop
 const computedRows = computed(() => {
+  if (props.data && props.data.length > 0) {
+    return props.data;
+  }
   if (props.formData && props.formData.length > 0) {
     return props.formData;
   }
   return props.rows || [];
 });
 
-// Always generate filters from computed columns
+// Generate filters from computed columns only if filter is enabled
 function initFilters() {
-  if (computedColumns.value && computedColumns.value.length > 0) {
+  if (props.filter && computedColumns.value && computedColumns.value.length > 0) {
     filters.value = Object.fromEntries(computedColumns.value.map(col => [col.key, '']));
   } else {
     filters.value = {};
   }
 }
 watch(() => computedColumns.value, initFilters, { immediate: true });
+watch(() => props.filter, initFilters, { immediate: true });
 
 function onSearchInput() {
   const value = searchQuery.value;
   const last = value.split(/\s+/).pop();
+  selectedSuggestionIndex.value = -1; // Reset selection when typing
   if (!last) {
     showSuggestions.value = false;
     suggestions.value = [];
     return;
   }
   if (!last.includes(':')) {
-    suggestions.value = columnKeys.value.filter(k => k.startsWith(last)).map(k => k + ':');
+    // Suggest both column keys and labels
+    const keySuggestions = computedColumns.value
+      .filter(c => c.key.startsWith(last))
+      .map(c => c.key + ':');
+    const labelSuggestions = computedColumns.value
+      .filter(c => c.label.toLowerCase().startsWith(last.toLowerCase()))
+      .map(c => c.label + ':');
+    
+    suggestions.value = [...keySuggestions, ...labelSuggestions];
     showSuggestions.value = !!suggestions.value.length;
   } else if (last.split(':').length === 2) {
-    suggestions.value = operators.filter(op => op.startsWith(last.split(':')[1])).map(op => last.split(':')[0] + ':' + op + ':');
-    showSuggestions.value = !!suggestions.value.length;
+    const [col, op] = last.split(':');
+    // Check if the column part matches any key or label
+    const foundColumn = computedColumns.value.find(c => c.key === col || c.label === col);
+    if (foundColumn) {
+      suggestions.value = operators.filter(operator => operator.startsWith(op)).map(operator => col + ':' + operator + ':');
+      showSuggestions.value = !!suggestions.value.length;
+    } else {
+      showSuggestions.value = false;
+      suggestions.value = [];
+    }
   } else {
     showSuggestions.value = false;
     suggestions.value = [];
@@ -335,28 +687,74 @@ function applySuggestion(s) {
   searchQuery.value = parts.join(' ');
   showSuggestions.value = false;
   suggestions.value = [];
+  selectedSuggestionIndex.value = -1;
+}
+
+function handleSearchKeydown(event) {
+  if (!showSuggestions.value || suggestions.value.length === 0) {
+    return;
+  }
+
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault();
+      selectedSuggestionIndex.value = Math.min(selectedSuggestionIndex.value + 1, suggestions.value.length - 1);
+      break;
+    case 'ArrowUp':
+      event.preventDefault();
+      selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1);
+      break;
+    case 'Tab':
+      event.preventDefault();
+      if (suggestions.value.length > 0) {
+        // If no suggestion is selected, use the first one
+        const suggestionIndex = selectedSuggestionIndex.value >= 0 ? selectedSuggestionIndex.value : 0;
+        applySuggestion(suggestions.value[suggestionIndex]);
+      }
+      break;
+    case 'Enter':
+      event.preventDefault();
+      if (suggestions.value.length > 0) {
+        // If no suggestion is selected, use the first one
+        const suggestionIndex = selectedSuggestionIndex.value >= 0 ? selectedSuggestionIndex.value : 0;
+        applySuggestion(suggestions.value[suggestionIndex]);
+      }
+      break;
+    case 'Escape':
+      showSuggestions.value = false;
+      suggestions.value = [];
+      selectedSuggestionIndex.value = -1;
+      break;
+  }
 }
 
 const filteredRows = computed(() => {
   // Basic search: support column:operator:value and free text
   let result = computedRows.value;
+
   const query = searchQuery.value.trim();
   if (query) {
     const tokens = query.split(/\s+/);
     tokens.forEach(token => {
       const [col, op, ...rest] = token.split(':');
       const value = rest.join(':');
-      if (computedColumns.value.some(c => c.key === col) && op && value) {
+      
+      // Find the column by key or label
+      const foundColumn = computedColumns.value.find(c => c.key === col || c.label === col);
+      
+      if (foundColumn && op && value) {
+        // Column-specific search with operator
         result = result.filter(row => {
-          const cell = String(row[col] ?? '').toLowerCase();
+          const cell = String(row[foundColumn.key] ?? '').toLowerCase();
           const val = value.toLowerCase();
+          
           if (op === 'contains') return cell.includes(val);
           if (op === 'startsWith') return cell.startsWith(val);
           if (op === 'endsWith') return cell.endsWith(val);
           if (op === '=') return cell === val;
           return true;
         });
-      } else if (computedColumns.value.some(c => c.key === col) && op && !value) {
+      } else if (foundColumn && op && !value) {
         // If only column:operator is typed, don't filter yet
         return;
       } else {
@@ -367,12 +765,33 @@ const filteredRows = computed(() => {
       }
     });
   }
-  // Per-column filters
-  Object.entries(filters.value).forEach(([key, val]) => {
-    if (val) {
-      result = result.filter(row => String(row[key] ?? '').toLowerCase().includes(val.toLowerCase()));
-    }
-  });
+  // Per-column filters (only if filter is enabled)
+  if (props.filter) {
+    Object.entries(filters.value).forEach(([key, val]) => {
+      if (val) {
+        result = result.filter(row => String(row[key] ?? '').toLowerCase().includes(val.toLowerCase()));
+      }
+    });
+  }
+  
+  // Apply sorting
+  if (sortColumn.value) {
+    result = [...result].sort((a, b) => {
+      const aVal = a[sortColumn.value];
+      const bVal = b[sortColumn.value];
+      
+      // Handle null/undefined values
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return sortDirection.value === 'asc' ? -1 : 1;
+      if (bVal == null) return sortDirection.value === 'asc' ? 1 : -1;
+      
+      // Smart type detection and comparison
+      const comparison = smartCompare(aVal, bVal);
+      
+      return sortDirection.value === 'asc' ? comparison : -comparison;
+    });
+  }
+  
   return result;
 });
 
@@ -420,7 +839,8 @@ const allSelected = computed(() => {
 });
 
 function toggleSelectAll(checked) {
-  if (checked) {
+  const isChecked = checked === 'true' || checked === true;
+  if (isChecked) {
     selectedRows.value = filteredRows.value.map(row => row.id || row.name);
   } else {
     selectedRows.value = [];
@@ -428,7 +848,8 @@ function toggleSelectAll(checked) {
 }
 function toggleRowSelect(row, checked) {
   const rowId = row.id || row.name;
-  if (checked) {
+  const isChecked = checked === 'true' || checked === true;
+  if (isChecked) {
     if (!selectedRows.value.includes(rowId)) {
       selectedRows.value.push(rowId);
     }
@@ -437,13 +858,223 @@ function toggleRowSelect(row, checked) {
   }
 }
 function clearFilters() {
-  initFilters();
+  if (props.filter) {
+    initFilters();
+  }
 }
+
+// Smart comparison function for different data types
+function smartCompare(a, b) {
+  // Convert to strings for analysis
+  const aStr = String(a).trim();
+  const bStr = String(b).trim();
+  
+  // Check if values are numbers (including decimal numbers)
+  const aNum = parseFloat(aStr);
+  const bNum = parseFloat(bStr);
+  const aIsNum = !isNaN(aNum) && isFinite(aNum) && aStr !== '';
+  const bIsNum = !isNaN(bNum) && isFinite(bNum) && bStr !== '';
+  
+  // If both are numbers, compare numerically
+  if (aIsNum && bIsNum) {
+    return aNum - bNum;
+  }
+  
+  // Check if values are dates
+  const aDate = new Date(aStr);
+  const bDate = new Date(bStr);
+  const aIsDate = !isNaN(aDate.getTime()) && aStr !== '';
+  const bIsDate = !isNaN(bDate.getTime()) && bStr !== '';
+  
+  // If both are valid dates, compare by date
+  if (aIsDate && bIsDate) {
+    return aDate.getTime() - bDate.getTime();
+  }
+  
+  // If one is a number and the other isn't, numbers come first
+  if (aIsNum && !bIsNum) return -1;
+  if (!aIsNum && bIsNum) return 1;
+  
+  // If one is a date and the other isn't, dates come first
+  if (aIsDate && !bIsDate) return -1;
+  if (!aIsDate && bIsDate) return 1;
+  
+  // Default to case-insensitive string comparison
+  return aStr.toLowerCase().localeCompare(bStr.toLowerCase());
+}
+
+// Sorting functions
+function handleSort(columnKey) {
+  if (sortColumn.value === columnKey) {
+    // Same column - cycle through: asc → desc → none (reset)
+    if (sortDirection.value === 'asc') {
+      sortDirection.value = 'desc';
+    } else if (sortDirection.value === 'desc') {
+      // Reset to no sorting
+      sortColumn.value = null;
+      sortDirection.value = 'asc';
+    }
+  } else {
+    // New column, start with ascending
+    sortColumn.value = columnKey;
+    sortDirection.value = 'asc';
+  }
+}
+
+function getSortIcon(columnKey) {
+  if (sortColumn.value !== columnKey) {
+    return '⇅'; // Neutral sort icon (up and down arrows together)
+  }
+  return sortDirection.value === 'asc' ? '↑' : '↓';
+}
+
+function getSortClass(columnKey) {
+  if (sortColumn.value !== columnKey) {
+    return 'text-gray-400 hover:text-gray-600';
+  }
+  return 'text-blue-600 font-semibold';
+}
+
+// CSV Upload/Download functions
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    alert('Please select a CSV file.');
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csv = e.target.result;
+      const data = parseCSV(csv);
+      
+      if (data.length === 0) {
+        alert('CSV file is empty.');
+        return;
+      }
+      
+      // Emit upload event with parsed data
+      emit('upload', data);
+      
+      // Clear the file input
+      event.target.value = '';
+    } catch (error) {
+      console.error('Error parsing CSV:', error);
+      alert('Error parsing CSV file. Please check the format.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(csv) {
+  const lines = csv.split('\n').filter(line => line.trim());
+  if (lines.length === 0) return [];
+  
+  // Get headers from first line
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  
+  // Parse data rows
+  const data = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+    if (values.length === headers.length) {
+      const row = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+      data.push(row);
+    }
+  }
+  
+  return data;
+}
+
+function downloadCSV() {
+  if (computedRows.value.length === 0) {
+    alert('No data to download.');
+    return;
+  }
+  
+  const headers = computedColumns.value.map(col => col.label || col.key);
+  const csvContent = [
+    headers.join(','),
+    ...computedRows.value.map(row => 
+      headers.map(header => {
+        const col = computedColumns.value.find(c => (c.label || c.key) === header);
+        const value = row[col.key] || '';
+        // Escape commas and quotes in values
+        return `"${String(value).replace(/"/g, '""')}"`;
+      }).join(',')
+    )
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `datagrid-export-${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Column visibility functions
+function toggleColumnSelector() {
+  showColumnSelector.value = !showColumnSelector.value;
+}
+
+function toggleColumnVisibility(columnKey) {
+  if (visibleColumns.value.has(columnKey)) {
+    visibleColumns.value.delete(columnKey);
+  } else {
+    visibleColumns.value.add(columnKey);
+  }
+}
+
+function selectAllColumns() {
+  allColumns.value.forEach(col => {
+    if (col.showColumn !== false) {
+      visibleColumns.value.add(col.key);
+    }
+  });
+}
+
+function deselectAllColumns() {
+  visibleColumns.value.clear();
+}
+
+// Initialize visible columns on mount
+function initializeVisibleColumns() {
+  if (props.columns) {
+    // Start with all columns visible (only those with showColumn !== false)
+    allColumns.value.forEach(col => {
+      if (col.showColumn !== false) {
+        visibleColumns.value.add(col.key);
+      }
+    });
+  }
+}
+
+// Initialize on mount
+onMounted(() => {
+  initializeVisibleColumns();
+  
+  // Close column selector when clicking outside
+  document.addEventListener('click', (event) => {
+    if (showColumnSelector.value && !event.target.closest('.column-selector-container')) {
+      showColumnSelector.value = false;
+    }
+  });
+});
 function emitRowClick(row) {
   emit('rowClick', row);
 }
 function emitAction(type, payload) {
-  emit('action', { type, payload });
+  emit('rowActionHandler', { type, payload });
 }
 function toggleMenu(id) {
   console.log('Toggle menu for ID:', id, 'Current openMenuId:', openMenuId.value);
@@ -481,6 +1112,41 @@ function onDelete() {
   emit('delete', selectedRows.value);
   // Default logic: placeholder
   // console.log('OnDelete triggered', selectedRows.value);
+}
+
+// Get tooltip text for action button
+function getActionTooltip(action) {
+  const selectedCount = selectedRows.value.length;
+  
+  if (action.min !== undefined && selectedCount < action.min) {
+    return `Please select at least ${action.min} row${action.min > 1 ? 's' : ''}`;
+  }
+  
+  if (action.max !== undefined && selectedCount > action.max) {
+    return `Please select at most ${action.max} row${action.max > 1 ? 's' : ''}`;
+  }
+  
+  return action.label;
+}
+
+// Handle custom actions
+function handleCustomAction(action) {
+  // Check if the action has a custom handler
+  const hasCustomHandler = emit('actionHandler', {
+    action: action.name,
+    selectedRows: selectedRows.value,
+    selectedData: selectedRows.value.map(id => computedRows.value.find(row => (row.id || row.name) === id))
+  });
+  
+  // If no custom handler is implemented, show info toast
+  if (!hasCustomHandler) {
+    // Import toaster if available, otherwise use console
+    if (typeof window !== 'undefined' && window.toastr) {
+      window.toastr.info(`Please implement the ${action.name} function`, 'Action Not Implemented');
+    } else {
+      console.info(`Please implement the ${action.name} function`);
+    }
+  }
 }
 
 const visiblePages = computed(() => {

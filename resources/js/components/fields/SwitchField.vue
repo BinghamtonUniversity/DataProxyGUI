@@ -79,7 +79,7 @@ const props = defineProps({
   fieldId: { type: String, default: () => `field_${Math.random().toString(36).substr(2, 9)}` },
   label: { type: String, default: '' },
   value: { type: [Boolean, String], default: "false" },
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
   edit:  { type: [Boolean,String,Array], default: true },

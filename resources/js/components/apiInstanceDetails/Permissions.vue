@@ -17,7 +17,7 @@ import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
 import { h, ref, computed } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
-import { type ApiData, RouteData } from '@/types'
+import { ApiInstance, ApiUser, Resource, type ApiInstanceRouteUserMap } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -48,32 +48,29 @@ import {
 import { Label } from '@/components/ui/label'
 
 interface Props {
-    api_id: string
-    api_type: string
-    apiData: ApiData | null
-    loadingApiData: boolean
-    apiError: string
-    updateApiData: (updatedApiData: ApiData) => void
-    refreshApiData: () => void
+    instance_id: string
+    apiInstanceData: ApiInstance | null,
+    apiUsers: ApiUser[] | null,
+    resources: Resource[] | null,
+    loading: boolean,
+    apiInstanceError: string
+    updateApiInstanceData: (updatedApiInstanceData: ApiInstance) => void
 }
 
 const props = defineProps<Props>()
 
-// New Route Dialog
-const verbDropdownOpen = ref(false)
-const newRouteDialogOpen = ref(false)
-const newRouteForm = ref({
-    description: '',
-    path: '',
-    verb: 'GET',
-    view_name: '',
-    required: '',
-    optional: ''
+// New Permission Dialog
+const userDropdownOpen = ref(false)
+const newPermissionDialogOpen = ref(false)
+const newPermissionForm = ref({
+    user: '',
+    verb: '',
+    route: ''
 })
-const newRouteLoading = ref(false)
-const newRouteError = ref('')
+const newPermissionLoading = ref(false)
+const newPermissionError = ref('')
 const isEditMode = ref(false)
-const editingRouteIndex = ref<number | null>(null)
+const editingPermissionIndex = ref<number | null>(null)
 
 // Table state
 const sorting = ref<SortingState>([])
@@ -81,75 +78,69 @@ const columnFilters = ref<ColumnFiltersState>([])
 const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
 
-// console.log('Routes component mounted')
-
-const openNewRouteDialog = () => {
-  newRouteForm.value = {
-    description: '',
-    path: '',
-    verb: 'GET',
-    view_name: '',
-    required: '',
-    optional: ''
+const openNewPermissionDialog = () => {
+  newPermissionForm.value = {
+    user: '',
+    verb: '',
+    route: ''
   }
-  newRouteError.value = ''
-  newRouteDialogOpen.value = true
+  newPermissionError.value = ''
+  newPermissionDialogOpen.value = true
 }
 
-const closeNewRouteDialog = () => {
-  newRouteDialogOpen.value = false
-  newRouteError.value = ''
+const closeNewPermissionDialog = () => {
+  newPermissionDialogOpen.value = false
+  newPermissionError.value = ''
   isEditMode.value = false
-  editingRouteIndex.value = null
+  editingPermissionIndex.value = null
 }
 
-const submitNewRoute = async (e: Event) => {
+const submitNewPermission = async (e: Event) => {
     e.preventDefault()
-    newRouteLoading.value = true
-    newRouteError.value = ''
+    newPermissionLoading.value = true
+    newPermissionError.value = ''
     
-    if (!props.apiData) {
-        newRouteError.value = 'API data not available'
-        newRouteLoading.value = false
+    if (!props.apiInstanceData) {
+        newPermissionError.value = 'API instance data not available'
+        newPermissionLoading.value = false
         return
     }
     
     try {
-        const newRoute = {
-            description: newRouteForm.value.description,
-            path: newRouteForm.value.path,
-            verb: newRouteForm.value.verb,
-            view_name: newRouteForm.value.view_name,
-            required: (newRouteForm.value.required || '').split(',').map(s => ({ name: s.trim() })).filter(p => p.name),
-            optional: (newRouteForm.value.optional || '').split(',').map(s => ({ name: s.trim() })).filter(p => p.name),
+        const normalizedRoute = newPermissionForm.value.route ?? "" 
+        const newPermission: ApiInstanceRouteUserMap = {
+            api_user: newPermissionForm.value.user,
+            verb: newPermissionForm.value.verb,
+            route: normalizedRoute.trim()
         }
         
-        let updatedApiData
+        let updatedApiInstanceData
     
-        if (isEditMode.value && editingRouteIndex.value !== null) {
-            updatedApiData = {
-                ...props.apiData,
-                version_urls: props.apiData.version_urls?.map((route, index) => 
-                index === editingRouteIndex.value 
-                    ? { ...route, ...newRoute }
-                    : route
+        if (isEditMode.value && editingPermissionIndex.value !== null) {
+            updatedApiInstanceData = {
+                ...props.apiInstanceData,
+                route_user_map: props.apiInstanceData.route_user_map?.map((permission, index) => 
+                index === editingPermissionIndex.value 
+                    ? { ...permission, ...newPermission }
+                    : permission
                 ) || []
             }
         } else {
-            updatedApiData = {
-                ...props.apiData,
-                version_urls: [...(props.apiData.version_urls || []), newRoute]
+            updatedApiInstanceData = {
+                ...props.apiInstanceData,
+                route_user_map: [...(props.apiInstanceData.route_user_map || []), newPermission]
             }
         }
+        console.log(updatedApiInstanceData)
 
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+        const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': getCsrfToken() || '',
             },
-            body: JSON.stringify(updatedApiData)
+            body: JSON.stringify(updatedApiInstanceData)
         })
 
         if (!response.ok) {
@@ -158,33 +149,30 @@ const submitNewRoute = async (e: Event) => {
         }
 
         const responseData = await response.json()
-        props.updateApiData(responseData || updatedApiData)
+        props.updateApiInstanceData(responseData || updatedApiInstanceData)
 
-        closeNewRouteDialog()
+        closeNewPermissionDialog()
     } catch (err: any) {
-        console.error('Error saving route:', err)
-        newRouteError.value = err.message || 'Error saving route'
+        console.error('Error saving permission:', err)
+        newPermissionError.value = err.message || 'Error saving permission'
     } finally {
-        newRouteLoading.value = false
+        newPermissionLoading.value = false
     }
 }
 
-const openEditRouteDialog = (route: RouteData, index: number) => {
+const openEditPermissionDialog = (permission: ApiInstanceRouteUserMap, index: number) => {
   isEditMode.value = true
-  editingRouteIndex.value = index
-  newRouteForm.value = {
-    description: route.description || '',
-    path: route.path,
-    verb: route.verb,
-    view_name: route.view_name,
-    required: route.required?.map(p => p.name).join(', ') || '',
-    optional: route.optional?.map(p => p.name).join(', ') || ''
+  editingPermissionIndex.value = index
+  newPermissionForm.value = {
+    user: permission.api_user,
+    verb: permission.verb,
+    route: permission.route
   }
-  newRouteDialogOpen.value = true
+  newPermissionDialogOpen.value = true
 }
 
 // Define table columns
-const columns: ColumnDef<RouteData>[] = [
+const columns: ColumnDef<ApiInstanceRouteUserMap>[] = [
   {
     id: 'select',
     header: ({ table }) => h(Checkbox, {
@@ -203,26 +191,31 @@ const columns: ColumnDef<RouteData>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: 'view_name',
+    accessorKey: 'api_user',
     header: ({ column }) => {
       return h(Button, {
         variant: 'ghost',
         onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['View Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
+      }, () => ['User', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
     },
-    cell: ({ row }) => h('div', { class: 'font-medium text-blue-600' }, row.getValue('view_name')),
-  },
+     cell: ({ row }) => {
+      const userId = row.getValue('api_user') as string | number
+      const user = props.apiUsers?.find(u => u.id === Number(userId))
+      return h('div', { class: 'font-medium text-blue-600' }, user?.app_name || userId)
+        }
+    
+   },
   {
-    accessorKey: 'path',
+    accessorKey: 'route',
     header: ({ column }) => {
       return h(Button, {
         variant: 'ghost',
         onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Path', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
+      }, () => ['Route', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
     },
     cell: ({ row }) => h('code', { 
       class: 'bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono' 
-    }, row.getValue('path')),
+    }, row.getValue('route')),
   },
   {
     accessorKey: 'verb',
@@ -241,44 +234,16 @@ const columns: ColumnDef<RouteData>[] = [
       }, verb)
     },
   },
-  {
-    id: 'parameters',
-    header: 'Parameters',
-    cell: ({ row }) => {
-      const route = row.original
-      const requiredParams = route.required || []
-      const optionalParams = route.optional || []
-      
-      if (requiredParams.length === 0 && optionalParams.length === 0) {
-        return h('div', { class: 'text-gray-500 text-sm' }, 'No parameters')
-      }
-      
-      return h('div', { class: 'flex flex-wrap gap-1' }, [
-        ...requiredParams.map(param => 
-          h('span', { 
-            key: param.name,
-            class: 'inline-flex items-center rounded px-2 py-1 text-xs bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-300 font-medium'
-          }, param.name)
-        ),
-        ...optionalParams.map(param => 
-          h('span', { 
-            key: param.name,
-            class: 'inline-flex items-center rounded px-2 py-1 text-xs bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-          }, param.name)
-        )
-      ])
-    },
-  },
 ]
 
 // Create table instance
 const table = computed(() => {
-  if (!props.apiData?.version_urls) {
+  if (!props.apiInstanceData?.route_user_map) {
     return null
   }
 
   return useVueTable({
-    data: props.apiData.version_urls,
+    data: props.apiInstanceData.route_user_map,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -301,9 +266,9 @@ const table = computed(() => {
 const headerGroups = computed(() => table.value?.getHeaderGroups() || [])
 const tableRows = computed(() => table.value?.getRowModel().rows || [])
 const hidableColumns = computed(() => table.value?.getAllColumns().filter(column => column.getCanHide()) || [])
-const pathFilterValue = computed({
-  get: () => table.value?.getColumn('path')?.getFilterValue() as string || '',
-  set: (value: string) => table.value?.getColumn('path')?.setFilterValue(value)
+const userFilterValue = computed({
+  get: () => table.value?.getColumn('api_user')?.getFilterValue() as string || '',
+  set: (value: string) => table.value?.getColumn('api_user')?.setFilterValue(value)
 })
 const selectedRowsCount = computed(() => table.value?.getFilteredSelectedRowModel().rows.length || 0)
 const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.length || 0)
@@ -316,97 +281,90 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
         <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
             
             <!-- Loading State -->
-            <template v-if="loadingApiData">
+            <template v-if="loading">
                 <div class="flex items-center justify-center h-32">
                     <div class="text-center">
                         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-                        <p class="mt-2">Loading routes...</p>
+                        <p class="mt-2">Loading permissions...</p>
                     </div>
                 </div>
             </template>
 
             <!-- Error State -->
-            <template v-else-if="apiError">
+            <template v-else-if="apiInstanceError">
                 <div class="flex items-center justify-center h-32">
                     <div class="text-center text-red-600">
-                        <p>Error loading routes: {{ apiError }}</p>
+                        <p>Error loading permissions: {{ apiInstanceError }}</p>
                     </div>
                 </div>
             </template>
 
             <!-- Data Table -->
-            <template v-else-if="apiData?.version_urls && table">
+            <template v-else-if="apiInstanceData?.route_user_map && table">
                 <div class="w-full">        
                     <!-- Table Controls -->
                     <div class="flex items-center py-4">
                         <Input
                             class="max-w-sm"
-                            placeholder="Filter by path"
-                            v-model="pathFilterValue"
+                            placeholder="Filter by user"
+                            v-model="userFilterValue"
                         />
                         
-                        <Dialog v-model:open="newRouteDialogOpen">
+                        <Dialog v-model:open="newPermissionDialogOpen">
                             <DialogTrigger as-child>
-                                <Button class="ml-4 text-green-600" variant="outline" @click="openNewRouteDialog">
+                                <Button class="ml-4 text-green-600" variant="outline" @click="openNewPermissionDialog">
                                     <Plus class="mr-2 h-4 w-4" />
-                                    New Route
+                                    New Permission
                                 </Button>
                             </DialogTrigger>
                             <DialogContent class="sm:max-w-md">
-                                <form @submit="submitNewRoute" class="space-y-6">
+                                <form @submit="submitNewPermission" class="space-y-6">
                                     <DialogHeader>
-                                        <DialogTitle>{{ isEditMode ? 'Edit Route' : 'Create New Route' }}</DialogTitle>
+                                        <DialogTitle>{{ isEditMode ? 'Edit Permission' : 'Create New Permission' }}</DialogTitle>
                                     </DialogHeader>
                                     <div class="grid gap-4">
                                         <div>
-                                            <Label for="route-path" class="mb-1">Path</Label>
-                                            <Input id="route-path" v-model="newRouteForm.path" required placeholder="/api/endpoint" />
-                                        </div>
-                                        <div>
-                                            <Label for="route-verb" class="mb-1">HTTP Method</Label>
-                                            <DropdownMenu v-model:open="verbDropdownOpen">
+                                            <Label for="permission-user" class="mb-1">User</Label>
+                                            <DropdownMenu v-model:open="userDropdownOpen">
                                                 <DropdownMenuTrigger as-child>
                                                 <Button
                                                     type="button"
                                                     variant="outline"
                                                     class="w-full justify-between"
                                                 >
-                                                    {{ newRouteForm.verb || 'Select method' }}
+                                                    {{ newPermissionForm.user ? apiUsers?.find(u => u.id === Number(newPermissionForm.user))?.app_name || 'Select user' : 'Select user' }}
+
                                                     <ChevronDown class="ml-1 h-4 w-4" />
                                                 </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="start" class="w-full">
                                                     <DropdownMenuItem
-                                                        v-for="method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']"
-                                                        :key="method"
-                                                        @click="newRouteForm.verb = method"
-                                                        :class="['w-full', {'font-semibold text-blue-600': newRouteForm.verb === method }]"
+                                                        v-for="user in apiUsers"
+                                                        :key="user.id"
+                                                        @click="newPermissionForm.user = String(user.id)"
+                                                        :class="['w-full', {'font-semibold text-blue-600': Number(newPermissionForm.user) === user.id }]"
                                                     >
-                                                        {{ method }}
+                                                        {{ user.app_name }}
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
                                         <div>
-                                            <Label for="route-view" class="mb-1">View Name</Label>
-                                            <Input id="route-view" v-model="newRouteForm.view_name" required placeholder="view_function_name" />
+                                            <Label for="permission-verb" class="mb-1">HTTP Method (Verb)</Label>
+                                            <Input id="permission-verb" v-model="newPermissionForm.verb" required placeholder="GET, POST, PUT, etc." />
                                         </div>
                                         <div>
-                                            <Label for="required-params" class="mb-1">Required Parameters</Label>
-                                            <Input id="required-params" v-model="newRouteForm.required" placeholder="param1, param2 (comma separated)" />
+                                            <Label for="permission-route" class="mb-1">Route</Label>
+                                            <Input id="permission-route" v-model="newPermissionForm.route" required placeholder="/api/endpoint" />
                                         </div>
-                                        <div>
-                                            <Label for="optional-params" class="mb-1">Optional Parameters</Label>
-                                            <Input id="optional-params" v-model="newRouteForm.optional" placeholder="param3, param4 (comma separated)" />
-                                        </div>
-                                        <div v-if="newRouteError" class="text-red-600 text-sm">{{ newRouteError }}</div>
+                                        <div v-if="newPermissionError" class="text-red-600 text-sm">{{ newPermissionError }}</div>
                                     </div>
                                     <DialogFooter class="gap-2">
                                         <DialogClose as-child>
-                                            <Button variant="secondary" type="button" @click="closeNewRouteDialog">Cancel</Button>
+                                            <Button variant="secondary" type="button" @click="closeNewPermissionDialog">Cancel</Button>
                                         </DialogClose>
-                                        <Button type="submit" variant="default" :disabled="newRouteLoading">
-                                            <span v-if="newRouteLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
+                                        <Button type="submit" variant="default" :disabled="newPermissionLoading">
+                                            <span v-if="newPermissionLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
                                             <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
                                         </Button>
                                     </DialogFooter>
@@ -454,7 +412,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         :key="row.id" 
                                         :data-state="row.getIsSelected() && 'selected'"
                                         class="cursor-pointer hover:bg-muted/50"
-                                        @click="openEditRouteDialog(row.original, index)"
+                                        @click="openEditPermissionDialog(row.original, index)"
                                     >
                                         <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                                             <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
@@ -464,7 +422,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                           
                                 <TableRow v-else>
                                     <TableCell :colspan="columns.length" class="h-24 text-center">
-                                        No routes found.
+                                        No permissions found.
                                     </TableCell>
                                 </TableRow>
                             </TableBody>
@@ -502,7 +460,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
             <template v-else>
                 <div class="flex items-center justify-center h-32">
                     <div class="text-center">
-                        <p>No routes available for this API version.</p>
+                        <p>No permissions available for this API instance.</p>
                     </div>
                 </div>
             </template>

@@ -238,9 +238,9 @@ const rules = {
             // Handle optgroup format with existing options
             for (const subOption of option.options) {
               if (typeof subOption === 'string' || typeof subOption === 'boolean' || typeof subOption === 'number') {
-                validValues.push(subOption);
+                validValues.push(subOption.toString());
               } else if (subOption && subOption.value !== undefined) {
-                validValues.push(subOption.value);
+                validValues.push(subOption.value.toString());
               }
             }
           } else if (option.type === 'optgroup' && (option.min !== undefined || option.max !== undefined)) {
@@ -252,21 +252,21 @@ const rules = {
             }
           } else if (typeof option === 'string' || typeof option === 'boolean'  || typeof option === 'number') {
             // Handle string options
-            validValues.push(option);
+            validValues.push(option.toString());
           } else if (option && option.value !== undefined) {
             // Handle object options
-            validValues.push(option.value);
+            validValues.push(option.value.toString());
           }
         }
-        
         // Validate selected values exist in options
         if (config.multiple && Array.isArray(value)) {
           for (const selectedValue of value) {
-            if (!validValues.includes(selectedValue)) {
-              return 'Invalid option selected.';
+            if (!validValues.includes(selectedValue.toString())) {
+              return 'Invalid option value selected.';
             }
           }
-        } else if (!config.multiple && !validValues.includes(value)) {
+        }
+        else if (!config.multiple && !validValues.includes(value.toString())) {
           return 'Invalid option selected.';
         }
       }

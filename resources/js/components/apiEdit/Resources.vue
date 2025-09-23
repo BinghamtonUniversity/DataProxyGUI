@@ -15,7 +15,7 @@ import {
 } from '@tanstack/vue-table'
 import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
 import { h, ref, computed } from 'vue'
-import { valueUpdater } from '@/lib/utils'
+import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
 import { type ApiData, type ResourceData } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -74,7 +74,7 @@ const editingResourceIndex = ref<number | null>(null)
 const openNewResourceDialog = () => {
   newResourceForm.value = {
     name: '',
-    type: 'Model',
+    type: '',
     model_name: ''
   }
   newResourceError.value = ''
@@ -128,11 +128,12 @@ const submitNewResource = async (e: Event) => {
       }
     }
     // console.log('Updated API Data:', updatedApiData)
-    const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/code`, {
+    const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken() || '',
       },
       body: JSON.stringify(updatedApiData)
     })
@@ -342,7 +343,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                     </div>
                                     <div>
                                     <Label for="model-name" class="mb-1">Model Name</Label>
-                                    <Input id="model-name" v-model="newResourceForm.model_name" required placeholder="Model name" />
+                                    <Input id="model-name" v-model="newResourceForm.model_name" placeholder="Model name" />
                                     </div>
                                     <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
                                 </div>

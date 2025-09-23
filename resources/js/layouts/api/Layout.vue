@@ -48,14 +48,27 @@ const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.locati
 const apiData = ref<ApiData | null>(null)
 const loadingApiData = ref(true)
 const apiError = ref('')
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
+const apiBaseUrl = '/api'
 
+// Get CSRF token from meta tag
+const getCsrfToken = () => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    return token;
+}
 
 const fetchApiData = async () => {
     loadingApiData.value = true
     apiError.value = ''
     try {
-        const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/versions/latest`)
+        const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/versions/latest`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        })
         if (!response.ok) throw new Error('Failed to fetch API data')
         apiData.value = await response.json()
     } catch (e: any) {

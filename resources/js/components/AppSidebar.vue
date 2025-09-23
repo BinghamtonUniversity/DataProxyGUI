@@ -64,6 +64,11 @@ const footerNavItems: NavItem[] = [
         icon: Folder,
         children: [
             {
+                title: 'CAS Users',
+                href: '/cas_users',
+                icon: Users,
+            },
+            {
                 title: 'DataGrid Example',
                 href: '/datagrid-example',
                 icon: LayoutGrid,
@@ -82,16 +87,6 @@ const footerNavItems: NavItem[] = [
                 title: 'Formbuilder Example',
                 href: '/formbuilder-example',
                 icon: LayoutGrid,
-            },
-            {
-                title: 'Environments',
-                href: '/environments',
-                icon: Globe,
-            },
-            {
-                title: 'Users',
-                href: '/users',
-                icon: Users,
             },
         ]
     },

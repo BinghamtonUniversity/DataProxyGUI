@@ -31,7 +31,13 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 const page = usePage();
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL || '';
+const apiBaseUrl = '/api';
+
+// Get CSRF token from meta tag
+const getCsrfToken = () => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    return token;
+};
 
 // Form state
 const formData = ref<{
@@ -78,13 +84,15 @@ const handleSave = async (apiData: ApiData | null, updateApiData: (updatedApiDat
         // Update the local state using the updateApiData function
         updateApiData(updatedApiData);
 
-        // Send the updated API data to the backend
-        const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/code`, {
+        // Send the updated API data to the backend via Laravel API
+        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
             },
+            credentials: 'same-origin',
             body: JSON.stringify(updatedApiData)
         });
 
@@ -206,18 +214,7 @@ const initializeFormData = (apiData: ApiData | null) => {
                     @update:form-data="handleFormChange"
                 />
 
-                <!-- Form Preview -->
-                <Card class="mt-6">
-                    <CardHeader>
-                        <CardTitle>Form Configuration Preview</CardTitle>
-                        <CardDescription>
-                            This is the JSON configuration that will be saved to the database.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-auto text-sm">{{ JSON.stringify(formData, null, 2) }}</pre>
-                    </CardContent>
-                </Card>
+ 
             </template>
         </div>
     </div>

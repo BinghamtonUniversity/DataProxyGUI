@@ -130,7 +130,7 @@ const props = defineProps({
   show:  { type: [Boolean,String,Array], default: true },
   edit:  { type: [Boolean,String,Array], default: true },
   parse:  { type: [Boolean,String,Array], default: true },
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   
   // Validation
   limit: {

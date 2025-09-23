@@ -195,7 +195,7 @@ const props = defineProps({
     type: String,
     default: '#000000'
   },
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   disabled: {
     type: Boolean,
     default: false

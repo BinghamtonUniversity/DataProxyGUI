@@ -114,7 +114,7 @@ const props = defineProps({
     type: String,
     default: 'Enter a number...'
   },
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   disabled: {
     type: Boolean,
     default: false
