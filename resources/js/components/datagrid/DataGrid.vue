@@ -487,7 +487,7 @@ const props = defineProps({
     default: () => []
   }
 });
-const emit = defineEmits(['rowClick', 'action', 'create', 'edit', 'multiple-edit', 'delete', 'upload', 'customAction']);
+const emit = defineEmits(['rowClick', 'rowActionHandler', 'create', 'edit', 'multiple-edit', 'delete', 'upload', 'actionHandler']);
 
 const searchQuery = ref('');
 const filters = ref({});
@@ -1074,7 +1074,7 @@ function emitRowClick(row) {
   emit('rowClick', row);
 }
 function emitAction(type, payload) {
-  emit('action', { type, payload });
+  emit('rowActionHandler', { type, payload });
 }
 function toggleMenu(id) {
   console.log('Toggle menu for ID:', id, 'Current openMenuId:', openMenuId.value);
@@ -1132,7 +1132,7 @@ function getActionTooltip(action) {
 // Handle custom actions
 function handleCustomAction(action) {
   // Check if the action has a custom handler
-  const hasCustomHandler = emit('customAction', {
+  const hasCustomHandler = emit('actionHandler', {
     action: action.name,
     selectedRows: selectedRows.value,
     selectedData: selectedRows.value.map(id => computedRows.value.find(row => (row.id || row.name) === id))

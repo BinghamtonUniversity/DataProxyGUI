@@ -382,6 +382,7 @@ const handleCustomAction = (actionData: { action: string; selectedRows: any[]; s
             openNewModal();
             break;
         case 'edit':
+        case 'single-edit':
             // Export functionality
             openEditModal(actionData.selectedData[0]);
             break;
@@ -442,7 +443,8 @@ onMounted(async () => {
                     { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
                     { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
                 ]"
-                @customAction="handleCustomAction"
+                @actionHandler="handleCustomAction"
+                @rowActionHandler="handleAction"
             >
             </DataGrid>
 
