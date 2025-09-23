@@ -214,18 +214,7 @@ const initializeFormData = (apiData: ApiData | null) => {
                     @update:form-data="handleFormChange"
                 />
 
-                <!-- Form Preview -->
-                <Card class="mt-6">
-                    <CardHeader>
-                        <CardTitle>Form Configuration Preview</CardTitle>
-                        <CardDescription>
-                            This is the JSON configuration that will be saved to the database.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-auto text-sm">{{ JSON.stringify(formData, null, 2) }}</pre>
-                    </CardContent>
-                </Card>
+ 
             </template>
         </div>
     </div>

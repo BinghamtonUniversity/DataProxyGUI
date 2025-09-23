@@ -16,7 +16,7 @@
         <div 
           v-for="(field, index) in formConfig.fields.filter(field => field && typeof field === 'object' && field.name)" 
           :key="field?.name || index" 
-          v-show="shouldShowField(field, debugFormData || {})"
+          v-show="shouldShowField(field, formData.value || {})"
           :class="[
             getFieldLayoutClasses(field),
             'field-wrapper',
@@ -29,7 +29,7 @@
             :field="field"
             :value="formData[field.name] || []"
             :disabled="disabled || field.disabled"
-            :edit="edit && shouldEditField(field, formData)"
+            :edit="edit && shouldEditField(field, formData.value || {})"
             @update:value="(value) => handleFieldChange(field.name, value)"
             @validation-error="(data) => handleValidationError(field.name, data)"
             @validation-success="(data) => handleValidationSuccess(field.name, data)"
@@ -39,9 +39,9 @@
             :is="getFieldComponent(field.type)"
             v-bind="field.type === 'fieldset' ? {
               ...field,
-              show: shouldShowField(field, debugFormData || {}),
-              edit: shouldEditField(field, debugFormData || {}),
-              formData: debugFormData || {}
+              show: shouldShowField(field, formData.value || {}),
+              edit: shouldEditField(field, formData.value || {}),
+              formData: formData.value || {}
             } : field.type === 'output' ? { field } : {
               ...field,
               errors: fieldErrors[field.name] || []
@@ -588,7 +588,10 @@ const initializeFormData = () => {
         console.log(`initializeFormData: Setting fieldset ${field.name} to empty object`);
       }
     } else if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
-      newData[field.name] = field.value || false;
+      // Normalize boolean-like defaults ('true'/'false' strings) to booleans
+      const raw = field.value;
+      const normalized = raw === true || raw === 'true' ? true : false;
+      newData[field.name] = normalized;
     } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {
       if (field.multiple) {
         newData[field.name] = [];

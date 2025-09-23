@@ -112,7 +112,7 @@ const props = defineProps({
   fieldId: { type: String, default: () => `fieldset_${Math.random().toString(36).substr(2, 9)}` },
   label: { type: String, default: '' },
   value: { type: [Object, Array], default: () => ({}) },
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
   edit:  { type: [Boolean,String,Array], default: true },
