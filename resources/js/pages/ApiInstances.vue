@@ -75,6 +75,7 @@ interface NewApiInstanceForm {
   public: number
   route_user_map: ApiInstanceRouteUserMap[]
   resources: ApiInstanceResource[]
+  options: [] | any
 }
 
 //TO-DO: Should send route_user_map and resources as empty JSON 
@@ -86,7 +87,8 @@ const newApiInstanceForm = ref<NewApiInstanceForm>({
   route: '',
   public: 0,
   route_user_map: [],
-  resources: []
+  resources: [],
+  options: []
 })
 const newApiInstanceLoading = ref(false)
 const newApiInstanceError = ref('')
@@ -110,7 +112,8 @@ const openNewApiInstanceDialog = () => {
     route: '',
     public: 0,
     route_user_map: [],
-    resources: []
+    resources: [],
+    options: []
   }
   newApiInstanceError.value = ''
   newApiInstanceDialogOpen.value = true
@@ -127,7 +130,8 @@ const closeNewApiInstanceDialog = () => {
     route: '',
     public: 0,
     route_user_map: [],
-    resources: []
+    resources: [],
+    options: []
   }
   isEditMode.value = false
   editingApiInstanceId.value = null
@@ -195,7 +199,8 @@ const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
         name: '',
         resource: ''
       }
-    ]
+    ],
+    options: apiInstance.options || []
   }
   newApiInstanceDialogOpen.value = true
 }
