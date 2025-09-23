@@ -18,7 +18,7 @@ class ApiController extends Controller
     public function __construct()
     {
         $this->djangoBaseUrl = config('services.django.base_url');
-        $this->uniqueId = 'B00694089';
+        $this->uniqueId = 'B00840451';
         $this->apiUser = config('services.django.api_user');
         $this->apiPassword = config('services.django.api_password');
     }
@@ -383,48 +383,6 @@ class ApiController extends Controller
 
         return response()->json([
             'error' => "Failed to fetch api users}",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function apiUsersStore(Request $request): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('POST', 'api_users', $request->all());
-
-        if ($result['success']) {
-            return response()->json($result['data'], 201);
-        }
-
-        return response()->json([
-            'error' => "Failed to create api user",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function apiUsersUpdate(Request $request, $id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('PUT', "api_users/{$id}", $request->all());
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to update api user",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function apiUsersDestroy($id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('DELETE', "api_users/{$id}");
-
-        if ($result['success']) {
-            return response()->json(['message' => 'API user deleted successfully']);
-        }
-
-        return response()->json([
-            'error' => "Failed to delete api user",
             'status' => $result['status']
         ], $result['status']);
     }

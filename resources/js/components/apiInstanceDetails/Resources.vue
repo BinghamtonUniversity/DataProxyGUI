@@ -51,7 +51,7 @@ const getResourceIdForIndex = (index: string): string | null => {
 const saveResources = async() => {
   // if (!props.apiInstanceData || !newResourceName.value || !selectedResourceId.value) return
   if (!props.apiInstanceData) return
-  console.log('Updated resources:', props.apiInstanceData)
+  // console.log('Updated resources:', props.apiInstanceData)
 
   // const newResource = {
   //   name: newResourceName.value,
@@ -76,7 +76,7 @@ const saveResources = async() => {
     api_version_id: props.apiInstanceData.api_version_id,
     environment_id: props.apiInstanceData.environment.id
   }
-  console.log('Saving request data:', requestData)
+  // console.log('Saving request data:', requestData)
 
   const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
         method: 'PUT',
@@ -116,13 +116,14 @@ const saveResources = async() => {
 // }
 
 // Update existing resource
-const updateResource = (index: number, field: 'name' | 'resource', value: string) => {
+const updateResource = (index: number, resource_name: string, value: string) => {
   if (!props.apiInstanceData) return
   
   const updatedResources = [...props.apiInstanceData.resources || []]
   updatedResources[index] = {
     ...updatedResources[index],
-    [field]: value
+    ['name']: resource_name,
+    ['resource']: value
   }
   
   const updatedData = {
@@ -183,7 +184,7 @@ const updateResource = (index: number, field: 'name' | 'resource', value: string
                   <DropdownMenuItem
                     v-for="resource in (resources || [])"
                     :key="resource.id"
-                    @click="updateResource(index, 'resource', resource.id.toString())"
+                    @click="updateResource(index, resourceItem.name, resource.id.toString())"
                     class="cursor-pointer"
                   >
                     {{ resource.name }} ({{ resource.resource_type }})

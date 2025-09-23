@@ -133,6 +133,19 @@ const submitNewPermission = async (e: Event) => {
         }
         console.log(updatedApiInstanceData)
 
+        const requestData = {
+            id: updatedApiInstanceData.id,
+            name: updatedApiInstanceData.name,
+            route: updatedApiInstanceData.route, 
+            route_user_map: updatedApiInstanceData.route_user_map,
+            resources: updatedApiInstanceData.resources, 
+            options: updatedApiInstanceData.options,
+            public: updatedApiInstanceData.public,
+            api_id: updatedApiInstanceData.api.id,
+            api_version_id: updatedApiInstanceData.api_version_id,
+            environment_id: updatedApiInstanceData.environment.id
+        }
+
         const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
             method: 'PUT',
             headers: {
@@ -140,7 +153,7 @@ const submitNewPermission = async (e: Event) => {
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': getCsrfToken() || '',
             },
-            body: JSON.stringify(updatedApiInstanceData)
+            body: JSON.stringify(requestData)
         })
 
         if (!response.ok) {
