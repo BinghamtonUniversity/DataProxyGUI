@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApiInstance, ApiUser, Resource, type ApiData } from '@/types'
+import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
     instance_id: string
@@ -47,21 +48,50 @@ updateLocalData()
 
 // Computed properties for read-only fields
 const readOnlyData = computed(() => ({
-    api_id: props.apiInstanceData?.api_id || null,
-    api_version_id: props.apiInstanceData?.api_version_id || null,
-    environment_id: props.apiInstanceData?.environment_id || null
+    api: props.apiInstanceData?.api.name,
+    api_version: props.apiInstanceData?.api_version.stable === false ? 'Latest working version' : props.apiInstanceData?.api_version.summary ?? undefined,
+    environment: props.apiInstanceData?.environment.name
 }))
 
 // Save function
-const saveChanges = () => {
+const saveChanges = async () => {
     if (props.apiInstanceData) {
         const updatedData: ApiInstance = {
             ...props.apiInstanceData,
             name: editableData.value.name,
             route: editableData.value.route
         }
-        console.log('Saving updated data:', updatedData)
-        // props.updateApiInstanceData(updatedData)
+        console.log('Updated data to save:', updatedData)
+        const requestData = {
+            id: updatedData.id,
+            name: updatedData.name,
+            route: updatedData.route, 
+            route_user_map: updatedData.route_user_map,
+            resources: updatedData.resources, 
+            options: updatedData.options,
+            public: updatedData.public,
+            api_id: updatedData.api.id,
+            api_version_id: updatedData.api_version_id,
+            environment_id: updatedData.environment.id
+        }
+        console.log('Saving updated data:', requestData)
+        // const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
+        //     method: 'PUT',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'Accept': 'application/json',
+        //         'X-CSRF-TOKEN': getCsrfToken() || '',
+        //     },
+        //     body: JSON.stringify(requestData)
+        // })
+
+        // if (!response.ok) {
+        //     const errorData = await response.json().catch(() => ({}))
+        //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        // }
+
+        // const responseData = await response.json()
+        // props.updateApiInstanceData(responseData)
     }
 }
 </script>
@@ -108,7 +138,7 @@ const saveChanges = () => {
                     <Label for="api" class="mb-1">API</Label>
                     <Input 
                         id="api" 
-                        :value="readOnlyData.api_id" 
+                        v-model="readOnlyData.api" 
                         readonly
                         disabled
                         class="w-full bg-gray-50"
@@ -119,7 +149,7 @@ const saveChanges = () => {
                     <Label for="api-version" class="mb-1">API Version</Label>
                     <Input 
                         id="api-version" 
-                        :value="readOnlyData.api_version_id" 
+                        v-model="readOnlyData.api_version" 
                         readonly
                         disabled
                         class="w-full bg-gray-50"
@@ -130,7 +160,7 @@ const saveChanges = () => {
                     <Label for="environment" class="mb-1">Environment</Label>
                     <Input 
                         id="environment" 
-                        :value="readOnlyData.environment_id" 
+                        v-model="readOnlyData.environment" 
                         readonly
                         disabled
                         class="w-full bg-gray-50"

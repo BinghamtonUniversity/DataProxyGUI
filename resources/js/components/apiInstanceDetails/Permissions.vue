@@ -107,10 +107,11 @@ const submitNewPermission = async (e: Event) => {
     }
     
     try {
+        const normalizedRoute = newPermissionForm.value.route ?? "" 
         const newPermission: ApiInstanceRouteUserMap = {
             api_user: newPermissionForm.value.user,
             verb: newPermissionForm.value.verb,
-            route: newPermissionForm.value.route
+            route: normalizedRoute.trim()
         }
         
         let updatedApiInstanceData

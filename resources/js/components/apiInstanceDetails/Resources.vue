@@ -8,8 +8,9 @@ import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuContent,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import {  ChevronDown, Plus } from 'lucide-vue-next'
 import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
@@ -27,32 +28,55 @@ const props = defineProps<Props>()
 const newResourceName = ref('')
 const selectedResourceId = ref('')
 
-// Check if apiInstanceData has resources
 const hasExistingResources = computed(() => {
-  return props.apiInstanceData?.resources && props.apiInstanceData.resources.length > 0
+  return props.apiInstanceData?.api_version.resources && props.apiInstanceData.api_version.resources.length > 0
 })
 
-// Get resource name by ID from the resources array
 const getResourceNameById = (resourceId: string) => {
   if (!props.resources || !Array.isArray(props.resources)) return resourceId
   const resource = props.resources.find(r => r.id.toString() === resourceId)
   return resource ? resource.name : resourceId
 }
 
-// Add new resource to the instance
-const addResource = async() => {
-  if (!props.apiInstanceData || !newResourceName.value || !selectedResourceId.value) return
-  
-  const newResource = {
-    name: newResourceName.value,
-    resource: selectedResourceId.value
+
+const getResourceIdForIndex = (index: string): string | null => {
+  const numericIndex = parseInt(index, 10);
+
+  if (props.apiInstanceData?.resources && props.apiInstanceData.resources[numericIndex]) {
+    return props.apiInstanceData.resources[numericIndex].resource || null;
   }
+  return null;
+};
+
+const saveResources = async() => {
+  // if (!props.apiInstanceData || !newResourceName.value || !selectedResourceId.value) return
+  if (!props.apiInstanceData) return
+  console.log('Updated resources:', props.apiInstanceData)
+
+  // const newResource = {
+  //   name: newResourceName.value,
+  //   resource: selectedResourceId.value
+  // }
   
-  const updatedData = {
-    ...props.apiInstanceData,
-    resources: [...(props.apiInstanceData.resources || []), newResource]
+  // const updatedData = {
+  //   ...props.apiInstanceData,
+  //   resources: [...(props.apiInstanceData.resources || []), newResource]
+  // }
+  // console.log(updatedData) 
+  
+  const requestData = {
+    id: props.apiInstanceData.id,
+    name: props.apiInstanceData.name,
+    route: props.apiInstanceData.route, 
+    route_user_map: props.apiInstanceData.route_user_map,
+    resources: props.apiInstanceData.resources, 
+    options: props.apiInstanceData.options,
+    public: props.apiInstanceData.public,
+    api_id: props.apiInstanceData.api.id,
+    api_version_id: props.apiInstanceData.api_version_id,
+    environment_id: props.apiInstanceData.environment.id
   }
-console.log(updatedData) 
+  console.log('Saving request data:', requestData)
 
   const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
         method: 'PUT',
@@ -61,7 +85,7 @@ console.log(updatedData)
             'Accept': 'application/json',
             'X-CSRF-TOKEN': getCsrfToken() || '',
         },
-        body: JSON.stringify(updatedData)
+        body: JSON.stringify(requestData)
     })
 
     if (!response.ok) {
@@ -70,26 +94,26 @@ console.log(updatedData)
     }
 
   const responseData = await response.json()
-  props.updateApiInstanceData(updatedData)
+  props.updateApiInstanceData(responseData)
   
   newResourceName.value = ''
   selectedResourceId.value = ''
 }
 
 // Remove resource from the instance
-const removeResource = (index: number) => {
-  if (!props.apiInstanceData) return
+// const removeResource = (index: number) => {
+//   if (!props.apiInstanceData) return
   
-  const updatedResources = [...props.apiInstanceData.resources || []]
-  updatedResources.splice(index, 1)
+//   const updatedResources = [...props.apiInstanceData.resources || []]
+//   updatedResources.splice(index, 1)
   
-  const updatedData = {
-    ...props.apiInstanceData,
-    resources: updatedResources
-  }
+//   const updatedData = {
+//     ...props.apiInstanceData,
+//     resources: updatedResources
+//   }
   
-  props.updateApiInstanceData(updatedData)
-}
+//   props.updateApiInstanceData(updatedData)
+// }
 
 // Update existing resource
 const updateResource = (index: number, field: 'name' | 'resource', value: string) => {
@@ -132,9 +156,9 @@ const updateResource = (index: number, field: 'name' | 'resource', value: string
         <div v-if="hasExistingResources" class="space-y-3">
           <h4 class="font-medium">Existing Resources:</h4>
           <div 
-            v-for="(resourceItem, index) in apiInstanceData.resources" 
+            v-for="(resourceItem, index) in apiInstanceData.api_version.resources" 
             :key="index"
-            class="flex items-center gap-4 p-3 border rounded-md bg-gray-50"
+            class="flex items-end gap-4"
           >
             <div class="flex-1">
               <Label :for="`resource-name-${index}`" class="text-sm font-medium">Name:</Label>
@@ -151,8 +175,8 @@ const updateResource = (index: number, field: 'name' | 'resource', value: string
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
                   <Button variant="outline" class="w-full mt-1 justify-between">
-                    {{ getResourceNameById(resourceItem.resource) }}
-                    <span class="ml-2">▼</span>
+                    {{ getResourceNameById(getResourceIdForIndex(index.toString()) ?? '') || 'Select Resource' }}
+                    <ChevronDown class="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent class="w-full">
@@ -167,19 +191,27 @@ const updateResource = (index: number, field: 'name' | 'resource', value: string
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+
             
-            <Button 
+            
+            <!-- <Button 
               variant="destructive" 
               size="sm"
               @click="removeResource(index)"
             >
               Remove
-            </Button>
+            </Button> -->
           </div>
         </div>
-        
+        <div class="pt-4 border-t">
+              <Button 
+                @click="saveResources"
+              >
+                Save Resources
+              </Button>
+            </div>
         <!-- Add New Resource Section -->
-        <div class="border-t pt-4 mt-4">
+        <!-- <div class="border-t pt-4 mt-4">
           <h4 class="font-medium mb-3">
             {{ hasExistingResources ? 'Add New Resource:' : 'Add Resource:' }}
           </h4>
@@ -218,17 +250,17 @@ const updateResource = (index: number, field: 'name' | 'resource', value: string
             </div>
             
             <Button 
-              @click="addResource"
+              @click="saveResource"
               :disabled="!newResourceName || !selectedResourceId"
             >
               Add Resource
             </Button>
           </div>
-        </div>
+        </div> -->
         
         <!-- Empty state message -->
         <div v-if="!hasExistingResources" class="text-gray-500 text-center py-4">
-          No resources configured yet. Add one above to get started.
+          No resources configured yet
         </div>
       </div>
       

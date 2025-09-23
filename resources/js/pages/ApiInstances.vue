@@ -75,6 +75,7 @@ interface NewApiInstanceForm {
   public: number
   route_user_map: ApiInstanceRouteUserMap[]
   resources: ApiInstanceResource[]
+  options: [] | any
 }
 
 //TO-DO: Should send route_user_map and resources as empty JSON 
@@ -86,7 +87,8 @@ const newApiInstanceForm = ref<NewApiInstanceForm>({
   route: '',
   public: 0,
   route_user_map: [],
-  resources: []
+  resources: [],
+  options: []
 })
 const newApiInstanceLoading = ref(false)
 const newApiInstanceError = ref('')
@@ -110,7 +112,8 @@ const openNewApiInstanceDialog = () => {
     route: '',
     public: 0,
     route_user_map: [],
-    resources: []
+    resources: [],
+    options: []
   }
   newApiInstanceError.value = ''
   newApiInstanceDialogOpen.value = true
@@ -127,7 +130,8 @@ const closeNewApiInstanceDialog = () => {
     route: '',
     public: 0,
     route_user_map: [],
-    resources: []
+    resources: [],
+    options: []
   }
   isEditMode.value = false
   editingApiInstanceId.value = null
@@ -195,7 +199,8 @@ const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
         name: '',
         resource: ''
       }
-    ]
+    ],
+    options: apiInstance.options || []
   }
   newApiInstanceDialogOpen.value = true
 }
@@ -568,72 +573,56 @@ onUnmounted(() => {
                         <div class="grid gap-6">
                         <!-- Environment Selection -->
                         <div class="relative">
-                            <Label for="environment-id" class="mb-1">Environment</Label>
-                            <div class="relative">
-                            <button
-                                type="button"
-                                class="w-full px-3 py-2 text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flex items-center justify-between"
-                                @click="toggleDropdown('environment')"
-                            >
-                                <span class="block truncate">
+                          <Label for="environment-id" class="mb-1">Environment</Label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                              <Button variant="outline" class="w-full justify-between">
                                 {{ getSelectedEnvironmentName() || 'Select Environment' }}
-                                </span>
-                                <ChevronDown class="h-4 w-4 text-gray-400" :class="{ 'rotate-180': dropdownOpen.environment }" />
-                            </button>
-                            
-                            <div
-                                v-show="dropdownOpen.environment"
-                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
-                            >
-                                <div
+                                <ChevronDown class="ml-2 h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent class="w-full max-h-60">
+                              <DropdownMenuItem
                                 v-for="env in environments"
                                 :key="env.id"
-                                class="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center"
                                 @click="selectEnvironment(env)"
-                                >
+                                class="flex items-center justify-between"
+                              >
                                 <span class="block truncate">{{ env.name }} - {{ env.type }}</span>
                                 <Check
-                                    v-if="newApiInstanceForm.environment_id === env.id.toString()"
-                                    class="h-4 w-4 text-blue-600 ml-auto"
+                                  v-if="newApiInstanceForm.environment_id === env.id.toString()"
+                                  class="h-4 w-4 text-blue-600"
                                 />
-                                </div>
-                            </div>
-                            </div>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
 
                         <!-- API Selection -->
                         <div class="relative">
-                            <Label for="api-id" class="mb-1">API</Label>
-                            <div class="relative">
-                            <button
-                                type="button"
-                                class="w-full px-3 py-2 text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flex items-center justify-between"
-                                @click="toggleDropdown('api')"
-                            >
-                                <span class="block truncate">
+                          <Label for="api-id" class="mb-1">API</Label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                              <Button variant="outline" class="w-full justify-between">
                                 {{ getSelectedApiName() || 'Select API' }}
-                                </span>
-                                <ChevronDown class="h-4 w-4 text-gray-400" :class="{ 'rotate-180': dropdownOpen.api }" />
-                            </button>
-                            
-                            <div
-                                v-show="dropdownOpen.api"
-                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
-                            >
-                                <div
+                                <ChevronDown class="ml-2 h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent class="w-full max-h-60">
+                              <DropdownMenuItem
                                 v-for="api in apis"
                                 :key="api.id"
-                                class="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center"
                                 @click="selectApi(api)"
-                                >
+                                class="flex items-center justify-between"
+                              >
                                 <span class="block truncate">{{ api.name }}</span>
                                 <Check
-                                    v-if="newApiInstanceForm.api_id === api.id.toString()"
-                                    class="h-4 w-4 text-blue-600 ml-auto"
+                                  v-if="newApiInstanceForm.api_id === api.id.toString()"
+                                  class="h-4 w-4 text-blue-600"
                                 />
-                                </div>
-                            </div>
-                            </div>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
 
                         <!-- API Version -->
