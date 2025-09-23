@@ -74,7 +74,7 @@ const editingResourceIndex = ref<number | null>(null)
 const openNewResourceDialog = () => {
   newResourceForm.value = {
     name: '',
-    type: 'Model',
+    type: '',
     model_name: ''
   }
   newResourceError.value = ''
@@ -343,7 +343,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                     </div>
                                     <div>
                                     <Label for="model-name" class="mb-1">Model Name</Label>
-                                    <Input id="model-name" v-model="newResourceForm.model_name" required placeholder="Model name" />
+                                    <Input id="model-name" v-model="newResourceForm.model_name" placeholder="Model name" />
                                     </div>
                                     <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
                                 </div>
