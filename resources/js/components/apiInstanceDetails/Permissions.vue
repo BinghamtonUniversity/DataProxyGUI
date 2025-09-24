@@ -77,6 +77,8 @@ const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
 const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
+const verbDropdownOpen = ref(false)
+const routeDropdownOpen = ref(false)
 
 const openNewPermissionDialog = () => {
   newPermissionForm.value = {
@@ -364,11 +366,62 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         </div>
                                         <div>
                                             <Label for="permission-verb" class="mb-1">HTTP Method (Verb)</Label>
-                                            <Input id="permission-verb" v-model="newPermissionForm.verb" required placeholder="GET, POST, PUT, etc." />
+                                            <DropdownMenu v-model:open="verbDropdownOpen">
+                                                <DropdownMenuTrigger as-child>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    class="w-full justify-between"
+                                                >
+                                                    {{ newPermissionForm.verb || 'Select method' }}
+                                                    <ChevronDown class="ml-1 h-4 w-4" />
+                                                </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start" class="w-full">
+                                                    <DropdownMenuItem
+                                                        v-for="method in ['ALL','GET', 'POST', 'PUT', 'DELETE', 'PATCH']"
+                                                        :key="method"
+                                                        @click="newPermissionForm.verb = method"
+                                                        :class="['w-full', {'font-semibold text-blue-600': newPermissionForm.verb === method }]"
+                                                    >
+                                                        {{ method }}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                         <div>
+                                            <!-- <Label for="permission-route" class="mb-1">Route</Label>
+                                            <Input id="permission-route" v-model="newPermissionForm.route" required placeholder="/api/endpoint" /> -->
                                             <Label for="permission-route" class="mb-1">Route</Label>
-                                            <Input id="permission-route" v-model="newPermissionForm.route" required placeholder="/api/endpoint" />
+                                            <DropdownMenu v-model:open="routeDropdownOpen">
+                                                <DropdownMenuTrigger as-child>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        class="w-full justify-between"
+                                                    >
+                                                        {{ newPermissionForm.route || 'Select route' }}
+                                                        <ChevronDown class="ml-1 h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start" class="w-full">
+                                                    <!-- Standalone wildcard option -->
+                                                    <DropdownMenuItem
+                                                        @click="newPermissionForm.route = '*'"
+                                                        :class="['w-full', {'font-semibold text-blue-600': newPermissionForm.route === '*' }]"
+                                                    >
+                                                        *
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        v-for="url in apiInstanceData?.api_version?.version_urls"
+                                                        :key="url.path"
+                                                        @click="newPermissionForm.route =`/${url.path}`"
+                                                        :class="['w-full', {'font-semibold text-blue-600': newPermissionForm.route === `/${url.path}*` }]"
+                                                    >
+                                                        /{{url.path }}*
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                         <div v-if="newPermissionError" class="text-red-600 text-sm">{{ newPermissionError }}</div>
                                     </div>

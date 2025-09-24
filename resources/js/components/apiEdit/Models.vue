@@ -47,7 +47,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import Editor from '@/pages/Editor.vue'
-
+import DataGrid from '@/components/datagrid/DataGrid.vue'
 
 interface Props {
     api_id: string
@@ -68,7 +68,8 @@ const newModelForm = ref({
   name: '',
   content: '',
   inheritance: 'models.Model',
-  class_meta: [] as { name: string; value: string }[]
+  class_meta: [] as { name: string; value: string }[],
+  class_methods: [] as { name: string; params: string; content: string }[]
 })
 const newModelLoading = ref(false)
 const newModelError = ref('')
@@ -83,7 +84,10 @@ const openNewModelDialog = () => {
     name: '',
     content: '',
     inheritance: 'models.Model',
-    class_meta: []
+    class_meta: [
+      { name: 'db_table', value: '' } 
+    ],
+    class_methods: []
   }
   newModelError.value = ''
   isEditMode.value = false
@@ -106,6 +110,14 @@ const removeNewModelMetaProperty = (index: number) => {
   newModelForm.value.class_meta.splice(index, 1)
 }
 
+const addNewModelClassMethods = () => {
+  newModelForm.value.class_methods.push({ name: '', params: '', content: '' })
+}
+
+const removeNewModelClassMethod = (index: number) => {
+  newModelForm.value.class_methods.splice(index, 1)
+}
+
 const submitNewModel = async (e: Event) => {
   e.preventDefault()
   newModelLoading.value = true
@@ -122,7 +134,8 @@ const submitNewModel = async (e: Event) => {
       name: newModelForm.value.name,
       content: newModelForm.value.content,
       inheritance: newModelForm.value.inheritance,
-      class_meta: newModelForm.value.class_meta.filter(meta => meta.name.trim() && meta.value.trim())
+      class_meta: newModelForm.value.class_meta.filter(meta => meta.name.trim() && meta.value.trim()),
+      class_methods: newModelForm.value.class_methods ?? []
     }
     
     let updatedApiData
@@ -144,7 +157,7 @@ const submitNewModel = async (e: Event) => {
         version_models: [...(props.apiData.version_models || []), newModel]
       }
     }
-    // console.log('Updated API Data:', updatedApiData)
+    console.log('Updated API Data:', updatedApiData)
     const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
             method: 'PUT',
             headers: {
@@ -179,7 +192,8 @@ const openEditModelDialog = (model: ModelData, index: number) => {
     name: model.name || '',
     content: model.content || '',
     inheritance: model.inheritance || 'models.Model',
-    class_meta: model.class_meta ? JSON.parse(JSON.stringify(model.class_meta)) : []
+    class_meta: model.class_meta ? JSON.parse(JSON.stringify(model.class_meta)) : [],
+    class_methods: model.class_methods ? JSON.parse(JSON.stringify(model.class_methods)) : []
   }
   newModelDialogOpen.value = true
 }
@@ -304,6 +318,54 @@ const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.le
 const canPreviousPage = computed(() => table.value?.getCanPreviousPage() || false)
 const canNextPage = computed(() => table.value?.getCanNextPage() || false)
 
+// const formConfig = {
+//     label: 'API Users',
+//     description: 'A list of API users with their credentials and environment settings.',
+//     name: "api-users-form",
+//     files: false,
+//     fields: [
+//     {
+//       "name": "name",
+//       "label": "Model Name",
+//       "type": "text"
+//     },
+//     {
+//       "name": "inheritance",
+//       "label": "Inheritance",
+//       "type": "text",
+//       "options":[]
+//     },
+//     {
+//       "name": "class_meta",
+//       "label": "Class ",
+//       "type": "text",
+      
+//     },
+//     {
+//       "name": "content_preview",
+//       "label": "Content",
+//       "type": "text"
+//     }
+//   ]
+// }
+
+// const handleCustomAction = (actionData: { action: string; selectedRows: any[]; selectedData: any[] }) => {
+//     console.log('Custom action triggered:', actionData);
+    
+//     switch (actionData.action) {
+//         case 'create':
+//             openNewModelDialog();
+//             break;
+//         case 'edit':
+//             // Export functionality
+//             // openEditModelDialog(actionData.selectedData[0]);
+//             break;
+        
+//         default:
+//             // info(Please implement the ${actionData.action} function, 'Action Not Implemented');
+//     }
+// };
+
 </script>
 
 <template>
@@ -328,10 +390,28 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                     </div>
                 </div>
             </template>
+            
 
             <!-- Data Table -->
             <template v-else-if="apiData?.version_models && table">
-              
+                <!-- <DataGrid 
+                    :schema="formConfig"
+                    :data="apiData?.version_models"
+                      :actions="[
+                    {name: 'create', type: 'success', min: 0, label: ' New', loc: 'left'},
+                    '|',
+                    {name: 'edit', type: 'primary', min: 1, max: 1, label: ' Edit', loc: 'right'},
+                    '|',
+                    {name: 'delete', type: 'danger', min: 1, max: 25, label: ' Delete', loc: 'right'}
+                ]"
+                :rowActions="[
+                    { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
+                    { type: 'view', label: 'View', icon: 'eye', colorClass: 'text-green-600 hover:bg-green-50' },
+                    { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
+                ]"
+                @actionHandler="handleCustomAction"
+        >
+                </DataGrid> -->
                 <!-- Table Controls -->
                 <div class="flex items-center py-4">
                     <Input
@@ -405,20 +485,81 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                 + Add Meta Property
                               </Button>
                             </div>
-
                             <!-- Content Editor -->
                             <div class="grid grid-cols-4 items-start gap-4">
                               <Label for="new-model-content" class="text-right pt-2">Content</Label>
                               <Editor 
                                 id="new-model-content" 
                                 v-model:code="newModelForm.content" 
-                                :language="props.api_type === 'python' || props.api_type === 'php' ? props.api_type : undefined"
-                                class="col-span-6"
+                                :language="'python'"
+                                class="min-h-[80px] col-span-6 border rounded-md"
                               />
-                              
-                            </div> 
+                            </div>
+                            <!-- Class Methods Section -->
+                          <div class="flex flex-col gap-4 border-t pt-4">
+                              <h3 class="text-lg font-medium">Class Methods</h3>
+                              <div v-if="newModelForm.class_methods.length > 0" class="space-y-3">
+                                <div class="grid grid-cols-12 items-center gap-2">
+                                  <Label class="col-span-3 text-sm font-semibold">Name</Label>
+                                  <Label class="col-span-3 text-sm font-semibold">Parameters</Label>
+                                  <Label class="col-span-5 text-sm font-semibold">Content</Label>
+                                </div>
+                                <div v-for="(method, index) in newModelForm.class_methods" :key="index" class="space-y-2">
+                                  <div class="grid grid-cols-7 items-center gap-2">
+                                    <Input 
+                                      v-model="method.name" 
+                                      placeholder="Method name" 
+                                      class="col-span-3"
+                                    />
+                                    <Input 
+                                      v-model="method.params" 
+                                      placeholder="self, param1, param2" 
+                                      class="col-span-3"
+                                    />
+                                    <Button 
+                                      type="button" 
+                                      variant="destructive" 
+                                      size="sm"
+                                      @click="removeNewModelClassMethod(index)"
+                                      class="col-span-1"
+                                    >
+                                      ×
+                                    </Button>
+                                  </div>
+                                  <div class="w-full">
+                                    <!-- <Editor 
+                                      id="new-model-method-content"
+                                      v-model:code="method.content" 
+                                      :language="'python'"
+                                      class="min-h-[80px] border rounded-md">
+                                    </Editor> -->
+                                    <textarea 
+                                      v-model="method.content" 
+                                      placeholder="# method content" 
+                                      class="w-full min-h-[80px] border rounded-md p-2 font-mono text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                                    ></textarea>
+                                  </div>
+                                  <Button 
+                                    type="button" 
+                                    variant="destructive" 
+                                    size="sm"
+                                    @click="removeNewModelClassMethod(index)"
+                                    class="col-span-1"
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+                              </div>
+                              <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
+                                No class methods defined.
+                              </div>
+                              <Button type="button" variant="outline" @click="addNewModelClassMethods" class="self-start">
+                                Add Class Method
+                              </Button>
+                            </div>
+ 
                           </div>
-
+                            
                           <!-- Error Display -->
                           <div v-if="newModelError" class="text-red-600 text-sm">
                             {{ newModelError }}
