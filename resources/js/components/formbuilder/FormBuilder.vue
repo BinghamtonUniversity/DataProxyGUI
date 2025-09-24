@@ -2137,7 +2137,8 @@ watch(
 watch([formName, fields], () => {
   emit('update:formData', {
     name: formName.value,
-    fields: fields.value
+    files: false,
+    fields: (fields.value || []).map(getFieldJson).filter(field => field && Object.keys(field).length > 0)
   });
 }, { deep: true });
 

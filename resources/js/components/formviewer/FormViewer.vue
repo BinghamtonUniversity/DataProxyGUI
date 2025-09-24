@@ -175,6 +175,10 @@ const props = defineProps({
       });
     }
   },
+  actionHandler: {
+    type: Function,
+    default: null
+  },
   // Whether to show default actions when no custom actions are provided
   showDefaultActions: {
     type: Boolean,
@@ -188,7 +192,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:modelValue', 'submit', 'reset', 'validation-error', 'validation-success', 'action', 'customAction']);
+const emit = defineEmits(['update:modelValue', 'submit', 'reset', 'validation-error', 'validation-success', 'action', 'customAction', 'actionHandler']);
 
 const formData = ref({});
 const validationErrors = ref([]);
@@ -203,7 +207,6 @@ const debugFormData = computed(() => {
 // Check if form data is initialized
 const isFormDataInitialized = computed(() => {
   const result = Object.keys(formData.value).length > 0 || (props.formConfig && props.formConfig.fields && props.formConfig.fields.length === 0);
-  console.log(`isFormDataInitialized: ${result}, formData keys: ${Object.keys(formData.value).length}, fields length: ${props.formConfig?.fields?.length || 0}`);
   return result;
 });
 
@@ -249,7 +252,7 @@ const shouldShowActions = computed(() => {
 // Debug array condition
 const debugArrayCondition = (field) => {
   const condition = field.array || (field.type === 'fieldset' && field.array);
-  console.log(`Array condition for ${field.name}: field.array=${!!field.array}, field.type=${field.type}, condition=${condition}`);
+  // console.log(`Array condition for ${field.name}: field.array=${!!field.array}, field.type=${field.type}, condition=${condition}`);
   return condition;
 };
 
@@ -500,6 +503,17 @@ const validateForm = () => {
 const handleAction = async (action) => {
   const { type, action: actionName } = action;
   
+  // If actionHandler is provided, call it first
+  if (props.actionHandler && typeof props.actionHandler === 'function') {
+    try {
+      await props.actionHandler({ type, action: actionName, formData: formData.value });
+      return; // If actionHandler handles the action, don't continue with default behavior
+    } catch (error) {
+      console.error('Error in actionHandler:', error);
+      // Continue with default behavior if actionHandler fails
+    }
+  }
+  
   switch (type) {
     case 'save':
       await submitForm();
@@ -576,16 +590,13 @@ const initializeFormData = () => {
   const newData = {};
   
   props.formConfig.fields.filter(field => field && typeof field === 'object' && field.name).forEach(field => {
-    console.log(`Processing field: ${field.name}, type: ${field.type}, has array: ${!!field.array}`);
     if (field.type === 'fieldset') {
       // If fieldset has array attribute, initialize as array
       if (field.array) {
         const minItems = field.array.min || 1;
         newData[field.name] = Array(minItems).fill({});
-        console.log(`initializeFormData: Setting fieldset with array ${field.name} to array with ${minItems} empty objects`);
       } else {
         newData[field.name] = {};
-        console.log(`initializeFormData: Setting fieldset ${field.name} to empty object`);
       }
     } else if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
       // Normalize boolean-like defaults ('true'/'false' strings) to booleans
@@ -616,8 +627,6 @@ const initializeFormData = () => {
     }
   });
   
-  console.log('Before merging with initial data:', newData);
-  
   // Merge with initial data, but preserve fieldset objects
   if (props.initialData && typeof props.initialData === 'object') {
     Object.keys(props.initialData).forEach(key => {
@@ -626,15 +635,12 @@ const initializeFormData = () => {
         // Don't overwrite fieldset objects with strings
         if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
           newData[key] = { ...newData[key], ...props.initialData[key] };
-          console.log(`initializeFormData: Merging fieldset ${key} with initial data: ${JSON.stringify(newData[key])}`);
         }
       } else {
         newData[key] = props.initialData[key];
       }
     });
   }
-  
-  console.log('Final formData after initialization:', newData);
   formData.value = newData;
 };
 
