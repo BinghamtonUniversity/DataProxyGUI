@@ -62,7 +62,7 @@ const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 const newResourceDialogOpen = ref(false)
 const newResourceForm = ref({
   name: '',
-  type: 'Model',
+  type: '',
   model_name: ''
 })
 const newResourceLoading = ref(false)
@@ -331,7 +331,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="start" class="w-full">
                                         <DropdownMenuItem
-                                            v-for="type in ['Model', 'Password']"
+                                            v-for="type in ['Model', 'Password', 'Other']"
                                             :key="type"
                                             @click="newResourceForm.type = type"
                                             :class="['w-full', {'font-semibold text-blue-600': newResourceForm.type === type }]"
@@ -341,9 +341,9 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                     </div>
-                                    <div>
-                                    <Label for="model-name" class="mb-1">Model Name</Label>
-                                    <Input id="model-name" v-model="newResourceForm.model_name" placeholder="Model name" />
+                                    <div v-if="newResourceForm.type === 'Model'">
+                                        <Label for="model-name" class="mb-1">Model Name</Label>
+                                        <Input id="model-name" v-model="newResourceForm.model_name" placeholder="Model name" />
                                     </div>
                                     <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
                                 </div>
