@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useVueTable,
 } from '@tanstack/vue-table'
-import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
+import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
 import { h, ref, computed, watch } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
@@ -185,6 +185,48 @@ const submitNewModel = async (e: Event) => {
   }
 }
 
+const handleDelete = async (model: ModelData) => {
+    if (!confirm(`Are you sure you want to delete the resource "${model.name}"?`)) {
+        return
+    }
+
+    if (!props.apiData) {
+        console.error('API data not available')
+        return
+    }
+    
+    try {
+        const updatedApiData = {
+            ...props.apiData,
+            version_models: props.apiData.version_models?.filter(existingModel => !(existingModel.name === model.name)) || []
+        }
+        // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
+
+        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            body: JSON.stringify(updatedApiData)
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        }
+
+        const responseData = await response.json()
+        props.updateApiData(responseData || updatedApiData)
+
+        // console.log('Route deleted successfully:', route)
+    } catch (err: any) {
+        console.error('Error deleting model:', err)
+        // show this error to the user via a toast/notification showError(err.message || 'Error deleting route')
+    }
+}
+
 const openEditModelDialog = (model: ModelData, index: number) => {
   isEditMode.value = true
   editingModelIndex.value = index
@@ -277,6 +319,26 @@ const columns: ColumnDef<ModelData>[] = [
             }, preview)
         },
     },
+    {
+    id: 'actions',
+    enableHiding: false,
+    cell: ({ row }) => {
+            const route = row.original
+            return h('div', { 'data-actions-cell': true }, [
+                h(Button, {
+                    variant: 'ghost',
+                    size: 'sm',
+                    onClick: (e: MouseEvent) => {
+                        e.stopPropagation()
+                        handleDelete(route)
+                    },
+                    class: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20'
+                }, {
+                    default: () => [h(Trash2, { class: 'h-4 w-4' })]
+                })
+            ])
+        },
+    }
 ]
 
 const table = computed(() => {

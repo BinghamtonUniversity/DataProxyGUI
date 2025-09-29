@@ -15,6 +15,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
+import { Trash2 } from 'lucide-vue-next'
+
 
 interface Props {
     api_id: string
@@ -160,6 +162,49 @@ const handleCreateNewView = async () => {
     }
 }
 
+const handleDeleteFunction = async (view: ApiVersionFunction ) =>{
+    if (!confirm(`Are you sure you want to delete the function "${view.name}"?`)) {
+        return
+    }
+
+    if (!props.apiData) {
+        console.error('API data not available')
+        return
+    }
+    
+    try {
+        const updatedApiData = {
+            ...props.apiData,
+            version_views: props.apiData.version_views?.filter(existingView => !(existingView.name === view.name)) || []
+        }
+        // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
+
+        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            body: JSON.stringify(updatedApiData)
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        }
+
+        const responseData = await response.json()
+        props.updateApiData(responseData || updatedApiData)
+        selectedFunction.value = null
+
+        // console.log('Route deleted successfully:', route)
+    } catch (err: any) {
+        console.error('Error deleting route:', err)
+        // show this error to the user via a toast/notification showError(err.message || 'Error deleting route')
+    }
+}
+
 const resetNewViewDialog = () => {
     newViewName.value = ''
     createViewError.value = null
@@ -247,23 +292,34 @@ const resetNewViewDialog = () => {
 
                         <!-- Function List -->
                         <nav class="flex flex-col space-y-1">
-                            <Button
+                            <div
                                 v-for="item in apiData.version_views"
                                 :key="item.name"
-                                variant="ghost"
-                                :class="[
-                                    'justify-start', 
-                                    'px-3', 
-                                    'py-1', 
-                                    'w-auto', 
-                                    'inline-flex', 
-                                    'text-xs',
-                                    selectedFunction?.name === item.name ? 'bg-accent' : ''
-                                ]" 
-                                @click="selectedFunction = item"             
+                                class="flex items-center gap-1 group"
                             >
-                                {{ item.name }}
-                            </Button>
+                                <Button
+                                    variant="ghost"
+                                    :class="[
+                                        'justify-start', 
+                                        'px-3', 
+                                        'py-1', 
+                                        'flex-1',
+                                        'text-xs',
+                                        selectedFunction?.name === item.name ? 'bg-accent' : ''
+                                    ]" 
+                                    @click="selectedFunction = item"             
+                                >
+                                    {{ item.name }}
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    @click.stop="handleDeleteFunction(item)"
+                                    class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
+                                >
+                                    <Trash2 :size="1" />
+                                </Button>
+                            </div>
                         </nav>
                     </aside>
 
