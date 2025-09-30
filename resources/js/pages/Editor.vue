@@ -11,6 +11,8 @@ const props = defineProps<{
   code: string
   language?: 'python' | 'php'
   isSaving?: boolean
+  saveError?: string,
+  saveSuccess?: Boolean,
 }>()
 
 const emit = defineEmits<{
@@ -83,6 +85,34 @@ const handleSave = () => {
       </div>
       
       <div class="flex items-center gap-2">
+        <Transition
+          enter-active-class="transition-all duration-300 ease-out"
+          enter-from-class="opacity-0 scale-95"
+          enter-to-class="opacity-100 scale-100"
+          leave-active-class="transition-all duration-200 ease-in"
+          leave-from-class="opacity-100 scale-100"
+          leave-to-class="opacity-0 scale-95"
+        >
+          <div v-if="props.saveError" class="px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 rounded-md text-xs">
+            {{ props.saveError }}
+          </div>
+        </Transition>
+        
+        <Transition
+          enter-active-class="transition-all duration-300 ease-out"
+          enter-from-class="opacity-0 scale-95"
+          enter-to-class="opacity-100 scale-100"
+          leave-active-class="transition-all duration-200 ease-in"
+          leave-from-class="opacity-100 scale-100"
+          leave-to-class="opacity-0 scale-95"
+        >
+          <div v-if="props.saveSuccess" class="px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 rounded-md text-xs flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Saved!
+          </div>
+        </Transition>
         <!-- <Button
           variant="outline"
           size="sm"

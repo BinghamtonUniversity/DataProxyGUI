@@ -325,13 +325,13 @@ const resetNewViewDialog = () => {
 
                     <!-- Editor Area -->
                     <div class="flex-1 min-w-0">
-                        <!-- Save status messages -->
+                        <!-- Save status messages
                         <div v-if="saveError" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
                             {{ saveError }}
                         </div>
                         <div v-if="saveSuccess" class="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm">
                             Changes saved successfully!
-                        </div>
+                        </div> -->
                         
                         <!-- Code Editor -->
                         <Editor 
@@ -339,6 +339,8 @@ const resetNewViewDialog = () => {
                             :code="selectedFunction.content" 
                             :language="api_type === 'python' || api_type === 'php' ? api_type : undefined"
                             :is-saving="isSaving"
+                            :saveError="saveError??''"
+                            :saveSuccess="saveSuccess"
                             @save="handleSave"
                         />
                         

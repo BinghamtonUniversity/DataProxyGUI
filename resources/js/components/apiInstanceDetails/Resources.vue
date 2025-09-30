@@ -192,13 +192,7 @@ const updateResource = (index: number, resource_name: string, value: string) => 
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <div class="pt-4 border-t">
-              <Button 
-                @click="saveResources"
-              >
-                Save Resources
-              </Button>
-            </div>
+           
             
             
             <!-- <Button 
@@ -209,6 +203,13 @@ const updateResource = (index: number, resource_name: string, value: string) => 
               Remove
             </Button> -->
           </div>
+        </div>
+         <div class="pt-4 border-t">
+          <Button 
+            @click="saveResources"
+          >
+            Save Resources
+          </Button>
         </div>
         
         <!-- Add New Resource Section -->
