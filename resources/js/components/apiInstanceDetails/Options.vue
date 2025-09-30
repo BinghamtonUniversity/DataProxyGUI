@@ -33,6 +33,7 @@ const formConfig = computed(() => {
 });
 
 const initialData = computed(() => {
+
     return props.apiInstanceData?.options || {}
 })
 
@@ -78,7 +79,7 @@ const handleSave = async (data: any) => {
 }
 
 const handleCustomAction = (action: any) => {
-    console.log('Custom action:', action)
+  
     switch (action.type) {
         case 'save':
             handleSave(action.formData)
@@ -95,6 +96,7 @@ const handleCustomAction = (action: any) => {
         :initialData="initialData"
         :actions="[{ type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' }]"
         :actionHandler="handleCustomAction"
+       
     />
     
     <!-- Global Toaster -->

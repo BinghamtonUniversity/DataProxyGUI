@@ -88,31 +88,80 @@ const props = defineProps({
 
 const emit = defineEmits(['update:value', 'validation-error', 'validation-success', 'blur', 'focus']);
 
-const internalValue = ref(props.value == props.options[1].value ? true : false);
+const internalValue = ref(
+  (() => {
+
+    
+    if (props.options && props.options.length >= 2) {
+      const result = (props.value == props.options[1].value);
+      return result;
+    } else {
+      const result = (props.value === true || props.value === 'true');
+      return result;
+    }
+  })()
+);
 const localError = ref('');
 const showInfo = ref(false);
 
 const validate = () => {
-  const errors = validateField(internalValue.value, { ...props, type: 'checkbox' });
-  localError.value = errors[0] || '';
-  if (errors.length > 0) {
-    emit('validation-error', { field: props.name, errors, value: internalValue.value });
-  } else {
-    emit('validation-success', { field: props.name, value: internalValue.value });
+  try {
+    // Ensure config has all required properties for validation
+    const config = {
+      type: 'checkbox',
+      required: props.required || false,
+      minLength: props.minLength,
+      maxLength: props.maxLength,
+      pattern: props.pattern,
+      min: props.min,
+      max: props.max,
+      ...props
+    };
+    
+    const errors = validateField(internalValue.value, config);
+    localError.value = errors[0] || '';
+    if (errors.length > 0) {
+      emit('validation-error', { field: props.name, errors, value: internalValue.value });
+    } else {
+      emit('validation-success', { field: props.name, value: internalValue.value });
+    }
+    return errors.length === 0;
+  } catch (error) {
+    console.error('Validation error in CheckboxField:', error);
+    localError.value = 'Validation error';
+    return false;
   }
-  return errors.length === 0;
 };
 
 const handleChange = (event) => {
-  internalValue.value = event.target.checked ? true : false;
-  var updatedValue = internalValue.value ? props.options[1].value : props.options[0].value;
-  emit('update:value', updatedValue);
-  validate();
+  try {
+    internalValue.value = event.target.checked ? true : false;
+    
+    // Safely handle options array
+    let updatedValue;
+    if (props.options && props.options.length >= 2) {
+      updatedValue = internalValue.value ? props.options[1].value : props.options[0].value;
+    } else {
+      // Fallback to boolean values if options are not properly defined
+      updatedValue = internalValue.value;
+    }
+    
+    emit('update:value', updatedValue);
+    validate();
+  } catch (error) {
+    console.error('Error in CheckboxField handleChange:', error);
+    // Still emit the value change even if validation fails
+    emit('update:value', internalValue.value);
+  }
 };
 
 const handleBlur = () => {
-  validate();
-  emit('blur', internalValue.value);
+  try {
+    validate();
+    emit('blur', internalValue.value);
+  } catch (error) {
+    console.error('Error in CheckboxField handleBlur:', error);
+  }
 };
 
 const handleFocus = () => {
@@ -120,7 +169,7 @@ const handleFocus = () => {
 };
 
 const getCheckboxLabel = () => {
-  if (props.options && props.options.length === 2) {
+  if (props.options && props.options.length >= 2) {
     // Use custom labels from options
     return internalValue.value ? props.options[1].label : props.options[0].label;
   }
@@ -129,7 +178,11 @@ const getCheckboxLabel = () => {
 };
 
 watch(() => props.value, (newValue) => {
-  internalValue.value = Boolean(newValue)
+  if (props.options && props.options.length >= 2) {
+    internalValue.value = (newValue == props.options[1].value);
+  } else {
+    internalValue.value = (newValue === true || newValue === 'true');
+  }
 }, { immediate: true });
 
 watch(() => props.validate, () => {
