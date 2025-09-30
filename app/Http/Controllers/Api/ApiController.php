@@ -18,7 +18,7 @@ class ApiController extends Controller
     public function __construct()
     {
         $this->djangoBaseUrl = config('services.django.base_url');
-        $this->uniqueId = 'B00694089';
+        $this->uniqueId = config('services.django.unique_id');
         $this->apiUser = config('services.django.api_user');
         $this->apiPassword = config('services.django.api_password');
     }
@@ -387,48 +387,6 @@ class ApiController extends Controller
         ], $result['status']);
     }
 
-    public function apiUsersStore(Request $request): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('POST', 'api_users', $request->all());
-
-        if ($result['success']) {
-            return response()->json($result['data'], 201);
-        }
-
-        return response()->json([
-            'error' => "Failed to create api user",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function apiUsersUpdate(Request $request, $id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('PUT', "api_users/{$id}", $request->all());
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to update api user",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function apiUsersDestroy($id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('DELETE', "api_users/{$id}");
-
-        if ($result['success']) {
-            return response()->json(['message' => 'API user deleted successfully']);
-        }
-
-        return response()->json([
-            'error' => "Failed to delete api user",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
     // ===========================================
     // API Versions
     // ===========================================
@@ -770,5 +728,55 @@ class ApiController extends Controller
 
         // If method doesn't match pattern, throw error
         throw new \BadMethodCallException("Method {$method} not found");
+    }
+
+    /**
+     * Get all versions of a specific API
+     */
+    public function getApiVersions($id): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions");
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch versions for API {$id}",
+        ], 500);
+    }
+
+    /**
+     * Publish a new version of a specific API
+     */
+    public function publishApiVersion(Request $request, $id): JsonResponse
+    {
+        $data = $request->all();
+        
+        $result = $this->makeDjangoRequest('PUT', "apis/{$id}/publish", $data);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to publish version for API {$id}",
+        ], 500);
+    }
+
+    /**
+     * Get details of a specific API version
+     */
+    public function getApiVersionDetails( $api_id, $version_id): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', "apis/{$api_id}/versions/{$version_id}");
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch version details for API version {$version_id}",
+        ], 500);
     }
 }
