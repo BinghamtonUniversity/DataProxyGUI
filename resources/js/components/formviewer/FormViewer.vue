@@ -175,6 +175,10 @@ const props = defineProps({
       });
     }
   },
+  actionHandler: {
+    type: Function,
+    default: null
+  },
   // Whether to show default actions when no custom actions are provided
   showDefaultActions: {
     type: Boolean,
@@ -188,7 +192,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:modelValue', 'submit', 'reset', 'validation-error', 'validation-success', 'action', 'customAction']);
+const emit = defineEmits(['update:modelValue', 'submit', 'reset', 'validation-error', 'validation-success', 'action', 'customAction', 'actionHandler']);
 
 const formData = ref({});
 const validationErrors = ref([]);
@@ -203,7 +207,6 @@ const debugFormData = computed(() => {
 // Check if form data is initialized
 const isFormDataInitialized = computed(() => {
   const result = Object.keys(formData.value).length > 0 || (props.formConfig && props.formConfig.fields && props.formConfig.fields.length === 0);
-  console.log(`isFormDataInitialized: ${result}, formData keys: ${Object.keys(formData.value).length}, fields length: ${props.formConfig?.fields?.length || 0}`);
   return result;
 });
 
@@ -249,7 +252,7 @@ const shouldShowActions = computed(() => {
 // Debug array condition
 const debugArrayCondition = (field) => {
   const condition = field.array || (field.type === 'fieldset' && field.array);
-  console.log(`Array condition for ${field.name}: field.array=${!!field.array}, field.type=${field.type}, condition=${condition}`);
+
   return condition;
 };
 
@@ -270,7 +273,16 @@ const getSafeFieldValue = (field) => {
 
   // Handle booleans
   if (field.type === 'checkbox' || field.type === 'switch') {
-    return typeof fieldValue === 'boolean' ? fieldValue : false;
+    // For checkbox fields, preserve string values if they exist
+    if (typeof fieldValue === 'string') {
+      return fieldValue;
+    }
+    // For boolean values, return as-is
+    if (typeof fieldValue === 'boolean') {
+      return fieldValue;
+    }
+    // Default to false for undefined/null values
+    return false;
   }
 
   // Handle arrays/multiple-selection
@@ -325,38 +337,34 @@ const getFieldComponent = (fieldType) => {
 
 // Handle field value changes
 const handleFieldChange = (fieldName, value) => {
-  console.log(`handleFieldChange: fieldName=${fieldName}, value=${value}, type=${typeof value}`);
-  console.log(`handleFieldChange: current formData before update:`, formData.value);
+
   
   // Check if this is a fieldset field
   const field = props.formConfig.fields.find(f => f && f.name === fieldName);
   if (field && field.type === 'fieldset') {
-    console.log(`handleFieldChange: This is a fieldset field. Ensuring value is correct type.`);
-    console.log(`handleFieldChange: Original value:`, value, 'type:', typeof value);
+
     
     // If fieldset has array attribute, ensure it's an array
     if (field.array) {
       if (!Array.isArray(value)) {
-        console.log(`handleFieldChange: Converting non-array value to empty array for fieldset with array attribute`);
+
         value = [];
       }
     } else {
       // Regular fieldset: ensure it's an object
       if (typeof value !== 'object' || value === null) {
-        console.log(`handleFieldChange: Converting non-object value to empty object`);
+
         value = {};
       }
     }
-    
-    console.log(`handleFieldChange: Final value for fieldset:`, value, 'type:', typeof value);
+
   }
   
   formData.value = {
     ...formData.value,
     [fieldName]: value
   };
-  
-  console.log(`handleFieldChange: formData after update:`, formData.value);
+
   emit('update:modelValue', formData.value);
   validateField(fieldName);
 };
@@ -452,8 +460,20 @@ const validateFieldLocal = (fieldName) => {
 
   const fieldValue = formData.value[fieldName];
   
+  // Ensure config has all required properties for validation
+  const config = {
+    type: field.type || 'text',
+    required: field.required || false,
+    minLength: field.minLength,
+    maxLength: field.maxLength,
+    pattern: field.pattern,
+    min: field.min,
+    max: field.max,
+    ...field
+  };
+  
   // Use the imported validation function
-  const errors = validateField(fieldValue, field, formData.value);
+  const errors = validateField(fieldValue, config, formData.value);
 
   // If there are errors, add them to validation errors
   if (errors.length > 0) {
@@ -499,6 +519,17 @@ const validateForm = () => {
 // Handle action clicks
 const handleAction = async (action) => {
   const { type, action: actionName } = action;
+  
+  // If actionHandler is provided, call it first
+  if (props.actionHandler && typeof props.actionHandler === 'function') {
+    try {
+      await props.actionHandler({ type, action: actionName, formData: formData.value });
+      return; // If actionHandler handles the action, don't continue with default behavior
+    } catch (error) {
+      console.error('Error in actionHandler:', error);
+      // Continue with default behavior if actionHandler fails
+    }
+  }
   
   switch (type) {
     case 'save':
@@ -576,27 +607,47 @@ const initializeFormData = () => {
   const newData = {};
   
   props.formConfig.fields.filter(field => field && typeof field === 'object' && field.name).forEach(field => {
-    console.log(`Processing field: ${field.name}, type: ${field.type}, has array: ${!!field.array}`);
     if (field.type === 'fieldset') {
       // If fieldset has array attribute, initialize as array
       if (field.array) {
         const minItems = field.array.min || 1;
         newData[field.name] = Array(minItems).fill({});
-        console.log(`initializeFormData: Setting fieldset with array ${field.name} to array with ${minItems} empty objects`);
       } else {
         newData[field.name] = {};
-        console.log(`initializeFormData: Setting fieldset ${field.name} to empty object`);
       }
     } else if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
-      // Normalize boolean-like defaults ('true'/'false' strings) to booleans
-      const raw = field.value;
-      const normalized = raw === true || raw === 'true' ? true : false;
-      newData[field.name] = normalized;
+  
+      // Check initialData first, then fall back to field.value
+      const raw = (props.initialData && props.initialData[field.name] !== undefined) 
+        ? props.initialData[field.name] 
+        : field.value;
+      
+      // For checkbox fields, always preserve string values from initialData
+      if (field.type === 'checkbox') {
+        // If we have initialData with string values, preserve them
+        if (props.initialData && props.initialData[field.name] !== undefined && typeof props.initialData[field.name] === 'string') {
+          newData[field.name] = raw; // Keep as string
+        } else if (field.options && field.options.length > 0) {
+          newData[field.name] = raw; // Keep as string to match options
+        } else {
+          // Normalize to boolean for checkbox fields without options
+          const normalized = raw === true || raw === 'true' ? true : false;
+          newData[field.name] = normalized;
+        }
+      } else {
+        // For other boolean types (boolean, switch), normalize to boolean
+        const normalized = raw === true || raw === 'true' ? true : false;
+        newData[field.name] = normalized;
+      }
+
     } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {
       if (field.multiple) {
         newData[field.name] = [];
       } else {
-        newData[field.name] = field.value || '';
+        // Check initialData first, then fall back to field.value
+        newData[field.name] = (props.initialData && props.initialData[field.name] !== undefined) 
+          ? props.initialData[field.name] 
+          : (field.value || '');
       }
     } else if (field.array) {
       const minItems = field.array.min || 1;
@@ -610,13 +661,17 @@ const initializeFormData = () => {
         }
       });
     } else if (field.type === 'text') {
-      newData[field.name] = field.value || '';
+      // Check initialData first, then fall back to field.value
+      newData[field.name] = (props.initialData && props.initialData[field.name] !== undefined) 
+        ? props.initialData[field.name] 
+        : (field.value || '');
     } else {
-      newData[field.name] = '';
+      // Check initialData first, then fall back to empty string
+      newData[field.name] = (props.initialData && props.initialData[field.name] !== undefined) 
+        ? props.initialData[field.name] 
+        : '';
     }
   });
-  
-  console.log('Before merging with initial data:', newData);
   
   // Merge with initial data, but preserve fieldset objects
   if (props.initialData && typeof props.initialData === 'object') {
@@ -626,15 +681,12 @@ const initializeFormData = () => {
         // Don't overwrite fieldset objects with strings
         if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
           newData[key] = { ...newData[key], ...props.initialData[key] };
-          console.log(`initializeFormData: Merging fieldset ${key} with initial data: ${JSON.stringify(newData[key])}`);
         }
       } else {
         newData[key] = props.initialData[key];
       }
     });
   }
-  
-  console.log('Final formData after initialization:', newData);
   formData.value = newData;
 };
 

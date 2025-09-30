@@ -148,8 +148,9 @@ const fetchEnvironments = async () => {
         
         // Update form config options for the environment dropdown
         formConfig.fields[2].options = environments.map((env: any) => ({
-            label: env.name || env.environment_name || `Environment ${env.id}`,
-            value: env.id
+            label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
+            value: env.id,
+            color: env.type === 'test' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : env.type === 'dev' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
         }));
         
         return environments;
@@ -290,7 +291,10 @@ const handleFormSubmit = async (formValues: any) => {
         submitting.value = false;
     }
 };
-
+const handleClick = (row: any) => {
+    console.log('DataGrid click:', row);
+    info(`User "${row.app_name}" clicked!`, 'User Clicked');
+};
 // Handle DataGrid action events
 const handleAction = (actionData: { type: string; payload: any }) => {
     console.log('DataGrid action:', actionData);
@@ -382,7 +386,6 @@ const handleCustomAction = (actionData: { action: string; selectedRows: any[]; s
             openNewModal();
             break;
         case 'edit':
-        case 'single-edit':
             // Export functionality
             openEditModal(actionData.selectedData[0]);
             break;
@@ -431,7 +434,7 @@ onMounted(async () => {
                 v-else
                 :schema="formConfig"
                 :data="users"
-                theme="default"
+                
                 :actions="[
                     {name: 'create', type: 'success', min: 0, label: ' New', loc: 'left'},
                     '|',
@@ -441,10 +444,12 @@ onMounted(async () => {
                 ]"
                 :rowActions="[
                     { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
+                    { type: 'view', label: 'View', icon: 'eye', colorClass: 'text-green-600 hover:bg-green-50' },
                     { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
                 ]"
                 @actionHandler="handleCustomAction"
                 @rowActionHandler="handleAction"
+                @rowClick="handleClick"
             >
             </DataGrid>
 

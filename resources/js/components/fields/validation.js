@@ -69,31 +69,32 @@ function getValidValuesFromOptions(options) {
 // Built-in validation rules
 const rules = {
   required: (value, config) => {
-    if (config.required && (value === undefined || value === null || value === '')) {
+
+    if (config &&  config.required && (value === undefined || value === null || value === '')) {
       return 'This field is required.';
     }
     return null;
   },
   minLength: (value, config) => {
-    if (config.minLength && value && value.length < config.minLength) {
+    if (config && config.minLength && value && value.length < config.minLength) {
       return `Minimum length is ${config.minLength}.`;
     }
     return null;
   },
   maxLength: (value, config) => {
-    if (config.maxLength && value && value.length > config.maxLength) {
+    if (config && config.maxLength && value && value.length > config.maxLength) {
       return `Maximum length is ${config.maxLength}.`;
     }
     return null;
   },
   pattern: (value, config) => {
-    if (config.pattern && value && !(new RegExp(config.pattern).test(value))) {
+    if (config && config.pattern && value && !(new RegExp(config.pattern).test(value))) {
       return 'Invalid format.';
     }
     return null;
   },
   email: (value, config) => {
-    if (config.type === 'email') {
+    if (config && config.type === 'email') {
       if (config.required && (!value || value.trim() === '')) {
         return 'Email address is required.';
       }
@@ -104,7 +105,7 @@ const rules = {
     return null;
   },
   phone: (value, config) => {
-    if (config.type === 'tel') {
+    if (config && config.type === 'tel') {
       if (config.required && (!value || value.trim() === '')) {
         return 'Phone number is required.';
       }
@@ -115,7 +116,7 @@ const rules = {
     return null;
   },
   url: (value, config) => {
-    if (config.type === 'url') {
+    if (config && config.type === 'url') {
       if (config.required && (!value || value.trim() === '')) {
         return 'URL is required.';
       }
@@ -130,7 +131,7 @@ const rules = {
     return null;
   },
   number: (value, config) => {
-    if (config.type === 'number') {
+    if (config && config.type === 'number') {
       if (config.required && (value === undefined || value === null || value === '')) {
         return 'Number is required.';
       }
@@ -154,7 +155,7 @@ const rules = {
     return null;
   },
   currency: (value, config) => {
-    if (config.type === 'currency') {
+    if (config && config.type === 'currency') {
       if (config.required && (value === undefined || value === null || value === '')) {
         return 'Amount is required.';
       }
@@ -189,7 +190,7 @@ const rules = {
     return null;
   },
   color: (value, config) => {
-    if (config.type === 'color') {
+    if (config && config.type === 'color') {
       if (config.required && (value === undefined || value === null || value === '')) {
         return 'Color is required.';
       }
@@ -203,7 +204,7 @@ const rules = {
     return null;
   },
   hidden: (value, config) => {
-    if (config.type === 'hidden') {
+    if (config && config.type === 'hidden') {
       if (config.required && (value === undefined || value === null || value === '')) {
         return 'Hidden field is required.';
       }
@@ -213,7 +214,7 @@ const rules = {
     return null;
   },
   select: (value, config) => {
-    if (config.type === 'select') {
+    if (config && config.type === 'select') {
       if (config.required) {
         if (config.multiple) {
           // For multiple selection, check if array is empty
@@ -274,7 +275,7 @@ const rules = {
     return null;
   },
   date: (value, config) => {
-    if (config.type === 'date') {
+    if (config && config.type === 'date') {
       if (config.required && (!value || value.trim() === '')) {
         return 'Date is required.';
       }
@@ -330,7 +331,7 @@ const rules = {
     return null;
   },
   combobox: (value, config) => {
-    if (config.type === 'combobox') {
+    if (config && config.type === 'combobox') {
       if (config.required && (!value || value.trim() === '')) {
         return 'This field is required.';
       }
@@ -346,13 +347,13 @@ const rules = {
     return null;
   },
   custom: (value, config) => {
-    if (typeof config.customValidation === 'function') {
+    if (config && typeof config.customValidation === 'function') {
       return config.customValidation(value, config);
     }
     return null;
   },
   range: (value, config) => {
-    if (config.type === 'range') {
+    if (config && config.type === 'range') {
       if (config.required && (value === undefined || value === null || value === '')) {
         return 'This field is required.';
       }
@@ -375,7 +376,7 @@ const rules = {
     return null;
   },
   checkbox: (value, config) => {
-    if (config.type === 'checkbox') {
+    if (config && config.type === 'checkbox') {
 
       if (config.required && (value === undefined || value === null || value  == false ) ) {
         return 'This checkbox is required.';
@@ -384,7 +385,7 @@ const rules = {
     return null;
   },
   switch: (value, config) => {
-    if (config.type === 'switch') {
+    if (config && config.type === 'switch') {
       if (config.required && (value === undefined || value === null ) && value !== config.options?.[1]?.value) {
         return 'This switch is required.';
       }
@@ -396,7 +397,7 @@ const rules = {
 // Custom validation rules from config.validate
 function runCustomValidations(value, config, matchValues = {}) {
   const errors = [];
-  if (Array.isArray(config.validate)) {
+  if (config && Array.isArray(config.validate)) {
     for (const rule of config.validate) {
       if (!rule.conditions) continue;
       switch (rule.type) {
@@ -457,6 +458,7 @@ function runCustomValidations(value, config, matchValues = {}) {
 
 // Main validation function
 export function validateField(value, config, matchValues = {}) {
+
   const errors = [];
   // Built-in rules
   for (const ruleName in rules) {

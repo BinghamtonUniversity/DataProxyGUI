@@ -729,4 +729,54 @@ class ApiController extends Controller
         // If method doesn't match pattern, throw error
         throw new \BadMethodCallException("Method {$method} not found");
     }
+
+    /**
+     * Get all versions of a specific API
+     */
+    public function getApiVersions($id): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions");
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch versions for API {$id}",
+        ], 500);
+    }
+
+    /**
+     * Publish a new version of a specific API
+     */
+    public function publishApiVersion(Request $request, $id): JsonResponse
+    {
+        $data = $request->all();
+        
+        $result = $this->makeDjangoRequest('PUT', "apis/{$id}/publish", $data);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to publish version for API {$id}",
+        ], 500);
+    }
+
+    /**
+     * Get details of a specific API version
+     */
+    public function getApiVersionDetails( $api_id, $version_id): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', "apis/{$api_id}/versions/{$version_id}");
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch version details for API version {$version_id}",
+        ], 500);
+    }
 }
