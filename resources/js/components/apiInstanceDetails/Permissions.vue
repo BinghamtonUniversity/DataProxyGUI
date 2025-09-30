@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useVueTable,
 } from '@tanstack/vue-table'
-import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
+import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
 import { h, ref, computed } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
@@ -72,11 +72,15 @@ const newPermissionError = ref('')
 const isEditMode = ref(false)
 const editingPermissionIndex = ref<number | null>(null)
 
+
+
 // Table state
 const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
 const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
+const verbDropdownOpen = ref(false)
+const routeDropdownOpen = ref(false)
 
 const openNewPermissionDialog = () => {
   newPermissionForm.value = {
@@ -131,7 +135,20 @@ const submitNewPermission = async (e: Event) => {
                 route_user_map: [...(props.apiInstanceData.route_user_map || []), newPermission]
             }
         }
-        console.log(updatedApiInstanceData)
+        // console.log(updatedApiInstanceData)
+
+        const requestData = {
+            id: updatedApiInstanceData.id,
+            name: updatedApiInstanceData.name,
+            route: updatedApiInstanceData.route, 
+            route_user_map: updatedApiInstanceData.route_user_map,
+            resources: updatedApiInstanceData.resources, 
+            options: updatedApiInstanceData.options,
+            public: updatedApiInstanceData.public,
+            api_id: updatedApiInstanceData.api.id,
+            api_version_id: updatedApiInstanceData.api_version_id,
+            environment_id: updatedApiInstanceData.environment.id
+        }
 
         const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
             method: 'PUT',
@@ -140,7 +157,7 @@ const submitNewPermission = async (e: Event) => {
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': getCsrfToken() || '',
             },
-            body: JSON.stringify(updatedApiInstanceData)
+            body: JSON.stringify(requestData)
         })
 
         if (!response.ok) {
@@ -159,6 +176,65 @@ const submitNewPermission = async (e: Event) => {
         newPermissionLoading.value = false
     }
 }
+
+const handleDelete = async (permission: ApiInstanceRouteUserMap) => {
+    const api_user = props.apiUsers?.find(u => u.id === Number(permission.api_user))?.app_name
+    if (!confirm(`Are you sure you want to delete the api user "${api_user}"?`)) {
+        return
+    }
+
+    if (!props.apiInstanceData) {
+        console.error('API Instance data not available')
+        return
+    }
+    
+    try {
+        const updatedApiInstanceData = {
+                ...props.apiInstanceData,
+                route_user_map: props.apiInstanceData.route_user_map?.filter(existingPermission => 
+                    !(existingPermission.api_user === permission.api_user && 
+                      existingPermission.route === permission.route && 
+                      existingPermission.verb === permission.verb)
+                ) || []
+            }
+        
+        const requestData = {
+            id: updatedApiInstanceData.id,
+            name: updatedApiInstanceData.name,
+            route: updatedApiInstanceData.route, 
+            route_user_map: updatedApiInstanceData.route_user_map,
+            resources: updatedApiInstanceData.resources, 
+            options: updatedApiInstanceData.options,
+            public: updatedApiInstanceData.public,
+            api_id: updatedApiInstanceData.api.id,
+            api_version_id: updatedApiInstanceData.api_version_id,
+            environment_id: updatedApiInstanceData.environment.id
+        }
+        // console.log('Sending updatedApiInstanceData:', JSON.stringify(requestData, null, 2))
+        const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            body: JSON.stringify(requestData)
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        }
+
+        const responseData = await response.json()
+        props.updateApiInstanceData(responseData || updatedApiInstanceData)
+
+    } catch (err: any) {
+        console.error('Error deleting route:', err)
+        // show this error to the user via a toast/notification showError(err.message || 'Error deleting route')
+    }
+}
+
 
 const openEditPermissionDialog = (permission: ApiInstanceRouteUserMap, index: number) => {
   isEditMode.value = true
@@ -234,6 +310,26 @@ const columns: ColumnDef<ApiInstanceRouteUserMap>[] = [
       }, verb)
     },
   },
+  {
+    id: 'actions',
+    enableHiding: false,
+    cell: ({ row }) => {
+            const route = row.original
+            return h('div', { 'data-actions-cell': true }, [
+                h(Button, {
+                    variant: 'ghost',
+                    size: 'sm',
+                    onClick: (e: MouseEvent) => {
+                        e.stopPropagation()
+                        handleDelete(route)
+                    },
+                    class: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20'
+                }, {
+                    default: () => [h(Trash2, { class: 'h-4 w-4' })]
+                })
+            ])
+        },
+    }
 ]
 
 // Create table instance
@@ -351,11 +447,62 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         </div>
                                         <div>
                                             <Label for="permission-verb" class="mb-1">HTTP Method (Verb)</Label>
-                                            <Input id="permission-verb" v-model="newPermissionForm.verb" required placeholder="GET, POST, PUT, etc." />
+                                            <DropdownMenu v-model:open="verbDropdownOpen">
+                                                <DropdownMenuTrigger as-child>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    class="w-full justify-between"
+                                                >
+                                                    {{ newPermissionForm.verb || 'Select method' }}
+                                                    <ChevronDown class="ml-1 h-4 w-4" />
+                                                </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start" class="w-full">
+                                                    <DropdownMenuItem
+                                                        v-for="method in ['ALL','GET', 'POST', 'PUT', 'DELETE', 'PATCH']"
+                                                        :key="method"
+                                                        @click="newPermissionForm.verb = method"
+                                                        :class="['w-full', {'font-semibold text-blue-600': newPermissionForm.verb === method }]"
+                                                    >
+                                                        {{ method }}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                         <div>
+                                            <!-- <Label for="permission-route" class="mb-1">Route</Label>
+                                            <Input id="permission-route" v-model="newPermissionForm.route" required placeholder="/api/endpoint" /> -->
                                             <Label for="permission-route" class="mb-1">Route</Label>
-                                            <Input id="permission-route" v-model="newPermissionForm.route" required placeholder="/api/endpoint" />
+                                            <DropdownMenu v-model:open="routeDropdownOpen">
+                                                <DropdownMenuTrigger as-child>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        class="w-full justify-between"
+                                                    >
+                                                        {{ newPermissionForm.route || 'Select route' }}
+                                                        <ChevronDown class="ml-1 h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start" class="w-full">
+                                                    <!-- Standalone wildcard option -->
+                                                    <DropdownMenuItem
+                                                        @click="newPermissionForm.route = '*'"
+                                                        :class="['w-full', {'font-semibold text-blue-600': newPermissionForm.route === '*' }]"
+                                                    >
+                                                        *
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        v-for="url in apiInstanceData?.api_version?.version_urls"
+                                                        :key="url.path"
+                                                        @click="newPermissionForm.route =`/${url.path}`"
+                                                        :class="['w-full', {'font-semibold text-blue-600': newPermissionForm.route === `/${url.path}*` }]"
+                                                    >
+                                                        /{{url.path }}*
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                         <div v-if="newPermissionError" class="text-red-600 text-sm">{{ newPermissionError }}</div>
                                     </div>

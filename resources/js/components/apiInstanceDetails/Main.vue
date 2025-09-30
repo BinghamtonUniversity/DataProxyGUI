@@ -61,7 +61,7 @@ const saveChanges = async () => {
             name: editableData.value.name,
             route: editableData.value.route
         }
-        console.log('Updated data to save:', updatedData)
+        // console.log('Updated data to save:', updatedData)
         const requestData = {
             id: updatedData.id,
             name: updatedData.name,
@@ -74,24 +74,24 @@ const saveChanges = async () => {
             api_version_id: updatedData.api_version_id,
             environment_id: updatedData.environment.id
         }
-        console.log('Saving updated data:', requestData)
-        // const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
-        //     method: 'PUT',
-        //     headers: {
-        //         'Content-Type': 'application/json',
-        //         'Accept': 'application/json',
-        //         'X-CSRF-TOKEN': getCsrfToken() || '',
-        //     },
-        //     body: JSON.stringify(requestData)
-        // })
+        // console.log('Saving updated data:', requestData)
+        const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            body: JSON.stringify(requestData)
+        })
 
-        // if (!response.ok) {
-        //     const errorData = await response.json().catch(() => ({}))
-        //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        // }
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        }
 
-        // const responseData = await response.json()
-        // props.updateApiInstanceData(responseData)
+        const responseData = await response.json()
+        props.updateApiInstanceData(responseData)
     }
 }
 </script>

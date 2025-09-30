@@ -60,7 +60,8 @@ const loading = ref(true)
 const resourceTypeOptions = [
   { value: 'mysql', label: 'MySQL' },
   { value: 'oracle', label: 'Oracle' },
-  { value: 'password', label: 'Password' },
+  { value: 'sqlsrv', label: 'Microsoft SQL Server'},
+  { value: 'secret', label: 'Secret Value' },
   { value: 'value', label: 'Value' }
 ]
 

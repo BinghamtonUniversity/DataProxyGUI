@@ -12,6 +12,7 @@ import Resources from '@/components/apiEdit/Resources.vue'
 import Functions from '@/components/apiEdit/Functions.vue'
 import Models from '@/components/apiEdit/Models.vue'
 import Options from '@/components/apiEdit/Options.vue'
+import Files from '@/components/apiEdit/Files.vue'
 import ApiDevelopers from '@/components/apiEdit/ApiDevelopers.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
 import AlertModal from '@/components/AlertModal.vue'
@@ -108,6 +109,12 @@ const tabs = [
         routeName: 'apiEdit.index'
     },
     { 
+        id: 'files', 
+        title: 'Files', 
+        component: Files,
+        routeName: 'apiEdit.index'
+    },
+    { 
         id: 'options', 
         title: 'Options', 
         component: Options,
@@ -140,7 +147,7 @@ const fetchApiData = async () => {
     try {
 
         const response = await fetch(`/ajax/apis/${props.api_id}/versions/latest`)
-        console.log('Fetch response:', response)
+        // console.log('Fetch response:', response)
 
         if (!response.ok) throw new Error('Failed to fetch API data')
         apiData.value = await response.json()

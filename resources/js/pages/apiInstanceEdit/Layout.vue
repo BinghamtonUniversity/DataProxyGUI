@@ -102,46 +102,36 @@ const fetchApiInstanceData = async () => {
 const fetchAllData = async () => {
   loading.value = true
   try {
+    // Fetch the API instance to get the environment type
+    const apiInstancesResponse = await fetch(`/ajax/api_instances/${props.instance_id}`)
+    if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
+    
+    const apiInstancesData = await apiInstancesResponse.json()
+    apiInstanceData.value = apiInstancesData
+    
+    const environmentType = apiInstancesData.environment?.type || 'dev' // fallback to 'dev'
+    
     const [
-      apiInstancesResponse,
       apiUsersResponse,
       resourcesResponse,
-    //   apisResponse,
-      // apiVersionsResponse
     ] = await Promise.all([
-      fetch(`/ajax/api_instances/${props.instance_id}`),
       fetch(`/api/api_users`),
-      fetch(`/ajax/resources/type/dev`), // TO:DO - Change to dynamic type if needed
-    //   fetch(`/api/environments`),
-    //   fetch(`/api/apis`),
-      
+      fetch(`/ajax/resources/type/${environmentType}`), // Now dynamic!
     ])
 
-    if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
-    if (!apiUsersResponse.ok) throw new Error('Failed to fetch environments')
+    if (!apiUsersResponse.ok) throw new Error('Failed to fetch API users')
     if (!resourcesResponse.ok) throw new Error('Failed to fetch resources')
-    // if (!apisResponse.ok) throw new Error('Failed to fetch APIs')
-    // if (!apiVersionsResponse.ok) throw new Error('Failed to fetch API users')
 
     const [
-      apiInstancesData,
       apiUsersData,
       resourcesData,
-      // apisData,
-      // apiVersionsData
     ] = await Promise.all([
-      apiInstancesResponse.json(),
       apiUsersResponse.json(),
       resourcesResponse.json(),
-      //   apisResponse.json(),
-      // apiVersionsResponse.json(),
     ])
 
-    apiInstanceData.value = apiInstancesData
     apiUsers.value = apiUsersData
     resources.value = resourcesData
-    // apis.value = apisData
-    // api_versions.value = apiVersionsData
 
   } catch (error) {
     console.error('Error fetching data:', error)

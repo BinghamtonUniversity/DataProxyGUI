@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useVueTable,
 } from '@tanstack/vue-table'
-import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
+import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
 import { h, ref, computed } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
@@ -62,7 +62,7 @@ const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 const newResourceDialogOpen = ref(false)
 const newResourceForm = ref({
   name: '',
-  type: 'Model',
+  type: '',
   model_name: ''
 })
 const newResourceLoading = ref(false)
@@ -155,6 +155,48 @@ const submitNewResource = async (e: Event) => {
   }
 }
 
+const handleDelete = async (resource: ResourceData) => {
+    if (!confirm(`Are you sure you want to delete the resource "${resource.name}"?`)) {
+        return
+    }
+
+    if (!props.apiData) {
+        console.error('API data not available')
+        return
+    }
+    
+    try {
+        const updatedApiData = {
+            ...props.apiData,
+            resources: props.apiData.resources?.filter(res => !(res.name === resource.name)) || []
+        }
+        // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
+
+        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            body: JSON.stringify(updatedApiData)
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        }
+
+        const responseData = await response.json()
+        props.updateApiData(responseData || updatedApiData)
+
+        // console.log('Route deleted successfully:', route)
+    } catch (err: any) {
+        console.error('Error deleting route:', err)
+        // show this error to the user via a toast/notification showError(err.message || 'Error deleting route')
+    }
+}
+
 // Edit resource handler
 const openEditResourceDialog = (resource: any, index: number) => {
   isEditMode.value = true
@@ -222,7 +264,27 @@ const columns: ColumnDef<ResourceData>[] = [
       }, () => ['Model Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
     },
     cell: ({ row }) => h('div', { class: 'font-medium' }, row.getValue('model_name')),
-  }
+  },
+  {
+    id: 'actions',
+    enableHiding: false,
+    cell: ({ row }) => {
+            const route = row.original
+            return h('div', { 'data-actions-cell': true }, [
+                h(Button, {
+                    variant: 'ghost',
+                    size: 'sm',
+                    onClick: (e: MouseEvent) => {
+                        e.stopPropagation()
+                        handleDelete(route)
+                    },
+                    class: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20'
+                }, {
+                    default: () => [h(Trash2, { class: 'h-4 w-4' })]
+                })
+            ])
+        },
+    },
 ]
 
 // Create table instance
@@ -331,7 +393,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="start" class="w-full">
                                         <DropdownMenuItem
-                                            v-for="type in ['Model', 'Password']"
+                                            v-for="type in ['Model', 'Password', 'Other']"
                                             :key="type"
                                             @click="newResourceForm.type = type"
                                             :class="['w-full', {'font-semibold text-blue-600': newResourceForm.type === type }]"
@@ -341,9 +403,9 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                     </div>
-                                    <div>
-                                    <Label for="model-name" class="mb-1">Model Name</Label>
-                                    <Input id="model-name" v-model="newResourceForm.model_name" placeholder="Model name" />
+                                    <div v-if="newResourceForm.type === 'Model'">
+                                        <Label for="model-name" class="mb-1">Model Name</Label>
+                                        <Input id="model-name" v-model="newResourceForm.model_name" placeholder="Model name" />
                                     </div>
                                     <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
                                 </div>

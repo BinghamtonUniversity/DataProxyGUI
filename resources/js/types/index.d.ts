@@ -42,6 +42,11 @@ export interface ModelData {
     name: string
     value: string
   }>
+  class_methods: Array<{
+    name: string
+    params: string
+    content: string
+  }>
   inheritance: string
 }
 
