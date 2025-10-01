@@ -1,6 +1,6 @@
 <script setup lang="ts">import { type BreadcrumbItem } from '@/types'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
-import { ref, shallowRef, watch, toRaw } from 'vue'
+import { ref, shallowRef, watch, toRaw, onMounted,  onBeforeUnmount } from 'vue'
 import { Button } from '@/components/ui/button'
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -45,11 +45,37 @@ declare global {
 }
 
 const editor = shallowRef<any>(null);
+const editorTheme = ref<"vs" | "vs-dark">("vs-dark")
+let mediaQueryList: MediaQueryList | null = null
 
 const editorOptions = {
   automaticLayout: true,
   formatOnType: true,
   formatOnPaste: true,
+}
+
+function getCookie(name: String){
+  const nameEQ = name + "="
+  const cookie_arr = document.cookie.split(';')//array of each application cookie (format: <name>=<value>) ignore <>
+
+  for(let i = 0; i < cookie_arr.length; i++){
+    let cookie = cookie_arr[i];
+    while(cookie.charAt(0) === ' '){//remove any qhite space before name (splitting into array causes white space for every cookie thats not cookie_arr[0])
+      cookie = cookie.substring(1, cookie.length)
+    }
+    if(cookie.indexOf(nameEQ) === 0){ return cookie.substring(nameEQ.length, cookie.length) }
+  }
+  return null;
+}
+function handleEditorTheme(){
+  let theme = getCookie("appearance") ?? "dark"//default to dark if cannot get cookie
+
+  if(theme === "system"){//resolve system preference
+    mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
+    theme = mediaQueryList.matches ? "dark" : "light"
+  }
+
+  editorTheme.value = theme === "light" ? "vs" : "vs-dark" //map appearance to Monaco themes
 }
 
 function handleMount(editorInstance: any, monaco: any) {
@@ -69,6 +95,19 @@ const handleSave = () => {
 // const formatCode = () => {
 //   editor.value?.getAction('editor.action.formatDocument').run()
 // }
+
+onMounted(() => {
+  handleEditorTheme()
+  if(getCookie("appearance") === "system"){//if system is theme watch live browser changes
+    mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
+    mediaQueryList.addEventListener("change", handleEditorTheme)
+  }
+})
+onBeforeUnmount(() => {
+  if(mediaQueryList){
+    mediaQueryList.removeEventListener("change", handleEditorTheme)
+  }
+})
 </script>
 
 <template>
@@ -141,7 +180,7 @@ const handleSave = () => {
       <vue-monaco-editor
         v-model:value="code"
         :language="props.language"
-        theme="vs-dark"
+        :theme="editorTheme"
         :options="editorOptions"
         @mount="handleMount"
         style="height:100%; width:100%;"
