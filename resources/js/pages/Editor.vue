@@ -2,6 +2,7 @@
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import { ref, shallowRef, watch, toRaw, onMounted,  onBeforeUnmount } from 'vue'
 import { Button } from '@/components/ui/button'
+import { getStoredAppearance } from '@/composables/useAppearance'
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Editor', href: '/editor' },
@@ -54,22 +55,9 @@ const editorOptions = {
   formatOnPaste: true,
 }
 
-function getCookie(name: String){
-  const nameEQ = name + "="
-  const cookie_arr = document.cookie.split(';')//array of each application cookie (format: <name>=<value>) ignore <>
 
-  for(let i = 0; i < cookie_arr.length; i++){
-    let cookie = cookie_arr[i];
-    while(cookie.charAt(0) === ' '){//remove any qhite space before name (splitting into array causes white space for every cookie thats not cookie_arr[0])
-      cookie = cookie.substring(1, cookie.length)
-    }
-    if(cookie.indexOf(nameEQ) === 0){ return cookie.substring(nameEQ.length, cookie.length) }
-  }
-  return null;
-}
 function handleEditorTheme(){
-  let theme = getCookie("appearance") ?? "dark"//default to dark if cannot get cookie
-
+  let theme = getStoredAppearance() ?? "dark"
   if(theme === "system"){//resolve system preference
     mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
     theme = mediaQueryList.matches ? "dark" : "light"
@@ -98,7 +86,7 @@ const handleSave = () => {
 
 onMounted(() => {
   handleEditorTheme()
-  if(getCookie("appearance") === "system"){//if system is theme watch live browser changes
+  if(getStoredAppearance() === "system"){//if system is theme watch live browser changes
     mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
     mediaQueryList.addEventListener("change", handleEditorTheme)
   }
