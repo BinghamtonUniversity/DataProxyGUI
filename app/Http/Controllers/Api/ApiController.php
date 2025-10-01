@@ -318,6 +318,26 @@ class ApiController extends Controller
             'status' => $result['status']
         ], $result['status']);
     }
+
+    public function apiInstancesDestroy($id): JsonResponse
+    {
+        $endpoint = "api_instances/{$id}";
+        
+        $result = $this->makeDjangoRequest('DELETE', $endpoint);
+
+        if ($result['success']) {
+            return response()->json([
+                'message' => ucfirst('api_instance') . ' deleted successfully'
+            ]);
+        }
+
+        return response()->json([
+            'error' => "Failed to delete api instances",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
     // ===========================================
     // API Instance by ID - AJAX call for fetching single instance
     // ===========================================

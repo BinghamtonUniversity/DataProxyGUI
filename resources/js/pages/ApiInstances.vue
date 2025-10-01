@@ -45,6 +45,8 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
 import { router } from '@inertiajs/vue3'
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -57,11 +59,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 const api_instances = ref<ApiInstance[]>([])
 const environments = ref<Environment[]>([])
 const apis = ref<Api[]>([])
-// const api_versions = ref<ApiData[]>([]) // TO:DO - Use after view details tabs
-// const resources = ref<Resource[]>([])
+
+// Toaster
+const { success, error, warning, info } = useToaster();
 
 const loading = ref(true)
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 
 //new API Instance
 const newApiInstanceDialogOpen = ref(false)
@@ -152,7 +154,7 @@ const submitNewApiInstance = async (e: Event) => {
     const body = isEditMode.value && editingApiInstanceId.value
       ? { ...newApiInstanceForm.value, id: editingApiInstanceId.value }
       : { ...newApiInstanceForm.value }
-    console.log('Submitting API Instance:', body)
+
     const response = await fetch(url, {
       method: request_method,
       headers: {
@@ -164,10 +166,16 @@ const submitNewApiInstance = async (e: Event) => {
     })
 
     if (!response.ok) throw new Error('Failed to save API Instance')
+    if(isEditMode.value) {
+      success('Updated successfully', 'API Instance Updated');
+    } else {
+      success('Created successfully', 'API Instance Created');
+    }
     closeNewApiInstanceDialog()
     await fetchApiInstances()
   } catch (err: any) {
     newApiInstanceError.value = err.message || 'Error saving API Instance'
+    error(newApiInstanceError.value, 'Error');
   } finally {
     newApiInstanceLoading.value = false
     isEditMode.value = false
@@ -175,6 +183,29 @@ const submitNewApiInstance = async (e: Event) => {
   }
 }
 
+const handleDeleteInstance = async (instance: ApiInstance) => {
+  if (!confirm(`Are you sure you want to delete API Instance "${instance.name}"? This action cannot be undone.`)) {
+    return
+  }
+  try{
+    const response = await fetch(`/api/api_instances/${instance.id}`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-TOKEN': getCsrfToken() || '',
+      },
+    })
+    if (!response.ok) {
+      error('Failed to delete API Instance', 'Error')
+      throw new Error('Failed to delete API Instance')
+    }
+    success(`API Instance "${instance.name}" deleted successfully`, 'API Instance Deleted');
+    await fetchApiInstances()
+  } catch (err: any) {
+    error(err.message || 'Error deleting API Instance', 'Error')
+  } finally {
+    // cleanup 
+  }
+}
 
 const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
   isEditMode.value = true
@@ -410,7 +441,7 @@ const columns: ColumnDef<ApiInstance>[] = [
             editLabel: 'Edit Instance',
             deleteLabel: 'Delete Instance',
             onEdit: () => openEditApiInstanceDialog(instance),
-            // onDelete: () => handleDeleteInstance(instance),
+            onDelete: () => handleDeleteInstance(instance),
           })
         ])
         }
@@ -770,6 +801,7 @@ onUnmounted(() => {
       </div>
     </div>
   </AppLayout>
+  <Toaster />
 </template>
 
 <style scoped>

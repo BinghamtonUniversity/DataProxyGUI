@@ -46,6 +46,8 @@ import {
   DialogClose
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 interface Props {
     instance_id: string
@@ -72,7 +74,8 @@ const newPermissionError = ref('')
 const isEditMode = ref(false)
 const editingPermissionIndex = ref<number | null>(null)
 
-
+// Toaster
+const { success, error, warning, info } = useToaster();
 
 // Table state
 const sorting = ref<SortingState>([])
@@ -167,11 +170,17 @@ const submitNewPermission = async (e: Event) => {
 
         const responseData = await response.json()
         props.updateApiInstanceData(responseData || updatedApiInstanceData)
+         if(isEditMode.value) {
+            success('Updated successfully', 'Permission Updated');
+        } else {
+            success('Created successfully', 'Permission Created');
+        }
 
         closeNewPermissionDialog()
     } catch (err: any) {
-        console.error('Error saving permission:', err)
+        // console.error('Error saving permission:', err)
         newPermissionError.value = err.message || 'Error saving permission'
+        error(newPermissionError.value, 'Error');
     } finally {
         newPermissionLoading.value = false
     }
@@ -210,7 +219,7 @@ const handleDelete = async (permission: ApiInstanceRouteUserMap) => {
             api_version_id: updatedApiInstanceData.api_version_id,
             environment_id: updatedApiInstanceData.environment.id
         }
-        // console.log('Sending updatedApiInstanceData:', JSON.stringify(requestData, null, 2))
+
         const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
             method: 'PUT',
             headers: {
@@ -228,11 +237,11 @@ const handleDelete = async (permission: ApiInstanceRouteUserMap) => {
 
         const responseData = await response.json()
         props.updateApiInstanceData(responseData || updatedApiInstanceData)
+        success('Deleted successfully', 'Permission Deleted');
 
     } catch (err: any) {
-        console.error('Error deleting route:', err)
-        // show this error to the user via a toast/notification showError(err.message || 'Error deleting route')
-    }
+        // console.error('Error deleting route:', err)
+        error(err.message || 'Error deleting permission', 'Error');}
 }
 
 
@@ -613,4 +622,5 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
             </template>
         </div>
     </div>
+    <Toaster />
 </template>

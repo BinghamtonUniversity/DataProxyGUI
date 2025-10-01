@@ -109,6 +109,7 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
     Route::get('/api_instances', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesIndex']);
     Route::post('/api_instances', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesStore']);
     Route::put('/api_instances/{id}', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesUpdate']);
+    Route::delete('/api_instances/{id}', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesDestroy']);
 
     //API Users
     Route::get('/api_users', [App\Http\Controllers\Api\ApiController::class, 'apiUsersIndex']);
