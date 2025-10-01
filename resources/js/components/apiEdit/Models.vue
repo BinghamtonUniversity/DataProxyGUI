@@ -48,6 +48,8 @@ import {
 import { Label } from '@/components/ui/label'
 import Editor from '@/pages/Editor.vue'
 import DataGrid from '@/components/datagrid/DataGrid.vue'
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 interface Props {
     api_id: string
@@ -60,7 +62,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
+
+// Toaster
+const { success, error, warning, info } = useToaster();
 
 // --- Dialog State and Handlers ---
 const newModelDialogOpen = ref(false)
@@ -157,7 +161,7 @@ const submitNewModel = async (e: Event) => {
         version_models: [...(props.apiData.version_models || []), newModel]
       }
     }
-    console.log('Updated API Data:', updatedApiData)
+
     const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
             method: 'PUT',
             headers: {
@@ -175,11 +179,17 @@ const submitNewModel = async (e: Event) => {
 
     const responseData = await response.json()
     props.updateApiData(responseData || updatedApiData)
-
+    if(isEditMode.value) {
+      success('Updated successfully', 'Model Updated');
+    } else {
+      success('Created successfully', 'Model Created');
+    }
     closeNewModelDialog()
   } catch (err: any) {
     console.error('Error saving model:', err)
     newModelError.value = err.message || 'Error saving model'
+    error(newModelError.value, 'Error')
+
   } finally {
     newModelLoading.value = false
   }
@@ -219,11 +229,11 @@ const handleDelete = async (model: ModelData) => {
 
         const responseData = await response.json()
         props.updateApiData(responseData || updatedApiData)
-
-        // console.log('Route deleted successfully:', route)
+        success(`Model "${model.name}" deleted successfully`, 'Model Deleted');
+        
     } catch (err: any) {
         console.error('Error deleting model:', err)
-        // show this error to the user via a toast/notification showError(err.message || 'Error deleting route')
+        error(err.message || 'Error deleting model', 'Error');
     }
 }
 
@@ -738,8 +748,5 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
             </template>
         </div>
     </div>
-
-    <!-- Edit Model Dialog -->
-    
-        
+    <Toaster />  
 </template>
