@@ -45,7 +45,10 @@ import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
 import { router } from '@inertiajs/vue3'
 
-
+import FormViewer from '@/components/formviewer/FormViewer.vue';
+import AlertModal from '@/components/AlertModal.vue';
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -56,7 +59,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const apis = ref<Api[]>([])
 const loading = ref(true)
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
+
+// Toaster
+const { success, error, warning, info } = useToaster();
 
 //new API
 const newApiDialogOpen = ref(false)
@@ -73,6 +78,7 @@ const isEditMode = ref(false)
 const editingApiId = ref<number|null>(null)
 
 const openNewApiDialog = () => {
+  // initialData.value = null;
   newApiForm.value = { name: '', description: '', tags: '' }
   newApiError.value = ''
   newApiDialogOpen.value = true
@@ -86,6 +92,56 @@ const closeNewApiDialog = () => {
   editingApiId.value = null
 }
 
+// const formConfig = {
+//     label: 'API Developers',
+//     description: 'Manage developers assigned to this API.',
+//     name: "api-developers-form",
+//     files: false,
+//     fields: [
+//     {
+//       "name": "name",
+//       "label": "Name",
+//       "type": "text",
+//       "width": "12",
+//       "offset": "0",
+//       "required": true
+//     },
+//     {
+//       "name": "description",
+//       "label": "Description",
+//       "type": "text",
+//       "width": "12",
+//       "offset": "0",
+//       "required": false
+//     },
+//     {
+//       "name": "tags",
+//       "label": "Tags",
+//       "type": "text",
+//       "help": "comma-separated tags",
+//       "width": "12",
+//       "offset": "0",
+//       "required": false
+//     }
+//   ]
+// };
+
+// const submitNewApi = async(formValues: any) => {
+//   console.log(formValues)
+// }
+
+// const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
+//     console.log('FormViewer action:', actionData);
+    
+//     switch (actionData.type) {
+//         case 'close':
+//             closeNewApiDialog();
+//             break;
+//         default:
+//             console.log('Unknown FormViewer action type:', actionData.type);
+//     }
+// };
+
 const submitNewApi = async (e: Event) => {
   e.preventDefault()
   newApiLoading.value = true
@@ -93,7 +149,6 @@ const submitNewApi = async (e: Event) => {
   try {
     let url = `/api/apis`
     let request_method = 'POST'
-    console.log(request_method)
     
     if (isEditMode.value && editingApiId.value) {
       url = `/api/apis/${editingApiId.value}`
@@ -114,15 +169,46 @@ const submitNewApi = async (e: Event) => {
     })
 
     if (!response.ok) throw new Error('Failed to save API')
+    if(isEditMode.value) {
+      success('API updated successfully', 'API Updated');
+    } else {
+      success('API created successfully', 'API Created');
+    }
     closeNewApiDialog()
     await fetchApis()
     // refresh  API list here
   } catch (err: any) {
     newApiError.value = err.message || 'Error saving API'
+    error(newApiError.value, 'Error')
   } finally {
     newApiLoading.value = false
     isEditMode.value = false
     editingApiId.value = null
+  }
+}
+
+const handleDeleteApi = async (api: Api) => {
+  if (!confirm(`Are you sure you want to delete API "${api.name}"? This action cannot be undone.`)) {
+    return
+  }
+  try{
+    const response = await fetch(`/api/apis/${api.id}`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-TOKEN': getCsrfToken() || '',
+      },
+    })
+    if (!response.ok) {
+      error('Failed to delete API', 'Error')
+      throw new Error('Failed to delete API')
+    }
+    success(`API "${api.name}" deleted successfully`, 'API Deleted');
+    await fetchApis()
+  } catch (err: any) {
+    // alert(err.message || 'Error deleting API')
+    error(err.message || 'Error deleting API', 'Error')
+  } finally {
+    // cleanup 
   }
 }
 
@@ -134,6 +220,11 @@ const openEditApiDialog = (api: Api) => {
     description: api.description,
     tags: api.tags,
   }
+  // initialData.value = {
+  //   name: api.name,
+  //   description: api.description,
+  //   tags: api.tags,
+  // }
   newApiDialogOpen.value = true
 }
 
@@ -231,7 +322,7 @@ const columns: ColumnDef<Api>[] = [
         // Optional: customize the view details link
         // viewDetailsHref: `/apis/${props.item.api_type}/${props.item.id}/routes`,
         onEdit: () => openEditApiDialog(api),
-        // onDelete: () => handleDeleteApi(api),
+        onDelete: () => handleDeleteApi(api),
       })
     ])
     },
@@ -331,6 +422,24 @@ onMounted(fetchApis)
                 placeholder="Filter by name..."
                 v-model="nameFilterValue"
               />
+              <!-- <Button class="ml-4 text-green-600" variant="outline" @click="openNewApiDialog">
+                    <Plus class="mr-2 h-4 w-4" />
+                    New API
+              </Button>
+
+              <AlertModal 
+                  :isOpen="newApiDialogOpen"
+                  title="Assign Developer to API"
+                  @close="closeNewApiDialog"
+              >
+                  <FormViewer 
+                      :formConfig="formConfig" 
+                      :initialData="initialData"
+                      :cancelAction="'close'"
+                      @submit="submitNewApi"
+                      @action="handleFormAction"
+                  />
+              </AlertModal> -->
               
               <Dialog v-model:open="newApiDialogOpen">
                 <DialogTrigger as-child>
@@ -481,5 +590,6 @@ onMounted(fetchApis)
         </template>
       </div>
     </div>
+    <Toaster />
   </AppLayout>
 </template>
