@@ -411,12 +411,9 @@ onMounted(fetchApis)
             </div>
           </div>
         </template>
-        
-        <!-- Data Table -->
-        <template v-else-if="apis?.length && table">
-          <div class="w-full">
-            <!-- Table Controls -->
-            <div class="flex items-center py-4">
+        <!-- Table Controls and New Button -->
+        <template v-else>
+          <div class="flex items-center py-4">
               <Input
                 class="max-w-sm"
                 placeholder="Filter by name..."
@@ -500,6 +497,12 @@ onMounted(fetchApis)
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+        </template>
+        
+        <!-- Data Table -->
+        <template v-if="apis?.length && table">
+          <div class="w-full">
+
 
             <!-- Data Table -->
             <div class="rounded-md border">

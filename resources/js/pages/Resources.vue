@@ -15,7 +15,7 @@ import {
   getSortedRowModel,
   useVueTable,
 } from '@tanstack/vue-table'
-import { ArrowUpDown, ChevronDown, Plus } from 'lucide-vue-next'
+import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
 import { h, ref, onMounted, computed } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 
@@ -44,6 +44,8 @@ import TableActions from '../components/TableActions.vue'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -55,6 +57,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 const resources = ref<Resource[]>([])
 const environments = ref<Environment[]>([])
 const loading = ref(true)
+
+//Toasters
+const { success, error, warning, info } = useToaster();
 
 // Resource type options
 const resourceTypeOptions = [
@@ -127,7 +132,7 @@ const submitNewResource = async (e: Event) => {
     const body = isEditMode.value && editingResourceId.value
       ? { ...newResourceForm.value, id: editingResourceId.value }
       : {... newResourceForm.value}
-    console.log('Submitting Resource:', body)
+    // console.log('Submitting Resource:', body)
     const response = await fetch(url, {
       method: request_method,
       headers: {
@@ -138,12 +143,18 @@ const submitNewResource = async (e: Event) => {
       body: JSON.stringify(body),
     })
 
-    // if (!response.ok) throw new Error('Failed to save Resource')
+    if (!response.ok) throw new Error('Failed to save Resource')
+    if(isEditMode.value) {
+      success('Resource updated successfully', 'Resource Updated');
+    } else {
+      success('Resource created successfully', 'Resource Created');
+    }
     closeNewResourceDialog()
     await fetchResources()
-    // refresh  API list here
+
   } catch (err: any) {
     newResourceError.value = err.message || 'Error saving Resource'
+    error(newResourceError.value, 'Error');
   } finally {
     newResourceLoading.value = false
     isEditMode.value = false
@@ -151,9 +162,33 @@ const submitNewResource = async (e: Event) => {
   }
 }
 
-const openEditResourceDialog = (resource: Resource) => {
+const handleDeleteResource = async (resource: Resource) => {
+  if (!confirm(`Are you sure you want to delete Resource "${resource.name}"? This action cannot be undone.`)) {
+    return
+  }
+  try{
+    const response = await fetch(`/ajax/resources/${resource.id}`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-TOKEN': getCsrfToken() || '',
+      },
+    })
+    if (!response.ok) {
+      // error('Failed to delete Resource', 'Error')
+      throw new Error('Failed to delete Resource')
+    }
+    success(`Resource "${resource.name}" deleted successfully`, 'API Deleted');
+    await fetchResources()
+  } catch (err: any) {
+    error(err.message || 'Error deleting Resource', 'Error')
+  } finally {
+    // cleanup 
+  }
+}
+
+const openEditResourceDialog = (resource: Resource, index:number) => {
   isEditMode.value = true
-  editingResourceId.value = resource.id
+  editingResourceId.value = index
   newResourceForm.value = {
     name: resource.name,
     type: resource.type,
@@ -236,11 +271,27 @@ const columns: ColumnDef<Resource>[] = [
       return h('div', { class: 'text-sm' }, date.toLocaleDateString())
     },
   },
-//   {
-//     accessorKey: 'created_by_id',
-//     header: 'Created By',
-//     cell: ({ row }) => h('div', { class: 'text-sm' }, `User ${row.getValue('created_by_id')}`),
-//   },
+  {
+    id: 'actions',
+    enableHiding: false,
+    cell: ({ row }) => {
+            const resource = row.original
+            return h('div', { 'data-actions-cell': true }, [
+                h(Button, {
+                    variant: 'ghost',
+                    size: 'sm',
+                    onClick: (e: MouseEvent) => {
+                        e.stopPropagation()
+                        handleDeleteResource(resource)
+                    },
+                    class: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20'
+                }, {
+                    default: () => [h(Trash2, { class: 'h-4 w-4' })]
+                })
+            ])
+        },
+    }
+
 ]
 
 // // Table state
@@ -501,8 +552,12 @@ onMounted(() => fetchAllData())
                   </TableHeader>
                   <TableBody>
                     <template v-if="tableRows.length">
-                      <template v-for="row in tableRows" :key="row.id">
-                        <TableRow :data-state="row.getIsSelected() && 'selected'">
+                      <template v-for="(row, index) in tableRows" :key="row.id">
+                        <TableRow 
+                        :data-state="row.getIsSelected() && 'selected'"
+                        class="cursor-pointer hover:bg-muted/50"
+                        @click="openEditResourceDialog(row.original, index)"
+                        >
                           <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                             <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
                           </TableCell>
@@ -575,5 +630,6 @@ onMounted(() => fetchAllData())
         
       </div>
     </div>
+    <Toaster />
   </AppLayout>
 </template>

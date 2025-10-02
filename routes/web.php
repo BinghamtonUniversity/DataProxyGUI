@@ -129,8 +129,6 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
 });
 
 // Resources
-
-
 Route::get('/resources', function () {
     return Inertia::render('Resources');
 })->middleware(['auth', 'verified'])->name('resources');
