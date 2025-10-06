@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {  ChevronDown, Plus } from 'lucide-vue-next'
 import { getCsrfToken } from '@/lib/utils'
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 interface Props {
     instance_id: string
@@ -24,6 +26,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+// Toaster
+const { success, error, warning, info } = useToaster();
 
 const newResourceName = ref('')
 const selectedResourceId = ref('')
@@ -51,19 +56,7 @@ const getResourceIdForIndex = (index: string): string | null => {
 const saveResources = async() => {
   // if (!props.apiInstanceData || !newResourceName.value || !selectedResourceId.value) return
   if (!props.apiInstanceData) return
-  // console.log('Updated resources:', props.apiInstanceData)
 
-  // const newResource = {
-  //   name: newResourceName.value,
-  //   resource: selectedResourceId.value
-  // }
-  
-  // const updatedData = {
-  //   ...props.apiInstanceData,
-  //   resources: [...(props.apiInstanceData.resources || []), newResource]
-  // }
-  // console.log(updatedData) 
-  
   const requestData = {
     id: props.apiInstanceData.id,
     name: props.apiInstanceData.name,
@@ -95,6 +88,7 @@ const saveResources = async() => {
 
   const responseData = await response.json()
   props.updateApiInstanceData(responseData)
+  success('Resources updated successfully', 'Success');
   
   newResourceName.value = ''
   selectedResourceId.value = ''
@@ -272,4 +266,5 @@ const updateResource = (index: number, resource_name: string, value: string) => 
       </div>
     </div>
   </div>
+  <Toaster />
 </template>

@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApiInstance, ApiUser, Resource, type ApiData } from '@/types'
 import { getCsrfToken } from '@/lib/utils'
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 interface Props {
     instance_id: string
@@ -17,6 +19,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+// Toaster
+const { success, error, warning, info } = useToaster();
 
 // Local reactive data for editable fields
 const editableData = ref({
@@ -92,6 +97,7 @@ const saveChanges = async () => {
 
         const responseData = await response.json()
         props.updateApiInstanceData(responseData)
+        success('API Instance updated successfully', 'Success');
     }
 }
 </script>
@@ -180,4 +186,5 @@ const saveChanges = async () => {
             No API instance data available
         </div>
     </div>
+    <Toaster />
 </template>
