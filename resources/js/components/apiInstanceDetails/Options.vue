@@ -8,6 +8,7 @@ import FormViewer from '@/components/formviewer/FormViewer.vue'
 import Toaster from '@/components/toaster/Toaster.vue'
 import { getCsrfToken } from '@/lib/utils'
 import { useToaster } from '@/composables/useToaster'
+import { Skeleton } from '@/components/ui/skeleton'
 const { success, error: showError, warning, info } = useToaster();
 
 interface Props {
@@ -23,18 +24,18 @@ interface Props {
 const props = defineProps<Props>()
 
 const formConfig = computed(() => {
-    return {label: 'Options',
+    return {label: ' ',
     description: '',
     name: "options",
     files: false,
-    fields: [...props.apiInstanceData?.api_version?.options || []]
+    fields: [...props.apiInstanceData?.api_version?.options.fields || []]
 }
 
 });
 
 const initialData = computed(() => {
 
-    return props.apiInstanceData?.options || {}
+    return props.apiInstanceData?.options || []
 })
 
 const handleSave = async (data: any) => {
@@ -91,12 +92,22 @@ const handleCustomAction = (action: any) => {
 </script>
 
 <template>
+    <div v-if="props.loading" class="space-y-4">
+        <Skeleton class="h-6 w-1/3" />
+        <div class="grid grid-cols-12 gap-4">
+            <Skeleton class="h-10 col-span-12 md:col-span-6" />
+            <Skeleton class="h-10 col-span-12 md:col-span-6" />
+            <Skeleton class="h-10 col-span-12 md:col-span-4" />
+            <Skeleton class="h-10 col-span-12 md:col-span-4" />
+            <Skeleton class="h-10 col-span-12 md:col-span-4" />
+        </div>
+    </div>
     <FormViewer
+        v-else
         :formConfig="formConfig "
         :initialData="initialData"
         :actions="[{ type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' }]"
         :actionHandler="handleCustomAction"
-       
     />
     
     <!-- Global Toaster -->
