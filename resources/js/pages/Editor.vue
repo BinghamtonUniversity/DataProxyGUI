@@ -1,7 +1,8 @@
 <script setup lang="ts">import { type BreadcrumbItem } from '@/types'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
-import { ref, shallowRef, watch, toRaw } from 'vue'
+import { ref, shallowRef, watch, toRaw, onMounted,  onBeforeUnmount } from 'vue'
 import { Button } from '@/components/ui/button'
+import { getStoredAppearance } from '@/composables/useAppearance'
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Editor', href: '/editor' },
@@ -45,11 +46,24 @@ declare global {
 }
 
 const editor = shallowRef<any>(null);
+const editorTheme = ref<"vs" | "vs-dark">("vs-dark")
+let mediaQueryList: MediaQueryList | null = null
 
 const editorOptions = {
   automaticLayout: true,
   formatOnType: true,
   formatOnPaste: true,
+}
+
+
+function handleEditorTheme(){
+  let theme = getStoredAppearance() ?? "dark"
+  if(theme === "system"){//resolve system preference
+    mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
+    theme = mediaQueryList.matches ? "dark" : "light"
+  }
+
+  editorTheme.value = theme === "light" ? "vs" : "vs-dark" //map appearance to Monaco themes
 }
 
 function handleMount(editorInstance: any, monaco: any) {
@@ -69,6 +83,19 @@ const handleSave = () => {
 // const formatCode = () => {
 //   editor.value?.getAction('editor.action.formatDocument').run()
 // }
+
+onMounted(() => {
+  handleEditorTheme()
+  if(getStoredAppearance() === "system"){//if system is theme watch live browser changes
+    mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
+    mediaQueryList.addEventListener("change", handleEditorTheme)
+  }
+})
+onBeforeUnmount(() => {
+  if(mediaQueryList){
+    mediaQueryList.removeEventListener("change", handleEditorTheme)
+  }
+})
 </script>
 
 <template>
@@ -141,7 +168,7 @@ const handleSave = () => {
       <vue-monaco-editor
         v-model:value="code"
         :language="props.language"
-        theme="vs-dark"
+        :theme="editorTheme"
         :options="editorOptions"
         @mount="handleMount"
         style="height:100%; width:100%;"

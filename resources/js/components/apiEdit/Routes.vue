@@ -46,6 +46,8 @@ import {
   DialogClose
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 interface Props {
     api_id: string
@@ -74,6 +76,9 @@ const newRouteLoading = ref(false)
 const newRouteError = ref('')
 const isEditMode = ref(false)
 const editingRouteIndex = ref<number | null>(null)
+
+// Toaster
+const { success, error, warning, info } = useToaster();
 
 // Table state
 const sorting = ref<SortingState>([])
@@ -159,11 +164,17 @@ const submitNewRoute = async (e: Event) => {
 
         const responseData = await response.json()
         props.updateApiData(responseData || updatedApiData)
+        if(isEditMode.value) {
+            success('Updated successfully', 'Route Updated');
+        } else {
+            success('Created successfully', 'Route Created');
+        }
 
         closeNewRouteDialog()
     } catch (err: any) {
-        console.error('Error saving route:', err)
+        // console.error('Error saving route:', err)
         newRouteError.value = err.message || 'Error saving route'
+        error(newRouteError.value, 'Error')
     } finally {
         newRouteLoading.value = false
     }
@@ -208,11 +219,11 @@ const handleDelete = async (route: RouteData) => {
 
         const responseData = await response.json()
         props.updateApiData(responseData || updatedApiData)
+        success(`Path "${route.path}-${route.verb}" deleted successfully`, 'Route Deleted');
 
-        // console.log('Route deleted successfully:', route)
     } catch (err: any) {
         console.error('Error deleting route:', err)
-        // show this error to the user via a toast/notification showError(err.message || 'Error deleting route')
+        error(err.message || 'Error deleting route', 'Error');
     }
 }
 
@@ -577,4 +588,5 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
             </template>
         </div>
     </div>
+    <Toaster />
 </template>

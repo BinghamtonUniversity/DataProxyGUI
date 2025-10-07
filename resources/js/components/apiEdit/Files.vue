@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
 import { Trash2 } from 'lucide-vue-next'
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 
 interface Props {
@@ -40,6 +42,9 @@ const isNewViewDialogOpen = ref(false)
 const newViewName = ref('')
 const isCreatingView = ref(false)
 const createViewError = ref<string | null>(null)
+
+// Toaster
+const { success, error, warning, info } = useToaster();
 
 const handleSave = async (updatedCode: string) => {
     if (!selectedFile.value || !props.apiData) {
@@ -153,9 +158,10 @@ const handleCreateNewView = async () => {
         newViewName.value = ''
         isNewViewDialogOpen.value = false
 
-    } catch (error) {
-        console.error('Create view error:', error)
-        createViewError.value = error instanceof Error ? error.message : 'Failed to create new function/file'
+    } catch (err: any) {
+        console.error('Create view error:', err)
+        createViewError.value = err instanceof Error ? err.message : 'Failed to create new function/file'
+        error(createViewError.value, 'Error');
     } finally {
         isCreatingView.value = false
     }
@@ -196,10 +202,11 @@ const handleDeleteFile = async (file: ApiVersionFunction ) =>{
         const responseData = await response.json()
         props.updateApiData(responseData || updatedApiData)
         selectedFile.value = null
+        success(`File "${file.name}" deleted successfully`, 'File Deleted');
 
     } catch (err: any) {
         console.error('Error deleting route:', err)
-        // show this error to the user via a toast/notification showError(err.message || 'Error deleting route')
+        error(err.message || 'Error deleting file', 'Error');
     }
 }
 
@@ -324,12 +331,12 @@ const resetNewViewDialog = () => {
                     <!-- Editor Area -->
                     <div class="flex-1 min-w-0">
                         <!-- Save status messages -->
-                        <div v-if="saveError" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+                        <!-- <div v-if="saveError" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
                             {{ saveError }}
                         </div>
                         <div v-if="saveSuccess" class="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm">
                             Changes saved successfully!
-                        </div>
+                        </div> -->
                         
                         <!-- Code Editor -->
                         <Editor 
@@ -360,4 +367,5 @@ const resetNewViewDialog = () => {
             </template>
         </div>
     </div>
+    <Toaster />
 </template>

@@ -243,7 +243,7 @@ const componentProps = computed(() => ({
     loading: loading.value,
     apiInstanceError: apiInstanceError.value,
     updateApiInstanceData,
-    refreshApiInstanceData
+    // refreshApiInstanceData
 }))
 // Fetch data on mount
 onMounted(() => fetchAllData())

@@ -318,6 +318,26 @@ class ApiController extends Controller
             'status' => $result['status']
         ], $result['status']);
     }
+
+    public function apiInstancesDestroy($id): JsonResponse
+    {
+        $endpoint = "api_instances/{$id}";
+        
+        $result = $this->makeDjangoRequest('DELETE', $endpoint);
+
+        if ($result['success']) {
+            return response()->json([
+                'message' => ucfirst('api_instance') . ' deleted successfully'
+            ]);
+        }
+
+        return response()->json([
+            'error' => "Failed to delete api instances",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
     // ===========================================
     // API Instance by ID - AJAX call for fetching single instance
     // ===========================================
@@ -383,6 +403,75 @@ class ApiController extends Controller
 
         return response()->json([
             'error' => "Failed to fetch api users}",
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function apiUsersStore(Request $request): JsonResponse
+    {
+        Log::info('apiUsersStore called');
+
+        $requestData = $request->all();
+        
+        $result = $this->makeDjangoRequest('POST', "api_users", $requestData);
+        // Log::info('Django request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to POST API User",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function apiUsersUpdate(Request $request, string $api_user_id): JsonResponse
+    {
+        Log::info('apiUsersUpdate called', ['api_instance_id' => $api_user_id]);
+
+        $endpoint = "api_users/{$api_user_id}";
+
+        $requestData = $request->all();
+        
+        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to PUT API User",
+            'api_id' => $api_user_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function apiUsersDestroy($id): JsonResponse
+    {
+        $endpoint = "api_users/{$id}";
+        
+        $result = $this->makeDjangoRequest('DELETE', $endpoint);
+
+        if ($result['success']) {
+            return response()->json([
+                'message' => ucfirst('api_user') . ' deleted successfully'
+            ]);
+        }
+
+        return response()->json([
+            'error' => "Failed to delete api user",
+            'details' => $result['data'],
             'status' => $result['status']
         ], $result['status']);
     }
@@ -522,6 +611,51 @@ class ApiController extends Controller
         ], $result['status']);
     }
 
+    public function resourcesUpdate(Request $request, string $resource_id): JsonResponse
+    {
+        Log::info('resourcesUpdate called', ['resource_id' => $resource_id]);
+
+        $endpoint = "resources/{$resource_id}";
+
+        $requestData = $request->all();
+        
+        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+        Log::info('Django request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to PUT API User",
+            'api_id' => $resource_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function resourcesDestroy($id): JsonResponse
+    {
+        $endpoint = "resources/{$id}";
+        
+        $result = $this->makeDjangoRequest('DELETE', $endpoint);
+
+        if ($result['success']) {
+            return response()->json([
+                'message' => ucfirst('resource') . ' deleted successfully'
+            ]);
+        }
+
+        return response()->json([
+            'error' => "Failed to delete resource",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
     /**
      * Generic resource controller - handles all CRUD operations dynamically
      * 
@@ -531,7 +665,7 @@ class ApiController extends Controller
      * @param mixed $id The resource ID (for update/destroy operations)
      * @return JsonResponse
      */
-    public function handleResource(string $resource, string $action, Request $request = null, $id = null): JsonResponse
+    public function handleResource(string $resource, string $action, ?Request $request=null, $id = null): JsonResponse
     {
         // Validate resource name
         $allowedResources = ['environments', 'users', 'apis'];

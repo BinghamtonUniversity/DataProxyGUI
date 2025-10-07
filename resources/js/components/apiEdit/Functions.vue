@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
 import { Trash2 } from 'lucide-vue-next'
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 
 interface Props {
@@ -34,7 +36,9 @@ const selectedFunction = ref<ApiVersionFunction | null>(null)
 const isSaving = ref(false)
 const saveError = ref<string | null>(null)
 const saveSuccess = ref(false)
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL || ''
+
+// Toaster
+const { success, error, warning, info } = useToaster();
 
 // New view dialog state
 const isNewViewDialogOpen = ref(false)
@@ -126,7 +130,7 @@ const handleCreateNewView = async () => {
             ...props.apiData,
             version_views: [...props.apiData.version_views, newFunction]
         }
-        console.log('Updated API Data:', updatedApiData)
+
         const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
             method: 'PUT',
             headers: {
@@ -139,6 +143,7 @@ const handleCreateNewView = async () => {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
+            // error('Failed to create function', 'Error');
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
         }
 
@@ -154,9 +159,10 @@ const handleCreateNewView = async () => {
         newViewName.value = ''
         isNewViewDialogOpen.value = false
 
-    } catch (error) {
-        console.error('Create view error:', error)
-        createViewError.value = error instanceof Error ? error.message : 'Failed to create new function'
+    } catch (e) {
+        console.error('Create view error:', e)
+        createViewError.value = e instanceof Error ? e.message : 'Failed to create new function'
+        error(createViewError.value, 'Error');
     } finally {
         isCreatingView.value = false
     }
@@ -197,11 +203,11 @@ const handleDeleteFunction = async (view: ApiVersionFunction ) =>{
         const responseData = await response.json()
         props.updateApiData(responseData || updatedApiData)
         selectedFunction.value = null
+        success(`Function "${view.name}" deleted successfully`, 'Function Deleted');
 
-        // console.log('Route deleted successfully:', route)
     } catch (err: any) {
         console.error('Error deleting route:', err)
-        // show this error to the user via a toast/notification showError(err.message || 'Error deleting route')
+        error(err.message || 'Error deleting function', 'Error');
     }
 }
 
@@ -362,4 +368,5 @@ const resetNewViewDialog = () => {
             </template>
         </div>
     </div>
+    <Toaster />
 </template>

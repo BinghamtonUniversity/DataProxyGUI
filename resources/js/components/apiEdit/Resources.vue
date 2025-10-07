@@ -45,6 +45,8 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 interface Props {
     api_id: string
@@ -57,7 +59,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 
 const newResourceDialogOpen = ref(false)
 const newResourceForm = ref({
@@ -69,6 +70,9 @@ const newResourceLoading = ref(false)
 const newResourceError = ref('')
 const isEditMode = ref(false)
 const editingResourceIndex = ref<number | null>(null)
+
+// Toaster
+const { success, error, warning, info } = useToaster();
 
 // New Resource Dialog handlers
 const openNewResourceDialog = () => {
@@ -145,11 +149,16 @@ const submitNewResource = async (e: Event) => {
 
     const responseData = await response.json()
     props.updateApiData(responseData || updatedApiData)
-
+    if(isEditMode.value) {
+      success('Updated successfully', 'Resource Updated');
+    } else {
+      success('Created successfully', 'Resource Created');
+    }
     closeNewResourceDialog()
   } catch (err: any) {
-    console.error('Error saving resource:', err)
+    // console.error('Error saving resource:', err)
     newResourceError.value = err.message || 'Error saving resource'
+    error(newResourceError.value, 'Error')
   } finally {
     newResourceLoading.value = false
   }
@@ -189,11 +198,10 @@ const handleDelete = async (resource: ResourceData) => {
 
         const responseData = await response.json()
         props.updateApiData(responseData || updatedApiData)
-
-        // console.log('Route deleted successfully:', route)
+        success(`Resource "${resource.name}" deleted successfully`, 'Resource Deleted');
     } catch (err: any) {
         console.error('Error deleting route:', err)
-        // show this error to the user via a toast/notification showError(err.message || 'Error deleting route')
+        error(err.message || 'Error deleting resource', 'Error');
     }
 }
 
@@ -497,4 +505,5 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
             </template>
         </div>        
     </div>
+    <Toaster />
 </template>

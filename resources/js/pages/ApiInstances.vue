@@ -45,6 +45,8 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
 import { router } from '@inertiajs/vue3'
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useToaster } from '@/composables/useToaster';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -57,11 +59,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 const api_instances = ref<ApiInstance[]>([])
 const environments = ref<Environment[]>([])
 const apis = ref<Api[]>([])
-// const api_versions = ref<ApiData[]>([]) // TO:DO - Use after view details tabs
-// const resources = ref<Resource[]>([])
+
+// Toaster
+const { success, error, warning, info } = useToaster();
 
 const loading = ref(true)
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
 
 //new API Instance
 const newApiInstanceDialogOpen = ref(false)
@@ -152,7 +154,7 @@ const submitNewApiInstance = async (e: Event) => {
     const body = isEditMode.value && editingApiInstanceId.value
       ? { ...newApiInstanceForm.value, id: editingApiInstanceId.value }
       : { ...newApiInstanceForm.value }
-    console.log('Submitting API Instance:', body)
+
     const response = await fetch(url, {
       method: request_method,
       headers: {
@@ -164,10 +166,16 @@ const submitNewApiInstance = async (e: Event) => {
     })
 
     if (!response.ok) throw new Error('Failed to save API Instance')
+    if(isEditMode.value) {
+      success('Updated successfully', 'API Instance Updated');
+    } else {
+      success('Created successfully', 'API Instance Created');
+    }
     closeNewApiInstanceDialog()
     await fetchApiInstances()
   } catch (err: any) {
     newApiInstanceError.value = err.message || 'Error saving API Instance'
+    error(newApiInstanceError.value, 'Error');
   } finally {
     newApiInstanceLoading.value = false
     isEditMode.value = false
@@ -175,6 +183,29 @@ const submitNewApiInstance = async (e: Event) => {
   }
 }
 
+const handleDeleteInstance = async (instance: ApiInstance) => {
+  if (!confirm(`Are you sure you want to delete API Instance "${instance.name}"? This action cannot be undone.`)) {
+    return
+  }
+  try{
+    const response = await fetch(`/api/api_instances/${instance.id}`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-TOKEN': getCsrfToken() || '',
+      },
+    })
+    if (!response.ok) {
+      error('Failed to delete API Instance', 'Error')
+      throw new Error('Failed to delete API Instance')
+    }
+    success(`API Instance "${instance.name}" deleted successfully`, 'API Instance Deleted');
+    await fetchApiInstances()
+  } catch (err: any) {
+    error(err.message || 'Error deleting API Instance', 'Error')
+  } finally {
+    // cleanup 
+  }
+}
 
 const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
   isEditMode.value = true
@@ -410,7 +441,7 @@ const columns: ColumnDef<ApiInstance>[] = [
             editLabel: 'Edit Instance',
             deleteLabel: 'Delete Instance',
             onEdit: () => openEditApiInstanceDialog(instance),
-            // onDelete: () => handleDeleteInstance(instance),
+            onDelete: () => handleDeleteInstance(instance),
           })
         ])
         }
@@ -547,136 +578,139 @@ onUnmounted(() => {
             </div>
           </div>
         </template>
+
+        <!-- Table Controls -->
+        <template v-else>
+          <div class="flex items-center py-4">
+              <Input
+              class="max-w-sm"
+              placeholder="Filter by name..."
+              v-model="nameFilterValue"
+            />
+              <Dialog v-model:open="newApiInstanceDialogOpen">
+                  <DialogTrigger as-child>
+                  <Button class="ml-4 text-green-600" variant="outline" @click="openNewApiInstanceDialog">
+                      <Plus class="mr-2 h-4 w-4" />
+                      New API Instance
+                  </Button>
+                  </DialogTrigger>
+                  <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <form @submit="submitNewApiInstance" class="space-y-6">
+                      <DialogHeader>
+                      <DialogTitle>{{ isEditMode ? 'Edit API Instance' : 'Create New API Instance' }}</DialogTitle>
+                      </DialogHeader>
+                      <div class="grid gap-6">
+                      <!-- Environment Selection -->
+                      <div class="relative">
+                        <Label for="environment-id" class="mb-1">Environment</Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger as-child>
+                            <Button variant="outline" class="w-full justify-between">
+                              {{ getSelectedEnvironmentName() || 'Select Environment' }}
+                              <ChevronDown class="ml-2 h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent class="w-full max-h-60">
+                            <DropdownMenuItem
+                              v-for="env in environments"
+                              :key="env.id"
+                              @click="selectEnvironment(env)"
+                              class="flex items-center justify-between"
+                            >
+                              <span class="block truncate">{{ env.name }} - {{ env.type }}</span>
+                              <Check
+                                v-if="newApiInstanceForm.environment_id === env.id.toString()"
+                                class="h-4 w-4 text-blue-600"
+                              />
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      <!-- API Selection -->
+                      <div class="relative">
+                        <Label for="api-id" class="mb-1">API</Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger as-child>
+                            <Button variant="outline" class="w-full justify-between">
+                              {{ getSelectedApiName() || 'Select API' }}
+                              <ChevronDown class="ml-2 h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent class="w-full max-h-60">
+                            <DropdownMenuItem
+                              v-for="api in apis"
+                              :key="api.id"
+                              @click="selectApi(api)"
+                              class="flex items-center justify-between"
+                            >
+                              <span class="block truncate">{{ api.name }}</span>
+                              <Check
+                                v-if="newApiInstanceForm.api_id === api.id.toString()"
+                                class="h-4 w-4 text-blue-600"
+                              />
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      <!-- API Version -->
+                      <div>
+                          <Label for="api-version" class="mb-1">API Version</Label>
+                          <Input id="api-version" v-model="newApiInstanceForm.api_version_id" placeholder="API Version" />
+                      </div>
+
+                      <!-- Name -->
+                      <div>
+                          <Label for="instance-name" class="mb-1">Name</Label>
+                          <Input id="instance-name" v-model="newApiInstanceForm.name" required placeholder="API Instance Name" />
+                      </div>
+
+                      <!-- Route/Slug -->
+                      <div>
+                          <Label for="instance-route" class="mb-1">Slug</Label>
+                          <Input id="instance-route" v-model="newApiInstanceForm.route" required placeholder="Route/Slug" />
+                      </div>
+
+                      <div v-if="newApiInstanceError" class="text-red-600 text-sm">{{ newApiInstanceError }}</div>
+                      </div>
+                      <DialogFooter class="gap-2">
+                      <DialogClose as-child>
+                          <Button variant="secondary" type="button" @click="closeNewApiInstanceDialog">Cancel</Button>
+                      </DialogClose>
+                      <Button type="submit" variant="default" :disabled="newApiInstanceLoading">
+                          <span v-if="newApiInstanceLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
+                          <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
+                      </Button>
+                      </DialogFooter>
+                  </form>
+                  </DialogContent>
+              </Dialog>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button variant="outline" class="ml-auto">
+                  Columns <ChevronDown class="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuCheckboxItem
+                  v-for="column in hidableColumns"
+                  :key="column.id"
+                  class="capitalize"
+                  :model-value="column.getIsVisible()"
+                  @update:model-value="(value) => column.toggleVisibility(!!value)"
+                >
+                  {{ column.id.replace('_', ' ') }}
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </template>
         
         <!-- Data Table -->
-        <template v-else-if="api_instances?.length && table">
+        <template v-if="api_instances?.length && table">
           <div class="w-full">
-            <!-- Table Controls -->
-            <div class="flex items-center py-4">
-                <Input
-                class="max-w-sm"
-                placeholder="Filter by name..."
-                v-model="nameFilterValue"
-              />
-                <Dialog v-model:open="newApiInstanceDialogOpen">
-                    <DialogTrigger as-child>
-                    <Button class="ml-4 text-green-600" variant="outline" @click="openNewApiInstanceDialog">
-                        <Plus class="mr-2 h-4 w-4" />
-                        New API Instance
-                    </Button>
-                    </DialogTrigger>
-                    <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <form @submit="submitNewApiInstance" class="space-y-6">
-                        <DialogHeader>
-                        <DialogTitle>{{ isEditMode ? 'Edit API Instance' : 'Create New API Instance' }}</DialogTitle>
-                        </DialogHeader>
-                        <div class="grid gap-6">
-                        <!-- Environment Selection -->
-                        <div class="relative">
-                          <Label for="environment-id" class="mb-1">Environment</Label>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger as-child>
-                              <Button variant="outline" class="w-full justify-between">
-                                {{ getSelectedEnvironmentName() || 'Select Environment' }}
-                                <ChevronDown class="ml-2 h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent class="w-full max-h-60">
-                              <DropdownMenuItem
-                                v-for="env in environments"
-                                :key="env.id"
-                                @click="selectEnvironment(env)"
-                                class="flex items-center justify-between"
-                              >
-                                <span class="block truncate">{{ env.name }} - {{ env.type }}</span>
-                                <Check
-                                  v-if="newApiInstanceForm.environment_id === env.id.toString()"
-                                  class="h-4 w-4 text-blue-600"
-                                />
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-
-                        <!-- API Selection -->
-                        <div class="relative">
-                          <Label for="api-id" class="mb-1">API</Label>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger as-child>
-                              <Button variant="outline" class="w-full justify-between">
-                                {{ getSelectedApiName() || 'Select API' }}
-                                <ChevronDown class="ml-2 h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent class="w-full max-h-60">
-                              <DropdownMenuItem
-                                v-for="api in apis"
-                                :key="api.id"
-                                @click="selectApi(api)"
-                                class="flex items-center justify-between"
-                              >
-                                <span class="block truncate">{{ api.name }}</span>
-                                <Check
-                                  v-if="newApiInstanceForm.api_id === api.id.toString()"
-                                  class="h-4 w-4 text-blue-600"
-                                />
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-
-                        <!-- API Version -->
-                        <div>
-                            <Label for="api-version" class="mb-1">API Version</Label>
-                            <Input id="api-version" v-model="newApiInstanceForm.api_version_id" placeholder="API Version" />
-                        </div>
-
-                        <!-- Name -->
-                        <div>
-                            <Label for="instance-name" class="mb-1">Name</Label>
-                            <Input id="instance-name" v-model="newApiInstanceForm.name" required placeholder="API Instance Name" />
-                        </div>
-
-                        <!-- Route/Slug -->
-                        <div>
-                            <Label for="instance-route" class="mb-1">Slug</Label>
-                            <Input id="instance-route" v-model="newApiInstanceForm.route" required placeholder="Route/Slug" />
-                        </div>
-
-                        <div v-if="newApiInstanceError" class="text-red-600 text-sm">{{ newApiInstanceError }}</div>
-                        </div>
-                        <DialogFooter class="gap-2">
-                        <DialogClose as-child>
-                            <Button variant="secondary" type="button" @click="closeNewApiInstanceDialog">Cancel</Button>
-                        </DialogClose>
-                        <Button type="submit" variant="default" :disabled="newApiInstanceLoading">
-                            <span v-if="newApiInstanceLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
-                            <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
-                        </Button>
-                        </DialogFooter>
-                    </form>
-                    </DialogContent>
-                </Dialog>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button variant="outline" class="ml-auto">
-                    Columns <ChevronDown class="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuCheckboxItem
-                    v-for="column in hidableColumns"
-                    :key="column.id"
-                    class="capitalize"
-                    :model-value="column.getIsVisible()"
-                    @update:model-value="(value) => column.toggleVisibility(!!value)"
-                  >
-                    {{ column.id.replace('_', ' ') }}
-                  </DropdownMenuCheckboxItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
 
             <!-- Data Table -->
             <div class="rounded-md border">
@@ -770,6 +804,7 @@ onUnmounted(() => {
       </div>
     </div>
   </AppLayout>
+  <Toaster />
 </template>
 
 <style scoped>
