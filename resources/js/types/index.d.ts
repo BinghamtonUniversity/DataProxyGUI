@@ -83,7 +83,7 @@ export interface ApiData { // TO:DO -- API Version Data
   version_models: ModelData[];
   version_views: ApiVersionFunction[]; 
   version_urls: RouteData[]; 
-  options: any[]; 
+  options: any; 
   version_files: any[]; 
   resources: ResourceData[]; 
   created_at: string; 
@@ -131,7 +131,7 @@ export interface ApiInstance {
   route: string
   route_user_map: ApiInstanceRouteUserMap[],
   resources: ApiInstanceResource[],
-  options?: string // TODO: JSON
+  options?: any // TODO: JSON
   public: number
   created_at: string
   updated_at: string

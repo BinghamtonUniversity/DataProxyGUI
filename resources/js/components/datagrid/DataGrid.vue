@@ -332,25 +332,37 @@
             </td>
             <td :class="[currentTheme.cell, 'text-right']">
               <div class="relative" @click.stop>
-                <button @click="toggleMenu(row.id || row.name || idx)" :class="currentTheme.menuButton">
-                  <svg :class="currentTheme.menuIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <circle cx="12" cy="5" r="1.5"/>
-                    <circle cx="12" cy="12" r="1.5"/>
-                    <circle cx="12" cy="19" r="1.5"/>
-                  </svg>
+                <!-- Single action button when only one action -->
+                <button 
+                  v-if="rowActions.length === 1"
+                  @click="emitAction(rowActions[0].type, row)" 
+                  :class="[currentTheme.menuButton, rowActions[0].colorClass]"
+                >
+                  {{ rowActions[0].label }}
                 </button>
-                <div v-if="openMenuId === (row.id || row.name || idx)" :class="currentTheme.dropdown">
-                  <slot name="row-actions" :row="row" :close-menu="closeMenu">
-                    <!-- Configurable row actions -->
-                    <button 
-                      v-for="action in rowActions" 
-                      :key="action.type"
-                      @click="emitAction(action.type, row); closeMenu()" 
-                      :class="[currentTheme.dropdownItem, action.colorClass]"
-                    >
-                      {{ action.label }}
-                    </button>
-                  </slot>
+                
+                <!-- Dropdown menu when multiple actions -->
+                <div v-else>
+                  <button @click="toggleMenu(row.id || row.name || idx)" :class="currentTheme.menuButton">
+                    <svg :class="currentTheme.menuIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="5" r="1.5"/>
+                      <circle cx="12" cy="12" r="1.5"/>
+                      <circle cx="12" cy="19" r="1.5"/>
+                    </svg>
+                  </button>
+                  <div v-if="openMenuId === (row.id || row.name || idx)" :class="currentTheme.dropdown">
+                    <slot name="row-actions" :row="row" :close-menu="closeMenu">
+                      <!-- Configurable row actions -->
+                      <button 
+                        v-for="action in rowActions" 
+                        :key="action.type"
+                        @click="emitAction(action.type, row); closeMenu()" 
+                        :class="[currentTheme.dropdownItem, action.colorClass]"
+                      >
+                        {{ action.label }}
+                      </button>
+                    </slot>
+                  </div>
                 </div>
               </div>
             </td>

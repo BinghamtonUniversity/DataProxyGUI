@@ -439,8 +439,7 @@ onMounted(() => {
                 :showEdit="true"
                 :showDelete="true"
                 :rowActions="[
-                    { type: 'view', label: 'View', icon: 'eye', colorClass: 'text-green-600 hover:bg-green-50' },
-                    { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
+
                     { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
                 ]"
                 @create="openNewModal"

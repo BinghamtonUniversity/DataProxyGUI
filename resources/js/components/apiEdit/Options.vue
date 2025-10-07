@@ -76,9 +76,10 @@ const handleSave = async (apiData: ApiData | null, updateApiData: (updatedApiDat
 
     try {
         // Create updated API data with new options
+        console.log('Form data:', formData.value)
         const updatedApiData: ApiData = {
             ...apiData,
-            options: formData.value.fields // Replace options with just the fields array
+            options: formData.value // Replace options with just the fields array
         };
 
         // Update the local state using the updateApiData function
@@ -119,21 +120,10 @@ const handleSave = async (apiData: ApiData | null, updateApiData: (updatedApiDat
 
 // Load existing options from apiData
 const loadExistingOptions = (apiData: ApiData | null) => {
-    if (apiData && apiData.options && apiData.options.length > 0) {
+    if (apiData && apiData.options ) {
         // If options exist in apiData, check if it's an array of fields or objects with form_config
-        const existingOptions = apiData.options;
+        formData.value = apiData.options;
         
-        // Check if the first option has form_config (old format) or is directly fields (new format)
-        if (existingOptions[0] && existingOptions[0].form_config) {
-            // Old format: options contains objects with form_config
-            formData.value = existingOptions[0].form_config;
-        } else {
-            // New format: options is directly an array of fields
-            formData.value = {
-                name: 'options',
-                fields: existingOptions
-            };
-        }
     } else {
         // Initialize with default structure if no options exist
         formData.value = {
