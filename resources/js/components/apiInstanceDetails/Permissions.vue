@@ -505,10 +505,10 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                                     <DropdownMenuItem
                                                         v-for="url in apiInstanceData?.api_version?.version_urls"
                                                         :key="url.path"
-                                                        @click="newPermissionForm.route =`/${url.path}`"
-                                                        :class="['w-full', {'font-semibold text-blue-600': newPermissionForm.route === `/${url.path}*` }]"
+                                                        @click="newPermissionForm.route =`${url.path}`"
+                                                        :class="['w-full', {'font-semibold text-blue-600': newPermissionForm.route === `${url.path}*` }]"
                                                     >
-                                                        /{{url.path }}*
+                                                        {{url.path }}*
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
