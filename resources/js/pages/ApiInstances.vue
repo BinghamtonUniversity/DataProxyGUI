@@ -363,7 +363,7 @@ const columns: ColumnDef<ApiInstance>[] = [
     header: 'API Version ID',
     cell: ({ row }) => {
       const api_version_id = row.getValue('api_version_id') as number
-      return h('div', { class: 'truncate max-w-32' }, api_version_id || 'No Version ID' )
+      return h('div', { class: 'truncate max-w-32' }, api_version_id || 'Latest Version' )
     },
   },
   {
