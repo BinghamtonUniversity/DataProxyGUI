@@ -163,7 +163,10 @@ export interface ApiUser {
 interface ResourceConfig {
   tns: string,
   pass: string,
-  user: string
+  user: string,
+  name?: string,
+  server?: string,
+  value?: string
 }
 
 export interface Resource {

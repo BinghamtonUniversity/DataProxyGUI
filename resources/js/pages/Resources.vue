@@ -76,10 +76,16 @@ const newResourceForm = ref({
   name: '',
   type: '',
   resource_type: '',
-  config: {            
+  config: {
+    // Oracle fields
+    user: '',
     pass: '',
     tns: '',
-    user: ''
+    // MySQL/SQL Server fields
+    name: '',
+    server: '',
+    // Secret/Value fields
+    value: ''
   }
 })
 const newResourceLoading = ref(false)
@@ -103,7 +109,19 @@ const environmentTypes = computed(() => {
 })
 
 const openNewResourceDialog = () => {
-  newResourceForm.value = { name: '', type: '', resource_type: '', config: { user: '', pass: '', tns: '' } }
+  newResourceForm.value = { 
+    name: '', 
+    type: '', 
+    resource_type: '', 
+    config: { 
+      user: '', 
+      pass: '', 
+      tns: '',
+      name: '',
+      server: '',
+      value: ''
+    } 
+  }
   newResourceError.value = ''
   newResourceDialogOpen.value = true
 }
@@ -111,9 +129,43 @@ const openNewResourceDialog = () => {
 const closeNewResourceDialog = () => {
   newResourceDialogOpen.value = false
   newResourceError.value = ''
-  newResourceForm.value = { name: '', type: '', resource_type: '', config: { user: '', pass: '', tns: '' } }
+  newResourceForm.value = { 
+    name: '', 
+    type: '', 
+    resource_type: '', 
+    config: { 
+      user: '', 
+      pass: '', 
+      tns: '',
+      name: '',
+      server: '',
+      value: ''
+    } 
+  }
   isEditMode.value = false
   editingResourceId.value = null
+}
+
+const openEditResourceDialog = (resource: Resource, index: number) => {
+  isEditMode.value = true
+  editingResourceId.value = index
+  newResourceForm.value = {
+    name: resource.name,
+    type: resource.type,
+    resource_type: resource.resource_type,
+    config: {
+      // Oracle fields
+      user: resource.config?.user || '',
+      pass: resource.config?.pass || '',
+      tns: resource.config?.tns || '',
+      // MySQL/SQL Server fields
+      name: resource.config?.name || '',
+      server: resource.config?.server || '',
+      // Secret/Value fields
+      value: resource.config?.value || ''
+    }
+  }
+  newResourceDialogOpen.value = true
 }
 
 const submitNewResource = async (e: Event) => {
@@ -184,22 +236,6 @@ const handleDeleteResource = async (resource: Resource) => {
   } finally {
     // cleanup 
   }
-}
-
-const openEditResourceDialog = (resource: Resource, index:number) => {
-  isEditMode.value = true
-  editingResourceId.value = index
-  newResourceForm.value = {
-    name: resource.name,
-    type: resource.type,
-    resource_type: resource.resource_type,
-    config: {
-      user: resource.config?.user || '',
-      pass: resource.config?.pass || '',
-      tns: resource.config?.tns || ''
-    }
-  }
-  newResourceDialogOpen.value = true
 }
 
 
@@ -481,7 +517,7 @@ onMounted(() => fetchAllData())
                         </DropdownMenu>
                       </div>
                       <!-- CONFIGURATION SECTION -->
-                    <div class="border-t pt-4 mt-4 space-y-4">
+                    <!-- <div class="border-t pt-4 mt-4 space-y-4">
                       <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration</h3>
                       <div>
                         <Label>User</Label>
@@ -498,6 +534,87 @@ onMounted(() => fetchAllData())
                     </div>
 
                       <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
+                    </div> -->
+                      <div class="border-t pt-4 mt-4 space-y-4">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Configuration</h3>
+                        
+                        <!-- Oracle Configuration -->
+                        <template v-if="newResourceForm.resource_type === 'oracle'">
+                          <div>
+                            <Label>User</Label>
+                            <Input v-model="newResourceForm.config.user" placeholder="Database Username" />
+                          </div>
+                          <div>
+                            <Label>Password</Label>
+                            <Input type="password" v-model="newResourceForm.config.pass" placeholder="Database Password" />
+                          </div>
+                          <div>
+                            <Label>TNS</Label>
+                            <Input v-model="newResourceForm.config.tns" placeholder="TNS connection string" />
+                          </div>
+                        </template>
+
+                        <!-- MySQL Configuration -->
+                        <template v-else-if="newResourceForm.resource_type === 'mysql'">
+                          <div>
+                            <Label>Database Name</Label>
+                            <Input v-model="newResourceForm.config.name" placeholder="Database Name" />
+                          </div>
+                          <div>
+                            <Label>User</Label>
+                            <Input v-model="newResourceForm.config.user" placeholder="Database Username" />
+                          </div>
+                          <div>
+                            <Label>Password</Label>
+                            <Input type="password" v-model="newResourceForm.config.pass" placeholder="Database Password" />
+                          </div>
+                          <div>
+                            <Label>Server</Label>
+                            <Input v-model="newResourceForm.config.server" placeholder="Server Address" />
+                          </div>
+                        </template>
+
+                        <!-- SQL Server Configuration -->
+                        <template v-else-if="newResourceForm.resource_type === 'sqlsrv'">
+                          <div>
+                            <Label>Database Name</Label>
+                            <Input v-model="newResourceForm.config.name" placeholder="Database Name" />
+                          </div>
+                          <div>
+                            <Label>User</Label>
+                            <Input v-model="newResourceForm.config.user" placeholder="Database Username" />
+                          </div>
+                          <div>
+                            <Label>Password</Label>
+                            <Input type="password" v-model="newResourceForm.config.pass" placeholder="Database Password" />
+                          </div>
+                          <div>
+                            <Label>Server</Label>
+                            <Input v-model="newResourceForm.config.server" placeholder="Server Address" />
+                          </div>
+                        </template>
+
+                        <!-- Secret Value Configuration -->
+                        <template v-else-if="newResourceForm.resource_type === 'secret'">
+                          <div>
+                            <Label>Secret Value</Label>
+                            <Input type="password" v-model="newResourceForm.config.value" placeholder="Secret Value" />
+                          </div>
+                        </template>
+
+                        <!-- Value Configuration -->
+                        <template v-else-if="newResourceForm.resource_type === 'value'">
+                          <div>
+                            <Label>Value</Label>
+                            <Input v-model="newResourceForm.config.value" placeholder="Value" />
+                          </div>
+                        </template>
+
+                        <!-- No resource type selected -->
+                        <template v-else>
+                          <p class="text-sm text-muted-foreground">Select a resource type to configure</p>
+                        </template>
+                      </div>
                     </div>
                     <DialogFooter class="gap-2">
                       <DialogClose as-child>
