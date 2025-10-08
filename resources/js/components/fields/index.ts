@@ -20,3 +20,4 @@ export { default as FieldsetField } from './FieldsetField.vue';
 export { default as ArrayField } from './ArrayField.vue';
 export { default as OutputField } from './OutputField.vue';
 export { default as CronField } from './CronField.vue';
+export { default as MonacoEditorField } from './MonacoEditorField.vue';

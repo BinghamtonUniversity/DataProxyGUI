@@ -128,7 +128,8 @@ import {
   FieldsetField,
   ArrayField,
   OutputField,
-  CronField
+  CronField,
+  MonacoEditorField
 } from '../fields';
 
 const props = defineProps({
@@ -329,6 +330,9 @@ const getFieldComponent = (fieldType) => {
     case 'fieldset': return FieldsetField;
     case 'output': return OutputField;
     case 'cron': return CronField;
+    case 'monaco': return MonacoEditorField;
+    case 'monaco-editor': return MonacoEditorField;
+    case 'code': return MonacoEditorField;
     default: return null;
   }
 };
