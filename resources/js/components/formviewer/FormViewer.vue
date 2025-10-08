@@ -16,7 +16,7 @@
         <div 
           v-for="(field, index) in formConfig.fields.filter(field => field && typeof field === 'object' && field.name)" 
           :key="field?.name || index" 
-          v-show="shouldShowField(field, formData.value || {})"
+          v-show="shouldShowField(field, { ...formData })"
           :class="[
             getFieldLayoutClasses(field),
             'field-wrapper',
@@ -29,7 +29,7 @@
             :field="field"
             :value="formData[field.name] || []"
             :disabled="disabled || field.disabled"
-            :edit="edit && shouldEditField(field, formData.value || {})"
+            :edit="edit && shouldEditField(field, { ...formData })"
             @update:value="(value) => handleFieldChange(field.name, value)"
             @validation-error="(data) => handleValidationError(field.name, data)"
             @validation-success="(data) => handleValidationSuccess(field.name, data)"
@@ -39,16 +39,16 @@
             :is="getFieldComponent(field.type)"
             v-bind="field.type === 'fieldset' ? {
               ...field,
-              show: shouldShowField(field, formData.value || {}),
-              edit: shouldEditField(field, formData.value || {}),
-              formData: formData.value || {}
+              show: shouldShowField(field, { ...formData }),
+              edit: shouldEditField(field, { ...formData }),
+              formData: { ...formData }
             } : field.type === 'output' ? { field } : {
               ...field,
               errors: fieldErrors[field.name] || []
             }"
             :value="getSafeFieldValue(field)"
             :disabled="disabled || field.disabled"
-            :edit="edit && shouldEditField(field, formData.value || {})"
+            :edit="edit && shouldEditField(field, { ...formData })"
             @update:value="(value) => handleFieldChange(field.name, value)"
             @validation-error="(data) => handleValidationError(field.name, data)"
             @validation-success="(data) => handleValidationSuccess(field.name, data)"
@@ -127,7 +127,8 @@ import {
   SwitchField,
   FieldsetField,
   ArrayField,
-  OutputField
+  OutputField,
+  CronField
 } from '../fields';
 
 const props = defineProps({
@@ -199,10 +200,6 @@ const validationErrors = ref([]);
 const isSubmitting = ref(false);
 const fieldErrors = ref({}); // Track errors for individual fields
 
-// Debug computed property to see what's in formData
-const debugFormData = computed(() => {
-  return formData.value;
-});
 
 // Check if form data is initialized
 const isFormDataInitialized = computed(() => {
@@ -331,6 +328,7 @@ const getFieldComponent = (fieldType) => {
     case 'switch': return SwitchField;
     case 'fieldset': return FieldsetField;
     case 'output': return OutputField;
+    case 'cron': return CronField;
     default: return null;
   }
 };
@@ -364,6 +362,7 @@ const handleFieldChange = (fieldName, value) => {
     ...formData.value,
     [fieldName]: value
   };
+
 
   emit('update:modelValue', formData.value);
   validateField(fieldName);
@@ -602,7 +601,11 @@ const resetForm = () => {
 
 // Initialize form data
 const initializeFormData = () => {
-  if (!props.formConfig || !props.formConfig.fields || !Array.isArray(props.formConfig.fields)) return;
+
+  if (!props.formConfig || !props.formConfig.fields || !Array.isArray(props.formConfig.fields)) {
+
+    return;
+  }
   
   const newData = {};
   

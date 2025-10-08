@@ -247,8 +247,7 @@ const filteredOptions = computed(() => {
   // Filter flattened options
   const filteredFlat = flattenedOptions.value.filter(option => {
     const label = option.label.toLowerCase();
-    const value = option.value.toLowerCase();
-    return label.includes(search) || value.includes(search);
+    return label.includes(search);
   });
   // Re-group filtered options by optgroup
   const grouped = {};
@@ -274,14 +273,7 @@ const displayValue = computed(() => {
   // If we have a search value, show it
   if (searchValue.value !== '') {
     return searchValue.value;
-  }
-  
-  // Otherwise show the selected value
-  if (internalValue.value) {
-    const selectedOption = processedOptions.value.find(option => option.value === internalValue.value);
-    return selectedOption ? selectedOption.label : internalValue.value;
-  }
-  
+  } 
   return '';
 });
 
@@ -409,7 +401,7 @@ const selectOption = (option) => {
 };
 
 const toggleDropdown = () => {
-  if (disabled || !edit) return;
+  if (props.disabled || !props.edit) return;
   
   isOpen.value = !isOpen.value;
   if (isOpen.value) {

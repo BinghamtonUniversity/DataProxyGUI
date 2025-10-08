@@ -7,7 +7,7 @@ import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 
 // Use Laravel API routes instead of direct Django calls to avoid CORS
 const apiBaseUrl = '/api';
@@ -29,15 +29,17 @@ const submitting = ref(false);
 const schedules = ref<any[]>([]);
 const loading = ref(false); //TODO: change to true
 const error = ref<string | null>(null);
+const apiInstances = ref<any[]>([]);
+const environmentsData = ref<any[]>([]);
 
 // Toaster
 const { success, error: showError, warning, info } = useToaster();
 
-// Form configuration for environments
-const formConfig = {
+// Form configuration for schedules
+const scheduleSchema = {
     label: 'Schedules',
     description: 'A list of schedules with their information.',
-    name: "my-form",
+    name: "schedule-schema",
     files: false,
     fields: [
         {
@@ -67,14 +69,36 @@ const formConfig = {
         {
             name: "verb",
             label: "Verb",
-            type: "text",
-            placeholder: "Enter the verb of the schedule",
+            type: "select",
+            placeholder: "Select the verb of the schedule",
             value: "",
             help: "verb of the schedule",
             info: "verb of the schedule",
             width: "12",
             offset: "0",
-            required: true
+            required: true,
+            options: [
+                {
+                    label: "GET",
+                    value: "GET"
+                },
+                {
+                    label: "POST",
+                    value: "POST"
+                },
+                {
+                    label: "PUT",
+                    value: "PUT"
+                },
+                {
+                    label: "DELETE",
+                    value: "DELETE"
+                },
+                {
+                    label: "PATCH",
+                    value: "PATCH"
+                }
+            ]
         },
         {
             name: "api_instance_id",
@@ -209,6 +233,131 @@ const formConfig = {
     ]
 };
 
+// Form configuration for environments
+const formConfig = {
+    label: 'Schedules',
+    description: 'A list of schedules with their information.',
+    name: "schedule-form",
+    files: false,
+    fields: [
+        {
+            name: "name",
+            label: "Name",
+            type: "text",
+            placeholder: "Enter the name of the schedule",
+            value: "",
+            help: "Name of the schedule",
+            info: "Name of the schedule",
+            width: "12",
+            offset: "0",
+            required: true
+        },
+        {
+            name: "cron",
+            label: "Schedule",
+            type: "cron",
+            placeholder: "Enter the cron job of the schedule",
+            value: "",
+            help: "cron job of the schedule",
+            info: "cron job of the schedule",
+            width: "12",
+            offset: "0",
+            required: true
+        },
+        {
+            name: "verb",
+            label: "Verb",
+            type: "select",
+            placeholder: "Select the verb of the schedule",
+            value: "GET",
+            help: "verb of the schedule",
+            info: "verb of the schedule",
+            width: "12",
+            offset: "0",
+            required: true,
+            options: [
+                {
+                    label: "GET",
+                    value: "GET"
+                },
+                {
+                    label: "POST",
+                    value: "POST"
+                },
+                {
+                    label: "PUT",
+                    value: "PUT"
+                },
+                {
+                    label: "DELETE",
+                    value: "DELETE"
+                },
+                {
+                    label: "PATCH",
+                    value: "PATCH"
+                }
+            ]
+        },
+        {
+            name: "api_instance_id",
+            label: "Api Instance",
+            type: "combobox",
+            placeholder: "Select an API instance",
+            value: "",
+            help: "Select the API instance for this schedule",
+            info: "API instance for the schedule",
+            width: "12",
+            offset: "0",
+            options: [],
+            required: true
+        },
+        {
+            name: "route",
+            label: "Route",
+            type: "select",
+            placeholder: "Select the route of the schedule",
+            value: "",
+            help: "api instance id of the schedule",
+            info: "verb of the schedule",
+            width: "12",
+            offset: "0",
+            required: true,
+            options: [],
+            show: [
+                {
+                    "op": "and",
+                    "conditions": [
+                        {
+                            "type": "requires",
+                            "name": "api_instance_id"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            name: "enabled",
+            label: "Enabled",
+            type: "checkbox",
+            placeholder: "Enter the api instance id of the schedule",
+            value: "false",
+            options: [
+              
+                {
+                    label: "false",
+                    value: "false"
+                },
+                {
+                    label: "true",
+                    value: "true"
+                },
+            ],
+            width: "12",
+            offset: "0",
+            required: false
+        }
+    ]
+};
 // Format timestamp for display
 const formatTimestamp = (timestamp: string | null | undefined) => {
     if (!timestamp || timestamp === null || timestamp === undefined) {
@@ -256,42 +405,81 @@ const getCsrfToken = () => {
     return token;
 };
 
-// Fetch environments from API
+// Fetch schedules from API
 const fetchSchedules = async () => {
-    // try {
-    //     loading.value = true;
-    //     error.value = null;
-    //     console.log(`${apiBaseUrl}/environments`);
+    try {
+        loading.value = true;
+        error.value = null;
         
-    //     const response = await fetch(`${apiBaseUrl}/environments`, {
-    //         method: 'GET',
-    //         headers: {
-    //             'Accept': 'application/json',
-    //             'Content-Type': 'application/json',
-    //             'X-CSRF-TOKEN': getCsrfToken() || '',
-    //         },
-    //         credentials: 'same-origin'
-    //     });
+        const response = await fetch(`/api/schedulers`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        });
         
-    //     if (!response.ok) {
-    //         throw new Error(`HTTP error! status: ${response.status}`);
-    //     }
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
-    //     const data = await response.json();
-    //     // Format timestamps for display
-    //     environments.value = data.map((env: any) => ({
-    //         ...env,
-    //         created_at: formatTimestamp(env.created_at),
-    //         updated_at: formatTimestamp(env.updated_at)
-    //     }));
+        const data = await response.json();
+        schedules.value = data;
         
-    // } catch (err: any) {
-    //     error.value = err.message || 'Failed to fetch environments';
-    //     showError('Failed to fetch environments. Please try again.', 'Error');
-    //     console.error('Error fetching environments:', err);
-    // } finally {
-    //     loading.value = false;
-    // }
+    } catch (err: any) {
+        error.value = err.message || 'Failed to fetch schedules';
+        showError('Failed to fetch schedules. Please try again.', 'Error');
+        console.error('Error fetching schedules:', err);
+    } finally {
+        loading.value = false;
+    }
+};
+
+// Fetch API instances for the combobox
+const fetchApiInstances = async () => {
+    try {
+        const response = await fetch(`/api/api_instances`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const environmentsResponse = await fetch(`/api/environments`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        });
+        
+        if (!environmentsResponse.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+         environmentsData.value = await environmentsResponse.json();
+        
+        const data = await response.json();
+        apiInstances.value = data;
+
+        formConfig.fields[3].options = apiInstances.value.map(instance => ({
+            label: `${instance.name} (${environmentsData.value.find((environment: any) => environment.id === instance.environment_id)?.name || 'Unknown Environment'})`,
+            value: instance.id
+        }));
+        
+    } catch (err: any) {
+        console.error('Error fetching API instances:', err);
+        showError('Failed to fetch API instances. Please try again.', 'Error');
+    }
 };
 
 // Modal functions
@@ -489,10 +677,20 @@ const handleDelete = async (selectedRowIds?: number[]) => {
     //     warning('Please select at least one environment to delete.', 'Selection Required');
     // }
 };
-
+const handleFormDataUpdate = (data: any) => {
+    if (data.api_instance_id) {
+        formConfig.fields[4].options = apiInstances.value.find(instance => instance.id === data.api_instance_id)?.route_user_map.map((route: any) => ({
+            label: `${route.route}`,
+            value: route.route
+        }));
+    }
+};
 // Fetch data on component mount
-onMounted(() => {
-    fetchSchedules();
+onMounted(async () => {
+    await Promise.all([
+        fetchSchedules(),
+        fetchApiInstances()
+    ]);
 });
 </script>
 
@@ -514,7 +712,7 @@ onMounted(() => {
             <!-- DataGrid -->
             <DataGrid 
                 v-else
-                :schema="formConfig"
+                :schema="scheduleSchema"
                 :data="schedules"
                 theme="default"
                 :showNew="true"
@@ -532,10 +730,10 @@ onMounted(() => {
                          >
              </DataGrid>
 
-            <!-- Modal for New/Edit Environment -->
+            <!-- Modal for New/Edit Schedule -->
             <AlertModal 
                 :isOpen="showModal"
-                :title="modalMode === 'new' ? 'Add New Environment' : 'Edit Environment'"
+                :title="modalMode === 'new' ? 'Add New Schedule' : 'Edit Schedule'"
                 @close="closeModal"
             >
                                                                    <FormViewer 
@@ -544,6 +742,7 @@ onMounted(() => {
                       :cancelAction="'close'"
                       @submit="handleFormSubmit"
                       @action="handleFormAction"
+                      @update:modelValue="handleFormDataUpdate"
                       :disabled="submitting"
                   />
                 

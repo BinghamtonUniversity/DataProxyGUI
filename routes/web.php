@@ -110,6 +110,12 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
     Route::post('/api_instances', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesStore']);
     Route::put('/api_instances/{id}', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesUpdate']);
 
+    //Schedulers
+    Route::get('/schedulers', [App\Http\Controllers\Api\ApiController::class, 'schedulersIndex']);
+    Route::post('/schedulers', [App\Http\Controllers\Api\ApiController::class, 'schedulersStore']);
+    Route::put('/schedulers/{id}', [App\Http\Controllers\Api\ApiController::class, 'schedulersUpdate']);
+    Route::delete('/schedulers/{id}', [App\Http\Controllers\Api\ApiController::class, 'schedulersDestroy']);
+
     //API Users
     Route::get('/api_users', [App\Http\Controllers\Api\ApiController::class, 'apiUsersIndex']);
     Route::post('/api_users', [App\Http\Controllers\Api\ApiController::class, 'apiUsersStore']);
