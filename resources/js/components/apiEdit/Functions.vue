@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
-import { type ApiData, type ApiVersionFunction } from '@/types'
+import { Api, type ApiData, type ApiVersionFunction } from '@/types'
 import {
   Dialog,
   DialogTrigger,
@@ -21,6 +21,7 @@ import { Trash2 } from 'lucide-vue-next'
 interface Props {
     api_id: string
     api_type: string
+    api: Api | null
     apiData: ApiData | null
     loadingApiData: boolean
     apiError: string
@@ -126,26 +127,26 @@ const handleCreateNewView = async () => {
             ...props.apiData,
             version_views: [...props.apiData.version_views, newFunction]
         }
-        console.log('Updated API Data:', updatedApiData)
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
+        // console.log('Updated API Data:', updatedApiData)
+        // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+        //     method: 'PUT',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'Accept': 'application/json',
+        //         'X-CSRF-TOKEN': getCsrfToken() || '',
+        //     },
+        //     body: JSON.stringify(updatedApiData)
+        // })
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
+        // if (!response.ok) {
+        //     const errorData = await response.json().catch(() => ({}))
+        //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        // }
 
-        const result = await response.json()
+        // const result = await response.json()
         
         // Update the local state through parent
-        props.updateApiData(result || updatedApiData)
+        props.updateApiData(updatedApiData)
         
         // Select the newly created function
         selectedFunction.value = newFunction
@@ -337,7 +338,7 @@ const resetNewViewDialog = () => {
                         <Editor 
                             v-if="selectedFunction" 
                             :code="selectedFunction.content" 
-                            :language="api_type === 'python' || api_type === 'php' ? api_type : undefined"
+                            :language="api?.api_type as 'python' | 'php' | undefined"
                             :is-saving="isSaving"
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"

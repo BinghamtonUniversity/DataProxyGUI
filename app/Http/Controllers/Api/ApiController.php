@@ -199,6 +199,20 @@ class ApiController extends Controller
         ], $result['status']);
     }
 
+    public function apisShow($id): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', "apis/{$id}");
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch api {$id}",
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
     public function apisStore(Request $request): JsonResponse
     {
         Log::info('Store method called', [
