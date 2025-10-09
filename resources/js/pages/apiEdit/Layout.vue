@@ -2,7 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, ApiData } from '@/types'
+import { type BreadcrumbItem, Api, ApiData } from '@/types'
 import Heading from '@/components/Heading.vue'
 import { Button } from '@/components/ui/button'
 
@@ -18,10 +18,9 @@ import BottomSheet from '@/components/BottomSheet.vue'
 import AlertModal from '@/components/AlertModal.vue'
 import FormViewer from '@/components/formviewer/FormViewer.vue'
 import { useToaster } from '@/composables/useToaster'
-
+import Toaster from '@/components/toaster/Toaster.vue'
 
 interface Props {
-    api_type: string
     api_id: string
     activeTab: string
 }
@@ -77,8 +76,8 @@ const publishFormConfig = ref({
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
-        title: 'API Edit',
-        href: `/apis/${props.api_type}/${props.api_id}/routes`,
+        title: `API Edit`,
+        href: `/apis/${props.api_id}/routes`,
     },
 ]
 
@@ -124,6 +123,7 @@ const tabs = [
 
 // Data fetching logic - runs once when component mounts
 const apiData = ref<ApiData | null>(null)
+const api = ref<Api | null>(null)
 const loadingApiData = ref(true)
 const apiError = ref('')
 const apiBaseUrl = '/api'
@@ -139,6 +139,13 @@ const dropdownRef = ref<HTMLElement | null>(null)
 const getCsrfToken = () => {
     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     return token;
+}
+
+const fetchApi = async () => {
+    const response = await fetch(`/ajax/apis/${props.api_id}`)
+    if (!response.ok) throw new Error('Failed to fetch API')
+    
+    api.value = await response.json()
 }
 
 const fetchApiData = async () => {
@@ -164,6 +171,7 @@ const updateApiData = (updatedApiData: ApiData) => {
 }
 
 const refreshApiData = () => {
+    fetchApi()
     fetchApiData()
 }
 
@@ -247,7 +255,7 @@ const openDiffModal = async (version: any) => {
     }
     
     // Navigate to comparison page
-    window.location.href = `/apis/${props.api_type}/${props.api_id}/compare/${version.id}`
+    window.location.href = `/apis/${props.api_id}/compare/${version.id}`
 }
 
 // Check if latest version is already stable
@@ -351,15 +359,31 @@ const handleDevelopersAction = (action: string) => {
 }
 
 // Save function
-const handleSave = () => {
-    console.log('Save API data')
-    // Implement save functionality
-    // This could save the current API configuration, settings, etc.
+const handleSave = async () => {
+
+    const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken() || '',
+        },
+        body: JSON.stringify(apiData.value)
+    })
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        showError(errorData.message || `HTTP error! status: ${response.status}`)
+        return
+    }
+    success('API data saved successfully!')
+    const responseData = await response.json()
+    updateApiData(responseData)
 }
 
 // Navigation helper
 const navigateToTab = (tabId: string) => {
-    router.get(`/apis/${props.api_type}/${props.api_id}/${tabId}`, {}, {
+    router.get(`/apis/${props.api_id}/${tabId}`, {}, {
         preserveState: true,
         preserveScroll: true,
         // only: ['activeTab'] // Only update the activeTab prop
@@ -374,7 +398,8 @@ const activeComponent = computed(() => {
 // Component props to pass down
 const componentProps = computed(() => ({
     api_id: props.api_id,
-    api_type: props.api_type,
+    api_type: 'php', // Default value since you're removing it from URL
+    api: api.value,
     apiData: apiData.value,
     loadingApiData: loadingApiData.value,
     apiError: apiError.value,
@@ -384,7 +409,16 @@ const componentProps = computed(() => ({
 
 // Fetch data on mount
 onMounted(() => {
+    fetchApi()
     fetchApiData()
+    
+    // Add keyboard event listener for Ctrl+S
+    document.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+            event.preventDefault() // Prevent browser's default save dialog
+            handleSave()
+        }
+    })
     
     // Close dropdown when clicking outside
     document.addEventListener('click', (event) => {
@@ -399,13 +433,18 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="API Edit" />
+    <Head :title="' API Edit'" />
     
     <AppLayout :breadcrumbs="breadcrumbItems">
         <div class="px-4 py-6">
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">API - {{ props.api_id }}</h1>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">API - {{ api?.name }}</h1>
+                        <div class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs font-medium rounded-md border border-blue-200 dark:border-blue-800">
+                            {{ api?.api_type }}
+                        </div>
+                    </div>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Manage your API settings</p>
                 </div>
                 
@@ -534,7 +573,6 @@ onMounted(() => {
         >
             <ApiDevelopers 
                 :api_id="props.api_id"
-                :api_type="props.api_type"
                 :apiData="apiData"
                 :loadingApiData="loadingApiData"
                 :apiError="apiError"
@@ -724,4 +762,5 @@ onMounted(() => {
             </div>
         </AlertModal>
     </AppLayout>
+    <Toaster />
 </template>

@@ -15,11 +15,23 @@
 function evaluateCondition(condition, formData) {
   const { type, name, value } = condition;
   
-  if (!name || !formData.hasOwnProperty(name)) {
+  if (!name) {
+    console.log('No field name provided');
+    return false;
+  }
+  
+  // Handle case where formData is undefined or null
+  if (!formData || typeof formData !== 'object') {
+    console.log('formData is not a valid object:', formData);
     return false;
   }
   
   const fieldValue = formData[name];
+  if (fieldValue === undefined) {
+    console.log('Field not found in formData:', name, 'Available fields:', Object.keys(formData), 'formData:', formData);
+    return false;
+  }
+  
   
   switch (type) {
     case 'equals':
@@ -75,7 +87,7 @@ function evaluateCondition(condition, formData) {
       return fieldValue && fieldValue !== '' && (!Array.isArray(fieldValue) || fieldValue.length > 0);
       
     case 'requires':
-      return fieldValue && fieldValue !== '' && fieldValue !== null && fieldValue !== undefined && (!Array.isArray(fieldValue) || fieldValue.length > 0);
+      return fieldValue !== null && fieldValue !== undefined && fieldValue !== '' && (!Array.isArray(fieldValue) || fieldValue.length > 0);
       
     default:
       return false;
@@ -93,6 +105,12 @@ function evaluateConditionGroup(conditionGroup, formData) {
   
   if (!conditions || !Array.isArray(conditions)) {
     return true;
+  }
+  
+  // Handle case where formData is undefined or null
+  if (!formData || typeof formData !== 'object') {
+    console.log('evaluateConditionGroup: formData is not valid:', formData);
+    return false;
   }
   
   const results = conditions.map(condition => {

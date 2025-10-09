@@ -26,7 +26,7 @@ const props = defineProps<Props>()
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: 'API Edit',
-        href: `/apis/${props.api_type}/${props.api_id}/options`,
+        href: `/apis/${props.api_id}/options`,
     },
 ];
 

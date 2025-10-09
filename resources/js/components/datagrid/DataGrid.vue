@@ -499,7 +499,7 @@ const props = defineProps({
     default: () => []
   }
 });
-const emit = defineEmits(['rowClick', 'rowActionHandler', 'create', 'edit', 'multiple-edit', 'delete', 'upload', 'actionHandler']);
+const emit = defineEmits(['rowClick', 'rowActionHandler', 'create', 'edit', 'multiple-edit', 'delete', 'upload', 'actionHandler', 'action']);
 
 const searchQuery = ref('');
 const filters = ref({});

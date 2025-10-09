@@ -70,6 +70,38 @@ const newApiForm = ref({
   description: '',
   tags: ''
 })
+const newApiFormConfig = {
+  label: 'New API',
+    description: 'Create a new API.',
+    name: "new-api-form",
+    files: false,
+    fields: [
+  {
+    name: 'name',
+    label: 'Name',
+    type: 'text',
+    required: true
+  },
+ {
+    name: 'description',
+    label: 'Description',
+    type: 'text',
+    required: false
+  },
+ {
+    name: 'api_type',
+    label: 'Type',
+    type: 'select',
+    required: true,
+    options: ['python', 'php', 'javascript']
+  },
+  {
+    name: 'tags',
+    label: 'Tags',
+    type: 'text',
+    required: false
+  }]
+};
 const newApiLoading = ref(false)
 const newApiError = ref('')
 
@@ -212,6 +244,45 @@ const handleDeleteApi = async (api: Api) => {
   }
 }
 
+const submitNewApi2 = async (formValues: any)=> {
+
+  newApiLoading.value = true
+  newApiError.value = ''
+  try {
+    let url = `/api/apis`
+    let request_method = 'POST'
+    console.log(request_method)
+    
+    if (isEditMode.value && editingApiId.value) {
+      url = `/api/apis/${editingApiId.value}`
+      request_method = 'PUT'
+    }
+    const body = isEditMode.value && editingApiId.value
+      ? { ...formValues, id: editingApiId.value }
+      : {... formValues}
+
+    const response = await fetch(url, {
+      method: request_method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': getCsrfToken() || '',
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) throw new Error('Failed to save API')
+    closeNewApiDialog()
+    await fetchApis()
+    // refresh  API list here
+  } catch (err: any) {
+    newApiError.value = err.message || 'Error saving API'
+  } finally {
+    newApiLoading.value = false
+    isEditMode.value = false
+    editingApiId.value = null
+  }
+}
 const openEditApiDialog = (api: Api) => {
   isEditMode.value = true
   editingApiId.value = api.id
@@ -236,7 +307,7 @@ const handleRowClick = (api: Api, event: MouseEvent) => {
   }
   
   // console.log('View details for API:', api)
-  router.visit(`/apis/${api.api_type}/${api.id}/routes`)
+  router.visit(`/apis/${api.id}/routes`)
 }
 
 // Define table columns
@@ -446,7 +517,14 @@ onMounted(fetchApis)
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <form @submit="submitNewApi" class="space-y-6">
+              
+                  <FormViewer 
+                  :formConfig="newApiFormConfig" 
+              
+                  @submit="submitNewApi2"
+              
+                  />
+                  <!-- <form @submit="submitNewApi" class="space-y-6">
                     <DialogHeader>
                       <DialogTitle>{{ isEditMode ? 'Edit API' : 'Create New API' }}</DialogTitle>
                     </DialogHeader>
@@ -474,7 +552,7 @@ onMounted(fetchApis)
                         <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
                       </Button>
                     </DialogFooter>
-                  </form>
+                  </form> -->
                 </DialogContent>
               </Dialog>
 

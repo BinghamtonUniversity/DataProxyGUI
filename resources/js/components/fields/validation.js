@@ -332,12 +332,12 @@ const rules = {
   },
   combobox: (value, config) => {
     if (config && config.type === 'combobox') {
-      if (config.required && (!value || value.trim() === '')) {
+      if (config.required && (!value || value === "")) {
         return 'This field is required.';
       }
       
       // If custom values are not allowed, check if value is in options
-      if (!config.allowCustom && value && value.trim() !== '') {
+      if (!config.allowCustom && value && value !== '') {
         const validValues = getValidValuesFromOptions(config.options);
         if (validValues.length > 0 && !validValues.includes(value)) {
           return 'Please select a valid option from the list.';
