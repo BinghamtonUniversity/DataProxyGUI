@@ -202,6 +202,11 @@ const shouldShowDiffView = computed(() => {
     return activeTab.value === 'functions'
 })
 
+// Check if we should show JSON comparison for options
+const shouldShowJsonComparison = computed(() => {
+    return activeTab.value === 'options'
+})
+
 // Generate side-by-side diff for functions
 const functionSideBySideDiff = computed(() => {
     if (!functionDiffData.value) return null
@@ -259,6 +264,19 @@ const functionDiffData = computed(() => {
     return {
         current: currentFunctions,
         selected: selectedFunctions
+    }
+})
+
+// Options JSON comparison data
+const optionsJsonData = computed(() => {
+    if (!currentApiData.value || !selectedApiData.value) return null
+    
+    const currentOptions = currentApiData.value.options || {}
+    const selectedOptions = selectedApiData.value.options || {}
+    
+    return {
+        current: JSON.stringify(currentOptions, null, 2),
+        selected: JSON.stringify(selectedOptions, null, 2)
     }
 })
 
@@ -448,8 +466,63 @@ onMounted(() => {
 
             <!-- Comparison Content -->
             <div v-else class="flex-1 flex overflow-hidden" :class="{ 'select-none': isResizing }">
+                <!-- JSON Comparison View for Options -->
+                <div v-if="shouldShowJsonComparison" class="flex-1 flex flex-col overflow-hidden">
+                    <!-- Header -->
+                    <div class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-medium text-gray-900 dark:text-white">Options Comparison</h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">
+                                    Compare configuration options between versions
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-medium rounded">
+                                    Current
+                                </div>
+                                <div class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs font-medium rounded">
+                                    Selected
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- JSON Comparison Content -->
+                    <div class="flex-1 overflow-auto">
+                        <div class="p-4">
+                            <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                                <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="font-medium text-gray-900 dark:text-white">Options JSON Comparison</h4>
+                                        <div class="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                                                <span>Selected (Historical)</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                                                <span>Current (Latest)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-900">
+                                    <CodeDiff
+                                        :old-string="optionsJsonData?.selected || '{}'"
+                                        :new-string="optionsJsonData?.current || '{}'"
+                                        :language="'json'"
+                                        :context="10"
+                                        :output-format="'side-by-side'"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Side-by-Side Diff View for Functions -->
-                <div v-if="shouldShowDiffView" class="flex-1 flex flex-col overflow-hidden">
+                <div v-else-if="shouldShowDiffView" class="flex-1 flex flex-col overflow-hidden">
                     <!-- Header -->
                     <div class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
                         <div class="flex items-center justify-between">
@@ -558,7 +631,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Normal Comparison View for Other Tabs -->
-                <div v-else class="flex-1 flex overflow-hidden">
+                <div v-else-if="!shouldShowJsonComparison" class="flex-1 flex overflow-hidden">
                 <!-- Left Panel - Selected Version (Historical) -->
                 <div 
                     class="overflow-hidden selected-version-panel"
