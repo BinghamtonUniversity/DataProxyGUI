@@ -166,6 +166,7 @@ const submitNewRoute = async (e: Event) => {
         newRouteLoading.value = false
         return
     }
+
     
     try {
         const newRoute = {
@@ -175,6 +176,21 @@ const submitNewRoute = async (e: Event) => {
             view_name: newRouteForm.value.view_name,
             required: newRouteForm.value.required.filter(param => param.name.trim() && param.description.trim() && param.example.trim()),
             optional: newRouteForm.value.optional.filter(param => param.name.trim() && param.description.trim() && param.example.trim()),
+        }
+
+        // Duplicate verb + path check
+        const existingRoutes = props.apiData.version_urls || []
+        const duplicate = existingRoutes.some((route, index) => {
+            const samePath = route.path.trim() === newRoute.path
+            const sameVerb = route.verb.trim().toUpperCase() === newRoute.verb
+            const isSameRoute = isEditMode.value && index === editingRouteIndex.value
+            return samePath && sameVerb && !isSameRoute
+        })
+
+        if (duplicate) {
+            newRouteError.value = `A route with path "${newRoute.path}" and verb "${newRoute.verb}" already exists.`
+            newRouteLoading.value = false
+            return
         }
         
         let updatedApiData

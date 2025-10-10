@@ -172,10 +172,33 @@ const submitNewResource = async (e: Event) => {
   e.preventDefault()
   newResourceLoading.value = true
   newResourceError.value = ''
+
+  if (!newResourceForm.value.name.trim()) {
+    newResourceError.value = 'Name is required.'
+    newResourceLoading.value = false
+    return
+  }
+
+  // TO-DO: Make config required
+
+
+  // Duplicate name + environment check
+  const duplicate = resources.value.find((res, idx) =>
+    res.name.toLowerCase().trim() === newResourceForm.value.name.trim().toLowerCase() &&
+      res.type === newResourceForm.value.type &&
+      res.name === newResourceForm.value.name &&
+      (isEditMode.value ? idx !== editingResourceId.value : true)
+    )
+
+  if (duplicate) {
+    newResourceError.value = `A Resource with name "${newResourceForm.value.name}" already exists in environment "${newResourceForm.value.type}".`
+    newResourceLoading.value = false
+    return
+  }
+
   try {
     let url = `/ajax/resources`
     let request_method = 'POST'
-    console.log(request_method)
     
     if (isEditMode.value && editingResourceId.value) {
       url = `/ajax/resources/${editingResourceId.value}`
@@ -614,7 +637,9 @@ onMounted(() => fetchAllData())
                         <template v-else>
                           <p class="text-sm text-muted-foreground">Select a resource type to configure</p>
                         </template>
+                        
                       </div>
+                      <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
                     </div>
                     <DialogFooter class="gap-2">
                       <DialogClose as-child>

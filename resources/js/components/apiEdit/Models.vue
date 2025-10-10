@@ -196,6 +196,20 @@ const submitNewModel = async (e: Event) => {
       class_meta: newModelForm.value.class_meta.filter(meta => meta.name.trim() && meta.value.trim()),
       class_methods: newModelForm.value.class_methods ?? []
     }
+
+    // Duplicate Model name check
+    const existingModels = props.apiData.version_models || []
+    const duplicate = existingModels.some((model, index) => {
+        const sameName = model.name.trim() === newModel.name.trim()
+        const isSameModel = isEditMode.value && index === editingModelIndex.value
+        return sameName && !isSameModel
+    })
+
+    if (duplicate) {
+        newModelError.value = `A model with name "${newModel.name}" already exists.`
+        newModelLoading.value = false
+        return
+    }
     
     let updatedApiData
 

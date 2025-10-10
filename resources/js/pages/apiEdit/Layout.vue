@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, onUnmounted } from 'vue'
+import { onMounted, ref, computed, onUnmounted, watch } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem, Api, ApiData } from '@/types'
@@ -26,6 +26,10 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+// Track unsaved changes
+const hasUnsavedChanges = ref(false)
+const originalApiData = ref<ApiData | null>(null)
 
 // Toaster
 const { success, error: showError, warning, info } = useToaster()
@@ -157,7 +161,11 @@ const fetchApiData = async () => {
         // console.log('Fetch response:', response)
 
         if (!response.ok) throw new Error('Failed to fetch API data')
-        apiData.value = await response.json()
+        const data = await response.json()
+        apiData.value = data
+
+        originalApiData.value = JSON.parse(JSON.stringify(data)) // Deep clone
+        hasUnsavedChanges.value = false
     } catch (e: any) {
         apiError.value = e.message || 'Error fetching API data'
         apiData.value = null
@@ -165,6 +173,14 @@ const fetchApiData = async () => {
         loadingApiData.value = false
     }
 }
+
+// Watch for changes in apiData
+watch(apiData, (newVal) => {
+    if (originalApiData.value && newVal) {
+        // Compare to detect changes
+        hasUnsavedChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalApiData.value)
+    }
+}, { deep: true })
 
 const updateApiData = (updatedApiData: ApiData) => {
     apiData.value = updatedApiData
@@ -397,7 +413,12 @@ const handleSave = async () => {
     success('API data saved successfully!')
     const responseData = await response.json()
     updateApiData(responseData)
+
+    // Reset dirty state after successful save
+    originalApiData.value = JSON.parse(JSON.stringify(responseData))
+    hasUnsavedChanges.value = false
 }
+
 
 // Navigation helper
 const navigateToTab = (tabId: string) => {
@@ -407,6 +428,20 @@ const navigateToTab = (tabId: string) => {
         // only: ['activeTab'] // Only update the activeTab prop
     })
 }
+
+// Browser/tab close warning
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (hasUnsavedChanges.value) {
+        event.preventDefault()
+        // use @ts-ignore to avoid type error
+        // @ts-ignore
+        event.returnValue = '' // Chrome requires returnValue to be set but use @ts-ignore to avoid type error
+    }
+}
+
+// Inertia navigation warning
+let removeInertiaHook: (() => void) | null = null
+
 
 // Get current active component
 const activeComponent = computed(() => {
@@ -449,6 +484,20 @@ onMounted(() => {
     
     document.addEventListener('keydown', keydownHandler)
     document.addEventListener('click', clickHandler)
+
+    // Add beforeunload listener
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    // Add Inertia navigation hook
+    removeInertiaHook = router.on('before', (event) => {
+        if (hasUnsavedChanges.value) {
+            // Show confirmation dialog
+            const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
+            if (!confirmed) {
+                return false // Cancel navigation
+            }
+        }
+    })
 })
 
 // Clean up event listeners when component unmounts
@@ -458,6 +507,11 @@ onUnmounted(() => {
     }
     if (clickHandler) {
         document.removeEventListener('click', clickHandler)
+    }
+
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+    if (removeInertiaHook) {
+        removeInertiaHook()
     }
 })
 </script>
