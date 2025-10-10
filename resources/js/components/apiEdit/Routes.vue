@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useVueTable,
 } from '@tanstack/vue-table'
-import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
+import { ArrowUpDown, ChevronDown, Plus, Trash2, Settings } from 'lucide-vue-next'
 import { h, ref, computed } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
@@ -63,19 +63,27 @@ const props = defineProps<Props>()
 
 // New Route Dialog
 const verbDropdownOpen = ref(false)
+const viewDropdownOpen = ref(false)
 const newRouteDialogOpen = ref(false)
 const newRouteForm = ref({
     description: '',
     path: '',
     verb: 'GET',
     view_name: '',
-    required: '',
-    optional: ''
+    required: [] as { name: string; example: string; description: string }[],
+    optional: [] as { name: string; example: string; description: string }[]
 })
 const newRouteLoading = ref(false)
 const newRouteError = ref('')
 const isEditMode = ref(false)
 const editingRouteIndex = ref<number | null>(null)
+
+//Params dialog
+const paramsDialogOpen = ref(false)
+const paramsForm = ref({ required: [] as { name: string; example: string; description: string }[],
+                         optional: [] as { name: string; example: string; description: string }[] })
+const editingParamsRoute = ref<RouteData | null>(null)
+const editingParamsIndex = ref<number | null>(null)
 
 // Toaster
 const { success, error, warning, info } = useToaster();
@@ -94,8 +102,8 @@ const openNewRouteDialog = () => {
     path: '',
     verb: 'GET',
     view_name: '',
-    required: '',
-    optional: ''
+    required: [],
+    optional: []
   }
   newRouteError.value = ''
   newRouteDialogOpen.value = true
@@ -106,6 +114,46 @@ const closeNewRouteDialog = () => {
   newRouteError.value = ''
   isEditMode.value = false
   editingRouteIndex.value = null
+}
+
+
+const openParamsDialog = (route: RouteData, index: number) => {
+  editingParamsRoute.value = route
+  editingParamsIndex.value = index
+  paramsForm.value = {
+    required: route.required ? JSON.parse(JSON.stringify(route.required)) : [],
+    optional: route.optional ? JSON.parse(JSON.stringify(route.optional)) : [],
+  }
+  paramsDialogOpen.value = true
+}
+
+const closeParamsDialog = () => {
+  paramsDialogOpen.value = false
+  editingParamsRoute.value = null
+  editingParamsIndex.value = null
+  paramsForm.value = { required: [], optional: [] }
+}
+
+const addRequiredParam = () => paramsForm.value.required.push({ name: '', example: '', description: '' })
+const removeRequiredParam = (index: number) => paramsForm.value.required.splice(index, 1)
+
+const addOptionalParam = () => paramsForm.value.optional.push({ name: '', example: '', description: '' })
+const removeOptionalParam = (index: number) => paramsForm.value.optional.splice(index, 1)
+
+const submitParams = async () => {
+  if (!props.apiData || editingParamsIndex.value === null) return
+
+  const updatedRoutes = [...props.apiData.version_urls]
+  updatedRoutes[editingParamsIndex.value] = {
+    ...updatedRoutes[editingParamsIndex.value],
+    required: paramsForm.value.required.filter(p => p.name.trim()),
+    optional: paramsForm.value.optional.filter(p => p.name.trim()),
+  }
+
+  const updatedApiData = { ...props.apiData, version_urls: updatedRoutes }
+  props.updateApiData(updatedApiData)
+  success('Parameters updated successfully', 'Updated')
+  closeParamsDialog()
 }
 
 const submitNewRoute = async (e: Event) => {
@@ -125,8 +173,8 @@ const submitNewRoute = async (e: Event) => {
             path: newRouteForm.value.path,
             verb: newRouteForm.value.verb,
             view_name: newRouteForm.value.view_name,
-            required: (newRouteForm.value.required || '').split(',').map(s => ({ name: s.trim() })).filter(p => p.name),
-            optional: (newRouteForm.value.optional || '').split(',').map(s => ({ name: s.trim() })).filter(p => p.name),
+            required: newRouteForm.value.required.filter(param => param.name.trim() && param.description.trim() && param.example.trim()),
+            optional: newRouteForm.value.optional.filter(param => param.name.trim() && param.description.trim() && param.example.trim()),
         }
         
         let updatedApiData
@@ -235,118 +283,138 @@ const openEditRouteDialog = (route: RouteData, index: number) => {
     path: route.path,
     verb: route.verb,
     view_name: route.view_name,
-    required: route.required?.map(p => p.name).join(', ') || '',
-    optional: route.optional?.map(p => p.name).join(', ') || ''
+    required: route.required?.map(p => ({
+      name: p.name,
+      description: p.description || '',
+      example: p.example || ''
+    })) || [],
+    optional: route.required?.map(p => ({
+      name: p.name,
+      description: p.description || '',
+      example: p.example || ''
+    })) || []
   }
   newRouteDialogOpen.value = true
 }
 
 // Define table columns
 const columns: ColumnDef<RouteData>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => h(Checkbox, {
-      'modelValue': table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate'),
-      'onUpdate:modelValue': value => table.toggleAllPageRowsSelected(!!value),
-      'ariaLabel': 'Select all',
-    }),
-    cell: ({ row }) => h('div', { onClick: e => e.stopPropagation() }, [
-        h(Checkbox, {
-            'modelValue': row.getIsSelected(),
-            'onUpdate:modelValue': value => row.toggleSelected(!!value),
-            'ariaLabel': 'Select row',
-        })
-    ]),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: 'view_name',
-    header: ({ column }) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['View Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
+    {
+        id: 'select',
+        header: ({ table }) => h(Checkbox, {
+        'modelValue': table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate'),
+        'onUpdate:modelValue': value => table.toggleAllPageRowsSelected(!!value),
+        'ariaLabel': 'Select all',
+        }),
+        cell: ({ row }) => h('div', { onClick: e => e.stopPropagation() }, [
+            h(Checkbox, {
+                'modelValue': row.getIsSelected(),
+                'onUpdate:modelValue': value => row.toggleSelected(!!value),
+                'ariaLabel': 'Select row',
+            })
+        ]),
+        enableSorting: false,
+        enableHiding: false,
     },
-    cell: ({ row }) => h('div', { class: 'font-medium text-blue-600' }, row.getValue('view_name')),
-  },
-  {
-    accessorKey: 'path',
-    header: ({ column }) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Path', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
+    {
+        accessorKey: 'view_name',
+        header: ({ column }) => {
+        return h(Button, {
+            variant: 'ghost',
+            onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
+        }, () => ['View Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
+        },
+        cell: ({ row }) => h('div', { class: 'font-medium text-blue-600' }, row.getValue('view_name')),
     },
-    cell: ({ row }) => h('code', { 
-      class: 'bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono' 
-    }, row.getValue('path')),
-  },
-  {
-    accessorKey: 'verb',
-    header: 'HTTP Method',
-    cell: ({ row }) => {
-      const verb = row.getValue('verb') as string
-      const verbColors: Record<string, string> = {
-        'GET': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-        'POST': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-        'PUT': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-        'DELETE': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-        'PATCH': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
-      }
-      return h('span', { 
-        class: `inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${verbColors[verb] || 'bg-gray-100 text-gray-800'}`
-      }, verb)
+    {
+        accessorKey: 'path',
+        header: ({ column }) => {
+        return h(Button, {
+            variant: 'ghost',
+            onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
+        }, () => ['Path', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
+        },
+        cell: ({ row }) => h('code', { 
+        class: 'bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono' 
+        }, row.getValue('path')),
     },
-  },
-  {
-    id: 'parameters',
-    header: 'Parameters',
-    cell: ({ row }) => {
-      const route = row.original
-      const requiredParams = route.required || []
-      const optionalParams = route.optional || []
-      
-      if (requiredParams.length === 0 && optionalParams.length === 0) {
-        return h('div', { class: 'text-gray-500 text-sm' }, 'No parameters')
-      }
-      
-      return h('div', { class: 'flex flex-wrap gap-1' }, [
-        ...requiredParams.map(param => 
-          h('span', { 
-            key: param.name,
-            class: 'inline-flex items-center rounded px-2 py-1 text-xs bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-300 font-medium'
-          }, param.name)
-        ),
-        ...optionalParams.map(param => 
-          h('span', { 
-            key: param.name,
-            class: 'inline-flex items-center rounded px-2 py-1 text-xs bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-          }, param.name)
-        )
-      ])
+    {
+        accessorKey: 'verb',
+        header: 'HTTP Method',
+        cell: ({ row }) => {
+        const verb = row.getValue('verb') as string
+        const verbColors: Record<string, string> = {
+            'GET': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+            'POST': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+            'PUT': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+            'DELETE': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+            'PATCH': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
+        }
+        return h('span', { 
+            class: `inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${verbColors[verb] || 'bg-gray-100 text-gray-800'}`
+        }, verb)
+        },
     },
-  },
-  {
-    id: 'actions',
-    enableHiding: false,
-    cell: ({ row }) => {
+    {
+        id: 'parameters',
+        header: 'Parameters',
+        cell: ({ row }) => {
+        const route = row.original
+        const requiredParams = route.required || []
+        const optionalParams = route.optional || []
+        
+        if (requiredParams.length === 0 && optionalParams.length === 0) {
+            return h('div', { class: 'text-gray-500 text-sm' }, 'No parameters')
+        }
+        
+        return h('div', { class: 'flex flex-wrap gap-1' }, [
+            ...requiredParams.map(param => 
+            h('span', { 
+                key: param.name,
+                class: 'inline-flex items-center rounded px-2 py-1 text-xs bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-300 font-medium'
+            }, param.name)
+            ),
+            ...optionalParams.map(param => 
+            h('span', { 
+                key: param.name,
+                class: 'inline-flex items-center rounded px-2 py-1 text-xs bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+            }, param.name)
+            )
+        ])
+        },
+    },
+    {
+        id: 'actions',
+        enableHiding: false,
+        cell: ({ row }) => {
             const route = row.original
-            return h('div', { 'data-actions-cell': true }, [
-                h(Button, {
-                    variant: 'ghost',
-                    size: 'sm',
-                    onClick: (e: MouseEvent) => {
-                        e.stopPropagation()
-                        handleDelete(route)
-                    },
-                    class: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20'
-                }, {
-                    default: () => [h(Trash2, { class: 'h-4 w-4' })]
-                })
+            const index = row.index
+            return h('div', { class: 'flex gap-2' }, [
+            h(Button, {
+                variant: 'ghost',
+                size: 'sm',
+                onClick: (e: MouseEvent) => {
+                e.stopPropagation()
+                openParamsDialog(route, index)
+                },
+                class: 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
+            }, {
+                default: () => [h(Settings, { class: 'h-4 w-4' })]
+            }),
+            h(Button, {
+                variant: 'ghost',
+                size: 'sm',
+                onClick: (e: MouseEvent) => {
+                e.stopPropagation()
+                handleDelete(route)
+                },
+                class: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20'
+            }, {
+                default: () => [h(Trash2, { class: 'h-4 w-4' })]
+            }),
             ])
         },
-    }
+    },
   
 ]
 
@@ -469,16 +537,40 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         </div>
                                         <div>
                                             <Label for="route-view" class="mb-1">View Name</Label>
-                                            <Input id="route-view" v-model="newRouteForm.view_name" required placeholder="view_function_name" />
+                                            <DropdownMenu v-model:open="viewDropdownOpen">
+                                                <DropdownMenuTrigger as-child>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    class="w-full justify-between"
+                                                >
+                                                    {{ newRouteForm.view_name || 'Select view' }}
+                                                    <ChevronDown class="ml-1 h-4 w-4" />
+                                                </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start" class="w-full">
+                                                    <DropdownMenuItem
+                                                        v-for="view_name in props.apiData?.version_views?.map(v => v.name) || []"
+                                                        :key="view_name"
+                                                        @click="newRouteForm.view_name = view_name"
+                                                        :class="['w-full', {'font-semibold text-blue-600': newRouteForm.verb === view_name }]"
+                                                    >
+                                                        {{ view_name }}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                            <!-- <Label for="route-view" class="mb-1">View Name</Label>
+                                            <Input id="route-view" v-model="newRouteForm.view_name" required placeholder="view_function_name" /> -->
                                         </div>
-                                        <div>
+                                        
+                                        <!-- <div>
                                             <Label for="required-params" class="mb-1">Required Parameters</Label>
                                             <Input id="required-params" v-model="newRouteForm.required" placeholder="param1, param2 (comma separated)" />
-                                        </div>
-                                        <div>
+                                        </div> -->
+                                        <!-- <div>
                                             <Label for="optional-params" class="mb-1">Optional Parameters</Label>
                                             <Input id="optional-params" v-model="newRouteForm.optional" placeholder="param3, param4 (comma separated)" />
-                                        </div>
+                                        </div> -->
                                         <div v-if="newRouteError" class="text-red-600 text-sm">{{ newRouteError }}</div>
                                     </div>
                                     <DialogFooter class="gap-2">
@@ -588,5 +680,56 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
             </template>
         </div>
     </div>
+    <Dialog v-model:open="paramsDialogOpen">
+        <DialogContent class="sm:max-w-lg">
+            <DialogHeader>
+            <DialogTitle>
+                Manage Parameters — {{ editingParamsRoute?.verb }} {{ editingParamsRoute?.path }}
+            </DialogTitle>
+            </DialogHeader>
+
+            <!-- Required Parameters -->
+            <section class="mt-4">
+            <h3 class="text-md font-semibold mb-2">Required Parameters</h3>
+            <div v-if="paramsForm.required.length">
+                <div v-for="(param, i) in paramsForm.required" :key="'req-'+i" class="grid grid-cols-9 gap-2 items-center mb-2">
+                <Input v-model="param.name" placeholder="Name" class="col-span-3" />
+                <Input v-model="param.example" placeholder="Example" class="col-span-2" />
+                <Input v-model="param.description" placeholder="Description" class="col-span-3" />
+                <Button variant="destructive" size="sm" @click="removeRequiredParam(i)">×</Button>
+                </div>
+            </div>
+            <div v-else class="text-sm text-gray-500">No required parameters defined.</div>
+            <Button variant="outline" size="sm" class="mt-2" @click="addRequiredParam">
+                <Plus class="h-4 w-4 mr-1" /> Add Required
+            </Button>
+            </section>
+
+            <!-- Optional Parameters -->
+            <section class="mt-6">
+            <h3 class="text-md font-semibold mb-2">Optional Parameters</h3>
+            <div v-if="paramsForm.optional.length">
+                <div v-for="(param, i) in paramsForm.optional" :key="'opt-'+i" class="grid grid-cols-9 gap-2 items-center mb-2">
+                <Input v-model="param.name" placeholder="Name" class="col-span-3" />
+                <Input v-model="param.example" placeholder="Example" class="col-span-2" />
+                <Input v-model="param.description" placeholder="Description" class="col-span-3" />
+                <Button variant="destructive" size="sm" @click="removeOptionalParam(i)">×</Button>
+                </div>
+            </div>
+            <div v-else class="text-sm text-gray-500">No optional parameters defined.</div>
+            <Button variant="outline" size="sm" class="mt-2" @click="addOptionalParam">
+                <Plus class="h-4 w-4 mr-1" /> Add Optional
+            </Button>
+            </section>
+
+            <DialogFooter class="mt-6">
+            <DialogClose as-child>
+                <Button variant="secondary" @click="closeParamsDialog">Cancel</Button>
+            </DialogClose>
+            <Button variant="default" @click="submitParams">Save</Button>
+            </DialogFooter>
+        </DialogContent>
+        </Dialog>
     <Toaster />
 </template>
+
