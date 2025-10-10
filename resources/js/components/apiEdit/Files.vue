@@ -24,6 +24,8 @@ interface Props {
     api_id: string
     api_type: string
     api: Api | null
+    highlightQuery?: string
+    highlightTarget?: string
     apiData: ApiData | null
     loadingApiData: boolean
     apiError: string

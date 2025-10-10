@@ -2,7 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, Api, ApiData } from '@/types'
+import { type BreadcrumbItem, Api, ApiData, ApiInstance, Environment } from '@/types'
 import Heading from '@/components/Heading.vue'
 import { Button } from '@/components/ui/button'
 
@@ -53,7 +53,7 @@ const publishFormData = ref({
 
 // Instances modal state
 const showInstancesModal = ref(false)
-const instances = ref<any[]>([])
+const instances = ref<ApiInstance[]>([])
 const loadingInstances = ref(false)
 const instancesError = ref('')
 
@@ -136,6 +136,7 @@ const tabs = [
 // Data fetching logic - runs once when component mounts
 const apiData = ref<ApiData | null>(null)
 const api = ref<Api | null>(null)
+const environment = ref<Environment[]>([])
 const loadingApiData = ref(true)
 const apiError = ref('')
 const apiBaseUrl = '/api'
@@ -158,6 +159,13 @@ const fetchApi = async () => {
     if (!response.ok) throw new Error('Failed to fetch API')
     
     api.value = await response.json()
+}
+
+const fetchEnvironment = async () => {
+    const response = await fetch(`/api/environments`)
+    if (!response.ok) throw new Error('Failed to fetch Environment')
+    
+    environment.value = await response.json()
 }
 
 const fetchApiData = async () => {
@@ -625,6 +633,7 @@ const handleDevelopersAction = (action: string) => {
         case 'instances':
             console.log('Show instances')
             showInstancesModal.value = true
+            fetchEnvironment()
             fetchInstances()
             break
         case 'publish':
@@ -1112,27 +1121,16 @@ onMounted(() => {
                                 <h3 class="font-medium text-gray-900 dark:text-white">
                                     {{ instance.name || `Instance ${instance.id}` }}
                                 </h3>
-                                <p v-if="instance.description" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                    {{ instance.description }}
-                                </p>
                                 <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
-                                    <span v-if="instance.status" class="flex items-center">
-                                        <span class="w-2 h-2 rounded-full mr-2" :class="{
-                                            'bg-green-500': instance.status === 'active',
-                                            'bg-yellow-500': instance.status === 'pending',
-                                            'bg-red-500': instance.status === 'inactive'
-                                        }"></span>
-                                        {{ instance.status }}
+                                    <span v-if="instance.environment_id" class="px-2 py-1 text-xs bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded">
+                                        {{ environment?.find((env: Environment) => env.id === instance.environment_id)?.name }}
                                     </span>
-                                    <span v-if="instance.environment" class="px-2 py-1 text-xs bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded">
-                                        {{ instance.environment }}
+                                    <span v-if="instance.route" class="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded font-mono">
+                                        {{ instance.route }}
                                     </span>
                                 </div>
                             </div>
                             <div class="flex items-center space-x-3">
-                                <span v-if="instance.url" class="text-sm text-blue-600 dark:text-blue-400 font-mono">
-                                    {{ instance.url }}
-                                </span>
                                 <button 
                                     @click="viewInstance(instance)"
                                     class="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 rounded-md transition-colors"
