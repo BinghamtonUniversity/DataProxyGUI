@@ -17,7 +17,7 @@ import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
 import { h, ref, computed, watch } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
-import { type ApiData, ModelData } from '@/types'
+import { Api, type ApiData, ModelData } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -54,6 +54,7 @@ import { useToaster } from '@/composables/useToaster';
 interface Props {
     api_id: string
     api_type: string
+    api: Api | null
     apiData: ApiData | null
     loadingApiData: boolean
     apiError: string

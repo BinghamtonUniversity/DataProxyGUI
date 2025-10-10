@@ -56,6 +56,12 @@ const showInstancesModal = ref(false)
 const instances = ref<any[]>([])
 const loadingInstances = ref(false)
 const instancesError = ref('')
+
+// Search functionality state
+const showSearchModal = ref(false)
+const searchQuery = ref('')
+const searchResults = ref<any[]>([])
+const isSearching = ref(false)
 const publishFormConfig = ref({
     label: 'Publish New Version',
     description: 'Enter details for the new version',
@@ -249,6 +255,218 @@ const viewInstance = (instance: any) => {
     
     // Open in new tab
     window.open(instanceUrl, '_blank')
+}
+
+// Search functionality
+const performSearch = () => {
+    if (!apiData.value || !searchQuery.value.trim()) {
+        searchResults.value = []
+        return
+    }
+
+    isSearching.value = true
+    const query = searchQuery.value.toLowerCase().trim()
+    const results: any[] = []
+
+    const data = apiData.value as any
+    
+    // Debug: Log the API data structure
+    console.log('API Data structure:', data)
+    console.log('Available properties:', Object.keys(data))
+
+    // Try different possible property names for each category
+    const searchInArray = (items: any[], category: string, type: string) => {
+        if (!items || !Array.isArray(items)) {
+            console.log(`No items found for ${category}`)
+            return
+        }
+        
+        console.log(`Searching in ${category}:`, items.length, 'items')
+        
+        items.forEach((item: any, index: number) => {
+            console.log(`${category} item ${index}:`, item)
+            
+            // Try different possible name fields
+            const name = item.name || item.title || item.function_name || item.route_name || item.model_name || item.file_name || item.view_name || item.url_name
+            console.log(`  Name found: "${name}"`)
+            
+            // Search in name
+            const nameMatch = name && name.toLowerCase().includes(query)
+            
+            // Search in content/description fields
+            const content = item.content || item.description || item.path || ''
+            const contentMatch = content && content.toLowerCase().includes(query)
+            
+            // Search in other text fields
+            const otherFields = [
+                item.verb,
+                item.model_name,
+                item.type,
+                ...(item.required || []),
+                ...(item.optional || [])
+            ].filter(Boolean)
+            
+            const otherFieldsMatch = otherFields.some(field => 
+                field && field.toString().toLowerCase().includes(query)
+            )
+            
+            if (nameMatch || contentMatch || otherFieldsMatch) {
+                console.log(`  ✓ Match found:`, { nameMatch, contentMatch, otherFieldsMatch })
+                results.push({
+                    category: category,
+                    type: type,
+                    name: name || 'Unnamed',
+                    description: item.description || item.path || item.content || 'No description',
+                    data: item
+                })
+            } else {
+                console.log(`  ✗ No match: "${name}" does not contain "${query}"`)
+            }
+        })
+    }
+
+    // Search in routes - using version_urls (which seems to be the routes)
+    console.log('Checking routes (version_urls):', data.version_urls)
+    searchInArray(data.version_urls || [], 'Routes', 'route')
+
+    // Search in resources - using resources property
+    console.log('Checking resources:', data.resources)
+    searchInArray(data.resources || [], 'Resources', 'resource')
+
+    // Search in functions - using version_views (which might be functions/views)
+    console.log('Checking functions (version_views):', data.version_views)
+    searchInArray(data.version_views || [], 'Functions', 'function')
+
+    // Search in models - using version_models
+    console.log('Checking models:', data.version_models)
+    searchInArray(data.version_models || [], 'Models', 'model')
+
+    // Search in files - using version_files
+    console.log('Checking files:', data.version_files)
+    searchInArray(data.version_files || [], 'Files', 'file')
+
+    // Search in top-level API data fields
+    const topLevelFields = [
+        { value: data.summary, label: 'Summary' },
+        { value: data.description, label: 'Description' }
+    ].filter(field => field.value)
+    
+    topLevelFields.forEach(field => {
+        if (field.value && field.value.toLowerCase().includes(query)) {
+            results.push({
+                category: 'API Info',
+                type: 'info',
+                name: field.label,
+                description: field.value,
+                data: { field: field.label, value: field.value }
+            })
+        }
+    })
+
+    console.log('Search completed. Results:', results)
+    searchResults.value = results
+    isSearching.value = false
+}
+
+// Open search modal
+const openSearchModal = () => {
+    showSearchModal.value = true
+    searchQuery.value = ''
+    searchResults.value = []
+}
+
+// Close search modal
+const closeSearchModal = () => {
+    showSearchModal.value = false
+    searchQuery.value = ''
+    searchResults.value = []
+}
+
+// Search highlighting state
+const highlightQuery = ref<string>('')
+const highlightTarget = ref<string>('')
+
+// Handle search result click
+const handleSearchResultClick = (result: any) => {
+    // Store the search query before closing the modal
+    const currentSearchQuery = searchQuery.value
+    
+    // Close the search modal
+    closeSearchModal()
+    
+    // Set highlighting state
+    highlightQuery.value = currentSearchQuery
+    highlightTarget.value = result.name
+    
+    // Navigate to the appropriate tab based on the result category
+    switch (result.category) {
+        case 'Routes':
+            navigateToTab('routes')
+            break
+        case 'Resources':
+            navigateToTab('resources')
+            break
+        case 'Functions':
+            navigateToTab('functions')
+            break
+        case 'Models':
+            navigateToTab('models')
+            break
+        case 'Files':
+            navigateToTab('files')
+            break
+        case 'API Info':
+            // For API info, we could show a toast or stay on current tab
+            info(`Found in API ${result.name}: ${result.description}`)
+            return
+    }
+    
+    // Handle highlighting for Routes and Resources (UI highlighting)
+    if (result.category === 'Routes' || result.category === 'Resources') {
+        setTimeout(() => {
+            const element = document.querySelector(`[data-${result.category.toLowerCase()}-name="${result.name}"]`)
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                // Add a temporary highlight effect
+                element.classList.add('search-highlight-item')
+                setTimeout(() => {
+                    element.classList.remove('search-highlight-item')
+                }, 3000)
+            }
+        }, 500) // Increased delay to ensure tab navigation and component mounting
+    }
+    
+    // Emit custom event for Functions and Files (editor highlighting)
+    if (result.category === 'Functions' || result.category === 'Files') {
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('search-result-selected', {
+                detail: {
+                    category: result.category,
+                    type: result.type,
+                    name: result.name,
+                    data: result.data,
+                    searchQuery: currentSearchQuery
+                }
+            }))
+        }, 1000) // Increased delay to ensure editor is ready
+    }
+}
+
+// Group search results by category
+const getGroupedResults = () => {
+    const grouped: { [key: string]: any[] } = {}
+    
+    searchResults.value.forEach(result => {
+        if (!grouped[result.category]) {
+            grouped[result.category] = []
+        }
+        grouped[result.category].push(result)
+    })
+    
+    return Object.keys(grouped).map(category => ({
+        name: category,
+        items: grouped[category]
+    }))
 }
 
 // Fetch version details for viewing
@@ -464,7 +682,9 @@ const componentProps = computed(() => ({
     loadingApiData: loadingApiData.value,
     apiError: apiError.value,
     updateApiData,
-    refreshApiData
+    refreshApiData,
+    highlightQuery: highlightQuery.value,
+    highlightTarget: highlightTarget.value
 }))
 
 // Fetch data on mount
@@ -480,6 +700,14 @@ onMounted(() => {
         }
     })
     
+    // Add keyboard event listener for Ctrl+F (search)
+    document.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+            event.preventDefault() // Prevent browser's default find dialog
+            openSearchModal()
+        }
+    })
+    
     // Close dropdown when clicking outside
     document.addEventListener('click', (event) => {
         const target = event.target as HTMLElement
@@ -491,6 +719,14 @@ onMounted(() => {
     })
 })
 </script>
+
+<style>
+.search-highlight-item {
+    background-color: #ffeb3b !important;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+</style>
 
 <template>
     <Head :title="' API Edit'" />
@@ -517,6 +753,18 @@ onMounted(() => {
                 </div>
             </div>
             <div class="flex justify-end items-center gap-2 mb-6">
+                <!-- Search Button -->
+                <Button 
+                    @click="openSearchModal"
+                    variant="outline"
+                    class="flex items-center gap-2"
+                >   
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Search
+                </Button>
+                
                 <!-- Save Button -->
                 <Button 
                     @click="handleSave"
@@ -899,6 +1147,85 @@ onMounted(() => {
                 <!-- Empty State -->
                 <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">
                     <p>No instances found for this API.</p>
+                </div>
+            </div>
+        </AlertModal>
+
+        <!-- Search Modal -->
+        <AlertModal
+            :isOpen="showSearchModal"
+            title="Search API Data"
+            @close="closeSearchModal"
+        >
+            <div class="space-y-4">
+                <!-- Search Input -->
+                <div class="flex gap-2">
+                    <input
+                        v-model="searchQuery"
+                        @input="performSearch"
+                        @keyup.enter="performSearch"
+                        type="text"
+                        placeholder="Search routes, resources, functions, models, and files..."
+                        class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <Button 
+                        @click="performSearch"
+                        :disabled="!searchQuery.trim()"
+                        class="px-4 py-2"
+                    >
+                        Search
+                    </Button>
+                </div>
+
+                <!-- Search Results -->
+                <div v-if="searchResults.length > 0" class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        Search Results ({{ searchResults.length }} found)
+                    </h3>
+                    
+                    <!-- Group results by category -->
+                    <div v-for="category in getGroupedResults()" :key="category.name" class="space-y-2">
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-1">
+                            {{ category.name }} ({{ category.items.length }})
+                        </h4>
+                        <div class="space-y-2">
+                            <div 
+                                v-for="result in category.items" 
+                                :key="`${result.type}-${result.name}`"
+                                @click="handleSearchResultClick(result)"
+                                class="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <h5 class="font-medium text-gray-900 dark:text-white">
+                                            {{ result.name }}
+                                        </h5>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            {{ result.description }}
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
+                                            {{ result.type }}
+                                        </span>
+                                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Results -->
+                <div v-else-if="searchQuery && !isSearching" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p>No results found for "{{ searchQuery }}"</p>
+                </div>
+
+                <!-- Search Prompt -->
+                <div v-else-if="!searchQuery" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p>Enter a search term to find items across routes, resources, functions, models, and files.</p>
                 </div>
             </div>
         </AlertModal>

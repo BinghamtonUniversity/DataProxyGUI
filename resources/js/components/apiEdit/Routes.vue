@@ -14,10 +14,10 @@ import {
   useVueTable,
 } from '@tanstack/vue-table'
 import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
-import { h, ref, computed } from 'vue'
+import { h, ref, computed, onMounted, onUnmounted } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
-import { type ApiData, RouteData } from '@/types'
+import { Api, type ApiData, RouteData } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -52,11 +52,14 @@ import { useToaster } from '@/composables/useToaster';
 interface Props {
     api_id: string
     api_type: string
+    api: Api | null
     apiData: ApiData | null
     loadingApiData: boolean
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
     refreshApiData: () => void
+    highlightQuery?: string
+    highlightTarget?: string
 }
 
 const props = defineProps<Props>()
@@ -268,7 +271,10 @@ const columns: ColumnDef<RouteData>[] = [
         onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
       }, () => ['View Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
     },
-    cell: ({ row }) => h('div', { class: 'font-medium text-blue-600' }, row.getValue('view_name')),
+    cell: ({ row }) => h('div', { 
+      class: 'font-medium text-blue-600',
+      innerHTML: highlightText(row.getValue('view_name'), props.highlightQuery || '')
+    }),
   },
   {
     accessorKey: 'path',
@@ -279,8 +285,9 @@ const columns: ColumnDef<RouteData>[] = [
       }, () => ['Path', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
     },
     cell: ({ row }) => h('code', { 
-      class: 'bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono' 
-    }, row.getValue('path')),
+      class: 'bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono',
+      innerHTML: highlightText(row.getValue('path'), props.highlightQuery || '')
+    }),
   },
   {
     accessorKey: 'verb',
@@ -295,8 +302,9 @@ const columns: ColumnDef<RouteData>[] = [
         'PATCH': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
       }
       return h('span', { 
-        class: `inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${verbColors[verb] || 'bg-gray-100 text-gray-800'}`
-      }, verb)
+        class: `inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${verbColors[verb] || 'bg-gray-100 text-gray-800'}`,
+        innerHTML: highlightText(verb, props.highlightQuery || '')
+      })
     },
   },
   {
@@ -389,7 +397,30 @@ const selectedRowsCount = computed(() => table.value?.getFilteredSelectedRowMode
 const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.length || 0)
 const canPreviousPage = computed(() => table.value?.getCanPreviousPage() || false)
 const canNextPage = computed(() => table.value?.getCanNextPage() || false)
+
+// Function to highlight text in UI elements
+const highlightText = (text: string, query: string) => {
+    if (!query || !text) return text
+    
+    const regex = new RegExp(`(${query})`, 'gi')
+    return text.replace(regex, '<mark class="search-highlight">$1</mark>')
+}
 </script>
+
+<style>
+.search-highlight {
+    background-color: #ffeb3b !important;
+    color: #000 !important;
+    border-radius: 2px;
+    padding: 1px 2px;
+}
+
+.search-highlight-item {
+    background-color: #ffeb3b !important;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+</style>
 
 <template>
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
@@ -533,6 +564,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         v-for="(row, index) in tableRows" 
                                         :key="row.id" 
                                         :data-state="row.getIsSelected() && 'selected'"
+                                        :data-route-name="row.original.view_name"
                                         class="cursor-pointer hover:bg-muted/50"
                                         @click="openEditRouteDialog(row.original, index)"
                                     >

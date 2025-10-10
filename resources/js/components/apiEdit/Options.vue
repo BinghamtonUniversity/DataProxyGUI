@@ -9,10 +9,11 @@ import { Save, Plus, Trash2 } from 'lucide-vue-next';
 import AppLayout from '@/layouts/AppLayout.vue';
 import APILayout from '@/layouts/api/Layout.vue';
 import FormBuilder from '@/components/formbuilder/FormBuilder.vue';
-import { type BreadcrumbItem, type ApiData } from '@/types';
+import { type BreadcrumbItem, type ApiData, Api } from '@/types';
 interface Props {
     api_id: string
     api_type: string
+    api: Api | null
     apiData: ApiData | null
     loadingApiData: boolean
     apiError: string
