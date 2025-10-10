@@ -501,7 +501,7 @@ onUnmounted(() => {
                             ref="editorRef"
                             v-if="selectedFile" 
                             :code="selectedFile.content" 
-                            :language="api_type === 'python' || api_type === 'php' ? api_type : undefined"
+                            :language="api?.api_type === 'python' || api?.api_type === 'php' ? api?.api_type : undefined"
                             :is-saving="isSaving"
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"
