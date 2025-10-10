@@ -894,6 +894,22 @@ class ApiController extends Controller
             'status' => $result['status']
         ], $result['status']);
     }
+    // ===========================================
+    // API's Instances
+    // ===========================================
+    public function apisInstancesIndex($id): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', "apis/{$id}/instances");
+    
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch API's instances for API {$id}",
+            'status' => $result['status']
+        ], $result['status']);
+    }
 
     /**
      * Magic method to handle dynamic resource calls

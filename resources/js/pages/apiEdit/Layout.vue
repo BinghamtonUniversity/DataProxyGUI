@@ -50,6 +50,12 @@ const publishFormData = ref({
     summary: '',
     description: ''
 })
+
+// Instances modal state
+const showInstancesModal = ref(false)
+const instances = ref<any[]>([])
+const loadingInstances = ref(false)
+const instancesError = ref('')
 const publishFormConfig = ref({
     label: 'Publish New Version',
     description: 'Enter details for the new version',
@@ -203,6 +209,48 @@ const fetchVersions = async () => {
     }
 }
 
+// Fetch API instances
+const fetchInstances = async () => {
+    loadingInstances.value = true
+    instancesError.value = ''
+    try {
+        const response = await fetch(`/api/api_instances`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        instances.value = await response.json()
+        instances.value = instances.value.filter((instance: any) => instance.api_id === api.value?.id)
+    } catch (e: any) {
+        instancesError.value = e.message || 'Error fetching instances'
+        showError('Failed to fetch API instances. Please try again.', 'Error')
+    } finally {
+        loadingInstances.value = false
+    }
+}
+
+// View instance - redirect to instance URL
+const viewInstance = (instance: any) => {
+    // Close the modal first
+    showInstancesModal.value = false
+    
+    // Construct the instance URL based on the pattern you provided
+    // Format: http://127.0.0.1:8001/api_instances/{instance_id}/main
+    const instanceUrl = `http://127.0.0.1:8001/api_instances/${instance.id}/main`
+    
+    // Open in new tab
+    window.open(instanceUrl, '_blank')
+}
+
 // Fetch version details for viewing
 const fetchVersionDetails = async (versionId: number) => {
     loadingVersionDetails.value = true
@@ -262,6 +310,17 @@ const openDiffModal = async (version: any) => {
 const isLatestVersionStable = computed(() => {
     if (!apiData.value) return false
     return apiData.value.stable === true
+})
+
+// Get current version name for display
+const currentVersionName = computed(() => {
+    if (!apiData.value) return 'Loading...'
+    
+    if (apiData.value.stable) {
+        return 'Latest'
+    } else {
+        return 'Latest/Working'
+    }
 })
 
 // Open publish modal
@@ -347,7 +406,8 @@ const handleDevelopersAction = (action: string) => {
             break
         case 'instances':
             console.log('Show instances')
-            // Navigate to instances or show instances modal
+            showInstancesModal.value = true
+            fetchInstances()
             break
         case 'publish':
             console.log('Publish new version')
@@ -448,7 +508,13 @@ onMounted(() => {
                     <p class="text-sm text-gray-600 dark:text-gray-400">Manage your API settings</p>
                 </div>
                 
-                
+                <!-- Version Display -->
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Version:</span>
+                    <div class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-sm font-medium rounded-md border border-green-200 dark:border-green-800">
+                        {{ currentVersionName }}
+                    </div>
+                </div>
             </div>
             <div class="flex justify-end items-center gap-2 mb-6">
                 <!-- Save Button -->
@@ -758,6 +824,81 @@ onMounted(() => {
                 <!-- Empty State -->
                 <div v-else class="text-center py-8 text-gray-600 dark:text-gray-300">
                     <p>No versions found for this API.</p>
+                </div>
+            </div>
+        </AlertModal>
+
+        <!-- API Instances Modal -->
+        <AlertModal
+            :isOpen="showInstancesModal"
+            title="API Instances"
+            @close="showInstancesModal = false"
+        >
+            <div class="space-y-4">
+                <!-- Loading State -->
+                <div v-if="loadingInstances" class="flex justify-center items-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span class="ml-3 text-gray-600 dark:text-gray-300">Loading instances...</span>
+                </div>
+
+                <!-- Error State -->
+                <div v-else-if="instancesError" class="text-center py-8">
+                    <div class="text-red-600 dark:text-red-400">
+                        <p class="text-lg font-semibold">Error loading instances</p>
+                        <p class="text-sm">{{ instancesError }}</p>
+                        <button @click="fetchInstances" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Instances List -->
+                <div v-else-if="instances.length > 0" class="space-y-3">
+                    <div 
+                        v-for="instance in instances" 
+                        :key="instance.id"
+                        class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <h3 class="font-medium text-gray-900 dark:text-white">
+                                    {{ instance.name || `Instance ${instance.id}` }}
+                                </h3>
+                                <p v-if="instance.description" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                    {{ instance.description }}
+                                </p>
+                                <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                    <span v-if="instance.status" class="flex items-center">
+                                        <span class="w-2 h-2 rounded-full mr-2" :class="{
+                                            'bg-green-500': instance.status === 'active',
+                                            'bg-yellow-500': instance.status === 'pending',
+                                            'bg-red-500': instance.status === 'inactive'
+                                        }"></span>
+                                        {{ instance.status }}
+                                    </span>
+                                    <span v-if="instance.environment" class="px-2 py-1 text-xs bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded">
+                                        {{ instance.environment }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span v-if="instance.url" class="text-sm text-blue-600 dark:text-blue-400 font-mono">
+                                    {{ instance.url }}
+                                </span>
+                                <button 
+                                    @click="viewInstance(instance)"
+                                    class="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 rounded-md transition-colors"
+                                >
+                                    View
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p>No instances found for this API.</p>
                 </div>
             </div>
         </AlertModal>

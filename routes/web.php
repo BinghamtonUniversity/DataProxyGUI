@@ -101,6 +101,9 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
     Route::post('/apis/{id}/developers', [App\Http\Controllers\Api\ApiController::class, 'createApiDeveloper']);
     Route::put('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'updateApiDeveloper']);
     Route::delete('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'deleteApiDeveloper']);
+
+    // API's Instances
+    Route::get('/apis/{id}/instances', [App\Http\Controllers\Api\ApiController::class, 'apisInstancesIndex']);
 });
 
 // Resources
