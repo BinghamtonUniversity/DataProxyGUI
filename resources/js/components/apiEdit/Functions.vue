@@ -53,6 +53,11 @@ const handleSave = async (updatedCode: string) => {
         return
     }
 
+    if (!updatedCode || updatedCode.trim() === '') {
+        saveError.value = 'Function content cannot be empty'
+        return
+    }
+
     isSaving.value = true
     saveError.value = null
     saveSuccess.value = false
@@ -124,7 +129,7 @@ const handleCreateNewView = async () => {
         // TO-DO:: PHP function template
         const newFunction: ApiVersionFunction = {
             name: newViewName.value.trim(),
-            content: `# Define the function ${newViewName.value.trim()} here\n`,
+            content: ``,
         }
 
         const updatedApiData = {
@@ -132,21 +137,21 @@ const handleCreateNewView = async () => {
             version_views: [...props.apiData.version_views, newFunction]
         }
 
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
+        // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+        //     method: 'PUT',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'Accept': 'application/json',
+        //         'X-CSRF-TOKEN': getCsrfToken() || '',
+        //     },
+        //     body: JSON.stringify(updatedApiData)
+        // })
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            // error('Failed to create function', 'Error');
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
+        // if (!response.ok) {
+        //     const errorData = await response.json().catch(() => ({}))
+        //     // error('Failed to create function', 'Error');
+        //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        // }
 
         // const result = await response.json()
         

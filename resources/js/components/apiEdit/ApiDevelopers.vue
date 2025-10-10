@@ -10,7 +10,7 @@ import { type ApiData } from '@/types';
 
 interface Props {
     api_id: string
-    api_type: string
+    // api_type: string
     apiData: ApiData | null
     loadingApiData: boolean
     apiError: string

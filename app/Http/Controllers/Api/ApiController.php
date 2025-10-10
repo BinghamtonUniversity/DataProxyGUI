@@ -611,7 +611,7 @@ class ApiController extends Controller
         $endpoint = "apis/{$api_id}/code";
 
         $requestData = $request->all();
-        
+
         $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
         Log::info('Django request result', [
             'success' => $result['success'],
@@ -807,20 +807,20 @@ class ApiController extends Controller
     /**
      * Update API code/configuration
      */
-    public function updateApiCode(Request $request, $id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('PUT', "apis/{$id}/code", $request->all());
+    // public function updateApiCode(Request $request, $id): JsonResponse
+    // {
+    //     $result = $this->makeDjangoRequest('PUT', "apis/{$id}/code", $request->all());
 
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
+    //     if ($result['success']) {
+    //         return response()->json($result['data']);
+    //     }
 
-        return response()->json([
-            'error' => "Failed to update API code for API {$id}",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
+    //     return response()->json([
+    //         'error' => "Failed to update API code for API {$id}",
+    //         'details' => $result['data'],
+    //         'status' => $result['status']
+    //     ], $result['status']);
+    // }
 
     /**
      * Get API developers for a specific API

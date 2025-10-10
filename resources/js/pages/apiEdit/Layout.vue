@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, onUnmounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem, Api, ApiData } from '@/types'
@@ -360,6 +360,24 @@ const handleDevelopersAction = (action: string) => {
 
 // Save function
 const handleSave = async () => {
+    if (
+        !apiData.value ||
+        !apiData.value.version_views ||
+        !Array.isArray(apiData.value.version_views)
+    ) {
+        showError('No version views found to save.')
+        return
+    }
+
+    const emptyViews = apiData.value.version_views.filter(
+        (view: any) => !view.content || view.content.trim() === ''
+    )
+
+    if (emptyViews.length > 0) {
+        const emptyNames = emptyViews.map((v: any) => v.name || '(Unnamed View)').join(', ')
+        showError(`The following functions have empty content: ${emptyNames}`)
+        return
+    }
 
     const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
         method: 'PUT',
@@ -407,28 +425,40 @@ const componentProps = computed(() => ({
     refreshApiData
 }))
 
+let keydownHandler: ((event: KeyboardEvent) => void) | null = null
+let clickHandler: ((event: MouseEvent) => void) | null = null
 // Fetch data on mount
 onMounted(() => {
     fetchApi()
     fetchApiData()
     
-    // Add keyboard event listener for Ctrl+S
-    document.addEventListener('keydown', (event) => {
+    keydownHandler = (event: KeyboardEvent) => {
         if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-            event.preventDefault() // Prevent browser's default save dialog
+            event.preventDefault()
             handleSave()
         }
-    })
+    }
     
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (event) => {
+    clickHandler = (event: MouseEvent) => {
         const target = event.target as HTMLElement
         
-        // Check if click is outside the dropdown container
         if (dropdownRef.value && !dropdownRef.value.contains(target)) {
             showDevelopersDropdown.value = false
         }
-    })
+    }
+    
+    document.addEventListener('keydown', keydownHandler)
+    document.addEventListener('click', clickHandler)
+})
+
+// Clean up event listeners when component unmounts
+onUnmounted(() => {
+    if (keydownHandler) {
+        document.removeEventListener('keydown', keydownHandler)
+    }
+    if (clickHandler) {
+        document.removeEventListener('click', clickHandler)
+    }
 })
 </script>
 
