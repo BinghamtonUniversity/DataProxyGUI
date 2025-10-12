@@ -22,7 +22,7 @@ interface Props {
     resources: Resource[] | null,
     loading: boolean,
     apiInstanceError: string
-    updateApiInstanceData: (updatedApiInstanceData: ApiInstance) => void
+    updateApiInstanceData: (updatedApiInstanceData: Partial<ApiInstance>) => void
 }
 
 const props = defineProps<Props>()
@@ -65,29 +65,12 @@ const saveResources = async() => {
     resources: props.apiInstanceData.resources, 
     options: props.apiInstanceData.options,
     public: props.apiInstanceData.public,
-    api_id: props.apiInstanceData.api.id,
+    api_id: props.apiInstanceData.api_id,
     api_version_id: props.apiInstanceData.api_version_id,
-    environment_id: props.apiInstanceData.environment.id
+    environment_id: props.apiInstanceData.environment_id
   }
-  // console.log('Saving request data:', requestData)
-
-  const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken() || '',
-        },
-        body: JSON.stringify(requestData)
-    })
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
-
-  const responseData = await response.json()
-  props.updateApiInstanceData(responseData)
+  
+  props.updateApiInstanceData(requestData)
   success('Resources updated successfully', 'Success');
   
   newResourceName.value = ''

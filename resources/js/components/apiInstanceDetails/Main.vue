@@ -15,7 +15,7 @@ interface Props {
     resources: Resource | null,
     loading: boolean,
     apiInstanceError: string
-    updateApiInstanceData: (updatedApiInstanceData: ApiInstance) => void
+    updateApiInstanceData: (updatedApiInstanceData: Partial<ApiInstance> ) => void
 }
 
 const props = defineProps<Props>()
@@ -75,29 +75,13 @@ const saveChanges = async () => {
             resources: updatedData.resources, 
             options: updatedData.options,
             public: updatedData.public,
-            api_id: updatedData.api.id,
+            api_id: updatedData.api_id,
             api_version_id: updatedData.api_version_id,
-            environment_id: updatedData.environment.id
-        }
-        // console.log('Saving updated data:', requestData)
-        const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(requestData)
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+            environment_id: updatedData.environment_id
         }
 
-        const responseData = await response.json()
-        props.updateApiInstanceData(responseData)
-        success('API Instance updated successfully', 'Success');
+        props.updateApiInstanceData(requestData)
+        success('Changes saved', 'Success');
     }
 }
 </script>
