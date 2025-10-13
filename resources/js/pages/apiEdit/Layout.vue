@@ -416,28 +416,28 @@ const handleSave = async () => {
 }
 
 // Add a method to check for changes
-const checkForUnsavedChanges = () => {
-    if (originalApiData.value && originalApiData.value) {
-        return JSON.stringify(apiData.value) !== JSON.stringify(originalApiData.value)
-    }
-    return false
-}
+// const checkForUnsavedChanges = () => {
+//     if (originalApiData.value && originalApiData.value) {
+//         return JSON.stringify(apiData.value) !== JSON.stringify(originalApiData.value)
+//     }
+//     return false
+// }
 
 // Navigation helper
 const navigateToTab = (tabId: string) => {
-    hasUnsavedChanges.value = checkForUnsavedChanges()
-    if (hasUnsavedChanges.value) {
-        if (confirm('You have unsaved changes. Do you want to leave?')) {
-            router.get(`/apis/${props.api_id}/${tabId}`, {}, {
-                preserveState: true,
-                preserveScroll: true,
-                // only: ['activeTab'] // Only update the activeTab prop
-            })
-        } else {
-            // Cancel tab change
-            return
-        }
-    }
+    // hasUnsavedChanges.value = checkForUnsavedChanges()
+    // if (hasUnsavedChanges.value) {
+    //     if (confirm('You have unsaved changes. Do you want to leave?')) {
+    //         router.get(`/apis/${props.api_id}/${tabId}`, {}, {
+    //             preserveState: true,
+    //             preserveScroll: true,
+    //             // only: ['activeTab'] // Only update the activeTab prop
+    //         })
+    //     } else {
+    //         // Cancel tab change
+    //         return
+    //     }
+    // }
     router.get(`/apis/${props.api_id}/${tabId}`, {}, {
         preserveState: true,
         preserveScroll: true,
@@ -446,18 +446,18 @@ const navigateToTab = (tabId: string) => {
     
 }
 
-// // Browser/tab close warning
-// const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-//     if (hasUnsavedChanges.value) {
-//         event.preventDefault()
-//         // use @ts-ignore to avoid type error
-//         // @ts-ignore
-//         event.returnValue = '' // Chrome requires returnValue to be set but use @ts-ignore to avoid type error
-//     }
-// }
+// Browser/tab close warning
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (hasUnsavedChanges.value) {
+        event.preventDefault()
+        // use @ts-ignore to avoid type error
+        // @ts-ignore
+        event.returnValue = '' // Chrome requires returnValue to be set but use @ts-ignore to avoid type error
+    }
+}
 
-// // Inertia navigation warning
-// let removeInertiaHook: (() => void) | null = null
+// Inertia navigation warning
+let removeInertiaHook: (() => void) | null = null
 
 
 // Get current active component
@@ -502,19 +502,19 @@ onMounted(() => {
     document.addEventListener('keydown', keydownHandler)
     document.addEventListener('click', clickHandler)
 
-    // // Add beforeunload listener
-    // window.addEventListener('beforeunload', handleBeforeUnload)
+    // Add beforeunload listener
+    window.addEventListener('beforeunload', handleBeforeUnload)
     
-    // // Add Inertia navigation hook
-    // removeInertiaHook = router.on('before', (event) => {
-    //     if (hasUnsavedChanges.value) {
-    //         // Show confirmation dialog
-    //         const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
-    //         if (!confirmed) {
-    //             return false // Cancel navigation
-    //         }
-    //     }
-    // })
+    // Add Inertia navigation hook
+    removeInertiaHook = router.on('before', (event) => {
+        if (hasUnsavedChanges.value) {
+            // Show confirmation dialog
+            const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
+            if (!confirmed) {
+                return false // Cancel navigation
+            }
+        }
+    })
 })
 
 // Clean up event listeners when component unmounts
@@ -526,10 +526,10 @@ onUnmounted(() => {
         document.removeEventListener('click', clickHandler)
     }
 
-    // window.removeEventListener('beforeunload', handleBeforeUnload)
-    // if (removeInertiaHook) {
-    //     removeInertiaHook()
-    // }
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+    if (removeInertiaHook) {
+        removeInertiaHook()
+    }
 })
 </script>
 

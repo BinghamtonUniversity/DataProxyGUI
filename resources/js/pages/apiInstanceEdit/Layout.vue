@@ -150,12 +150,12 @@ const fetchAllData = async () => {
 }
 
 // Watch for changes in apiInstanceData to track unsaved changes
-// watch(apiInstanceData, (newVal) => {
-//     if (originalApiInstanceData.value && newVal) {
-//         // Compare to detect changes
-//         hasUnsavedChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalApiInstanceData.value)
-//     }
-// }, { deep: true })
+watch(apiInstanceData, (newVal) => {
+    if (originalApiInstanceData.value && newVal) {
+        // Compare to detect changes
+        hasUnsavedChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalApiInstanceData.value)
+    }
+}, { deep: true })
 
 const updateApiInstanceData = (updatedApiInstanceData: Partial<ApiInstance>) => {
     if(!apiInstanceData) return
@@ -243,29 +243,29 @@ const updateInstanceVersion = async (version: any) => {
 }
 
 // Add a method to check for changes
-const checkForUnsavedChanges = () => {
-    if (originalApiInstanceData.value && apiInstanceData.value) {
-        return JSON.stringify(apiInstanceData.value) !== JSON.stringify(originalApiInstanceData.value)
-    }
-    return false
-}
+// const checkForUnsavedChanges = () => {
+//     if (originalApiInstanceData.value && apiInstanceData.value) {
+//         return JSON.stringify(apiInstanceData.value) !== JSON.stringify(originalApiInstanceData.value)
+//     }
+//     return false
+// }
 
 // Navigation helper
 const navigateToTab = (tabId: string) => {
-    hasUnsavedChanges.value = checkForUnsavedChanges()
-    if (hasUnsavedChanges.value) {
-        if (confirm('You have unsaved changes. Do you want to leave?')) {
-            // Proceed with tab change
-            router.get(`/api_instances/${props.instance_id}/${tabId}`, {}, {
-                preserveState: true,
-                preserveScroll: true,
-                // only: ['activeTab'] // Only update the activeTab prop
-            })
-        } else {
-            // Cancel tab change
-            return
-        }
-    }
+    // hasUnsavedChanges.value = checkForUnsavedChanges()
+    // if (hasUnsavedChanges.value) {
+    //     if (confirm('You have unsaved changes. Do you want to leave?')) {
+    //         // Proceed with tab change
+    //         router.get(`/api_instances/${props.instance_id}/${tabId}`, {}, {
+    //             preserveState: true,
+    //             preserveScroll: true,
+    //             // only: ['activeTab'] // Only update the activeTab prop
+    //         })
+    //     } else {
+    //         // Cancel tab change
+    //         return
+    //     }
+    // }
     router.get(`/api_instances/${props.instance_id}/${tabId}`, {}, {
         preserveState: true,
         preserveScroll: true,
@@ -303,7 +303,7 @@ const handleSave = async() => {
             public: apiInstanceData.value?.public,
             api_id: apiInstanceData.value?.api.id,
             api_version_id: apiInstanceData.value?.api_version_id,
-            environment_id: apiInstanceData.value?.environment.id
+            environment_id: apiInstanceData.value?.environment_id
         }
   
     const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
@@ -330,18 +330,18 @@ const handleSave = async() => {
     hasUnsavedChanges.value = false
 }
 
-// // Browser/tab close warning
-// const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-//     if (hasUnsavedChanges.value) {
-//         event.preventDefault()
-//         // use @ts-ignore to avoid type error
-//         // @ts-ignore
-//         event.returnValue = '' // Chrome requires returnValue to be set but use @ts-ignore to avoid type error
-//     }
-// }
+// Browser/tab close warning
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (hasUnsavedChanges.value) {
+        event.preventDefault()
+        // use @ts-ignore to avoid type error
+        // @ts-ignore
+        event.returnValue = '' // Chrome requires returnValue to be set but use @ts-ignore to avoid type error
+    }
+}
 
-// // Inertia navigation warning
-// let removeInertiaHook: (() => void) | null = null
+// Inertia navigation warning
+let removeInertiaHook: (() => void) | null = null
 
 let keydownHandler: ((event: KeyboardEvent) => void) | null = null
 // let clickHandler: ((event: MouseEvent) => void) | null = null
@@ -359,18 +359,18 @@ onMounted(() => {
 
         document.addEventListener('keydown', keydownHandler)
         // Add beforeunload listener
-        // window.addEventListener('beforeunload', handleBeforeUnload)
+        window.addEventListener('beforeunload', handleBeforeUnload)
         
-        // // Add Inertia navigation hook
-        // removeInertiaHook = router.on('before', (event) => {
-        //         if (hasUnsavedChanges.value) {
-        //             // Show confirmation dialog
-        //             const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
-        //             if (!confirmed) {
-        //                 return false // Cancel navigation
-        //             }
-        //         }
-        //     })
+        // Add Inertia navigation hook
+        removeInertiaHook = router.on('before', (event) => {
+                if (hasUnsavedChanges.value) {
+                    // Show confirmation dialog
+                    const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
+                    if (!confirmed) {
+                        return false // Cancel navigation
+                    }
+                }
+            })
         }
 )
 
@@ -379,10 +379,10 @@ onUnmounted(() => {
         document.removeEventListener('keydown', keydownHandler)
     }
 
-    // window.removeEventListener('beforeunload', handleBeforeUnload)
-    // if (removeInertiaHook) {
-    //     removeInertiaHook()
-    // }
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+    if (removeInertiaHook) {
+        removeInertiaHook()
+    }
 })
 
 </script>

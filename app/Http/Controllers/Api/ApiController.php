@@ -3,105 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Faker\Provider\Base;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class ApiController extends Controller
+class ApiController extends BaseDjangoController
 {
-    private $djangoBaseUrl;
-    private $uniqueId;
-    private $apiUser;
-    private $apiPassword;
-
-    public function __construct()
-    {
-        $this->djangoBaseUrl = config('services.django.base_url');
-        $this->uniqueId = config('services.django.unique_id');
-        $this->apiUser = config('services.django.api_user');
-        $this->apiPassword = config('services.django.api_password');
-    }
-
-    /**
-     * Generic method to make HTTP requests to Django API
-     */
-    private function makeDjangoRequest(string $method, string $endpoint, array $data = [], array $headers = []): array
-    {
-        $defaultHeaders = [
-            'X-Unique-Id' => $this->uniqueId,
-            'Accept' => 'application/json',
-        ];
-
-        if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
-            $defaultHeaders['Content-Type'] = 'application/json';
-        }
-
-        $headers = array_merge($defaultHeaders, $headers);
-       
-        $fullUrl = "{$this->djangoBaseUrl}/api/{$endpoint}";
-        Log::info('Making Django request', [
-            'method' => $method,
-            'full_url' => $fullUrl,
-            'endpoint' => $endpoint,
-            'headers' => $headers,
-            'data' => $data,
-            'django_base_url' => $this->djangoBaseUrl
-        ]);
-
-        try {
-            $response = Http::withBasicAuth($this->apiUser, $this->apiPassword)
-                        ->withHeaders($headers);
-
-            switch (strtoupper($method)) {
-                case 'GET':
-                    $response = $response->get($fullUrl);
-                    break;
-                case 'POST':
-                    $response = $response->post($fullUrl, $data);
-                    break;
-                case 'PUT':
-                    $response = $response->put($fullUrl, $data);
-                    break;
-                case 'DELETE':
-                    $response = $response->delete($fullUrl);
-                    break;
-                default:
-                    throw new \InvalidArgumentException("Unsupported HTTP method: {$method}");
-            }
-
-            // Add response debugging
-            // Log::info('Django response received', [
-            //     'status' => $response->status(),
-            //     'successful' => $response->successful(),
-            //     // 'body' => $response->body(),
-            //     'headers' => $response->headers()
-            // ]);
-
-            return [
-                'success' => $response->successful(),
-                'status' => $response->status(),
-                'data' => $response->json(),
-                'response' => $response
-            ];
-
-        } catch (\Exception $e) {
-            Log::error("Django API request failed: {$e->getMessage()}", [
-                'method' => $method,
-                'endpoint' => $endpoint,
-                'full_url' => $fullUrl,
-                'data' => $data,
-                'exception' => $e->getTraceAsString()
-            ]);
-
-            return [
-                'success' => false,
-                'status' => 500,
-                'data' => ['error' => 'Internal server error'],
-                'response' => null
-            ];
-        }
-    }
+    
     /**
      * Generic index method for any resource
      */
@@ -267,294 +177,6 @@ class ApiController extends Controller
     }
 
     // ===========================================
-    // API Instances
-    // ===========================================
-    public function apiInstancesIndex(): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('GET', 'api_instances');
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to fetch api instances}",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function apiInstancesStore(Request $request): JsonResponse
-    {
-        Log::info('ApiInstancesStore called');
-
-        $requestData = $request->all();
-        
-        $result = $this->makeDjangoRequest('POST', "api_instances", $requestData);
-        // Log::info('Django request result', [
-        //     'success' => $result['success'],
-        //     'status' => $result['status'],
-        //     'data' => $result['data']
-        // ]);
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to POST API Instance details",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function apiInstancesUpdate(Request $request, string $api_instance_id): JsonResponse
-    {
-        Log::info('ApiInstancesStore called', ['api_instance_id' => $api_instance_id]);
-
-        $endpoint = "api_instances/{$api_instance_id}";
-
-        $requestData = $request->all();
-        
-        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to PUT API Instance details",
-            'api_id' => $api_instance_id,
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function apiInstancesDestroy($id): JsonResponse
-    {
-        $endpoint = "api_instances/{$id}";
-        
-        $result = $this->makeDjangoRequest('DELETE', $endpoint);
-
-        if ($result['success']) {
-            return response()->json([
-                'message' => ucfirst('api_instance') . ' deleted successfully'
-            ]);
-        }
-
-        return response()->json([
-            'error' => "Failed to delete api instances",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    // ===========================================
-    // API Instance by ID - AJAX call for fetching single instance
-    // ===========================================
-    public function ApiInstancesEditIndex(Request $request, string $instance_id): JsonResponse
-    {
-        Log::info('ApiInstancesEditIndex called', ['instance_id' => $instance_id]);
-
-        $endpoint = "api_instances/{$instance_id}";
-        
-        $result = $this->makeDjangoRequest('GET', $endpoint);
-        // Log::info('Django request result', [
-        //     'success' => $result['success'],
-        //     'status' => $result['status'],
-        //     'data' => $result['data']
-        // ]);
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to fetch API details",
-            'api_id' => $instance_id,
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function ApiInstancesEditUpdate(Request $request, string $instance_id): JsonResponse
-    {
-        Log::info('ApiInstancesEditUpdate called', ['instance_id' => $instance_id]);
-
-        $endpoint = "api_instances/{$instance_id}";
-        $requestData = $request->all();
-        
-        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to put API Instance details",
-            'api_id' => $instance_id,
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    // ===========================================
-    // Schedulers
-    // ===========================================
-    public function schedulersIndex(): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('GET', 'schedulers');
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to fetch schedulers}",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function schedulersStore(Request $request): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('POST', 'schedulers', $request->all());
-
-        if ($result['success']) {
-            return response()->json($result['data'], 201);
-        }
-
-        return response()->json([
-            'error' => "Failed to create schedulers",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function schedulersUpdate(Request $request, $id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('PUT', "schedulers/{$id}", $request->all());
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to update schedulers",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function schedulersDestroy($id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('DELETE', "schedulers/{$id}");
-
-        if ($result['success']) {
-            return response()->json([
-                'message' => ucfirst('schedulers') . ' deleted successfully'
-            ]);
-        }
-
-        return response()->json([
-            'error' => "Failed to delete schedulers",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    // ===========================================
-    // API Users
-    // ===========================================
-    public function apiUsersIndex(): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('GET', 'api_users');
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to fetch api users}",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function apiUsersStore(Request $request): JsonResponse
-    {
-        Log::info('apiUsersStore called');
-
-        $requestData = $request->all();
-        
-        $result = $this->makeDjangoRequest('POST', "api_users", $requestData);
-        // Log::info('Django request result', [
-        //     'success' => $result['success'],
-        //     'status' => $result['status'],
-        //     'data' => $result['data']
-        // ]);
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to POST API User",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function apiUsersUpdate(Request $request, string $api_user_id): JsonResponse
-    {
-        Log::info('apiUsersUpdate called', ['api_instance_id' => $api_user_id]);
-
-        $endpoint = "api_users/{$api_user_id}";
-
-        $requestData = $request->all();
-        
-        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to PUT API User",
-            'api_id' => $api_user_id,
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function apiUsersDestroy($id): JsonResponse
-    {
-        $endpoint = "api_users/{$id}";
-        
-        $result = $this->makeDjangoRequest('DELETE', $endpoint);
-
-        if ($result['success']) {
-            return response()->json([
-                'message' => ucfirst('api_user') . ' deleted successfully'
-            ]);
-        }
-
-        return response()->json([
-            'error' => "Failed to delete api user",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    // ===========================================
     // API Versions
     // ===========================================
     public function apiVersionsIndex($instance_id): JsonResponse
@@ -606,132 +228,49 @@ class ApiController extends Controller
 
     public function ApiEditUpdate(Request $request, string $api_id): JsonResponse
     {
-        Log::info('ApiEditStore called', ['api_id' => $api_id]);
+        Log::info('ApiEditUpdate called', ['api_id' => $api_id]);
 
         $endpoint = "apis/{$api_id}/code";
-
         $requestData = $request->all();
 
-        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
+        try {
+            $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
 
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to PUT API details",
-            'api_id' => $api_id,
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-
-    // ===========================================
-    // Resources -- TO:DO - Move to separate controller and make djangorequest util function
-    // ===========================================
-    public function resourcesByTypeIndex($type): JsonResponse
-    {
-        $endpoint = "resources/type/{$type}";
-
-        $result = $this->makeDjangoRequest('GET', $endpoint);
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to fetch resources of type {$type}",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function resourcesIndex(): JsonResponse
-    {
-        $endpoint = "resources";
-        Log::info('Fetching all resources', ['endpoint' => $endpoint]);
-        $result = $this->makeDjangoRequest('GET', $endpoint);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to fetch resources",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-    
-    public function resourcesStore(Request $request): JsonResponse
-    {
-        Log::info('Store method called', [
-            'request_data' => $request->all()
-        ]);
-        $result = $this->makeDjangoRequest('POST', 'resources', $request->all());
-
-        if ($result['success']) {
-            return response()->json($result['data'], 201);
-        }
-       
-        return response()->json([
-            'error' => "Failed to create resource",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function resourcesUpdate(Request $request, string $resource_id): JsonResponse
-    {
-        Log::info('resourcesUpdate called', ['resource_id' => $resource_id]);
-
-        $endpoint = "resources/{$resource_id}";
-
-        $requestData = $request->all();
-        
-        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to PUT API User",
-            'api_id' => $resource_id,
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    public function resourcesDestroy($id): JsonResponse
-    {
-        $endpoint = "resources/{$id}";
-        
-        $result = $this->makeDjangoRequest('DELETE', $endpoint);
-
-        if ($result['success']) {
-            return response()->json([
-                'message' => ucfirst('resource') . ' deleted successfully'
+            Log::info('Django request result', [
+                'success' => $result['success'],
+                'status' => $result['status'],
+                'data' => $result['data']
             ]);
-        }
 
-        return response()->json([
-            'error' => "Failed to delete resource",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
+            if ($result['success']) {
+                return response()->json($result['data']);
+            }
+
+            // Extract a meaningful error message from the Django response
+            $errorMessage = $result['data']['error']
+                ?? $result['data']['detail']
+                ?? $result['data']['message']
+                ?? 'Unknown error occurred on Django side.';
+
+            return response()->json([
+                'error' => 'Failed to update API details.',
+                'details' => $errorMessage,
+                'status' => $result['status'],
+                'api_id' => $api_id,
+            ], $result['status']);
+
+        } catch (\Throwable $e) {
+            Log::error('Exception during ApiEditUpdate', [
+                'api_id' => $api_id,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'error' => 'Internal server error while updating API details.',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -785,114 +324,6 @@ class ApiController extends Controller
             default:
                 return response()->json(['error' => 'Invalid action'], 400);
         }
-    }
-
-    /**
-     * Get the latest version of a specific API
-     */
-    public function getLatestApiVersion($id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions/latest");
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to fetch latest version for API {$id}",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    /**
-     * Update API code/configuration
-     */
-    // public function updateApiCode(Request $request, $id): JsonResponse
-    // {
-    //     $result = $this->makeDjangoRequest('PUT', "apis/{$id}/code", $request->all());
-
-    //     if ($result['success']) {
-    //         return response()->json($result['data']);
-    //     }
-
-    //     return response()->json([
-    //         'error' => "Failed to update API code for API {$id}",
-    //         'details' => $result['data'],
-    //         'status' => $result['status']
-    //     ], $result['status']);
-    // }
-
-    /**
-     * Get API developers for a specific API
-     */
-    public function getApiDevelopers($id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('GET', "apis/{$id}/developers");
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to fetch API developers for API {$id}",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    /**
-     * Create a new API developer assignment
-     */
-    public function createApiDeveloper(Request $request, $id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('POST', "apis/{$id}/developers", $request->all());
-
-        if ($result['success']) {
-            return response()->json($result['data'], 201);
-        }
-
-        return response()->json([
-            'error' => "Failed to assign developer to API {$id}",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    /**
-     * Update an API developer assignment
-     */
-    public function updateApiDeveloper(Request $request, $api_id, $id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('PUT', "apis/{$api_id}/developers/{$id}", $request->all());
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to update API developer assignment",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    /**
-     * Delete an API developer assignment
-     */
-    public function deleteApiDeveloper($api_id, $id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('DELETE', "apis/{$api_id}/developers/{$id}");
-
-        if ($result['success']) {
-            return response()->json([
-                'message' => 'API developer assignment removed successfully'
-            ]);
-        }
-
-        return response()->json([
-            'error' => "Failed to remove API developer assignment",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
     }
 
     /**
