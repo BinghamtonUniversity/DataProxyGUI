@@ -17,7 +17,7 @@ import { ArrowUpDown, ChevronDown, Plus, Trash2, Settings } from 'lucide-vue-nex
 import { h, ref, computed } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
-import { type ApiData, RouteData } from '@/types'
+import { type ApiData, RouteData, Api } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -53,6 +53,7 @@ interface Props {
     api_id: string
     api_type: string
     apiData: ApiData | null
+    api: Api | null
     loadingApiData: boolean
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void

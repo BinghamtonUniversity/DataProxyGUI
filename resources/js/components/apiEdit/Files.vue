@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
-import { type ApiData, type ApiVersionFunction } from '@/types'
+import { type ApiData, type ApiVersionFunction, Api} from '@/types'
 import {
   Dialog,
   DialogTrigger,
@@ -24,6 +24,7 @@ interface Props {
     api_id: string
     api_type: string
     apiData: ApiData | null
+    api: Api | null
     loadingApiData: boolean
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
