@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, onUnmounted, watch } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem, Api, ApiData, ApiInstance, Environment } from '@/types'
@@ -19,6 +19,7 @@ import AlertModal from '@/components/AlertModal.vue'
 import FormViewer from '@/components/formviewer/FormViewer.vue'
 import { useToaster } from '@/composables/useToaster'
 import Toaster from '@/components/toaster/Toaster.vue'
+import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
     api_id: string
@@ -26,6 +27,10 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+// Track unsaved changes
+const hasUnsavedChanges = ref(false)
+const originalApiData = ref<ApiData | null>(null)
 
 // Toaster
 const { success, error: showError, warning, info } = useToaster()
@@ -148,11 +153,6 @@ const showApiDevelopersModal = ref(false)
 const showDevelopersDropdown = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 
-// Get CSRF token from meta tag
-const getCsrfToken = () => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    return token;
-}
 
 const fetchApi = async () => {
     const response = await fetch(`/ajax/apis/${props.api_id}`)
@@ -177,7 +177,11 @@ const fetchApiData = async () => {
         // console.log('Fetch response:', response)
 
         if (!response.ok) throw new Error('Failed to fetch API data')
-        apiData.value = await response.json()
+        const data = await response.json()
+        apiData.value = data
+
+        originalApiData.value = JSON.parse(JSON.stringify(data)) // Deep clone
+        hasUnsavedChanges.value = false
     } catch (e: any) {
         apiError.value = e.message || 'Error fetching API data'
         apiData.value = null
@@ -185,6 +189,14 @@ const fetchApiData = async () => {
         loadingApiData.value = false
     }
 }
+
+// Watch for changes in apiData
+watch(apiData, (newVal) => {
+    if (originalApiData.value && newVal) {
+        // Compare to detect changes
+        hasUnsavedChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalApiData.value)
+    }
+}, { deep: true })
 
 const updateApiData = (updatedApiData: ApiData) => {
     apiData.value = updatedApiData
@@ -646,6 +658,24 @@ const handleDevelopersAction = (action: string) => {
 
 // Save function
 const handleSave = async () => {
+    if (
+        !apiData.value ||
+        !apiData.value.version_views ||
+        !Array.isArray(apiData.value.version_views)
+    ) {
+        showError('No version views found to save.')
+        return
+    }
+
+    const emptyViews = apiData.value.version_views.filter(
+        (view: any) => !view.content || view.content.trim() === ''
+    )
+
+    if (emptyViews.length > 0) {
+        const emptyNames = emptyViews.map((v: any) => v.name || '(Unnamed View)').join(', ')
+        showError(`The following functions have empty content: ${emptyNames}`)
+        return
+    }
 
     const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
         method: 'PUT',
@@ -665,16 +695,56 @@ const handleSave = async () => {
     success('API data saved successfully!')
     const responseData = await response.json()
     updateApiData(responseData)
+
+    // Reset dirty state after successful save
+    originalApiData.value = JSON.parse(JSON.stringify(responseData))
+    hasUnsavedChanges.value = false
 }
+
+// Add a method to check for changes
+// const checkForUnsavedChanges = () => {
+//     if (originalApiData.value && originalApiData.value) {
+//         return JSON.stringify(apiData.value) !== JSON.stringify(originalApiData.value)
+//     }
+//     return false
+// }
 
 // Navigation helper
 const navigateToTab = (tabId: string) => {
+    // hasUnsavedChanges.value = checkForUnsavedChanges()
+    // if (hasUnsavedChanges.value) {
+    //     if (confirm('You have unsaved changes. Do you want to leave?')) {
+    //         router.get(`/apis/${props.api_id}/${tabId}`, {}, {
+    //             preserveState: true,
+    //             preserveScroll: true,
+    //             // only: ['activeTab'] // Only update the activeTab prop
+    //         })
+    //     } else {
+    //         // Cancel tab change
+    //         return
+    //     }
+    // }
     router.get(`/apis/${props.api_id}/${tabId}`, {}, {
         preserveState: true,
         preserveScroll: true,
         // only: ['activeTab'] // Only update the activeTab prop
     })
+    
 }
+
+// Browser/tab close warning
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (hasUnsavedChanges.value) {
+        event.preventDefault()
+        // use @ts-ignore to avoid type error
+        // @ts-ignore
+        event.returnValue = '' // Chrome requires returnValue to be set but use @ts-ignore to avoid type error
+    }
+}
+
+// Inertia navigation warning
+let removeInertiaHook: (() => void) | null = null
+
 
 // Get current active component
 const activeComponent = computed(() => {
@@ -695,36 +765,59 @@ const componentProps = computed(() => ({
     highlightTarget: highlightTarget.value
 }))
 
+let keydownHandler: ((event: KeyboardEvent) => void) | null = null
+let clickHandler: ((event: MouseEvent) => void) | null = null
 // Fetch data on mount
 onMounted(() => {
     fetchApi()
     fetchApiData()
     
-    // Add keyboard event listener for Ctrl+S
-    document.addEventListener('keydown', (event) => {
+    keydownHandler = (event: KeyboardEvent) => {
         if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-            event.preventDefault() // Prevent browser's default save dialog
+            event.preventDefault()
             handleSave()
         }
-    })
+    }
     
-    // Add keyboard event listener for Ctrl+F (search)
-    document.addEventListener('keydown', (event) => {
-        if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
-            event.preventDefault() // Prevent browser's default find dialog
-            openSearchModal()
-        }
-    })
-    
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (event) => {
+    clickHandler = (event: MouseEvent) => {
         const target = event.target as HTMLElement
         
-        // Check if click is outside the dropdown container
         if (dropdownRef.value && !dropdownRef.value.contains(target)) {
             showDevelopersDropdown.value = false
         }
+    }
+    
+    document.addEventListener('keydown', keydownHandler)
+    document.addEventListener('click', clickHandler)
+
+    // Add beforeunload listener
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    // Add Inertia navigation hook
+    removeInertiaHook = router.on('before', (event) => {
+        if (hasUnsavedChanges.value) {
+            // Show confirmation dialog
+            const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
+            if (!confirmed) {
+                return false // Cancel navigation
+            }
+        }
     })
+})
+
+// Clean up event listeners when component unmounts
+onUnmounted(() => {
+    if (keydownHandler) {
+        document.removeEventListener('keydown', keydownHandler)
+    }
+    if (clickHandler) {
+        document.removeEventListener('click', clickHandler)
+    }
+
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+    if (removeInertiaHook) {
+        removeInertiaHook()
+    }
 })
 </script>
 

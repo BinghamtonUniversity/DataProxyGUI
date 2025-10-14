@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
-import { Trash2 } from 'lucide-vue-next'
+import { Trash2, Pencil } from 'lucide-vue-next'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 
@@ -48,9 +48,19 @@ const newViewName = ref('')
 const isCreatingView = ref(false)
 const createViewError = ref<string | null>(null)
 
+//Edit function name state
+const viewBeingEdited = ref<ApiVersionFunction | null>(null)
+const isEditingView = ref(false)
+
+
 const handleSave = async (updatedCode: string) => {
     if (!selectedFunction.value || !props.apiData) {
         saveError.value = 'No function selected or API data not available'
+        return
+    }
+
+    if (!updatedCode || updatedCode.trim() === '') {
+        saveError.value = 'Function content cannot be empty'
         return
     }
 
@@ -125,7 +135,7 @@ const handleCreateNewView = async () => {
         // TO-DO:: PHP function template
         const newFunction: ApiVersionFunction = {
             name: newViewName.value.trim(),
-            content: `# Define the function ${newViewName.value.trim()} here\n`,
+            content: ``,
         }
 
         const updatedApiData = {
@@ -133,21 +143,21 @@ const handleCreateNewView = async () => {
             version_views: [...props.apiData.version_views, newFunction]
         }
 
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
+        // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+        //     method: 'PUT',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'Accept': 'application/json',
+        //         'X-CSRF-TOKEN': getCsrfToken() || '',
+        //     },
+        //     body: JSON.stringify(updatedApiData)
+        // })
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            // error('Failed to create function', 'Error');
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
+        // if (!response.ok) {
+        //     const errorData = await response.json().catch(() => ({}))
+        //     // error('Failed to create function', 'Error');
+        //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        // }
 
         // const result = await response.json()
         
@@ -213,10 +223,74 @@ const handleDeleteFunction = async (view: ApiVersionFunction ) =>{
     }
 }
 
+
+const editFunctionName = (view: ApiVersionFunction) => {
+  isEditingView.value = true
+  viewBeingEdited.value = view
+  newViewName.value = view.name
+  isNewViewDialogOpen.value = true
+}
+
+
 const resetNewViewDialog = () => {
     newViewName.value = ''
     createViewError.value = null
     isCreatingView.value = false
+    isEditingView.value = false
+    viewBeingEdited.value = null
+}
+
+const handleUpdateFunctionName = async () => {
+  if (!props.apiData || !viewBeingEdited.value) {
+    createViewError.value = 'No function selected for editing'
+    return
+  }
+
+  const trimmedName = newViewName.value.trim()
+  if (!trimmedName) {
+    createViewError.value = 'Function name cannot be empty'
+    return
+  }
+
+  // Prevent duplicates
+  const nameExists = props.apiData.version_views.some(
+    func => func.name === trimmedName && func !== viewBeingEdited.value
+  )
+  if (nameExists) {
+    createViewError.value = 'A function with this name already exists'
+    return
+  }
+
+  isCreatingView.value = true
+  createViewError.value = null
+
+  try {
+    const updatedApiData = {
+      ...props.apiData,
+      version_views: props.apiData.version_views.map(func =>
+        func.name === viewBeingEdited.value?.name
+          ? { ...func, name: trimmedName }
+          : func
+      )
+    }
+
+    props.updateApiData(updatedApiData)
+
+    // If editing currently selected function, update reference
+    if (selectedFunction.value?.name === viewBeingEdited.value.name) {
+      selectedFunction.value.name = trimmedName
+    }
+
+    success(`Function name updated to "${trimmedName}"`, 'Function Updated')
+    isNewViewDialogOpen.value = false
+  } catch (e: any) {
+    console.error('Update function name error:', e)
+    createViewError.value = e.message || 'Failed to update function name'
+  } finally {
+    isCreatingView.value = false
+    isEditingView.value = false
+    viewBeingEdited.value = null
+  }
 }
 
 // Handle search result selection
@@ -412,7 +486,7 @@ onUnmounted(() => {
                                 </DialogTrigger>
                                 <DialogContent class="sm:max-w-md">
                                     <DialogHeader>
-                                        <DialogTitle>Create New Function</DialogTitle>
+                                        <DialogTitle>{{ isEditingView ? 'Edit Function Name' : 'Create New Function' }}</DialogTitle>
                                     </DialogHeader>
                                     <div class="space-y-4">
                                         <div class="space-y-2">
@@ -422,7 +496,7 @@ onUnmounted(() => {
                                                 v-model="newViewName"
                                                 placeholder="Enter function name"
                                                 :disabled="isCreatingView"
-                                                @keyup.enter="handleCreateNewView"
+                                                @keyup.enter="isEditingView ? handleUpdateFunctionName() : handleCreateNewView()"
                                             />
                                         </div>
                                         
@@ -439,11 +513,14 @@ onUnmounted(() => {
                                                 Cancel
                                             </Button>
                                             <Button 
-                                                @click="handleCreateNewView"
+                                                @click="isEditingView ? handleUpdateFunctionName() : handleCreateNewView()"
                                                 :disabled="!newViewName.trim() || isCreatingView"
                                             >
                                                 <div v-if="isCreatingView" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                                {{ isCreatingView ? 'Creating...' : 'Create' }}
+                                                {{ isCreatingView 
+                                                    ? (isEditingView ? 'Updating...' : 'Creating...') 
+                                                    : (isEditingView ? 'Update' : 'Create') 
+                                                }}
                                             </Button>
                                         </div>
                                     </div>
@@ -476,11 +553,20 @@ onUnmounted(() => {
                                 <Button
                                     variant="ghost"
                                     size="sm"
+                                    @click.stop="editFunctionName(item)"
+                                    class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                                >
+                                    <Pencil :size="1" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
                                     @click.stop="handleDeleteFunction(item)"
                                     class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
                                 >
                                     <Trash2 :size="1" />
                                 </Button>
+                                
                             </div>
                         </nav>
                     </aside>

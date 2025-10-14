@@ -17,7 +17,7 @@ import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
 import { h, ref, computed, onMounted, onUnmounted } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
-import { type ApiData, type ResourceData } from '@/types'
+import { type ApiData, type ResourceData, Api } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -52,6 +52,7 @@ interface Props {
     api_id: string
     api_type: string
     apiData: ApiData | null
+    api: Api | null
     loadingApiData: boolean
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
@@ -134,23 +135,23 @@ const submitNewResource = async (e: Event) => {
       }
     }
     // console.log('Updated API Data:', updatedApiData)
-    const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-      method: 'PUT',
-      headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken() || '',
-      },
-      body: JSON.stringify(updatedApiData)
-    })
+    // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+    //   method: 'PUT',
+    //   headers: {
+    //       'Content-Type': 'application/json',
+    //       'Accept': 'application/json',
+    //       'X-CSRF-TOKEN': getCsrfToken() || '',
+    //   },
+    //   body: JSON.stringify(updatedApiData)
+    // })
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
+    // if (!response.ok) {
+    //   const errorData = await response.json().catch(() => ({}))
+    //   throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+    // }
 
-    const responseData = await response.json()
-    props.updateApiData(responseData || updatedApiData)
+    // const responseData = await response.json()
+    props.updateApiData(updatedApiData)
     if(isEditMode.value) {
       success('Updated successfully', 'Resource Updated');
     } else {

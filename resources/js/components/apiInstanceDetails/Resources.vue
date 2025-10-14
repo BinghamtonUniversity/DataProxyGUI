@@ -23,7 +23,7 @@ interface Props {
     resources: Resource[] | null,
     loading: boolean,
     apiInstanceError: string
-    updateApiInstanceData: (updatedApiInstanceData: ApiInstance) => void
+    updateApiInstanceData: (updatedApiInstanceData: Partial<ApiInstance>) => void
 }
 
 const props = defineProps<Props>()
@@ -66,49 +66,17 @@ const saveResources = async() => {
     resources: props.apiInstanceData.resources, 
     options: props.apiInstanceData.options,
     public: props.apiInstanceData.public,
-    api_id: props.apiInstanceData.api.id,
+    api_id: props.apiInstanceData.api_id,
     api_version_id: props.apiInstanceData.api_version_id,
-    environment_id: props.apiInstanceData.environment.id
+    environment_id: props.apiInstanceData.environment_id
   }
-  // console.log('Saving request data:', requestData)
-
-  const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken() || '',
-        },
-        body: JSON.stringify(requestData)
-    })
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
-
-  const responseData = await response.json()
-  props.updateApiInstanceData(responseData)
+  
+  props.updateApiInstanceData(requestData)
   success('Resources updated successfully', 'Success');
   
   newResourceName.value = ''
   selectedResourceId.value = ''
 }
-
-// Remove resource from the instance
-// const removeResource = (index: number) => {
-//   if (!props.apiInstanceData) return
-  
-//   const updatedResources = [...props.apiInstanceData.resources || []]
-//   updatedResources.splice(index, 1)
-  
-//   const updatedData = {
-//     ...props.apiInstanceData,
-//     resources: updatedResources
-//   }
-  
-//   props.updateApiInstanceData(updatedData)
-// }
 
 // Update existing resource
 const updateResource = (index: number, resource_name: string, value: string) => {
@@ -187,72 +155,15 @@ const updateResource = (index: number, resource_name: string, value: string) => 
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-           
-            
-            
-            <!-- <Button 
-              variant="destructive" 
-              size="sm"
-              @click="removeResource(index)"
-            >
-              Remove
-            </Button> -->
+
           </div>
         </div>
-         <div class="pt-4 border-t">
+         <!-- <div class="pt-4 border-t">
           <Button 
             @click="saveResources"
           >
             Save Resources
           </Button>
-        </div>
-        
-        <!-- Add New Resource Section -->
-        <!-- <div class="border-t pt-4 mt-4">
-          <h4 class="font-medium mb-3">
-            {{ hasExistingResources ? 'Add New Resource:' : 'Add Resource:' }}
-          </h4>
-          
-          <div class="flex items-end gap-4">
-            <div class="flex-1">
-              <Label for="new-resource-name" class="text-sm font-medium">Resource Name:</Label>
-              <Input
-                id="new-resource-name"
-                v-model="newResourceName"
-                class="mt-1"
-                placeholder="Enter resource name"
-              />
-            </div>
-            
-            <div class="flex-1">
-              <Label class="text-sm font-medium">Available Resources:</Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button variant="outline" class="w-full mt-1 justify-between">
-                    {{ selectedResourceId ? getResourceNameById(selectedResourceId) : 'Select a resource' }}
-                    <span class="ml-2">▼</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent class="w-full">
-                  <DropdownMenuItem
-                    v-for="resource in (resources || [])"
-                    :key="resource.id"
-                    @click="selectedResourceId = resource.id.toString()"
-                    class="cursor-pointer"
-                  >
-                    {{ resource.name }} ({{ resource.resource_type }})
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            
-            <Button 
-              @click="saveResource"
-              :disabled="!newResourceName || !selectedResourceId"
-            >
-              Add Resource
-            </Button>
-          </div>
         </div> -->
         
         <!-- Empty state message -->

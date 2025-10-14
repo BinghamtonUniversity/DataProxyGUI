@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
-import { Api, type ApiData, type ApiVersionFunction } from '@/types'
+import { type ApiData, type ApiVersionFunction, Api} from '@/types'
 import {
   Dialog,
   DialogTrigger,
