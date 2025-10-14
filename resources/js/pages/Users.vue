@@ -34,7 +34,7 @@ const error = ref<string | null>(null);
 const { success, error: showError, warning, info } = useToaster();
 
 // Form configuration for API users
-const formConfig = {
+const formConfig = ref({
     label: 'API Users',
     description: 'A list of API users with their credentials and environment settings.',
     name: "api-users-form",
@@ -90,7 +90,7 @@ const formConfig = {
             required: false
         }
     ]
-};
+});
 
 // Get CSRF token from meta tag
 const getCsrfToken = () => {
@@ -147,7 +147,7 @@ const fetchEnvironments = async () => {
         const environments = await response.json();
         
         // Update form config options for the environment dropdown
-        formConfig.fields[2].options = environments.map((env: any) => ({
+        formConfig.value.fields[2].options = environments.map((env: any) => ({
             label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
             value: env.id,
             color: env.type === 'test' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : env.type === 'dev' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
@@ -403,7 +403,7 @@ const handleCustomAction = (actionData: { action: string; selectedRows: any[]; s
 // Fetch data on component mount
 onMounted(async () => {
     await fetchEnvironments(); // Load environments first for dropdown
-    fetchUsers();
+    await fetchUsers();
 });
 </script>
 
@@ -434,7 +434,7 @@ onMounted(async () => {
                 v-else
                 :schema="formConfig"
                 :data="users"
-                
+                :filter="true"
                 :actions="[
                     {name: 'create', type: 'success', min: 0, label: ' New', loc: 'left'},
                     '|',

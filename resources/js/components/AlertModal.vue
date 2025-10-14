@@ -9,7 +9,7 @@
     <!-- Modal -->
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div 
-        class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 w-full max-w-[calc(100%-2rem)] grid gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg my-auto"
+        class="relative bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 w-full max-w-[calc(100%-2rem)] grid gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg my-auto"
         @click.stop>
         
         <!-- Header -->

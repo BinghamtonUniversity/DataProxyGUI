@@ -2,7 +2,7 @@
 import { onMounted, ref, computed, watch } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, ApiData } from '@/types'
+import { type BreadcrumbItem, ApiData, Api } from '@/types'
 import Heading from '@/components/Heading.vue'
 import { Button } from '@/components/ui/button'
 import { CodeDiff } from 'v-code-diff'
@@ -16,6 +16,7 @@ import Options from '@/components/apiEdit/Options.vue'
 import Files from '@/components/apiEdit/Files.vue'
 
 interface Props {
+    api: Api
     api_type: string
     api_id: string
     version_id: string
@@ -144,6 +145,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 const currentComponentProps = computed(() => ({
     api_id: props.api_id,
     api_type: props.api_type,
+    api: props.api,
     apiData: currentApiData.value,
     loadingApiData: loading.value,
     apiError: error.value,
@@ -187,6 +189,7 @@ const currentComponentProps = computed(() => ({
 const selectedComponentProps = computed(() => ({
     api_id: props.api_id,
     api_type: props.api_type,
+    api: props.api,
     apiData: selectedApiData.value,
     loadingApiData: loading.value,
     apiError: error.value,
@@ -742,6 +745,8 @@ onMounted(() => {
                             
                             <div class="opacity-75 pointer-events-none select-none">
                                 <component
+                                    
+                                 
                                     :is="activeComponent"
                                     :key="`selected-${activeTab}`"
                                     v-bind="selectedComponentProps"

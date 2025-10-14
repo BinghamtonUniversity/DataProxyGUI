@@ -202,7 +202,7 @@
       <table :class="currentTheme.table">
         <thead>
           <tr>
-            <th :class="[currentTheme.headerCell, currentTheme.borderRight, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']">
+            <th :class="[currentTheme.headerCell, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']">
               <CheckboxField
                 :name="'select-all'"
                 :value="allSelected"
@@ -220,7 +220,6 @@
               :key="col.key" 
               :class="[
                 currentTheme.headerCell, 
-                colIdx < computedColumns.length - 1 ? currentTheme.borderRight : '',
                 'cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'
               ]"
               @click="handleSort(col.key)"
@@ -243,10 +242,10 @@
         </thead>
         <tbody>
           <tr v-if="filter">
-            <td :class="[currentTheme.filterCell, currentTheme.borderRight]">
+            <td :class="[currentTheme.filterCell]">
               <button @click="clearFilters" :class="currentTheme.clearButton" title="Clear all filters">Clear</button>
             </td>
-            <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.filterCell, colIdx < computedColumns.length - 1 ? currentTheme.borderRight : '']">
+            <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.filterCell]">
               <span v-if="col.options">
                 <select
                   class="input-field"
@@ -286,7 +285,7 @@
               currentTheme.rowHover
             ]"
           >
-            <td :class="[currentTheme.cell, currentTheme.borderRight, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']" @click.stop>
+            <td :class="[currentTheme.cell, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']" @click.stop>
               <CheckboxField
                 :name="'row-select-' + (row.id || row.name)"
                 :value="selectedRows.includes(row.id || row.name)"
@@ -301,7 +300,7 @@
                 ]"
               />
             </td>
-            <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.cell, colIdx < computedColumns.length - 1 ? currentTheme.borderRight : '']">
+            <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.cell]">
               <!-- Render option badges if column has options -->
               <span v-if="col.options && row[col.key]">
                 <span v-if="typeof col.options[0] === 'object'">
@@ -784,7 +783,16 @@ const filteredRows = computed(() => {
   if (props.filter) {
     Object.entries(filters.value).forEach(([key, val]) => {
       if (val) {
-        result = result.filter(row => String(row[key] ?? '').toLowerCase().includes(val.toLowerCase()));
+        // Find the column configuration to check if it has options
+        const column = computedColumns.value.find(col => col.key === key);
+        
+        if (column && column.options) {
+          // For select fields with options, do exact match on the value
+          result = result.filter(row => String(row[key] ?? '') === String(val));
+        } else {
+          // For regular text fields, use substring match
+          result = result.filter(row => String(row[key] ?? '').toLowerCase().includes(String(val).toLowerCase()));
+        }
       }
     });
   }

@@ -67,6 +67,67 @@ const showSearchModal = ref(false)
 const searchQuery = ref('')
 const searchResults = ref<any[]>([])
 const isSearching = ref(false)
+
+// API Data Import/Export state
+const showApiDataImportModal = ref(false)
+const apiDataImportJson = ref('')
+
+// API Data Import/Export functions
+const openApiDataImportModal = () => {
+    showApiDataImportModal.value = true
+    apiDataImportJson.value = JSON.stringify(apiData.value, null, 2)
+}
+
+const closeApiDataImportModal = () => {
+    showApiDataImportModal.value = false
+    apiDataImportJson.value = ''
+}
+
+const handleApiDataImport = (formData: any) => {
+    try {
+        const importedData = JSON.parse(formData.jsonData)
+        
+        // Validate the imported data structure
+        if (!importedData || typeof importedData !== 'object') {
+            throw new Error('Invalid JSON structure')
+        }
+        
+        // Validate required API data fields
+        const requiredFields = ['version_urls', 'version_views', 'version_models', 'version_files', 'resources']
+        const missingFields = requiredFields.filter(field => !importedData.hasOwnProperty(field))
+        
+        if (missingFields.length > 0) {
+            throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
+        }
+        
+        // Update the API data with imported data
+        updateApiData(importedData)
+        
+        closeApiDataImportModal()
+        success('API data imported successfully!', 'Import Successful')
+        
+    } catch (error: any) {
+        showError(error.message || 'Invalid JSON format. Please check your JSON and try again.', 'Import Error')
+    }
+}
+
+const exportApiData = () => {
+    if (!apiData.value) {
+        showError('No API data available to export', 'Export Error')
+        return
+    }
+    
+    const dataStr = JSON.stringify(apiData.value, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(dataBlob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `api-data-${api.value?.name || 'export'}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+    success('API data exported successfully!', 'Export Successful')
+}
+
 const publishFormConfig = ref({
     label: 'Publish New Version',
     description: 'Enter details for the new version',
@@ -87,6 +148,27 @@ const publishFormConfig = ref({
             required: true,
             width: '12',
             placeholder: 'Detailed description of changes in this version'
+        }
+    ]
+})
+
+// API Data Import form configuration
+const apiDataImportFormConfig = ref({
+    label: 'Import API Data',
+    description: 'Import complete API data from JSON',
+    files: false,
+    fields: [
+        {
+            name: 'jsonData',
+            label: 'API Data JSON',
+            type: 'monaco',
+            required: true,
+            width: '12',
+            placeholder: 'Paste your complete API data JSON here...',
+            help: 'Paste the complete JSON configuration for your API data',
+            info: 'The JSON should contain all API data including routes, resources, functions, models, and files',
+            language: 'json',
+            height: 600
         }
     ]
 })
@@ -629,13 +711,16 @@ const handleDevelopersAction = (action: string) => {
     
     switch (action) {
         case 'export':
-            // Open export URL in new tab
-            const exportUrl = `http://127.0.0.1:8001/apis/${props.api_id}/version/latest`
-            window.open(exportUrl, '_blank')
+            console.log('Export API data')
+            // Export complete API data as JSON
+            exportApiData()
+            
             break
         case 'import':
-            console.log('Import developers')
-            // Implement import functionality
+            console.log('Import API data')
+            // Open import modal for complete API data
+            openApiDataImportModal()
+            
             break
         case 'versions':
 
@@ -865,7 +950,17 @@ onUnmounted(() => {
                     </svg>
                     Search
                 </Button>
-                
+                <!-- Manage Developers Button -->
+                <Button 
+                    @click="openApiDevelopersModal"
+                    variant="outline"
+                    class="flex items-center gap-2"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                    </svg>
+                    Manage Developers
+                </Button>
                 <!-- Save Button -->
                 <Button 
                     @click="handleSave"
@@ -937,18 +1032,9 @@ onUnmounted(() => {
                     </div>
                 </div>
             </div>
-            <div class="flex justify-end items-center mb-6">
-                <Button 
-                    @click="openApiDevelopersModal"
-                    variant="outline"
-                    class="flex items-center gap-2"
-                >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-                    </svg>
-                    Manage Developers
-                </Button>
-            </div>
+            
+                
+            
 
             <div class="flex flex-col space-y-8">
                 <!-- Tab navigation -->
@@ -1318,6 +1404,39 @@ onUnmounted(() => {
                     <p>Enter a search term to find items across routes, resources, functions, models, and files.</p>
                 </div>
             </div>
+        </AlertModal>
+
+        <!-- API Data Import Modal -->
+        <AlertModal
+            :isOpen="showApiDataImportModal"
+            title="Import API Data"
+            @close="closeApiDataImportModal"
+        >
+            <FormViewer
+                :formConfig="apiDataImportFormConfig"
+                :initialData="{ jsonData: apiDataImportJson }"
+                :actions="[
+                    {
+                        type: 'save',
+                        action: 'import',
+                        label: 'Import API Data',
+                        modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors'
+                    },
+                    {
+                        type: 'cancel',
+                        action: 'close',
+                        label: 'Cancel',
+                        modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors'
+                    }
+                ]"
+                :actionHandler="async ({ type, action, formData }: { type: string, action: string, formData: any }) => {
+                    if (action === 'import') {
+                        handleApiDataImport(formData);
+                    } else if (action === 'close') {
+                        closeApiDataImportModal();
+                    }
+                }"
+            />
         </AlertModal>
     </AppLayout>
     <Toaster />

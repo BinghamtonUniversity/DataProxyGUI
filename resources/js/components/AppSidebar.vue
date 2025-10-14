@@ -20,7 +20,7 @@ const mainNavItems: NavItem[] = [
         icon: Building2,
     },
     {
-        title: 'Users',
+        title: 'API Accounts',
         href: '/users',
         icon: Users,
     },
