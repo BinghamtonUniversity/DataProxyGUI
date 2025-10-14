@@ -610,7 +610,6 @@ const closeApiDevelopersModal = () => {
 // Dropdown functions for Developers button
 const toggleDevelopersDropdown = () => {
     showDevelopersDropdown.value = !showDevelopersDropdown.value
-    console.log('Toggle developers dropdown', showDevelopersDropdown.value)
 }
 
 const handleDevelopersAction = (action: string) => {
@@ -618,26 +617,26 @@ const handleDevelopersAction = (action: string) => {
     
     switch (action) {
         case 'export':
-            console.log('Export developers')
-            // Implement export functionality
+            // Open export URL in new tab
+            const exportUrl = `http://127.0.0.1:8001/apis/${props.api_id}/version/latest`
+            window.open(exportUrl, '_blank')
             break
         case 'import':
             console.log('Import developers')
             // Implement import functionality
             break
         case 'versions':
-            console.log('Show versions')
+
             showVersionsModal.value = true
             fetchVersions()
             break
         case 'instances':
-            console.log('Show instances')
+
             showInstancesModal.value = true
             fetchEnvironment()
             fetchInstances()
             break
         case 'publish':
-            console.log('Publish new version')
             openPublishModal()
             break
         default:

@@ -562,7 +562,7 @@ onMounted(() => {
                                     </h3>
                                     <p class="text-sm text-gray-600 dark:text-gray-400">
                                         <span v-if="(activeTab === 'functions' && selectedFunctionIndex !== null) || (activeTab === 'files' && selectedFileIndex !== null)">
-                                            Comparing {{ activeTab === 'functions' ? 'function' : 'file' }} {{ activeTab === 'functions' ? selectedFunctionIndex + 1 : selectedFileIndex + 1 }}
+                                            Comparing {{ activeTab === 'functions' ? 'function' : 'file' }} {{ activeTab === 'functions' ? (selectedFunctionIndex ?? 0) + 1 : (selectedFileIndex ?? 0) + 1 }}
                                         </span>
                                         <span v-else>
                                             {{ activeTab === 'functions' ? (functionDiffData?.current?.length || 0) : (fileDiffData?.current?.length || 0) }} {{ activeTab === 'functions' ? 'functions' : 'files' }} available for comparison
@@ -676,7 +676,7 @@ onMounted(() => {
                             <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden m-4">
                                 <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                                     <h5 class="font-medium text-gray-900 dark:text-white">
-                                        {{ selectedFunction.current?.name || `Function ${selectedFunctionIndex + 1}` }}
+                                        {{ selectedFunction.current?.name || `Function ${(selectedFunctionIndex ?? 0) + 1}` }}
                                     </h5>
                                     <p class="text-sm text-gray-500 dark:text-gray-400">
                                         {{ selectedFunction.current?.content || 'No description' }}
@@ -699,7 +699,7 @@ onMounted(() => {
                             <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden m-4">
                                 <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                                     <h5 class="font-medium text-gray-900 dark:text-white">
-                                        {{ selectedFile.current?.name || `File ${selectedFileIndex + 1}` }}
+                                        {{ selectedFile.current?.name || `File ${(selectedFileIndex ?? 0) + 1}` }}
                                     </h5>
                                     <p class="text-sm text-gray-500 dark:text-gray-400">
                                         {{ selectedFile.current?.content || 'No description' }}

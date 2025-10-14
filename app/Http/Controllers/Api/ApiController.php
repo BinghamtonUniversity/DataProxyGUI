@@ -1007,4 +1007,35 @@ class ApiController extends Controller
             'error' => "Failed to fetch version details for API version {$version_id}",
         ], 500);
     }
+
+    /**
+     * Export API Version - Display JSON in new tab
+     */
+    public function exportApiVersion(Request $request, string $api_id)
+    {
+        Log::info('Export API Version called', ['api_id' => $api_id]);
+
+        $endpoint = "apis/{$api_id}/versions/latest";
+        
+        $result = $this->makeDjangoRequest('GET', $endpoint);
+        Log::info('Django request result for export', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
+
+        if ($result['success']) {
+            // Return JSON with proper headers for display in browser
+            return response()->json($result['data'], 200, [
+                'Content-Type' => 'application/json',
+                'Content-Disposition' => 'inline; filename="api_' . $api_id . '_latest_version.json"'
+            ]);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch API version for export",
+            'api_id' => $api_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
 }
