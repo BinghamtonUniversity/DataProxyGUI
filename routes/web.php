@@ -76,31 +76,31 @@ Route::middleware(['auth', 'verified'])->prefix('api')->group(function () {
     Route::delete('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisDestroy']);
 
     //API Instances
-    Route::get('/api_instances', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesIndex']);
-    Route::post('/api_instances', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesStore']);
-    Route::put('/api_instances/{id}', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesUpdate']);
-    Route::delete('/api_instances/{id}', [App\Http\Controllers\Api\ApiController::class, 'apiInstancesDestroy']);
+    Route::get('/api_instances', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesIndex']);
+    Route::post('/api_instances', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesStore']);
+    Route::put('/api_instances/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesUpdate']);
+    Route::delete('/api_instances/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesDestroy']);
 
     //Schedulers
-    Route::get('/schedulers', [App\Http\Controllers\Api\ApiController::class, 'schedulersIndex']);
-    Route::post('/schedulers', [App\Http\Controllers\Api\ApiController::class, 'schedulersStore']);
-    Route::put('/schedulers/{id}', [App\Http\Controllers\Api\ApiController::class, 'schedulersUpdate']);
-    Route::delete('/schedulers/{id}', [App\Http\Controllers\Api\ApiController::class, 'schedulersDestroy']);
+    Route::get('/schedulers', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersIndex']);
+    Route::post('/schedulers', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersStore']);
+    Route::put('/schedulers/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersUpdate']);
+    Route::delete('/schedulers/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersDestroy']);
 
     //API Users
-    Route::get('/api_users', [App\Http\Controllers\Api\ApiController::class, 'apiUsersIndex']);
-    Route::post('/api_users', [App\Http\Controllers\Api\ApiController::class, 'apiUsersStore']);
-    Route::put('/api_users/{id}', [App\Http\Controllers\Api\ApiController::class, 'apiUsersUpdate']);
-    Route::delete('/api_users/{id}', [App\Http\Controllers\Api\ApiController::class, 'apiUsersDestroy']);
+    Route::get('/api_users', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersIndex']);
+    Route::post('/api_users', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersStore']);
+    Route::put('/api_users/{id}', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersUpdate']);
+    Route::delete('/api_users/{id}', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersDestroy']);
 
     //API Versions
     Route::get('/apis/{id}/api_versions', [App\Http\Controllers\Api\ApiController::class, 'apiVersionsIndex']);
 
     // API Developer routes
-    Route::get('/apis/{id}/developers', [App\Http\Controllers\Api\ApiController::class, 'getApiDevelopers']);
-    Route::post('/apis/{id}/developers', [App\Http\Controllers\Api\ApiController::class, 'createApiDeveloper']);
-    Route::put('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'updateApiDeveloper']);
-    Route::delete('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiController::class, 'deleteApiDeveloper']);
+    Route::get('/apis/{id}/developers', [App\Http\Controllers\Api\ApiDevelopersController::class, 'getApiDevelopers']);
+    Route::post('/apis/{id}/developers', [App\Http\Controllers\Api\ApiDevelopersController::class, 'createApiDeveloper']);
+    Route::put('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiDevelopersController::class, 'updateApiDeveloper']);
+    Route::delete('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiDevelopersController::class, 'deleteApiDeveloper']);
 });
 
 // Resources
@@ -110,12 +110,12 @@ Route::get('/resources', function () {
 
 
 Route::middleware(['auth', 'verified'])->prefix('ajax/resources')->group(function () {
-    Route::get('/', [App\Http\Controllers\Api\ApiController::class, 'resourcesIndex']);
-    Route::get('/{id}', [App\Http\Controllers\Api\ApiController::class, 'resourcesShow']);
-    Route::get('/type/{type}', [App\Http\Controllers\Api\ApiController::class, 'resourcesByTypeIndex']);
-    Route::post('/', [App\Http\Controllers\Api\ApiController::class, 'resourcesStore']);
-    Route::put('/{id}', [App\Http\Controllers\Api\ApiController::class, 'resourcesUpdate']);
-    Route::delete('/{id}', [App\Http\Controllers\Api\ApiController::class, 'resourcesDestroy']);
+    Route::get('/', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesIndex']);
+    Route::get('/{id}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesShow']);
+    Route::get('/type/{type}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesByTypeIndex']);
+    Route::post('/', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesStore']);
+    Route::put('/{id}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesUpdate']);
+    Route::delete('/{id}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesDestroy']);
 
 });
 
@@ -180,6 +180,14 @@ Route::middleware(['auth', 'verified'])->prefix('/ajax/apis')->group(function ()
 });
 
 // ============================================
+// API Export - (JSON export in new tab)
+// ============================================
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/apis/{api_id}/version/latest', [App\Http\Controllers\Api\ApiController::class, 'exportApiVersion'])
+        ->name('api.export.version');
+});
+
+// ============================================
 // API Version Comparison
 // ============================================
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -215,9 +223,9 @@ Route::middleware(['auth', 'verified'])->prefix('/api_instances/{instance_id}')-
 // ============================================
     
 Route::middleware(['auth', 'verified'])->prefix('/ajax/api_instances')->group(function () {
-    Route::get('/{instance_id}', [App\Http\Controllers\Api\ApiController::class, 'ApiInstancesEditIndex'])
+    Route::get('/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditIndex'])
         ->name('api_instances.edit.index');
-    Route::put('/{instance_id}', [App\Http\Controllers\Api\ApiController::class, 'ApiInstancesEditUpdate'])
+    Route::put('/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditUpdate'])
         ->name('api_instances.edit.update');
 
 });

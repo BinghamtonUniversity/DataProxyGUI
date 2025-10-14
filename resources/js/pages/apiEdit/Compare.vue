@@ -2,7 +2,7 @@
 import { onMounted, ref, computed, watch } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, ApiData } from '@/types'
+import { type BreadcrumbItem, ApiData, Api } from '@/types'
 import Heading from '@/components/Heading.vue'
 import { Button } from '@/components/ui/button'
 import { CodeDiff } from 'v-code-diff'
@@ -13,8 +13,10 @@ import Resources from '@/components/apiEdit/Resources.vue'
 import Functions from '@/components/apiEdit/Functions.vue'
 import Models from '@/components/apiEdit/Models.vue'
 import Options from '@/components/apiEdit/Options.vue'
+import Files from '@/components/apiEdit/Files.vue'
 
 interface Props {
+    api: Api
     api_type: string
     api_id: string
     version_id: string
@@ -39,13 +41,21 @@ const triggerUpdate = () => {
     forceUpdate.value++
 }
 
-// Selected function for diff view
+// Selected function/file for diff view
 const selectedFunctionIndex = ref<number | null>(null)
+const selectedFileIndex = ref<number | null>(null)
 const selectedFunction = computed(() => {
     if (selectedFunctionIndex.value === null || !functionDiffData.value) return null
     return {
         current: functionDiffData.value.current?.[selectedFunctionIndex.value],
         selected: functionDiffData.value.selected?.[selectedFunctionIndex.value]
+    }
+})
+const selectedFile = computed(() => {
+    if (selectedFileIndex.value === null || !fileDiffData.value) return null
+    return {
+        current: fileDiffData.value.current?.[selectedFileIndex.value],
+        selected: fileDiffData.value.selected?.[selectedFileIndex.value]
     }
 })
 
@@ -109,6 +119,10 @@ const tabs = [
         title: 'Models'
     },
     { 
+        id: 'files', 
+        title: 'Files'
+    },
+    { 
         id: 'options', 
         title: 'Options'
     }
@@ -131,6 +145,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 const currentComponentProps = computed(() => ({
     api_id: props.api_id,
     api_type: props.api_type,
+    api: props.api,
     apiData: currentApiData.value,
     loadingApiData: loading.value,
     apiError: error.value,
@@ -174,6 +189,7 @@ const currentComponentProps = computed(() => ({
 const selectedComponentProps = computed(() => ({
     api_id: props.api_id,
     api_type: props.api_type,
+    api: props.api,
     apiData: selectedApiData.value,
     loadingApiData: loading.value,
     apiError: error.value,
@@ -192,14 +208,15 @@ const activeComponent = computed(() => {
         case 'resources': return Resources
         case 'functions': return Functions
         case 'models': return Models
+        case 'files': return Files
         case 'options': return Options
         default: return Routes
     }
 })
 
-// Check if we should show diff view for functions
+// Check if we should show diff view for functions and files
 const shouldShowDiffView = computed(() => {
-    return activeTab.value === 'functions'
+    return activeTab.value === 'functions' || activeTab.value === 'files'
 })
 
 // Check if we should show JSON comparison for options
@@ -267,6 +284,19 @@ const functionDiffData = computed(() => {
     }
 })
 
+// File diff data
+const fileDiffData = computed(() => {
+    if (!currentApiData.value || !selectedApiData.value) return null
+    
+    const currentFiles = currentApiData.value.version_files || []
+    const selectedFiles = selectedApiData.value.version_files || []
+    
+    return {
+        current: currentFiles,
+        selected: selectedFiles
+    }
+})
+
 // Options JSON comparison data
 const optionsJsonData = computed(() => {
     if (!currentApiData.value || !selectedApiData.value) return null
@@ -295,8 +325,9 @@ const generateFunctionDiffData = (currentFunc: any, selectedFunc: any) => {
 // Navigation helper
 const navigateToTab = (tabId: string) => {
     activeTab.value = tabId
-    // Reset selected function when switching tabs
+    // Reset selected function and file when switching tabs
     selectedFunctionIndex.value = null
+    selectedFileIndex.value = null
 }
 
 // Function selection handlers
@@ -308,9 +339,18 @@ const backToFunctionList = () => {
     selectedFunctionIndex.value = null
 }
 
+// File selection handlers
+const selectFile = (index: number) => {
+    selectedFileIndex.value = index
+}
+
+const backToFileList = () => {
+    selectedFileIndex.value = null
+}
+
 // Go back to API edit
 const goBack = () => {
-    router.get(`/apis/${props.api_type}/${props.api_id}/${activeTab.value}`)
+    router.get(`/apis/${props.api_id}/${activeTab.value}`)
 }
 
 // Resizing functions
@@ -468,25 +508,7 @@ onMounted(() => {
             <div v-else class="flex-1 flex overflow-hidden" :class="{ 'select-none': isResizing }">
                 <!-- JSON Comparison View for Options -->
                 <div v-if="shouldShowJsonComparison" class="flex-1 flex flex-col overflow-hidden">
-                    <!-- Header -->
-                    <div class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="font-medium text-gray-900 dark:text-white">Options Comparison</h3>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">
-                                    Compare configuration options between versions
-                                </p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-medium rounded">
-                                    Current
-                                </div>
-                                <div class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs font-medium rounded">
-                                    Selected
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
 
                     <!-- JSON Comparison Content -->
                     <div class="flex-1 overflow-auto">
@@ -521,82 +543,128 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Side-by-Side Diff View for Functions -->
+                <!-- Side-by-Side Diff View for Functions and Files -->
                 <div v-else-if="shouldShowDiffView" class="flex-1 flex flex-col overflow-hidden">
                     <!-- Header -->
                     <div class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-4">
                                 <button 
-                                    v-if="selectedFunctionIndex !== null"
-                                    @click="backToFunctionList"
+                                    v-if="(activeTab === 'functions' && selectedFunctionIndex !== null) || (activeTab === 'files' && selectedFileIndex !== null)"
+                                    @click="activeTab === 'functions' ? backToFunctionList() : backToFileList()"
                                     class="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                                 >
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                                     </svg>
-                                    Back to Functions
+                                    Back to {{ activeTab === 'functions' ? 'Functions' : 'Files' }}
                                 </button>
                                 <div>
                                     <h3 class="font-medium text-gray-900 dark:text-white">
-                                        {{ selectedFunctionIndex !== null ? 'Function Comparison' : 'Function List' }}
+                                        {{ (activeTab === 'functions' && selectedFunctionIndex !== null) || (activeTab === 'files' && selectedFileIndex !== null) ? `${activeTab === 'functions' ? 'Function' : 'File'} Comparison` : `${activeTab === 'functions' ? 'Function' : 'File'} List` }}
                                     </h3>
                                     <p class="text-sm text-gray-600 dark:text-gray-400">
-                                        <span v-if="selectedFunctionIndex !== null">
-                                            Comparing function {{ selectedFunctionIndex + 1 }}
+                                        <span v-if="(activeTab === 'functions' && selectedFunctionIndex !== null) || (activeTab === 'files' && selectedFileIndex !== null)">
+                                            Comparing {{ activeTab === 'functions' ? 'function' : 'file' }} {{ activeTab === 'functions' ? (selectedFunctionIndex ?? 0) + 1 : (selectedFileIndex ?? 0) + 1 }}
                                         </span>
                                         <span v-else>
-                                            {{ functionDiffData?.current?.length || 0 }} functions available for comparison
+                                            {{ activeTab === 'functions' ? (functionDiffData?.current?.length || 0) : (fileDiffData?.current?.length || 0) }} {{ activeTab === 'functions' ? 'functions' : 'files' }} available for comparison
                                         </span>
                                     </p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <div class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-medium rounded">
-                                    Current
-                                </div>
                                 <div class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs font-medium rounded">
                                     Selected
                                 </div>
+                                <div class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-medium rounded">
+                                    Current
+                                </div>
+                                
                             </div>
                         </div>
                     </div>
 
-                    <!-- Function List View -->
-                    <div v-if="selectedFunctionIndex === null" class="flex-1 overflow-auto">
-                        <div v-if="!functionDiffData || functionDiffData.current?.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                            No functions to compare
-                        </div>
-                        <div v-else class="p-4">
-                            <div class="grid gap-4">
-                                <div 
-                                    v-for="(func, index) in functionDiffData.current" 
-                                    :key="index"
-                                    @click="selectFunction(index)"
-                                    class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
-                                >
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex-1">
-                                            <h5 class="font-medium text-gray-900 dark:text-white mb-1">
-                                                {{ func.name || `Function ${index + 1}` }}
-                                            </h5>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                                                {{ func.content?.substring(0, 100) || 'No description' }}{{ func.content?.length > 100 ? '...' : '' }}
-                                            </p>
-                                            <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                                                <span>{{ (func.content || '').split('\n').length }} lines</span>
-                                                <span v-if="functionDiffData.selected?.[index]" class="text-green-600 dark:text-green-400">
-                                                    Has comparison data
-                                                </span>
-                                                <span v-else class="text-gray-400 dark:text-gray-500">
-                                                    No comparison data
-                                                </span>
+                    <!-- Function/File List View -->
+                    <div v-if="(activeTab === 'functions' && selectedFunctionIndex === null) || (activeTab === 'files' && selectedFileIndex === null)" class="flex-1 overflow-auto">
+                        <!-- Functions List -->
+                        <div v-if="activeTab === 'functions'">
+                            <div v-if="!functionDiffData || functionDiffData.current?.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                No functions to compare
+                            </div>
+                            <div v-else class="p-4">
+                                <div class="grid gap-4">
+                                    <div 
+                                        v-for="(func, index) in functionDiffData.current" 
+                                        :key="index"
+                                        @click="selectFunction(index)"
+                                        class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+                                    >
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex-1">
+                                                <h5 class="font-medium text-gray-900 dark:text-white mb-1">
+                                                    {{ func.name || `Function ${index + 1}` }}
+                                                </h5>
+                                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                                    {{ func.content?.substring(0, 100) || 'No description' }}{{ func.content?.length > 100 ? '...' : '' }}
+                                                </p>
+                                                <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                                                    <span>{{ (func.content || '').split('\n').length }} lines</span>
+                                                    <span v-if="functionDiffData.selected?.[index]" class="text-green-600 dark:text-green-400">
+                                                        Has comparison data
+                                                    </span>
+                                                    <span v-else class="text-gray-400 dark:text-gray-500">
+                                                        No comparison data
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <svg class="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                                </svg>
                                             </div>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <svg class="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                            </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Files List -->
+                        <div v-else-if="activeTab === 'files'">
+                            <div v-if="!fileDiffData || fileDiffData.current?.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                No files to compare
+                            </div>
+                            <div v-else class="p-4">
+                                <div class="grid gap-4">
+                                    <div 
+                                        v-for="(file, index) in fileDiffData.current" 
+                                        :key="index"
+                                        @click="selectFile(index)"
+                                        class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+                                    >
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex-1">
+                                                <h5 class="font-medium text-gray-900 dark:text-white mb-1">
+                                                    {{ file.name || `File ${index + 1}` }}
+                                                </h5>
+                                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                                    {{ file.content?.substring(0, 100) || 'No description' }}{{ file.content?.length > 100 ? '...' : '' }}
+                                                </p>
+                                                <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                                                    <span>{{ (file.content || '').split('\n').length }} lines</span>
+                                                    <span v-if="fileDiffData.selected?.[index]" class="text-green-600 dark:text-green-400">
+                                                        Has comparison data
+                                                    </span>
+                                                    <span v-else class="text-gray-400 dark:text-gray-500">
+                                                        No comparison data
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <svg class="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                                </svg>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -604,13 +672,14 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <!-- Function Diff View -->
+                    <!-- Function/File Diff View -->
                     <div v-else class="flex-1 overflow-auto">
-                        <div v-if="selectedFunction" class="h-full">
+                        <!-- Function Diff View -->
+                        <div v-if="activeTab === 'functions' && selectedFunction" class="h-full">
                             <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden m-4">
                                 <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                                     <h5 class="font-medium text-gray-900 dark:text-white">
-                                        {{ selectedFunction.current?.name || `Function ${selectedFunctionIndex + 1}` }}
+                                        {{ selectedFunction.current?.name || `Function ${(selectedFunctionIndex ?? 0) + 1}` }}
                                     </h5>
                                     <p class="text-sm text-gray-500 dark:text-gray-400">
                                         {{ selectedFunction.current?.content || 'No description' }}
@@ -620,6 +689,29 @@ onMounted(() => {
                                     <CodeDiff
                                         :old-string="selectedFunction.selected?.content || ''"
                                         :new-string="selectedFunction.current?.content || ''"
+                                        :language="'javascript'"
+                                        :context="10"
+                                        :output-format="'side-by-side'"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File Diff View -->
+                        <div v-else-if="activeTab === 'files' && selectedFile" class="h-full">
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden m-4">
+                                <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                                    <h5 class="font-medium text-gray-900 dark:text-white">
+                                        {{ selectedFile.current?.name || `File ${(selectedFileIndex ?? 0) + 1}` }}
+                                    </h5>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ selectedFile.current?.content || 'No description' }}
+                                    </p>
+                                </div>
+                                <div class="bg-white dark:bg-gray-900">
+                                    <CodeDiff
+                                        :old-string="selectedFile.selected?.content || ''"
+                                        :new-string="selectedFile.current?.content || ''"
                                         :language="'javascript'"
                                         :context="10"
                                         :output-format="'side-by-side'"
@@ -653,6 +745,8 @@ onMounted(() => {
                             
                             <div class="opacity-75 pointer-events-none select-none">
                                 <component
+                                    
+                                 
                                     :is="activeComponent"
                                     :key="`selected-${activeTab}`"
                                     v-bind="selectedComponentProps"
@@ -716,46 +810,88 @@ onMounted(() => {
                         <!-- Current Version Content -->
                         <div class="flex-1 overflow-auto">
                             <div v-if="shouldShowDiffView" class="h-full">
-                                <!-- Function Diff View -->
+                                <!-- Function/File Diff View -->
                                 <div class="h-full flex flex-col">
                                     <div class="bg-blue-50 dark:bg-blue-900/20 p-3 border-b border-gray-200 dark:border-gray-700">
-                                        <h4 class="font-medium text-blue-900 dark:text-blue-100">Current Functions</h4>
+                                        <h4 class="font-medium text-blue-900 dark:text-blue-100">Current {{ activeTab === 'functions' ? 'Functions' : 'Files' }}</h4>
                                         <p class="text-sm text-blue-700 dark:text-blue-300">
-                                            {{ functionDiffData?.current?.length || 0 }} functions
+                                            {{ activeTab === 'functions' ? (functionDiffData?.current?.length || 0) : (fileDiffData?.current?.length || 0) }} {{ activeTab === 'functions' ? 'functions' : 'files' }}
                                         </p>
                                     </div>
                                     <div class="flex-1 overflow-auto">
-                                        <div v-if="!functionDiffData || functionDiffData.current?.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                                            No functions in current version
-                                        </div>
-                                        <div v-else class="space-y-6 p-4">
-                                            <div 
-                                                v-for="(func, index) in functionDiffData.current" 
-                                                :key="index"
-                                                class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
-                                            >
-                                                <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                                                    <h5 class="font-medium text-gray-900 dark:text-white">{{ func.name || `Function ${index + 1}` }}</h5>
-                                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ func.content || 'No description' }}</p>
-                                                </div>
-                                                <div class="bg-gray-50 dark:bg-gray-900">
-                                                    <div class="bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs text-gray-600 dark:text-gray-400 border-b flex items-center justify-between">
-                                                        <span>Current Version</span>
-                                                        <span class="text-xs">{{ (func.content || '').split('\n').length }} lines</span>
+                                        <!-- Functions Content -->
+                                        <div v-if="activeTab === 'functions'">
+                                            <div v-if="!functionDiffData || functionDiffData.current?.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                                No functions in current version
+                                            </div>
+                                            <div v-else class="space-y-6 p-4">
+                                                <div 
+                                                    v-for="(func, index) in functionDiffData.current" 
+                                                    :key="index"
+                                                    class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+                                                >
+                                                    <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                                                        <h5 class="font-medium text-gray-900 dark:text-white">{{ func.name || `Function ${index + 1}` }}</h5>
+                                                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ func.content || 'No description' }}</p>
                                                     </div>
-                                                    <div class="overflow-x-auto">
-                                                        <table class="w-full text-sm">
-                                                            <tbody>
-                                                                <tr v-for="(line, lineIndex) in (func.content || '').split('\n')" :key="lineIndex">
-                                                                    <td class="w-12 px-2 py-1 text-right text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 select-none">
-                                                                        {{ lineIndex + 1 }}
-                                                                    </td>
-                                                                    <td class="px-3 py-1 font-mono text-gray-900 dark:text-white whitespace-pre">
-                                                                        {{ line }}
-                                                                    </td>
-                                                                </tr>
-                                                            </tbody>
-                                                        </table>
+                                                    <div class="bg-gray-50 dark:bg-gray-900">
+                                                        <div class="bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs text-gray-600 dark:text-gray-400 border-b flex items-center justify-between">
+                                                            <span>Current Version</span>
+                                                            <span class="text-xs">{{ (func.content || '').split('\n').length }} lines</span>
+                                                        </div>
+                                                        <div class="overflow-x-auto">
+                                                            <table class="w-full text-sm">
+                                                                <tbody>
+                                                                    <tr v-for="(line, lineIndex) in (func.content || '').split('\n')" :key="lineIndex">
+                                                                        <td class="w-12 px-2 py-1 text-right text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 select-none">
+                                                                            {{ lineIndex + 1 }}
+                                                                        </td>
+                                                                        <td class="px-3 py-1 font-mono text-gray-900 dark:text-white whitespace-pre">
+                                                                            {{ line }}
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Files Content -->
+                                        <div v-else-if="activeTab === 'files'">
+                                            <div v-if="!fileDiffData || fileDiffData.current?.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                                No files in current version
+                                            </div>
+                                            <div v-else class="space-y-6 p-4">
+                                                <div 
+                                                    v-for="(file, index) in fileDiffData.current" 
+                                                    :key="index"
+                                                    class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+                                                >
+                                                    <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                                                        <h5 class="font-medium text-gray-900 dark:text-white">{{ file.name || `File ${index + 1}` }}</h5>
+                                                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ file.content || 'No description' }}</p>
+                                                    </div>
+                                                    <div class="bg-gray-50 dark:bg-gray-900">
+                                                        <div class="bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs text-gray-600 dark:text-gray-400 border-b flex items-center justify-between">
+                                                            <span>Current Version</span>
+                                                            <span class="text-xs">{{ (file.content || '').split('\n').length }} lines</span>
+                                                        </div>
+                                                        <div class="overflow-x-auto">
+                                                            <table class="w-full text-sm">
+                                                                <tbody>
+                                                                    <tr v-for="(line, lineIndex) in (file.content || '').split('\n')" :key="lineIndex">
+                                                                        <td class="w-12 px-2 py-1 text-right text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 select-none">
+                                                                            {{ lineIndex + 1 }}
+                                                                        </td>
+                                                                        <td class="px-3 py-1 font-mono text-gray-900 dark:text-white whitespace-pre">
+                                                                            {{ line }}
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

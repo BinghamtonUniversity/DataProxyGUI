@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, onUnmounted, watch } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, Api, ApiData } from '@/types'
+import { type BreadcrumbItem, Api, ApiData, ApiInstance, Environment } from '@/types'
 import Heading from '@/components/Heading.vue'
 import { Button } from '@/components/ui/button'
 
@@ -19,6 +19,7 @@ import AlertModal from '@/components/AlertModal.vue'
 import FormViewer from '@/components/formviewer/FormViewer.vue'
 import { useToaster } from '@/composables/useToaster'
 import Toaster from '@/components/toaster/Toaster.vue'
+import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
     api_id: string
@@ -26,6 +27,10 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+// Track unsaved changes
+const hasUnsavedChanges = ref(false)
+const originalApiData = ref<ApiData | null>(null)
 
 // Toaster
 const { success, error: showError, warning, info } = useToaster()
@@ -50,6 +55,79 @@ const publishFormData = ref({
     summary: '',
     description: ''
 })
+
+// Instances modal state
+const showInstancesModal = ref(false)
+const instances = ref<ApiInstance[]>([])
+const loadingInstances = ref(false)
+const instancesError = ref('')
+
+// Search functionality state
+const showSearchModal = ref(false)
+const searchQuery = ref('')
+const searchResults = ref<any[]>([])
+const isSearching = ref(false)
+
+// API Data Import/Export state
+const showApiDataImportModal = ref(false)
+const apiDataImportJson = ref('')
+
+// API Data Import/Export functions
+const openApiDataImportModal = () => {
+    showApiDataImportModal.value = true
+    apiDataImportJson.value = JSON.stringify(apiData.value, null, 2)
+}
+
+const closeApiDataImportModal = () => {
+    showApiDataImportModal.value = false
+    apiDataImportJson.value = ''
+}
+
+const handleApiDataImport = (formData: any) => {
+    try {
+        const importedData = JSON.parse(formData.jsonData)
+        
+        // Validate the imported data structure
+        if (!importedData || typeof importedData !== 'object') {
+            throw new Error('Invalid JSON structure')
+        }
+        
+        // Validate required API data fields
+        const requiredFields = ['version_urls', 'version_views', 'version_models', 'version_files', 'resources']
+        const missingFields = requiredFields.filter(field => !importedData.hasOwnProperty(field))
+        
+        if (missingFields.length > 0) {
+            throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
+        }
+        
+        // Update the API data with imported data
+        updateApiData(importedData)
+        
+        closeApiDataImportModal()
+        success('API data imported successfully!', 'Import Successful')
+        
+    } catch (error: any) {
+        showError(error.message || 'Invalid JSON format. Please check your JSON and try again.', 'Import Error')
+    }
+}
+
+const exportApiData = () => {
+    if (!apiData.value) {
+        showError('No API data available to export', 'Export Error')
+        return
+    }
+    
+    const dataStr = JSON.stringify(apiData.value, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(dataBlob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `api-data-${api.value?.name || 'export'}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+    success('API data exported successfully!', 'Export Successful')
+}
+
 const publishFormConfig = ref({
     label: 'Publish New Version',
     description: 'Enter details for the new version',
@@ -70,6 +148,27 @@ const publishFormConfig = ref({
             required: true,
             width: '12',
             placeholder: 'Detailed description of changes in this version'
+        }
+    ]
+})
+
+// API Data Import form configuration
+const apiDataImportFormConfig = ref({
+    label: 'Import API Data',
+    description: 'Import complete API data from JSON',
+    files: false,
+    fields: [
+        {
+            name: 'jsonData',
+            label: 'API Data JSON',
+            type: 'monaco',
+            required: true,
+            width: '12',
+            placeholder: 'Paste your complete API data JSON here...',
+            help: 'Paste the complete JSON configuration for your API data',
+            info: 'The JSON should contain all API data including routes, resources, functions, models, and files',
+            language: 'json',
+            height: 600
         }
     ]
 })
@@ -124,6 +223,7 @@ const tabs = [
 // Data fetching logic - runs once when component mounts
 const apiData = ref<ApiData | null>(null)
 const api = ref<Api | null>(null)
+const environment = ref<Environment[]>([])
 const loadingApiData = ref(true)
 const apiError = ref('')
 const apiBaseUrl = '/api'
@@ -135,17 +235,19 @@ const showApiDevelopersModal = ref(false)
 const showDevelopersDropdown = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 
-// Get CSRF token from meta tag
-const getCsrfToken = () => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    return token;
-}
 
 const fetchApi = async () => {
     const response = await fetch(`/ajax/apis/${props.api_id}`)
     if (!response.ok) throw new Error('Failed to fetch API')
     
     api.value = await response.json()
+}
+
+const fetchEnvironment = async () => {
+    const response = await fetch(`/api/environments`)
+    if (!response.ok) throw new Error('Failed to fetch Environment')
+    
+    environment.value = await response.json()
 }
 
 const fetchApiData = async () => {
@@ -157,7 +259,11 @@ const fetchApiData = async () => {
         // console.log('Fetch response:', response)
 
         if (!response.ok) throw new Error('Failed to fetch API data')
-        apiData.value = await response.json()
+        const data = await response.json()
+        apiData.value = data
+
+        originalApiData.value = JSON.parse(JSON.stringify(data)) // Deep clone
+        hasUnsavedChanges.value = false
     } catch (e: any) {
         apiError.value = e.message || 'Error fetching API data'
         apiData.value = null
@@ -165,6 +271,14 @@ const fetchApiData = async () => {
         loadingApiData.value = false
     }
 }
+
+// Watch for changes in apiData
+watch(apiData, (newVal) => {
+    if (originalApiData.value && newVal) {
+        // Compare to detect changes
+        hasUnsavedChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalApiData.value)
+    }
+}, { deep: true })
 
 const updateApiData = (updatedApiData: ApiData) => {
     apiData.value = updatedApiData
@@ -201,6 +315,260 @@ const fetchVersions = async () => {
     } finally {
         loadingVersions.value = false
     }
+}
+
+// Fetch API instances
+const fetchInstances = async () => {
+    loadingInstances.value = true
+    instancesError.value = ''
+    try {
+        const response = await fetch(`/api/api_instances`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        instances.value = await response.json()
+        instances.value = instances.value.filter((instance: any) => instance.api_id === api.value?.id)
+    } catch (e: any) {
+        instancesError.value = e.message || 'Error fetching instances'
+        showError('Failed to fetch API instances. Please try again.', 'Error')
+    } finally {
+        loadingInstances.value = false
+    }
+}
+
+// View instance - redirect to instance URL
+const viewInstance = (instance: any) => {
+    // Close the modal first
+    showInstancesModal.value = false
+    
+    // Construct the instance URL based on the pattern you provided
+    // Format: http://127.0.0.1:8001/api_instances/{instance_id}/main
+    const instanceUrl = `http://127.0.0.1:8001/api_instances/${instance.id}/main`
+    
+    // Open in new tab
+    window.open(instanceUrl, '_blank')
+}
+
+// Search functionality
+const performSearch = () => {
+    if (!apiData.value || !searchQuery.value.trim()) {
+        searchResults.value = []
+        return
+    }
+
+    isSearching.value = true
+    const query = searchQuery.value.toLowerCase().trim()
+    const results: any[] = []
+
+    const data = apiData.value as any
+    
+    // Debug: Log the API data structure
+    console.log('API Data structure:', data)
+    console.log('Available properties:', Object.keys(data))
+
+    // Try different possible property names for each category
+    const searchInArray = (items: any[], category: string, type: string) => {
+        if (!items || !Array.isArray(items)) {
+            console.log(`No items found for ${category}`)
+            return
+        }
+        
+        console.log(`Searching in ${category}:`, items.length, 'items')
+        
+        items.forEach((item: any, index: number) => {
+            console.log(`${category} item ${index}:`, item)
+            
+            // Try different possible name fields
+            const name = item.name || item.title || item.function_name || item.route_name || item.model_name || item.file_name || item.view_name || item.url_name
+            console.log(`  Name found: "${name}"`)
+            
+            // Search in name
+            const nameMatch = name && name.toLowerCase().includes(query)
+            
+            // Search in content/description fields
+            const content = item.content || item.description || item.path || ''
+            const contentMatch = content && content.toLowerCase().includes(query)
+            
+            // Search in other text fields
+            const otherFields = [
+                item.verb,
+                item.model_name,
+                item.type,
+                ...(item.required || []),
+                ...(item.optional || [])
+            ].filter(Boolean)
+            
+            const otherFieldsMatch = otherFields.some(field => 
+                field && field.toString().toLowerCase().includes(query)
+            )
+            
+            if (nameMatch || contentMatch || otherFieldsMatch) {
+                console.log(`  ✓ Match found:`, { nameMatch, contentMatch, otherFieldsMatch })
+                results.push({
+                    category: category,
+                    type: type,
+                    name: name || 'Unnamed',
+                    description: item.description || item.path || item.content || 'No description',
+                    data: item
+                })
+            } else {
+                console.log(`  ✗ No match: "${name}" does not contain "${query}"`)
+            }
+        })
+    }
+
+    // Search in routes - using version_urls (which seems to be the routes)
+    console.log('Checking routes (version_urls):', data.version_urls)
+    searchInArray(data.version_urls || [], 'Routes', 'route')
+
+    // Search in resources - using resources property
+    console.log('Checking resources:', data.resources)
+    searchInArray(data.resources || [], 'Resources', 'resource')
+
+    // Search in functions - using version_views (which might be functions/views)
+    console.log('Checking functions (version_views):', data.version_views)
+    searchInArray(data.version_views || [], 'Functions', 'function')
+
+    // Search in models - using version_models
+    console.log('Checking models:', data.version_models)
+    searchInArray(data.version_models || [], 'Models', 'model')
+
+    // Search in files - using version_files
+    console.log('Checking files:', data.version_files)
+    searchInArray(data.version_files || [], 'Files', 'file')
+
+    // Search in top-level API data fields
+    const topLevelFields = [
+        { value: data.summary, label: 'Summary' },
+        { value: data.description, label: 'Description' }
+    ].filter(field => field.value)
+    
+    topLevelFields.forEach(field => {
+        if (field.value && field.value.toLowerCase().includes(query)) {
+            results.push({
+                category: 'API Info',
+                type: 'info',
+                name: field.label,
+                description: field.value,
+                data: { field: field.label, value: field.value }
+            })
+        }
+    })
+
+    console.log('Search completed. Results:', results)
+    searchResults.value = results
+    isSearching.value = false
+}
+
+// Open search modal
+const openSearchModal = () => {
+    showSearchModal.value = true
+    searchQuery.value = ''
+    searchResults.value = []
+}
+
+// Close search modal
+const closeSearchModal = () => {
+    showSearchModal.value = false
+    searchQuery.value = ''
+    searchResults.value = []
+}
+
+// Search highlighting state
+const highlightQuery = ref<string>('')
+const highlightTarget = ref<string>('')
+
+// Handle search result click
+const handleSearchResultClick = (result: any) => {
+    // Store the search query before closing the modal
+    const currentSearchQuery = searchQuery.value
+    
+    // Close the search modal
+    closeSearchModal()
+    
+    // Set highlighting state
+    highlightQuery.value = currentSearchQuery
+    highlightTarget.value = result.name
+    
+    // Navigate to the appropriate tab based on the result category
+    switch (result.category) {
+        case 'Routes':
+            navigateToTab('routes')
+            break
+        case 'Resources':
+            navigateToTab('resources')
+            break
+        case 'Functions':
+            navigateToTab('functions')
+            break
+        case 'Models':
+            navigateToTab('models')
+            break
+        case 'Files':
+            navigateToTab('files')
+            break
+        case 'API Info':
+            // For API info, we could show a toast or stay on current tab
+            info(`Found in API ${result.name}: ${result.description}`)
+            return
+    }
+    
+    // Handle highlighting for Routes and Resources (UI highlighting)
+    if (result.category === 'Routes' || result.category === 'Resources') {
+        setTimeout(() => {
+            const element = document.querySelector(`[data-${result.category.toLowerCase()}-name="${result.name}"]`)
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                // Add a temporary highlight effect
+                element.classList.add('search-highlight-item')
+                setTimeout(() => {
+                    element.classList.remove('search-highlight-item')
+                }, 3000)
+            }
+        }, 500) // Increased delay to ensure tab navigation and component mounting
+    }
+    
+    // Emit custom event for Functions and Files (editor highlighting)
+    if (result.category === 'Functions' || result.category === 'Files') {
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('search-result-selected', {
+                detail: {
+                    category: result.category,
+                    type: result.type,
+                    name: result.name,
+                    data: result.data,
+                    searchQuery: currentSearchQuery
+                }
+            }))
+        }, 1000) // Increased delay to ensure editor is ready
+    }
+}
+
+// Group search results by category
+const getGroupedResults = () => {
+    const grouped: { [key: string]: any[] } = {}
+    
+    searchResults.value.forEach(result => {
+        if (!grouped[result.category]) {
+            grouped[result.category] = []
+        }
+        grouped[result.category].push(result)
+    })
+    
+    return Object.keys(grouped).map(category => ({
+        name: category,
+        items: grouped[category]
+    }))
 }
 
 // Fetch version details for viewing
@@ -264,6 +632,17 @@ const isLatestVersionStable = computed(() => {
     return apiData.value.stable === true
 })
 
+// Get current version name for display
+const currentVersionName = computed(() => {
+    if (!apiData.value) return 'Loading...'
+    
+    if (apiData.value.stable) {
+        return 'Latest'
+    } else {
+        return 'Latest/Working'
+    }
+})
+
 // Open publish modal
 const openPublishModal = () => {
     // Check if latest version is already stable
@@ -325,7 +704,6 @@ const closeApiDevelopersModal = () => {
 // Dropdown functions for Developers button
 const toggleDevelopersDropdown = () => {
     showDevelopersDropdown.value = !showDevelopersDropdown.value
-    console.log('Toggle developers dropdown', showDevelopersDropdown.value)
 }
 
 const handleDevelopersAction = (action: string) => {
@@ -333,24 +711,29 @@ const handleDevelopersAction = (action: string) => {
     
     switch (action) {
         case 'export':
-            console.log('Export developers')
-            // Implement export functionality
+            console.log('Export API data')
+            // Export complete API data as JSON
+            exportApiData()
+            
             break
         case 'import':
-            console.log('Import developers')
-            // Implement import functionality
+            console.log('Import API data')
+            // Open import modal for complete API data
+            openApiDataImportModal()
+            
             break
         case 'versions':
-            console.log('Show versions')
+
             showVersionsModal.value = true
             fetchVersions()
             break
         case 'instances':
-            console.log('Show instances')
-            // Navigate to instances or show instances modal
+
+            showInstancesModal.value = true
+            fetchEnvironment()
+            fetchInstances()
             break
         case 'publish':
-            console.log('Publish new version')
             openPublishModal()
             break
         default:
@@ -360,6 +743,24 @@ const handleDevelopersAction = (action: string) => {
 
 // Save function
 const handleSave = async () => {
+    if (
+        !apiData.value ||
+        !apiData.value.version_views ||
+        !Array.isArray(apiData.value.version_views)
+    ) {
+        showError('No version views found to save.')
+        return
+    }
+
+    const emptyViews = apiData.value.version_views.filter(
+        (view: any) => !view.content || view.content.trim() === ''
+    )
+
+    if (emptyViews.length > 0) {
+        const emptyNames = emptyViews.map((v: any) => v.name || '(Unnamed View)').join(', ')
+        showError(`The following functions have empty content: ${emptyNames}`)
+        return
+    }
 
     const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
         method: 'PUT',
@@ -379,16 +780,56 @@ const handleSave = async () => {
     success('API data saved successfully!')
     const responseData = await response.json()
     updateApiData(responseData)
+
+    // Reset dirty state after successful save
+    originalApiData.value = JSON.parse(JSON.stringify(responseData))
+    hasUnsavedChanges.value = false
 }
+
+// Add a method to check for changes
+// const checkForUnsavedChanges = () => {
+//     if (originalApiData.value && originalApiData.value) {
+//         return JSON.stringify(apiData.value) !== JSON.stringify(originalApiData.value)
+//     }
+//     return false
+// }
 
 // Navigation helper
 const navigateToTab = (tabId: string) => {
+    // hasUnsavedChanges.value = checkForUnsavedChanges()
+    // if (hasUnsavedChanges.value) {
+    //     if (confirm('You have unsaved changes. Do you want to leave?')) {
+    //         router.get(`/apis/${props.api_id}/${tabId}`, {}, {
+    //             preserveState: true,
+    //             preserveScroll: true,
+    //             // only: ['activeTab'] // Only update the activeTab prop
+    //         })
+    //     } else {
+    //         // Cancel tab change
+    //         return
+    //     }
+    // }
     router.get(`/apis/${props.api_id}/${tabId}`, {}, {
         preserveState: true,
         preserveScroll: true,
         // only: ['activeTab'] // Only update the activeTab prop
     })
+    
 }
+
+// Browser/tab close warning
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (hasUnsavedChanges.value) {
+        event.preventDefault()
+        // use @ts-ignore to avoid type error
+        // @ts-ignore
+        event.returnValue = '' // Chrome requires returnValue to be set but use @ts-ignore to avoid type error
+    }
+}
+
+// Inertia navigation warning
+let removeInertiaHook: (() => void) | null = null
+
 
 // Get current active component
 const activeComponent = computed(() => {
@@ -404,33 +845,74 @@ const componentProps = computed(() => ({
     loadingApiData: loadingApiData.value,
     apiError: apiError.value,
     updateApiData,
-    refreshApiData
+    refreshApiData,
+    highlightQuery: highlightQuery.value,
+    highlightTarget: highlightTarget.value
 }))
 
+let keydownHandler: ((event: KeyboardEvent) => void) | null = null
+let clickHandler: ((event: MouseEvent) => void) | null = null
 // Fetch data on mount
 onMounted(() => {
     fetchApi()
     fetchApiData()
     
-    // Add keyboard event listener for Ctrl+S
-    document.addEventListener('keydown', (event) => {
+    keydownHandler = (event: KeyboardEvent) => {
         if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-            event.preventDefault() // Prevent browser's default save dialog
+            event.preventDefault()
             handleSave()
         }
-    })
+    }
     
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (event) => {
+    clickHandler = (event: MouseEvent) => {
         const target = event.target as HTMLElement
         
-        // Check if click is outside the dropdown container
         if (dropdownRef.value && !dropdownRef.value.contains(target)) {
             showDevelopersDropdown.value = false
         }
+    }
+    
+    document.addEventListener('keydown', keydownHandler)
+    document.addEventListener('click', clickHandler)
+
+    // Add beforeunload listener
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    // Add Inertia navigation hook
+    removeInertiaHook = router.on('before', (event) => {
+        if (hasUnsavedChanges.value) {
+            // Show confirmation dialog
+            const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
+            if (!confirmed) {
+                return false // Cancel navigation
+            }
+        }
     })
 })
+
+// Clean up event listeners when component unmounts
+onUnmounted(() => {
+    if (keydownHandler) {
+        document.removeEventListener('keydown', keydownHandler)
+    }
+    if (clickHandler) {
+        document.removeEventListener('click', clickHandler)
+    }
+
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+    if (removeInertiaHook) {
+        removeInertiaHook()
+    }
+})
 </script>
+
+<style>
+.search-highlight-item {
+    background-color: #ffeb3b !important;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+</style>
 
 <template>
     <Head :title="' API Edit'" />
@@ -448,9 +930,37 @@ onMounted(() => {
                     <p class="text-sm text-gray-600 dark:text-gray-400">Manage your API settings</p>
                 </div>
                 
-                
+                <!-- Version Display -->
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Version:</span>
+                    <div class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-sm font-medium rounded-md border border-green-200 dark:border-green-800">
+                        {{ currentVersionName }}
+                    </div>
+                </div>
             </div>
             <div class="flex justify-end items-center gap-2 mb-6">
+                <!-- Search Button -->
+                <Button 
+                    @click="openSearchModal"
+                    variant="outline"
+                    class="flex items-center gap-2"
+                >   
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Search
+                </Button>
+                <!-- Manage Developers Button -->
+                <Button 
+                    @click="openApiDevelopersModal"
+                    variant="outline"
+                    class="flex items-center gap-2"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                    </svg>
+                    Manage Developers
+                </Button>
                 <!-- Save Button -->
                 <Button 
                     @click="handleSave"
@@ -522,18 +1032,9 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
-            <div class="flex justify-end items-center mb-6">
-                <Button 
-                    @click="openApiDevelopersModal"
-                    variant="outline"
-                    class="flex items-center gap-2"
-                >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-                    </svg>
-                    Manage Developers
-                </Button>
-            </div>
+            
+                
+            
 
             <div class="flex flex-col space-y-8">
                 <!-- Tab navigation -->
@@ -760,6 +1261,182 @@ onMounted(() => {
                     <p>No versions found for this API.</p>
                 </div>
             </div>
+        </AlertModal>
+
+        <!-- API Instances Modal -->
+        <AlertModal
+            :isOpen="showInstancesModal"
+            title="API Instances"
+            @close="showInstancesModal = false"
+        >
+            <div class="space-y-4">
+                <!-- Loading State -->
+                <div v-if="loadingInstances" class="flex justify-center items-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span class="ml-3 text-gray-600 dark:text-gray-300">Loading instances...</span>
+                </div>
+
+                <!-- Error State -->
+                <div v-else-if="instancesError" class="text-center py-8">
+                    <div class="text-red-600 dark:text-red-400">
+                        <p class="text-lg font-semibold">Error loading instances</p>
+                        <p class="text-sm">{{ instancesError }}</p>
+                        <button @click="fetchInstances" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Instances List -->
+                <div v-else-if="instances.length > 0" class="space-y-3">
+                    <div 
+                        v-for="instance in instances" 
+                        :key="instance.id"
+                        class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <h3 class="font-medium text-gray-900 dark:text-white">
+                                    {{ instance.name || `Instance ${instance.id}` }}
+                                </h3>
+                                <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                    <span v-if="instance.environment_id" class="px-2 py-1 text-xs bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded">
+                                        {{ environment?.find((env: Environment) => env.id === instance.environment_id)?.name }}
+                                    </span>
+                                    <span v-if="instance.route" class="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded font-mono">
+                                        {{ instance.route }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <button 
+                                    @click="viewInstance(instance)"
+                                    class="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 rounded-md transition-colors"
+                                >
+                                    View
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p>No instances found for this API.</p>
+                </div>
+            </div>
+        </AlertModal>
+
+        <!-- Search Modal -->
+        <AlertModal
+            :isOpen="showSearchModal"
+            title="Search API Data"
+            @close="closeSearchModal"
+        >
+            <div class="space-y-4">
+                <!-- Search Input -->
+                <div class="flex gap-2">
+                    <input
+                        v-model="searchQuery"
+                        @input="performSearch"
+                        @keyup.enter="performSearch"
+                        type="text"
+                        placeholder="Search routes, resources, functions, models, and files..."
+                        class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <Button 
+                        @click="performSearch"
+                        :disabled="!searchQuery.trim()"
+                        class="px-4 py-2"
+                    >
+                        Search
+                    </Button>
+                </div>
+
+                <!-- Search Results -->
+                <div v-if="searchResults.length > 0" class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        Search Results ({{ searchResults.length }} found)
+                    </h3>
+                    
+                    <!-- Group results by category -->
+                    <div v-for="category in getGroupedResults()" :key="category.name" class="space-y-2">
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-1">
+                            {{ category.name }} ({{ category.items.length }})
+                        </h4>
+                        <div class="space-y-2">
+                            <div 
+                                v-for="result in category.items" 
+                                :key="`${result.type}-${result.name}`"
+                                @click="handleSearchResultClick(result)"
+                                class="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <h5 class="font-medium text-gray-900 dark:text-white">
+                                            {{ result.name }}
+                                        </h5>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            {{ result.description }}
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
+                                            {{ result.type }}
+                                        </span>
+                                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Results -->
+                <div v-else-if="searchQuery && !isSearching" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p>No results found for "{{ searchQuery }}"</p>
+                </div>
+
+                <!-- Search Prompt -->
+                <div v-else-if="!searchQuery" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p>Enter a search term to find items across routes, resources, functions, models, and files.</p>
+                </div>
+            </div>
+        </AlertModal>
+
+        <!-- API Data Import Modal -->
+        <AlertModal
+            :isOpen="showApiDataImportModal"
+            title="Import API Data"
+            @close="closeApiDataImportModal"
+        >
+            <FormViewer
+                :formConfig="apiDataImportFormConfig"
+                :initialData="{ jsonData: apiDataImportJson }"
+                :actions="[
+                    {
+                        type: 'save',
+                        action: 'import',
+                        label: 'Import API Data',
+                        modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors'
+                    },
+                    {
+                        type: 'cancel',
+                        action: 'close',
+                        label: 'Cancel',
+                        modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors'
+                    }
+                ]"
+                :actionHandler="async ({ type, action, formData }: { type: string, action: string, formData: any }) => {
+                    if (action === 'import') {
+                        handleApiDataImport(formData);
+                    } else if (action === 'close') {
+                        closeApiDataImportModal();
+                    }
+                }"
+            />
         </AlertModal>
     </AppLayout>
     <Toaster />

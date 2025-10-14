@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
-import { type ApiData, type ApiVersionFunction } from '@/types'
+import { type ApiData, type ApiVersionFunction, Api} from '@/types'
 import {
   Dialog,
   DialogTrigger,
@@ -23,6 +23,9 @@ import { useToaster } from '@/composables/useToaster';
 interface Props {
     api_id: string
     api_type: string
+    api: Api | null
+    highlightQuery?: string
+    highlightTarget?: string
     apiData: ApiData | null
     loadingApiData: boolean
     apiError: string
@@ -36,6 +39,7 @@ const selectedFile = ref<ApiVersionFunction | null>(null)
 const isSaving = ref(false)
 const saveError = ref<string | null>(null)
 const saveSuccess = ref(false)
+const editorRef = ref<any>(null)
 
 // New file dialog state
 const isNewViewDialogOpen = ref(false)
@@ -216,7 +220,160 @@ const resetNewViewDialog = () => {
     isCreatingView.value = false
 }
 
+// Handle search result selection
+const handleSearchResult = (event: CustomEvent) => {
+    const { category, name, data, searchQuery } = event.detail
+    
+    if (category === 'Files' && props.apiData?.version_files) {
+        // Find the file by name
+        const fileToSelect = props.apiData.version_files.find(file => file.name === name)
+        if (fileToSelect) {
+            selectedFile.value = fileToSelect
+            // Scroll to the file in the list
+            setTimeout(() => {
+                const fileButton = document.querySelector(`[data-file-name="${name}"]`)
+                if (fileButton) {
+                    fileButton.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }
+                
+                // If there's a search query, highlight it in the editor
+                if (searchQuery && searchQuery.trim()) {
+                    highlightTextInEditor(searchQuery.trim())
+                }
+            }, 200) // Increased delay to ensure editor is loaded
+        }
+    }
+}
+
+// Function to highlight text in the editor
+const highlightTextInEditor = (searchText: string) => {
+    let attempts = 0
+    const maxAttempts = 20 // Try for up to 10 seconds (20 * 500ms)
+    
+    const tryHighlight = () => {
+        attempts++
+        
+        // Try multiple methods to find the Monaco editor
+        let editorInstance = null
+        
+        // Method 1: Look for VueMonacoEditor component
+        const vueMonacoEditor = document.querySelector('vue-monaco-editor')
+        if (vueMonacoEditor && (vueMonacoEditor as any).__vueParentComponent) {
+            const component = (vueMonacoEditor as any).__vueParentComponent
+            if (component.exposed && component.exposed.editor) {
+                editorInstance = component.exposed.editor.value
+            }
+        }
+        
+        // Method 2: Look for Monaco editor in DOM
+        if (!editorInstance) {
+            const editorElement = document.querySelector('.monaco-editor')
+            if (editorElement) {
+                editorInstance = (editorElement as any).__monacoEditor
+            }
+        }
+        
+        // Method 3: Look for Monaco editor in window
+        if (!editorInstance && window.monaco) {
+            const editors = window.monaco.editor.getEditors()
+            if (editors.length > 0) {
+                // Find the editor that contains our file content
+                const currentContent = selectedFile.value?.content || ''
+                editorInstance = editors.find(e => {
+                    const model = e.getModel()
+                    return model && model.getValue().includes(currentContent)
+                })
+            }
+        }
+        
+        // Method 4: Try to find any Monaco editor
+        if (!editorInstance && window.monaco) {
+            const editors = window.monaco.editor.getEditors()
+            if (editors.length > 0) {
+                editorInstance = editors[0] // Use the first available editor
+            }
+        }
+        
+        // Method 5: Try to access through Vue component ref
+        if (!editorInstance && editorRef.value) {
+            if (editorRef.value.editor) {
+                editorInstance = editorRef.value.editor
+            }
+        }
+        
+        if (editorInstance) {
+            try {
+                const model = editorInstance.getModel()
+                if (model && model.getValue().length > 0) {
+                    // Find all matches of the search text
+                    const matches = model.findMatches(searchText, false, false, false, null, false)
+                    
+                    if (matches.length > 0) {
+                        // Try to get the range from the match object
+                        const firstMatch = matches[0]
+                        const range = firstMatch.range || firstMatch
+                        
+                        try {
+                            // Set selection to the first match
+                            editorInstance.setSelection(range)
+                            editorInstance.revealRangeInCenter(range)
+                            editorInstance.focus()
+                        } catch (selectionError) {
+                            // Try alternative approach - just focus and scroll to the first match
+                            editorInstance.focus()
+                        }
+                        
+                        // Highlight all matches with a bright yellow background
+                        const decorations = editorInstance.deltaDecorations([], matches.map((match: any) => ({
+                            range: match.range || match,
+                            options: {
+                                inlineClassName: 'search-highlight',
+                                isWholeLine: false
+                            }
+                        })))
+                        
+                        // Remove highlights after 5 seconds
+                        setTimeout(() => {
+                            editorInstance.deltaDecorations(decorations, [])
+                        }, 5000)
+                        
+                        return // Success, stop trying
+                    }
+                }
+            } catch (error) {
+                // Continue trying
+            }
+        }
+        
+        // If we haven't found the editor yet and haven't exceeded max attempts, try again
+        if (attempts < maxAttempts) {
+            setTimeout(tryHighlight, 500) // Try again in 500ms
+        }
+    }
+    
+    // Start trying after a short delay
+    setTimeout(tryHighlight, 200)
+}
+
+// Add event listener for search results
+onMounted(() => {
+    window.addEventListener('search-result-selected', handleSearchResult as EventListener)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('search-result-selected', handleSearchResult as EventListener)
+})
+
 </script>
+
+<style>
+.search-highlight {
+    background-color: #ffeb3b !important;
+    color: #000 !important;
+    border-radius: 2px;
+    padding: 1px 2px;
+}
+</style>
 
 <template>
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
@@ -303,6 +460,7 @@ const resetNewViewDialog = () => {
                                 class="flex items-center gap-1 group"
                             >
                                 <Button
+                                    :data-file-name="item.name"
                                     variant="ghost"
                                     :class="[
                                         'justify-start', 
@@ -340,9 +498,10 @@ const resetNewViewDialog = () => {
                         
                         <!-- Code Editor -->
                         <Editor 
+                            ref="editorRef"
                             v-if="selectedFile" 
                             :code="selectedFile.content" 
-                            :language="api_type === 'python' || api_type === 'php' ? api_type : undefined"
+                            :language="api?.api_type === 'python' || api?.api_type === 'php' ? api?.api_type : undefined"
                             :is-saving="isSaving"
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"

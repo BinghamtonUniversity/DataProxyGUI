@@ -14,10 +14,10 @@ import {
   useVueTable,
 } from '@tanstack/vue-table'
 import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
-import { h, ref, computed } from 'vue'
+import { h, ref, computed, onMounted, onUnmounted } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
-import { type ApiData, type ResourceData } from '@/types'
+import { type ApiData, type ResourceData, Api } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -52,10 +52,13 @@ interface Props {
     api_id: string
     api_type: string
     apiData: ApiData | null
+    api: Api | null
     loadingApiData: boolean
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
     refreshApiData: () => void
+    highlightQuery?: string
+    highlightTarget?: string
 }
 
 const props = defineProps<Props>()
@@ -132,23 +135,23 @@ const submitNewResource = async (e: Event) => {
       }
     }
     // console.log('Updated API Data:', updatedApiData)
-    const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-      method: 'PUT',
-      headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken() || '',
-      },
-      body: JSON.stringify(updatedApiData)
-    })
+    // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+    //   method: 'PUT',
+    //   headers: {
+    //       'Content-Type': 'application/json',
+    //       'Accept': 'application/json',
+    //       'X-CSRF-TOKEN': getCsrfToken() || '',
+    //   },
+    //   body: JSON.stringify(updatedApiData)
+    // })
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
+    // if (!response.ok) {
+    //   const errorData = await response.json().catch(() => ({}))
+    //   throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+    // }
 
-    const responseData = await response.json()
-    props.updateApiData(responseData || updatedApiData)
+    // const responseData = await response.json()
+    props.updateApiData(updatedApiData)
     if(isEditMode.value) {
       success('Updated successfully', 'Resource Updated');
     } else {
@@ -251,7 +254,10 @@ const columns: ColumnDef<ResourceData>[] = [
         onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
       }, () => ['Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
     },
-    cell: ({ row }) => h('div', { class: 'font-medium text-blue-600' }, row.getValue('name')),
+    cell: ({ row }) => h('div', { 
+      class: 'font-medium text-blue-600',
+      innerHTML: highlightText(row.getValue('name'), props.highlightQuery || '')
+    }),
   },
   {
     accessorKey: 'type',
@@ -259,8 +265,9 @@ const columns: ColumnDef<ResourceData>[] = [
     cell: ({ row }) => {
       const type = row.getValue('type') as string
       return h('div', { 
-        class: 'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300' 
-      }, type)
+        class: 'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300',
+        innerHTML: highlightText(type, props.highlightQuery || '')
+      })
     },
   },
   {
@@ -271,7 +278,10 @@ const columns: ColumnDef<ResourceData>[] = [
         onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
       }, () => ['Model Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
     },
-    cell: ({ row }) => h('div', { class: 'font-medium' }, row.getValue('model_name')),
+    cell: ({ row }) => h('div', { 
+      class: 'font-medium',
+      innerHTML: highlightText(row.getValue('model_name'), props.highlightQuery || '')
+    }),
   },
   {
     id: 'actions',
@@ -333,7 +343,30 @@ const selectedRowsCount = computed(() => table.value?.getFilteredSelectedRowMode
 const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.length || 0)
 const canPreviousPage = computed(() => table.value?.getCanPreviousPage() || false)
 const canNextPage = computed(() => table.value?.getCanNextPage() || false)
+
+// Function to highlight text in UI elements
+const highlightText = (text: string, query: string) => {
+    if (!query || !text) return text
+    
+    const regex = new RegExp(`(${query})`, 'gi')
+    return text.replace(regex, '<mark class="search-highlight">$1</mark>')
+}
 </script>
+
+<style>
+.search-highlight {
+    background-color: #ffeb3b !important;
+    color: #000 !important;
+    border-radius: 2px;
+    padding: 1px 2px;
+}
+
+.search-highlight-item {
+    background-color: #ffeb3b !important;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+</style>
 
 <template>
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
@@ -451,6 +484,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                         v-for="(row,index) in tableRows" 
                                         :key="row.id" 
                                         :data-state="row.getIsSelected() && 'selected'"
+                                        :data-resource-name="row.original.name"
                                         class="cursor-pointer hover:bg-muted/50"
                                         @click="openEditResourceDialog(row.original, index)"
                                     >

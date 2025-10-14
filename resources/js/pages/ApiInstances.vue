@@ -143,6 +143,25 @@ const submitNewApiInstance = async (e: Event) => {
   e.preventDefault()
   newApiInstanceLoading.value = true
   newApiInstanceError.value = ''
+
+  // Trim and normalize route just in case
+  const routeToCheck = newApiInstanceForm.value.route.trim().toLowerCase()
+  const envToCheck = newApiInstanceForm.value.environment_id
+
+  // Composite duplicate check (route + environment)
+  const duplicate = api_instances.value.some(inst =>
+    inst.route.trim().toLowerCase() === routeToCheck &&
+    inst.environment_id === Number(envToCheck) &&
+    (!isEditMode.value || inst.id !== editingApiInstanceId.value) // ignore self when editing
+  )
+
+  if (duplicate) {
+    newApiInstanceError.value = 'An API instance with this route already exists in the selected environment.'
+    error(newApiInstanceError.value, 'Duplicate Entry')
+    newApiInstanceLoading.value = false
+    return // prevent API call
+  }
+
   try {
     let url = `/api/api_instances`
     let request_method = 'POST'

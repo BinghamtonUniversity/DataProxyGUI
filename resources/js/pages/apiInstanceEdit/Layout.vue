@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, onUnmounted, computed, watch } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem, ApiData, ApiInstance, ApiUser, Resource } from '@/types'
@@ -14,8 +14,7 @@ import Permissions from '@/components/apiInstanceDetails/Permissions.vue'
 import AlertModal from '@/components/AlertModal.vue'
 import FormViewer from '@/components/formviewer/FormViewer.vue'
 import { useToaster } from '@/composables/useToaster'
-
-
+import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
     instance_id: string
@@ -33,11 +32,6 @@ const versions = ref<any[]>([])
 const loadingVersions = ref(false)
 const versionsError = ref('')
 
-// Get CSRF token from meta tag
-const getCsrfToken = () => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    return token;
-}
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
@@ -83,6 +77,13 @@ const resources = ref<Resource | null>(null)
 const loading = ref(true)
 const apiInstanceError = ref('')
 
+
+// Track unsaved changes
+const hasUnsavedChanges = ref(false)
+const originalApiInstanceData = ref<ApiInstance | null>(null)
+
+// Not being used currently, but might be useful later
+// Using fetchAllData instead
 const fetchApiInstanceData = async () => {
     loading.value = true
     apiInstanceError.value = ''
@@ -90,7 +91,12 @@ const fetchApiInstanceData = async () => {
         const response = await fetch(`/ajax/api_instances/${props.instance_id}`)
         // console.log('Fetch response:', response)
         if (!response.ok) throw new Error('Failed to fetch API Instance data')
-        apiInstanceData.value = await response.json()
+        const data = await response.json()
+        apiInstanceData.value = data
+
+        originalApiInstanceData.value = JSON.parse(JSON.stringify(data)) // Deep clone
+        hasUnsavedChanges.value = false
+
     } catch (e: any) {
         apiInstanceError.value = e.message || 'Error fetching API Instance data'
         apiInstanceData.value = null
@@ -108,6 +114,9 @@ const fetchAllData = async () => {
     
     const apiInstancesData = await apiInstancesResponse.json()
     apiInstanceData.value = apiInstancesData
+
+    originalApiInstanceData.value = JSON.parse(JSON.stringify(apiInstancesData)) // Deep clone
+    hasUnsavedChanges.value = false
     
     const environmentType = apiInstancesData.environment?.type || 'dev' // fallback to 'dev'
     
@@ -140,8 +149,21 @@ const fetchAllData = async () => {
   }
 }
 
-const updateApiInstanceData = (updatedApiInstanceData: ApiInstance) => {
-    apiInstanceData.value = updatedApiInstanceData
+// Watch for changes in apiInstanceData to track unsaved changes
+watch(apiInstanceData, (newVal) => {
+    if (originalApiInstanceData.value && newVal) {
+        // Compare to detect changes
+        hasUnsavedChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalApiInstanceData.value)
+    }
+}, { deep: true })
+
+const updateApiInstanceData = (updatedApiInstanceData: Partial<ApiInstance>) => {
+    if(!apiInstanceData) return
+    
+    apiInstanceData.value = { 
+        ...apiInstanceData.value, 
+        ...updatedApiInstanceData,
+    } as ApiInstance
 }
 
 const refreshApiInstanceData = () => {
@@ -220,13 +242,36 @@ const updateInstanceVersion = async (version: any) => {
     }
 }
 
+// Add a method to check for changes
+// const checkForUnsavedChanges = () => {
+//     if (originalApiInstanceData.value && apiInstanceData.value) {
+//         return JSON.stringify(apiInstanceData.value) !== JSON.stringify(originalApiInstanceData.value)
+//     }
+//     return false
+// }
+
 // Navigation helper
 const navigateToTab = (tabId: string) => {
+    // hasUnsavedChanges.value = checkForUnsavedChanges()
+    // if (hasUnsavedChanges.value) {
+    //     if (confirm('You have unsaved changes. Do you want to leave?')) {
+    //         // Proceed with tab change
+    //         router.get(`/api_instances/${props.instance_id}/${tabId}`, {}, {
+    //             preserveState: true,
+    //             preserveScroll: true,
+    //             // only: ['activeTab'] // Only update the activeTab prop
+    //         })
+    //     } else {
+    //         // Cancel tab change
+    //         return
+    //     }
+    // }
     router.get(`/api_instances/${props.instance_id}/${tabId}`, {}, {
         preserveState: true,
         preserveScroll: true,
         // only: ['activeTab'] // Only update the activeTab prop
     })
+    
 }
 
 // Get current active component
@@ -245,8 +290,100 @@ const componentProps = computed(() => ({
     updateApiInstanceData,
     // refreshApiInstanceData
 }))
+
+const handleSave = async() => {
+
+    const requestData = {
+            id: apiInstanceData.value?.id,
+            name: apiInstanceData.value?.name,
+            route: apiInstanceData.value?.route, 
+            route_user_map: apiInstanceData.value?.route_user_map,
+            resources: apiInstanceData.value?.resources, 
+            options: apiInstanceData.value?.options,
+            public: apiInstanceData.value?.public,
+            api_id: apiInstanceData.value?.api.id,
+            api_version_id: apiInstanceData.value?.api_version_id,
+            environment_id: apiInstanceData.value?.environment_id
+        }
+  
+    const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken() || '',
+        },
+        body: JSON.stringify(requestData)
+    })
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        showError(errorData.message || `HTTP error! status: ${response.status}`)
+        return
+    }
+    success('API Instance data saved successfully!')
+    const responseData = await response.json()
+    apiInstanceData.value = responseData
+
+    // Reset dirty state after successful save
+    originalApiInstanceData.value = JSON.parse(JSON.stringify(responseData))
+    hasUnsavedChanges.value = false
+}
+
+// Browser/tab close warning
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (hasUnsavedChanges.value) {
+        event.preventDefault()
+        // use @ts-ignore to avoid type error
+        // @ts-ignore
+        event.returnValue = '' // Chrome requires returnValue to be set but use @ts-ignore to avoid type error
+    }
+}
+
+// Inertia navigation warning
+let removeInertiaHook: (() => void) | null = null
+
+let keydownHandler: ((event: KeyboardEvent) => void) | null = null
+// let clickHandler: ((event: MouseEvent) => void) | null = null
+
 // Fetch data on mount
-onMounted(() => fetchAllData())
+onMounted(() => {
+        fetchAllData()
+        
+        keydownHandler = (event: KeyboardEvent) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                event.preventDefault()
+                handleSave()
+            }
+        }
+
+        document.addEventListener('keydown', keydownHandler)
+        // Add beforeunload listener
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        
+        // Add Inertia navigation hook
+        removeInertiaHook = router.on('before', (event) => {
+                if (hasUnsavedChanges.value) {
+                    // Show confirmation dialog
+                    const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
+                    if (!confirmed) {
+                        return false // Cancel navigation
+                    }
+                }
+            })
+        }
+)
+
+onUnmounted(() => {
+    if (keydownHandler) {
+        document.removeEventListener('keydown', keydownHandler)
+    }
+
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+    if (removeInertiaHook) {
+        removeInertiaHook()
+    }
+})
 
 </script>
 
@@ -256,7 +393,19 @@ onMounted(() => fetchAllData())
     <AppLayout :breadcrumbs="breadcrumbItems">
         <div class="px-4 py-6">
             <Heading :title="`API Instance - ${props.instance_id}`" description="Manage your API Instance" />
-
+            <div class="flex justify-end items-center gap-2 mb-6">
+                <!-- Save Button -->
+                <Button 
+                    @click="handleSave"
+                    variant="outline"
+                    class="flex items-center gap-2"
+                >   
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                    </svg>
+                    Save
+                </Button>
+            </div>
             <div class="flex flex-col space-y-8">
                 <!-- Tab navigation -->
                 <nav class="flex w-full mb-8">
