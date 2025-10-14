@@ -3,24 +3,24 @@
 <template>
   <div :class="currentTheme.container">
     <!-- Header with title and actions -->
-    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
       <!-- Title and Description -->
-      <div>
+      <div class="flex flex-col gap-0.5">
         <h2 v-if="schema.label || schema.title || formConfig.label || formConfig.title || title" :class="currentTheme.title">
           {{ schema.label || schema.title || formConfig.label || formConfig.title || title }}
         </h2>
-        <p v-if="schema.description || formConfig.description" class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+        <p v-if="schema.description || formConfig.description" class="text-xs text-gray-500 dark:text-gray-400">
           {{ schema.description || formConfig.description }}
         </p>
       </div>
       
       <!-- Action buttons row -->
-      <div v-if="processedActions.length > 0 || showNew || showEdit || showDelete" class="flex items-center justify-between gap-4 mt-4">
+      <div v-if="processedActions.length > 0 || showNew || showEdit || showDelete" class="flex items-center justify-between gap-3 mt-3">
         <!-- Left positioned actions -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5">
           <template v-if="processedActions.length > 0">
             <template v-for="(action, index) in leftActions" :key="`left-${index}`">
-              <div v-if="action.type === 'separator'" class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
+              <div v-if="action.type === 'separator'" class="w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
               <button
                 v-else
                 @click="handleCustomAction(action)"
@@ -42,7 +42,7 @@
           <slot name="actions">
             <template v-if="processedActions.length > 0">
               <template v-for="(action, index) in rightActions" :key="`right-${index}`">
-                <div v-if="action.type === 'separator'" class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
+                <div v-if="action.type === 'separator'" class="w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
                 <button
                   v-else
                   @click="handleCustomAction(action)"
@@ -76,12 +76,44 @@
             </template>
           </slot>
         </div>
-      </div>
-      
+      </div>      
+    </div>
+    </div>
+    <!-- Built-in search bar below header (conditional) -->
+    <div v-if="search" class="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <div class="relative flex-1 max-w-sm">
+          <TextField
+          :required="false"
+          :value="searchQuery"
+          @update:value="searchQuery = $event"
+          @input="onSearchInput"
+          @change="onSearchInput"
+          @keydown="handleSearchKeydown"
+          name="searchQuery"
+          label="Search"
+          placeholder="Search (e.g. column_name:contains:string)"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div v-if="showSuggestions && suggestions.length" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded shadow mt-1 absolute z-20">
+          <div 
+            v-for="(s, i) in suggestions" 
+            :key="i" 
+            @mousedown.prevent="applySuggestion(s)" 
+            :class="[
+              'px-4 py-2 cursor-pointer transition-colors',
+              i === selectedSuggestionIndex 
+                ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100' 
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+            ]"
+          >
+            {{ s }}
+          </div>
+        </div>
 
-      
-      <!-- Icon-only utility buttons (Download, Upload, Columns) -->
-      <div v-if="upload || download || columns" class="flex items-center justify-end  mt-4">
+      </div>
+      <div class="flex items-center gap-1">
+        <div v-if="upload || download || columns" class="flex items-center justify-end  mt-4">
         <div class="flex border border-gray-200 dark:border-gray-700 rounded-md">
           <input
             v-if="upload"
@@ -162,38 +194,9 @@
             </div>
           </div>
         </div>
+
       </div>
-    </div>
-    <!-- Built-in search bar below header (conditional) -->
-    <div v-if="search" :class="currentTheme.searchContainer">
-      <TextField
-        :required="false"
-        :value="searchQuery"
-        @update:value="searchQuery = $event"
-        @input="onSearchInput"
-        @change="onSearchInput"
-        @keydown="handleSearchKeydown"
-        name="searchQuery"
-        label="Search"
-        placeholder="Search (e.g. column_name:contains:string)"
-        autocomplete="off"
-        spellcheck="false"
-      />
-      <div v-if="showSuggestions && suggestions.length" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded shadow mt-1 absolute z-20 w-full max-w-xl">
-        <div 
-          v-for="(s, i) in suggestions" 
-          :key="i" 
-          @mousedown.prevent="applySuggestion(s)" 
-          :class="[
-            'px-4 py-2 cursor-pointer transition-colors',
-            i === selectedSuggestionIndex 
-              ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100' 
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-          ]"
-        >
-          {{ s }}
-        </div>
-      </div>
+      
     </div>
     <div class="overflow-x-auto">
       <table :class="currentTheme.table">

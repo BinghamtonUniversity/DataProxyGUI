@@ -39,29 +39,53 @@ export const theme = {
   },
   datatable: {
     default: {
-      container: 'bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700',
-      header: 'flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700',
-      title: 'text-xl font-semibold text-gray-900 dark:text-gray-100',
-      newButton: 'px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 focus:outline-none',
-      editButton: 'px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed',
-      deleteButton: 'px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed',
-      searchContainer: 'p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900',
-      table: 'min-w-full bg-white dark:bg-gray-800 rounded shadow border border-gray-200 dark:border-gray-700',
-      headerCell: 'px-6 py-3 text-left text-gray-700 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700',
-      filterCell: 'px-6 py-2 border-b border-gray-100 dark:border-gray-700',
-      clearButton: 'px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600',
-      row: 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100',
-      rowEven: 'bg-gray-50 dark:bg-gray-900',
-      rowOdd: 'bg-white dark:bg-gray-800',
-      rowHover: 'hover:bg-gray-100 dark:hover:bg-gray-700',
-      cell: 'px-6 py-4 text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-gray-700',
-      borderRight: 'border-r border-gray-200 dark:border-gray-700',
-      menuButton: 'p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none text-gray-600 dark:text-gray-100',
-      menuIcon: 'w-5 h-5 text-gray-600 dark:text-gray-100',
-      dropdown: 'absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10',
-      dropdownItem: 'block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700',
-      dropdownItemDanger: 'block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900'
-    },
+    container:
+      'relative w-full overflow-auto bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-800',
+    header:
+      'flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800',
+    title:
+      'text-sm font-medium text-gray-900 dark:text-gray-100',
+    newButton:
+    'px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium shadow-sm hover:bg-primary/90 dark:hover:bg-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors disabled:opacity-50 disabled:pointer-events-none',
+
+    editButton:
+      'px-3 py-2 rounded-md bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 dark:focus-visible:ring-gray-600 transition-colors disabled:opacity-50 disabled:pointer-events-none',
+
+    deleteButton:
+      'px-3 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-500 dark:bg-red-500 dark:hover:bg-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 dark:focus-visible:ring-red-300 transition-colors disabled:opacity-50 disabled:pointer-events-none',
+    searchContainer:
+      'p-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950',
+    table:
+      'w-full caption-bottom text-sm rounded-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100',
+    headerCell:
+      'h-12 px-4 text-left align-middle font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800',
+    filterCell:
+      'px-4 py-2 border-b border-gray-100 dark:border-gray-800',
+    clearButton:
+      'px-2 py-1 text-xs rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700',
+    row:
+      'border-b border-gray-100 dark:border-gray-800 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800',
+    rowEven:
+      'bg-white dark:bg-gray-900',
+    rowOdd:
+      'bg-white dark:bg-gray-900',
+    rowHover:
+      'hover:bg-gray-50 dark:hover:bg-gray-800',
+    cell:
+      'p-3 align-middle text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-gray-800',
+    borderRight:
+      'border-r border-gray-200 dark:border-gray-800',
+    menuButton:
+      'p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-200 dark:focus-visible:ring-gray-700',
+    menuIcon:
+      'w-4 h-4 text-gray-600 dark:text-gray-300',
+    dropdown:
+      'absolute right-0 mt-2 w-36 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-md shadow-md z-10',
+    dropdownItem:
+      'block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800',
+    dropdownItemDanger:
+      'block w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900'
+  },
     minimal: {
       container: 'bg-white dark:bg-gray-800 rounded-lg',
       header: 'flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700',
