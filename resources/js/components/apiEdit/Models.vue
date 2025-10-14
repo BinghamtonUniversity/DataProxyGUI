@@ -54,8 +54,8 @@ import { useToaster } from '@/composables/useToaster';
 interface Props {
     api_id: string
     api_type: string
-    apiData: ApiData | null
     api: Api | null
+    apiData: ApiData | null
     loadingApiData: boolean
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void

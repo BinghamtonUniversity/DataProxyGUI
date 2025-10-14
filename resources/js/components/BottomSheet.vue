@@ -1,29 +1,30 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 overflow-y-auto">
+  <div v-if="isOpen" class="fixed inset-0 z-50">
     <!-- Backdrop -->
     <div 
-      class="fixed inset-0   backdrop-blur-sm transition-opacity"
+      class="fixed inset-0 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
       @click="closeModal">
     </div>
     
     <!-- Bottom Sheet -->
     <div 
       :class="[
-        'fixed inset-x-0 bottom-0 bg-white dark:bg-gray-800 rounded-t-xl shadow-xl overflow-hidden transition-transform duration-300 ease-out',
+        'fixed inset-x-0 bottom-0 bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-t-xl shadow-xl overflow-hidden transition-transform duration-300 ease-out',
         isOpen ? 'translate-y-0' : 'translate-y-full',
         maxHeightClass
       ]">
       <!-- Header -->
-      <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+      <div class="relative flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
           {{ title }}
         </h3>
         <button 
           @click="closeModal"
-          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          class="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
+          <span class="sr-only">Close</span>
         </button>
       </div>
       

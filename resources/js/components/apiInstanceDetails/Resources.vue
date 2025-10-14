@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ApiInstance, ApiUser, Resource, type ApiData } from '@/types'
+import { Api, ApiInstance, ApiUser, Resource, type ApiData } from '@/types'
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -18,6 +18,7 @@ import { useToaster } from '@/composables/useToaster';
 interface Props {
     instance_id: string
     apiInstanceData: ApiInstance | null,
+    api: Api | null,
     apiUsers: ApiUser[] | null,
     resources: Resource[] | null,
     loading: boolean,

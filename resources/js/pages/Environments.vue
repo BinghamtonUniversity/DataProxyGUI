@@ -35,8 +35,8 @@ const { success, error: showError, warning, info } = useToaster();
 
 // Form configuration for environments
 const formConfig = {
-    label: 'Envrionments',
-    description: 'A list of environments with their information.',
+    label: '',
+    description: '',
     name: "my-form",
     files: false,
     fields: [

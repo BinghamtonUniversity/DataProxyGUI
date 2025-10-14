@@ -180,6 +180,14 @@ Route::middleware(['auth', 'verified'])->prefix('/ajax/apis')->group(function ()
 });
 
 // ============================================
+// API Export - (JSON export in new tab)
+// ============================================
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/apis/{api_id}/version/latest', [App\Http\Controllers\Api\ApiController::class, 'exportApiVersion'])
+        ->name('api.export.version');
+});
+
+// ============================================
 // API Version Comparison
 // ============================================
 Route::middleware(['auth', 'verified'])->group(function () {

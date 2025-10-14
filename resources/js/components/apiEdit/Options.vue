@@ -1,20 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Save, Plus, Trash2 } from 'lucide-vue-next';
+import { Plus, Trash2, Upload, Download } from 'lucide-vue-next';
 import AppLayout from '@/layouts/AppLayout.vue';
 import APILayout from '@/layouts/api/Layout.vue';
 import FormBuilder from '@/components/formbuilder/FormBuilder.vue';
+import FormViewer from '@/components/formviewer/FormViewer.vue';
+import AlertModal from '@/components/AlertModal.vue';
 import { type BreadcrumbItem, type ApiData, Api } from '@/types';
 interface Props {
     api_id: string
     api_type: string
-    apiData: ApiData | null
     api: Api | null
+    apiData: ApiData | null
     loadingApiData: boolean
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
@@ -49,73 +51,26 @@ const formData = ref<{
     fields: []
 });
 
-const isSaving = ref(false);
-const saveError = ref<string | null>(null);
-const saveSuccess = ref(false);
+// Import modal state
+const showImportModal = ref(false);
+const importJsonData = ref('');
 
-// Handle form builder changes
+// Form changes update local state only - database save via Ctrl+S
+
+// Handle form builder changes - update local state only
 const handleFormChange = (newFormData: any) => {
     formData.value = newFormData;
-    console.log('Form data updated:', formData.value);
-};
-
-// Save options to database
-const handleSave = async (apiData: ApiData | null, updateApiData: (updatedApiData: ApiData) => void) => {
-    if (!formData.value.fields || formData.value.fields.length === 0) {
-        saveError.value = 'Please add at least one field to the form';
-        return;
-    }
-
-    if (!apiData) {
-        saveError.value = 'API data not available';
-        return;
-    }
     
-    isSaving.value = true;
-    saveError.value = null;
-    saveSuccess.value = false;
-
-    try {
-        // Create updated API data with new options
-        console.log('Form data:', formData.value)
+    if (props.apiData) {
         const updatedApiData: ApiData = {
-            ...apiData,
+            ...props.apiData,
             options: formData.value // Replace options with just the fields array
         };
 
         // Update the local state using the updateApiData function
-        updateApiData(updatedApiData);
-
-        // Send the updated API data to the backend via Laravel API
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify(updatedApiData)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
-
-        const responseData = await response.json();
-        updateApiData(responseData || updatedApiData);
+        props.updateApiData(updatedApiData);
         
-        saveSuccess.value = true;
-        setTimeout(() => {
-            saveSuccess.value = false;
-        }, 3000);
-
-    } catch (error) {
-        console.error('Save error:', error);
-        saveError.value = error instanceof Error ? error.message : 'Failed to save options';
-    } finally {
-        isSaving.value = false;
+        console.log('Form data updated locally:', formData.value);
     }
 };
 
@@ -140,6 +95,115 @@ const initializeFormData = (apiData: ApiData | null) => {
         loadExistingOptions(apiData);
     }
 };
+
+// Event listeners for dropdown actions
+const handleImportEvent = () => {
+    openImportModal();
+};
+
+const handleExportEvent = () => {
+    exportOptions();
+};
+
+// Mount/unmount event listeners
+onMounted(() => {
+    window.addEventListener('openOptionsImport', handleImportEvent);
+    window.addEventListener('exportOptions', handleExportEvent);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('openOptionsImport', handleImportEvent);
+    window.removeEventListener('exportOptions', handleExportEvent);
+});
+
+// Import modal functions
+const openImportModal = () => {
+    showImportModal.value = true;
+    importJsonData.value = JSON.stringify(formData.value, null, 2);
+};
+
+const closeImportModal = () => {
+    showImportModal.value = false;
+    importJsonData.value = '';
+};
+
+const handleImportSubmit = (formValues: any) => {
+    try {
+        const importedData = JSON.parse(formValues.jsonData);
+        
+        // Validate the imported data structure
+        if (!importedData || typeof importedData !== 'object') {
+            throw new Error('Invalid JSON structure');
+        }
+        
+        if (!importedData.fields || !Array.isArray(importedData.fields)) {
+            throw new Error('JSON must contain a "fields" array');
+        }
+        
+        // Update the form data with imported data
+        formData.value = {
+            name: importedData.name || 'options',
+            fields: importedData.fields
+        };
+        
+        // Update the API data
+        if (props.apiData) {
+            const updatedApiData: ApiData = {
+                ...props.apiData,
+                options: formData.value
+            };
+            props.updateApiData(updatedApiData);
+        }
+        
+        closeImportModal();
+        console.log('Options imported successfully:', formData.value);
+    } catch (error) {
+        console.error('Import error:', error);
+        alert('Invalid JSON format. Please check your JSON and try again.');
+    }
+};
+
+const handleImportAction = (actionData: { type: string; action: string; formData: any }) => {
+    if (actionData.type === 'close') {
+        closeImportModal();
+    }
+};
+
+// Export current options as JSON
+const exportOptions = () => {
+    const dataStr = JSON.stringify(formData.value, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'options.json';
+    link.click();
+    URL.revokeObjectURL(url);
+};
+
+// Form configuration for import modal
+const importFormConfig = {
+    label: '',
+    description: '',
+    name: "import-options-form",
+    files: false,
+    fields: [
+        {
+            name: "jsonData",
+            label: "JSON Data",
+            type: "monaco",
+            placeholder: "Paste your JSON options here...",
+            value: "",
+            help: "Paste the JSON configuration for your options",
+            info: "The JSON should contain a 'fields' array with your form configuration",
+            width: "12",
+            offset: "0",
+            required: true,
+            language: "json",
+            height: 600
+        }
+    ]
+};
 </script>
 
 
@@ -152,27 +216,6 @@ const initializeFormData = (apiData: ApiData | null) => {
 }">
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
         <div class="">
-            
-            <!-- Save Button -->
-            <div class="flex justify-end mb-4">
-                <Button 
-                    @click="() => handleSave(apiData, updateApiData)" 
-                    :disabled="isSaving"
-                    class="flex items-center gap-2"
-                >
-                    <Save class="h-4 w-4" />
-                    {{ isSaving ? 'Saving...' : 'Save Options' }}
-                </Button>
-            </div>
-
-            <!-- Save Status Messages -->
-            <div v-if="saveError" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-                {{ saveError }}
-            </div>
-            
-            <div v-if="saveSuccess" class="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm">
-                Options saved successfully!
-            </div>
 
             <!-- Loading State -->
             <template v-if="loadingApiData">
@@ -208,5 +251,20 @@ const initializeFormData = (apiData: ApiData | null) => {
  
             </template>
         </div>
+        
+        <!-- Import Modal -->
+        <AlertModal 
+            :isOpen="showImportModal"
+            title="Import Options"
+            @close="closeImportModal"
+        >
+            <FormViewer 
+                :formConfig="importFormConfig" 
+                :initialData="{ jsonData: importJsonData }"
+                :cancelAction="'close'"
+                @submit="handleImportSubmit"
+                @action="handleImportAction"
+            />
+        </AlertModal>
     </div>
 </template>
