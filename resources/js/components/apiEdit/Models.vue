@@ -555,7 +555,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                       <DialogContent class="sm:max-w-3xl">
                         <form @submit="submitNewModel" class="space-y-6">
                           <DialogHeader>
-                            <DialogTitle>{{ isEditMode ? 'Edit Model' : 'Create New Model' }}</DialogTitle>
+                            <DialogTitle aria-describedby="dialog-title">{{ isEditMode ? 'Edit Model' : 'Create New Model' }}</DialogTitle>
                           </DialogHeader>
                           <div class="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-6">
                             <!-- Basic Model Info -->
@@ -621,7 +621,6 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                   variant="outline"
                                   @click="openContentEditor"
                                 >
-                                  <Code class="mr-2 h-4 w-4" />
                                   Edit Content
                                 </Button>
                               </div>
@@ -642,7 +641,6 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                   variant="outline"
                                   @click="openClassMethodsEditor"
                                 >
-                                  <FileCode class="mr-2 h-4 w-4" />
                                   Edit Methods
                                 </Button>
                               </div>
@@ -679,7 +677,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                     <Dialog v-model:open="contentEditorDialogOpen">
                       <DialogContent class="sm:max-w-5xl max-h-[90vh]">
                         <DialogHeader>
-                          <DialogTitle>Edit Model Content</DialogTitle>
+                          <DialogTitle aria-describedby="edit-model-content">Edit Model Content</DialogTitle>
                         </DialogHeader>
                         <div class="py-4 h-[60vh]">
                           <Editor 
@@ -703,7 +701,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                     <Dialog v-model:open="classMethodsEditorDialogOpen">
                       <DialogContent class="sm:max-w-6xl max-h-[90vh]">
                         <DialogHeader>
-                          <DialogTitle>Edit Class Methods</DialogTitle>
+                          <DialogTitle aria-describedby="edit-class-methods">Edit Class Methods</DialogTitle>
                         </DialogHeader>
                         <div class="py-4 max-h-[70vh] overflow-y-auto space-y-4">
                           <div v-if="tempClassMethods.length === 0" class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">

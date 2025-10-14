@@ -15,6 +15,7 @@ interface Props {
     api_type: string
     api: Api | null
     apiData: ApiData | null
+    api: Api | null
     loadingApiData: boolean
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
