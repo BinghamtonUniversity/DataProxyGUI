@@ -112,6 +112,28 @@ const submitNewResource = async (e: Event) => {
       type: newResourceForm.value.type,
       model_name: newResourceForm.value.model_name
     }
+
+    // duplicate name check
+    const duplicateName = props.apiData.resources?.some((res, index) =>
+      res.name === newResource.name && index !== editingResourceIndex.value
+    )
+
+    // duplicate model_name check
+    const duplicateModel = props.apiData.resources?.some((res, index) =>
+      res.model_name === newResource.model_name && index !== editingResourceIndex.value
+    )
+
+    if (duplicateName) {
+      newResourceError.value = `A resource with the name "${newResource.name}" already exists.`
+      newResourceLoading.value = false
+      return
+    }
+
+    if (duplicateModel) {
+      newResourceError.value = `The model "${newResource.model_name}" is already assigned to another resource.`
+      newResourceLoading.value = false
+      return
+    }
     
     let updatedApiData
 
@@ -180,25 +202,8 @@ const handleDelete = async (resource: ResourceData) => {
             ...props.apiData,
             resources: props.apiData.resources?.filter(res => !(res.name === resource.name)) || []
         }
-        // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
-
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
-
-        const responseData = await response.json()
-        props.updateApiData(responseData || updatedApiData)
+        
+        props.updateApiData(updatedApiData)
         success(`Resource "${resource.name}" deleted successfully`, 'Resource Deleted');
     } catch (err: any) {
         console.error('Error deleting route:', err)
@@ -414,7 +419,29 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                     </div>
                                     <div v-if="newResourceForm.type === 'Model'">
                                         <Label for="model-name" class="mb-1">Model Name</Label>
-                                        <Input id="model-name" v-model="newResourceForm.model_name" placeholder="Model name" />
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger as-child>
+                                          <Button
+                                              type="button"
+                                              variant="outline"
+                                              class="w-full justify-between"
+                                          >
+                                              {{ newResourceForm.model_name || 'Select model' }}
+                                              <ChevronDown class="ml-1 h-4 w-4" />
+                                          </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="start" class="w-full">
+                                          <DropdownMenuItem
+                                              v-for="model in apiData.version_models || []"
+                                              :key="model.name"
+                                              @click="newResourceForm.model_name = model.name"
+                                              :class="['w-full', {'font-semibold text-blue-600': newResourceForm.model_name === model.name }]"
+                                          >
+                                              {{ model.name }}
+                                          </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                      </DropdownMenu>
+                                        <!-- <Input id="model-name" v-model="newResourceForm.model_name" required placeholder="Model name" /> -->
                                     </div>
                                     <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
                                 </div>
@@ -422,7 +449,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                     <DialogClose as-child>
                                     <Button variant="secondary" type="button" @click="closeNewResourceDialog">Cancel</Button>
                                     </DialogClose>
-                                    <Button type="submit" variant="default" :disabled="newResourceLoading">
+                                    <Button type="submit" variant="default" :disabled="newResourceLoading || !newResourceForm.type">
                                     <span v-if="newResourceLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
                                     <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
                                     </Button>

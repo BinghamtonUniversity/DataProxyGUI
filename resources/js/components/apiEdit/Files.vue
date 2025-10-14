@@ -343,7 +343,7 @@ const resetNewViewDialog = () => {
                         <Editor 
                             v-if="selectedFile" 
                             :code="selectedFile.content" 
-                            :language="api_type === 'python' || api_type === 'php' ? api_type : undefined"
+                            :language="api?.api_type as 'python' | 'php' | undefined"
                             :is-saving="isSaving"
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"

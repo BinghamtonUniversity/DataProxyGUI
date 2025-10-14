@@ -280,25 +280,8 @@ const handleDelete = async (model: ModelData) => {
             ...props.apiData,
             version_models: props.apiData.version_models?.filter(existingModel => !(existingModel.name === model.name)) || []
         }
-        // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
-
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
-
-        const responseData = await response.json()
-        props.updateApiData(responseData || updatedApiData)
+       
+        props.updateApiData(updatedApiData)
         success(`Model "${model.name}" deleted successfully`, 'Model Deleted');
         
     } catch (err: any) {
@@ -565,7 +548,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                             </div>
                             <div class="grid grid-cols-4 items-center gap-4">
                               <Label for="new-model-inheritance" class="text-right">Inheritance</Label>
-                              <Input id="new-model-inheritance" v-model="newModelForm.inheritance" placeholder="models.Model" class="col-span-3" />
+                              <Input id="new-model-inheritance" v-model="newModelForm.inheritance" required placeholder="models.Model" class="col-span-3" />
                             </div>
                             
                             <!-- Meta Properties Section -->
@@ -581,11 +564,13 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                     v-model="meta.name" 
                                     placeholder="Name" 
                                     class="col-span-3"
+                                    required
                                   />
                                   <Input 
                                     v-model="meta.value" 
                                     placeholder="Value" 
                                     class="col-span-4"
+                                    required
                                   />
                                   <Button 
                                     type="button" 
