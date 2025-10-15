@@ -1,52 +1,25 @@
 <script setup lang="ts">
-import type {
-  ColumnDef,
-  ColumnFiltersState,
-  ExpandedState,
-  SortingState,
-  VisibilityState,
-} from '@tanstack/vue-table'
-import {
-  FlexRender,
-  getCoreRowModel,
-  getExpandedRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useVueTable,
-} from '@tanstack/vue-table'
-import { ArrowUpDown, ChevronDown, Plus, Check } from 'lucide-vue-next'
-import { h, ref, onMounted, onUnmounted, computed, reactive } from 'vue'
-import { valueUpdater } from '@/lib/utils'
+import { ChevronDown, Plus, Check } from 'lucide-vue-next'
+import { ref, onMounted, onUnmounted, reactive } from 'vue'
 
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, ApiInstance, Environment, Api, ApiInstanceRouteUserMap, ApiInstanceResource} from '@/types'
+import { type BreadcrumbItem, ApiInstance, Environment, Api, ApiInstanceRouteUserMap, ApiInstanceResource, ApiData} from '@/types'
 import { Head } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuItem
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import TableActions from '../components/TableActions.vue'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
 import { router } from '@inertiajs/vue3'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
+import DataGrid from '@/components/datagrid/DataGrid.vue';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -59,11 +32,131 @@ const breadcrumbs: BreadcrumbItem[] = [
 const api_instances = ref<ApiInstance[]>([])
 const environments = ref<Environment[]>([])
 const apis = ref<Api[]>([])
-
+const api_versions = ref<ApiData[]>([])
 // Toaster
 const { success, error, warning, info } = useToaster();
 
 const loading = ref(true)
+
+// DataGrid schema for API instances
+const apiInstancesSchema = {
+    label: '',
+    description: '',
+    name: "api-instances-schema",
+    files: false,
+    fields: [
+        {
+            name: "id",
+            label: "ID",
+            type: "text",
+            placeholder: "API Instance ID",
+            value: "",
+            help: "Unique identifier for the API instance",
+            info: "Unique identifier for the API instance",
+            width: "12",
+            offset: "0",
+            required: true,
+            showColumn: false
+        },
+        {
+            name: "name",
+            label: "Name",
+            type: "text",
+            placeholder: "API Instance Name",
+            value: "",
+            help: "Name of the API instance",
+            info: "Name of the API instance",
+            width: "12",
+            offset: "0",
+            required: true,
+            showColumn: true
+        },
+        {
+            name: "route",
+            label: "Slug",
+            type: "text",
+            placeholder: "Route/Slug",
+            value: "",
+            help: "Route or slug for the API instance",
+            info: "Route or slug for the API instance",
+            width: "12",
+            offset: "0",
+            required: true,
+            showColumn: true
+        },
+        {
+            name: "environment_id",
+            label: "Environment",
+            type: "text",
+            placeholder: "Environment ID",
+            value: "",
+            help: "Environment where this API instance is deployed",
+            info: "Environment where this API instance is deployed",
+            width: "12",
+            offset: "0",
+            options: [],
+            required: true,
+            showColumn: true
+        },
+        {
+            name: "api_id",
+            label: "API",
+            type: "text",
+            placeholder: "API",
+            value: "",
+            help: "ID of the associated API",
+            info: "ID of the associated API",
+            width: "12",
+            offset: "0",
+            options: [],
+            required: true,
+            showColumn: true
+        },
+        {
+            name: "api_version_id_id",
+            label: "API Version",
+            type: "text",
+            placeholder: "API Version ID",
+            value: "",
+            help: "Version of the API",
+            info: "Version of the API",
+            width: "12",
+            offset: "0",
+            options: [] as Array<{label: string, value: any, color: string}>,
+            required: false,
+            showColumn: true
+        },
+        {
+            name: "errors",
+            label: "Error Level",
+            type: "text",
+            placeholder: "Resources",
+            value: "All",
+            help: "Resources of the API instance",
+            info: "Resources of the API instance",
+            width: "12",
+            offset: "0",
+            required: false,
+            showColumn: true
+        },
+        {
+            name: "resources",
+            label: "Resources",
+            type: "text",
+            placeholder: "Resources",
+            value: "",
+            help: "Resources of the API instance",
+            info: "Resources of the API instance",
+            width: "12",
+            offset: "0",
+            required: false,
+            showColumn: true,
+            isArrayObject: true,
+            targetObjectAttribute: "name",
+            targetColor: "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200"
+        }
+    ]
+};
 
 //new API Instance
 const newApiInstanceDialogOpen = ref(false)
@@ -266,43 +359,7 @@ const handleRowClick = (instance: ApiInstance, event: MouseEvent) => {
   router.visit(`/api_instances/${instance.id}/main`)
 }
 
-// MOVE THESE to Details Page ?? Helper functions for managing array fields
-// const addRouteUserMap = () => {
-//   newApiInstanceForm.value.route_user_map.push({
-//     api_user: '',
-//     verb: '',
-//     route: ''
-//   })
-// }
 
-// const removeRouteUserMap = (index: number) => {
-//   if (newApiInstanceForm.value.route_user_map.length > 0) {
-//     newApiInstanceForm.value.route_user_map.splice(index, 1)
-//   }
-// }
-
-// const addResource = () => {
-//   newApiInstanceForm.value.resources.push({
-//     name: '',
-//     resource: ''
-//   })
-// }
-
-// const removeResource = (index: number) => {
-//   if (newApiInstanceForm.value.resources.length > 1) {
-//     newApiInstanceForm.value.resources.splice(index, 1)
-//   }
-// }
-
-// Dropdown functionality
-const toggleDropdown = (type: keyof typeof dropdownOpen) => {
-  // Close all dropdowns first
-  Object.keys(dropdownOpen).forEach(key => {
-    dropdownOpen[key as keyof typeof dropdownOpen] = false
-  })
-  // Open the requested dropdown
-  dropdownOpen[type] = !dropdownOpen[type]
-}
 
 const selectEnvironment = (env: Environment) => {
   newApiInstanceForm.value.environment_id = env.id.toString()
@@ -345,179 +402,19 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
-// Define table columns
-const columns: ColumnDef<ApiInstance>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => h(Checkbox, {
-      'modelValue': table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate'),
-      'onUpdate:modelValue': value => table.toggleAllPageRowsSelected(!!value),
-      'ariaLabel': 'Select all',
-    }),
-    cell: ({ row }) => h(Checkbox, {
-      'modelValue': row.getIsSelected(),
-      'onUpdate:modelValue': value => row.toggleSelected(!!value),
-      'ariaLabel': 'Select row',
-    }),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: 'id',
-    header: ({ column }) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['ID', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
-    },
-    cell: ({ row }) => h('div', { class: 'font-medium' }, row.getValue('id')),
-  },
-  {
-    accessorKey: 'name',
-    header: ({ column }) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
-    },
-    cell: ({ row }) => h('div', { class: 'font-medium' }, row.getValue('name')),
-  },
-  {
-    accessorKey: 'route',
-    header: 'Slug',
-    cell: ({ row }) => {
-      const type = row.getValue('route') as string
-      return h('div', { 
-        class: 'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300' 
-      }, type)
-    },
-  },
-  {
-    accessorKey: 'environment_id',
-    header: 'Environment',
-    cell: ({ row }) => {
-      const env_id = row.getValue('environment_id') as number
-      return h('div', { class: 'truncate max-w-32' }, env_id || 'No environment' )
-    },
-  },
-  {
-    accessorKey: 'api_id',
-    header: 'API ID',
-    cell: ({ row }) => {
-      const api_id = row.getValue('api_id') as number
-      return h('div', { class: 'truncate max-w-32' }, api_id || 'No API ID' )
-    },
-  },
-  {
-    accessorKey: 'api_version_id',
-    header: 'API Version ID',
-    cell: ({ row }) => {
-      const api_version_id = row.getValue('api_version_id') as number
-      return h('div', { class: 'truncate max-w-32' }, api_version_id || 'Latest Version' )
-    },
-  },
-  {
-    accessorKey: 'created_at',
-    header: ({ column }) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Created At', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
-    },
-    cell: ({ row }) => {
-      const date = new Date(row.getValue('created_at'))
-      return h('div', { class: 'text-sm' }, date.toLocaleDateString())
-    },
-  },
-  {
-    id: 'resources',
-    header: 'Resources',
-    cell: ({ row }) => {
-      const resources = row.original.resources || []
-      
-      if (resources.length === 0) {
-        return h('div', { class: 'text-gray-500 text-sm' }, 'No resources')
-      }
-      
-      return h('div', { class: 'flex flex-wrap gap-1' }, [
-        ...resources.map(res => 
-          h('span', { 
-            key: res.name,
-            class: 'inline-flex items-center rounded px-2 py-1 text-xs bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-300 font-medium'
-          }, res.name)
-        ),
-      ])
-    },
-  },
-  {
-    id: 'actions',
-    enableHiding: false,
-    cell: ({ row }) => {
-        const instance = row.original
-        return h('div', { 'data-actions-cell': true }, [ h(TableActions<ApiInstance>, {
-            item: instance,
-            viewDetailsHref: `/api_instances/${instance.id}/main`,
-            editLabel: 'Edit Instance',
-            deleteLabel: 'Delete Instance',
-            onEdit: () => openEditApiInstanceDialog(instance),
-            onDelete: () => handleDeleteInstance(instance),
-          })
-        ])
-        }
-    }
-]
-
-// Table state
-const sorting = ref<SortingState>([])
-const columnFilters = ref<ColumnFiltersState>([])
-const columnVisibility = ref<VisibilityState>({})
-const rowSelection = ref({})
-const expanded = ref<ExpandedState>({})
-
-const table = computed(() => {
-  if (!api_instances.value || api_instances.value.length === 0) {
-    return null
-  }
-
-  return useVueTable({
-    data: api_instances.value,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
-    onSortingChange: updaterOrValue => valueUpdater(updaterOrValue, sorting),
-    onColumnFiltersChange: updaterOrValue => valueUpdater(updaterOrValue, columnFilters),
-    onColumnVisibilityChange: updaterOrValue => valueUpdater(updaterOrValue, columnVisibility),
-    onRowSelectionChange: updaterOrValue => valueUpdater(updaterOrValue, rowSelection),
-    state: {
-      get sorting() { return sorting.value },
-      get columnFilters() { return columnFilters.value },
-      get columnVisibility() { return columnVisibility.value },
-      get rowSelection() { return rowSelection.value },
-    },
-  })
-})
-
-// Computed properties
-const headerGroups = computed(() => table.value?.getHeaderGroups() || [])
-const tableRows = computed(() => table.value?.getRowModel().rows || [])
-const hidableColumns = computed(() => table.value?.getAllColumns().filter(column => column.getCanHide()) || [])
-const nameFilterValue = computed({
-  get: () => table.value?.getColumn('name')?.getFilterValue() as string || '',
-  set: (value: string) => table.value?.getColumn('name')?.setFilterValue(value)
-})
-const selectedRowsCount = computed(() => table.value?.getFilteredSelectedRowModel().rows.length || 0)
-const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.length || 0)
-const canPreviousPage = computed(() => table.value?.getCanPreviousPage() || false)
-const canNextPage = computed(() => table.value?.getCanNextPage() || false)
 
 const fetchApiInstances = async () => {
   loading.value = true
   try {
     const response = await fetch(`/api/api_instances`)
     api_instances.value = await response.json()
+
+    // Set api_version_id to -1 if it is null
+    api_instances.value.forEach((instance: any) => {
+        if(instance.api_version_id === null) {
+            instance.api_version_id = -1
+        }
+    });
   } catch (e) {
     api_instances.value = []
     console.error('Error fetching API Instances:', e)
@@ -533,36 +430,70 @@ const fetchAllData = async () => {
       apiInstancesResponse,
       environmentsResponse,
       apisResponse,
-      // apiVersionsResponse
+      apiVersionsResponse
     ] = await Promise.all([
       fetch(`/api/api_instances`),
       fetch(`/api/environments`),
       fetch(`/api/apis`),
-      // fetch(`/api/api_versions`),
+      fetch(`/api/api_versions`),
     ])
 
     if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
     if (!environmentsResponse.ok) throw new Error('Failed to fetch environments')
     if (!apisResponse.ok) throw new Error('Failed to fetch APIs')
-    // if (!apiVersionsResponse.ok) throw new Error('Failed to fetch API users')
+    if (!apiVersionsResponse.ok) throw new Error('Failed to fetch API versions')
 
     const [
       apiInstancesData,
       environmentsData,
       apisData,
-      // apiVersionsData
+      apiVersionsData
     ] = await Promise.all([
       apiInstancesResponse.json(),
       environmentsResponse.json(),
       apisResponse.json(),
-      // apiVersionsResponse.json(),
+      apiVersionsResponse.json(),
     ])
+    
+
 
     api_instances.value = apiInstancesData
     environments.value = environmentsData
     apis.value = apisData
-    // api_versions.value = apiVersionsData
+    api_versions.value = apiVersionsData
+    
 
+
+    apiInstancesSchema.fields[3].options = environmentsData.map((env: any) => ({
+        label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
+        value: env.id,
+        color: env.type === 'test' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : env.type === 'dev' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+    }));
+
+    apiInstancesSchema.fields[4].options = apisData.map((api: any) => ({
+        label: api.name  || `API ${api.id}`,
+        value: api.id,
+        color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+    }));
+
+    apiInstancesSchema.fields[5].options = apiVersionsData.map((apiVersion: any) => ({
+        
+        label: apiVersion.summary  || `API Version ${apiVersion.id}`,
+        value: apiVersion.id,
+        color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+    }));
+    api_instances.value.forEach((instance: any) => {
+        if(instance.api_version_id_id === null) {
+            instance.api_version_id_id = -1
+        }
+    });
+     apiInstancesSchema.fields[5]!.options!.unshift!({
+         label: 'Latest/Working',
+         value: -1,
+         color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+     });
+     console.log(apiInstancesSchema.fields[5]!.options!)
+     console.log(api_instances.value)
   } catch (error) {
     console.error('Error fetching data:', error)
   } finally {
@@ -579,6 +510,42 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
+
+// DataGrid action handlers
+const handleDataGridAction = (actionData: { type: string; payload: any }) => {
+  console.log('DataGrid action:', actionData);
+  
+  switch (actionData.type) {
+    case 'single-edit':
+      openEditApiInstanceDialog(actionData.payload);
+      break;
+    case 'single-delete':
+      handleDeleteInstance(actionData.payload);
+      break;
+    case 'view':
+      router.visit(`/api_instances/${actionData.payload.id}/main`);
+      break;
+    default:
+      console.log('Unknown action type:', actionData.type);
+  }
+};
+
+const handleDataGridCustomAction = (actionData: { action: string; selectedRows: any[]; selectedData: any[] }) => {
+  console.log('Custom action triggered:', actionData);
+  
+  switch (actionData.action) {
+    case 'create':
+      openNewApiInstanceDialog();
+      break;
+    default:
+      info(`Please implement the ${actionData.action} function`, 'Action Not Implemented');
+  }
+};
+
+const handleDataGridRowClick = (row: any) => {
+  console.log('DataGrid row click:', row);
+  router.visit(`/api_instances/${row.id}/main`);
+};
 </script>
 
 <template>
@@ -598,227 +565,121 @@ onUnmounted(() => {
           </div>
         </template>
 
-        <!-- Table Controls -->
+        <!-- DataGrid Implementation -->
         <template v-else>
-          <div class="flex items-center py-4">
-              <Input
-              class="max-w-sm"
-              placeholder="Filter by name..."
-              v-model="nameFilterValue"
-            />
-              <Dialog v-model:open="newApiInstanceDialogOpen">
-                  <DialogTrigger as-child>
-                  <Button class="ml-4 text-green-600" variant="outline" @click="openNewApiInstanceDialog">
-                      <Plus class="mr-2 h-4 w-4" />
-                      New API Instance
-                  </Button>
-                  </DialogTrigger>
-                  <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <form @submit="submitNewApiInstance" class="space-y-6">
-                      <DialogHeader>
-                      <DialogTitle>{{ isEditMode ? 'Edit API Instance' : 'Create New API Instance' }}</DialogTitle>
-                      </DialogHeader>
-                      <div class="grid gap-6">
-                      <!-- Environment Selection -->
-                      <div class="relative">
-                        <Label for="environment-id" class="mb-1">Environment</Label>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger as-child>
-                            <Button variant="outline" class="w-full justify-between">
-                              {{ getSelectedEnvironmentName() || 'Select Environment' }}
-                              <ChevronDown class="ml-2 h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent class="w-full max-h-60">
-                            <DropdownMenuItem
-                              v-for="env in environments"
-                              :key="env.id"
-                              @click="selectEnvironment(env)"
-                              class="flex items-center justify-between"
-                            >
-                              <span class="block truncate">{{ env.name }} - {{ env.type }}</span>
-                              <Check
-                                v-if="newApiInstanceForm.environment_id === env.id.toString()"
-                                class="h-4 w-4 text-blue-600"
-                              />
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+          <DataGrid 
+            :schema="apiInstancesSchema"
+            :data="api_instances"
+            theme="default"
+            :actions="[
+              {name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus'},
+            ]"
+            :rowActions="[
+              { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
+              { type: 'view', label: 'View', icon: 'eye', colorClass: 'text-green-600 hover:bg-green-50' },
+              { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50' }
+            ]"
+            @actionHandler="handleDataGridCustomAction"
+            @rowActionHandler="handleDataGridAction"
+            @rowClick="handleDataGridRowClick"
+          />
+        </template>
 
-                      <!-- API Selection -->
-                      <div class="relative">
-                        <Label for="api-id" class="mb-1">API</Label>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger as-child>
-                            <Button variant="outline" class="w-full justify-between">
-                              {{ getSelectedApiName() || 'Select API' }}
-                              <ChevronDown class="ml-2 h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent class="w-full max-h-60">
-                            <DropdownMenuItem
-                              v-for="api in apis"
-                              :key="api.id"
-                              @click="selectApi(api)"
-                              class="flex items-center justify-between"
-                            >
-                              <span class="block truncate">{{ api.name }}</span>
-                              <Check
-                                v-if="newApiInstanceForm.api_id === api.id.toString()"
-                                class="h-4 w-4 text-blue-600"
-                              />
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      <!-- API Version -->
-                      <div>
-                          <Label for="api-version" class="mb-1">API Version</Label>
-                          <Input id="api-version" v-model="newApiInstanceForm.api_version_id" placeholder="API Version" />
-                      </div>
-
-                      <!-- Name -->
-                      <div>
-                          <Label for="instance-name" class="mb-1">Name</Label>
-                          <Input id="instance-name" v-model="newApiInstanceForm.name" required placeholder="API Instance Name" />
-                      </div>
-
-                      <!-- Route/Slug -->
-                      <div>
-                          <Label for="instance-route" class="mb-1">Slug</Label>
-                          <Input id="instance-route" v-model="newApiInstanceForm.route" required placeholder="Route/Slug" />
-                      </div>
-
-                      <div v-if="newApiInstanceError" class="text-red-600 text-sm">{{ newApiInstanceError }}</div>
-                      </div>
-                      <DialogFooter class="gap-2">
-                      <DialogClose as-child>
-                          <Button variant="secondary" type="button" @click="closeNewApiInstanceDialog">Cancel</Button>
-                      </DialogClose>
-                      <Button type="submit" variant="default" :disabled="newApiInstanceLoading">
-                          <span v-if="newApiInstanceLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
-                          <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
+        <!-- Create/Edit Dialog -->
+        <Dialog v-model:open="newApiInstanceDialogOpen">
+          <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <form @submit="submitNewApiInstance" class="space-y-6">
+              <DialogHeader>
+                <DialogTitle>{{ isEditMode ? 'Edit API Instance' : 'Create New API Instance' }}</DialogTitle>
+              </DialogHeader>
+              <div class="grid gap-6">
+                <!-- Environment Selection -->
+                <div class="relative">
+                  <Label for="environment-id" class="mb-1">Environment</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <Button variant="outline" class="w-full justify-between">
+                        {{ getSelectedEnvironmentName() || 'Select Environment' }}
+                        <ChevronDown class="ml-2 h-4 w-4" />
                       </Button>
-                      </DialogFooter>
-                  </form>
-                  </DialogContent>
-              </Dialog>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger as-child>
-                <Button variant="outline" class="ml-auto">
-                  Columns <ChevronDown class="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuCheckboxItem
-                  v-for="column in hidableColumns"
-                  :key="column.id"
-                  class="capitalize"
-                  :model-value="column.getIsVisible()"
-                  @update:model-value="(value) => column.toggleVisibility(!!value)"
-                >
-                  {{ column.id.replace('_', ' ') }}
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </template>
-        
-        <!-- Data Table -->
-        <template v-if="api_instances?.length && table">
-          <div class="w-full">
-
-            <!-- Data Table -->
-            <div class="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow v-for="headerGroup in headerGroups" :key="headerGroup.id">
-                    <TableHead v-for="header in headerGroup.headers" :key="header.id">
-                      <FlexRender 
-                        v-if="!header.isPlaceholder" 
-                        :render="header.column.columnDef.header" 
-                        :props="header.getContext()" 
-                      />
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <template v-if="tableRows.length">
-                    <template v-for="row in tableRows" :key="row.id" >
-                      <TableRow 
-                      :data-state="row.getIsSelected() && 'selected'"
-                      @click="(event: MouseEvent) => handleRowClick(row.original, event)"
-                      class="cursor-pointer hover:bg-muted/50"
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent class="w-full max-h-60">
+                      <DropdownMenuItem
+                        v-for="env in environments"
+                        :key="env.id"
+                        @click="selectEnvironment(env)"
+                        class="flex items-center justify-between"
                       >
-                        <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
-                          <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
-                        </TableCell>
-                      </TableRow>
-                      <TableRow v-if="row.getIsExpanded()" class="bg-muted/50">
-                        <TableCell :colspan="row.getAllCells().length" class="p-4">
-                          <div class="space-y-2">
-                            <h4 class="font-semibold">API Instance Details</h4>
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                              <div><strong>ID:</strong> {{ row.original.id }}</div>
-                              <div><strong>Name:</strong> {{ row.original.name }}</div>
-                              <div><strong>Slug:</strong> {{ row.original.route }}</div>
-                              <div><strong>Environment:</strong> {{ row.original.environment_id }}</div>
-                              <div><strong>API:</strong> {{ row.original.api_id }}</div>
-                              <div><strong>API Version:</strong> {{ row.original.api_version_id }}</div>
-                              <div><strong>Created At:</strong> {{ new Date(row.original.created_at).toLocaleString() }}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    </template>
-                  </template>
-                  <TableRow v-else>
-                    <TableCell :colspan="columns.length" class="h-24 text-center">
-                      No APIs found.
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
+                        <span class="block truncate">{{ env.name }} - {{ env.type }}</span>
+                        <Check
+                          v-if="newApiInstanceForm.environment_id === env.id.toString()"
+                          class="h-4 w-4 text-blue-600"
+                        />
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
 
-            <!-- Pagination -->
-            <div class="flex items-center justify-end space-x-2 py-4">
-              <div class="flex-1 text-sm text-muted-foreground">
-                {{ selectedRowsCount }} of {{ totalRowsCount }} row(s) selected.
-              </div>
-              <div class="space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  :disabled="!canPreviousPage"
-                  @click="table?.previousPage()"
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  :disabled="!canNextPage"
-                  @click="table?.nextPage()"
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          </div>
-        </template>
+                <!-- API Selection -->
+                <div class="relative">
+                  <Label for="api-id" class="mb-1">API</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <Button variant="outline" class="w-full justify-between">
+                        {{ getSelectedApiName() || 'Select API' }}
+                        <ChevronDown class="ml-2 h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent class="w-full max-h-60">
+                      <DropdownMenuItem
+                        v-for="api in apis"
+                        :key="api.id"
+                        @click="selectApi(api)"
+                        class="flex items-center justify-between"
+                      >
+                        <span class="block truncate">{{ api.name }}</span>
+                        <Check
+                          v-if="newApiInstanceForm.api_id === api.id.toString()"
+                          class="h-4 w-4 text-blue-600"
+                        />
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
 
-        <!-- No Data State -->
-        <template v-else>
-          <div class="flex items-center justify-center h-32">
-            <div class="text-center">
-              <p>No APIs available.</p>
-            </div>
-          </div>
-        </template>
+                <!-- API Version -->
+                <div>
+                  <Label for="api-version" class="mb-1">API Version</Label>
+                  <Input id="api-version" v-model="newApiInstanceForm.api_version_id" placeholder="API Version" />
+                </div>
+
+                <!-- Name -->
+                <div>
+                  <Label for="instance-name" class="mb-1">Name</Label>
+                  <Input id="instance-name" v-model="newApiInstanceForm.name" required placeholder="API Instance Name" />
+                </div>
+
+                <!-- Route/Slug -->
+                <div>
+                  <Label for="instance-route" class="mb-1">Slug</Label>
+                  <Input id="instance-route" v-model="newApiInstanceForm.route" required placeholder="Route/Slug" />
+                </div>
+
+                <div v-if="newApiInstanceError" class="text-red-600 text-sm">{{ newApiInstanceError }}</div>
+              </div>
+              <DialogFooter class="gap-2">
+                <DialogClose as-child>
+                  <Button variant="secondary" type="button" @click="closeNewApiInstanceDialog">Cancel</Button>
+                </DialogClose>
+                <Button type="submit" variant="default" :disabled="newApiInstanceLoading">
+                  <span v-if="newApiInstanceLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
+                  <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
         
       </div>
     </div>

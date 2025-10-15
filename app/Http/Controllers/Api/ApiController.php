@@ -577,4 +577,18 @@ class ApiController extends BaseDjangoController
             'status' => $result['status']
         ], $result['status']);
     }
+
+    public function allApiVersionsIndex(): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', 'api_versions');
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch all API versions",
+            'status' => $result['status']
+        ], $result['status']);
+    }
 }

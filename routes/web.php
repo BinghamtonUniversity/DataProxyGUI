@@ -110,7 +110,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         //API Versions
         Route::get('/apis/{id}/api_versions', [App\Http\Controllers\Api\ApiController::class, 'apiVersionsIndex']);
-
+        Route::get('/api_versions', [App\Http\Controllers\Api\ApiController::class, 'allApiVersionsIndex']);
         // API Developer routes
         Route::get('/apis/{id}/developers', [App\Http\Controllers\Api\ApiDevelopersController::class, 'getApiDevelopers']);
         Route::post('/apis/{id}/developers', [App\Http\Controllers\Api\ApiDevelopersController::class, 'createApiDeveloper']);

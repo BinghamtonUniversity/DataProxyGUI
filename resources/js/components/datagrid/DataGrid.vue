@@ -303,8 +303,30 @@
               />
             </td>
             <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.cell]">
+              <!-- Render array of objects if isArrayObject is true -->
+              <span v-if="col.isArrayObject && getArrayData(row[col.key]) && getArrayData(row[col.key]).length > 0">
+                <div class="flex flex-wrap gap-1">
+                  <div 
+                    v-for="(item, itemIndex) in getArrayData(row[col.key])" 
+                    :key="itemIndex"
+                    :class="[
+                      'inline-flex flex-col p-1 rounded-lg border shadow-sm max-w-32',
+                      col.targetColor || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                    ]"
+                  >
+                    <div class="text-xs font-semibold truncate">
+                      {{ item[col.targetObjectAttribute] || item }}
+                    </div>
+                   
+                  </div>
+                </div>
+              </span>
+              
+              <span v-else-if="col.isArrayObject" class="text-xs text-gray-500">
+                
+              </span>
               <!-- Render option badges if column has options -->
-              <span v-if="col.options && row[col.key] !== undefined && row[col.key] !== null">
+              <span v-else-if="col.options && row[col.key] !== undefined && row[col.key] !== null">
                 <span v-if="col.options.length > 0 && typeof col.options[0] === 'object'">
                   <!-- Option objects with label and color -->
                   <span 
@@ -621,7 +643,10 @@ const allColumns = computed(() => {
       required: field.required || false,
       options: field.options || null,
       width: field.width || field.columns || 12,
-      showColumn: field.showColumn !== false // Default to true if not specified
+      showColumn: field.showColumn !== false, // Default to true if not specified
+      isArrayObject: field.isArrayObject || false,
+      targetObjectAttribute: field.targetObjectAttribute || null,
+      targetColor: field.targetColor || null
     }));
   }
   
@@ -663,6 +688,29 @@ function initFilters() {
 }
 watch(() => computedColumns.value, initFilters, { immediate: true });
 watch(() => props.filter, initFilters, { immediate: true });
+
+// Helper function to handle both array and JSON string data
+function getArrayData(data) {
+  
+  
+  if (Array.isArray(data)) {
+    
+    return data;
+  }
+  
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data);
+      
+      return Array.isArray(parsed) ? parsed : null;
+    } catch (e) {
+      
+      return null;
+    }
+  }
+
+  return null;
+}
 
 function onSearchInput() {
   const value = searchQuery.value;
@@ -787,11 +835,11 @@ const filteredRows = computed(() => {
   // Per-column filters (only if filter is enabled)
   if (props.filter) {
     Object.entries(filters.value).forEach(([key, val]) => {
-      console.log('Filter value', key, val);
+
       if (val) {
         // Find the column configuration to check if it has options
         const column = computedColumns.value.find(col => col.key === key);
-        console.log('Column configuration', column);
+
         if (column && column.options) {
           // For select fields with options, do exact match on the value
           // Special handling for boolean values
