@@ -35,8 +35,8 @@ const { success, error: showError, warning, info } = useToaster();
 
 // Form configuration for API users
 const formConfig = ref({
-    label: 'API Users',
-    description: 'A list of API users with their credentials and environment settings.',
+    label: '',
+    description: '',
     name: "api-users-form",
     files: false,
     fields: [
@@ -87,6 +87,10 @@ const formConfig = ref({
             info: "Whether the API user is currently active",
             width: "12",
             offset: "0",
+            options: [
+                { label: 'false', value: false, color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' },
+                { label: 'true', value: true, color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' }
+            ],
             required: false
         }
     ]
@@ -150,7 +154,7 @@ const fetchEnvironments = async () => {
         formConfig.value.fields[2].options = environments.map((env: any) => ({
             label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
             value: env.id,
-            color: env.type === 'test' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : env.type === 'dev' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+            color: env.type === 'test' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : env.type === 'dev' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
         }));
         
         return environments;
@@ -436,16 +440,18 @@ onMounted(async () => {
                 :data="users"
                 :filter="true"
                 :actions="[
-                    {name: 'create', type: 'success', min: 0, label: ' New', loc: 'left'},
+                    {name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus'},
                     '|',
-                    {name: 'edit', type: 'primary', min: 1, max: 1, label: ' Edit', loc: 'right'},
+                    {name: 'show_secret', type: 'info', min: 0, label: 'Show Secret', icon: 'eye', loc: 'left'},
                     '|',
-                    {name: 'delete', type: 'danger', min: 1, max: 25, label: ' Delete', loc: 'right'}
+                    {name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right'},
+                    '|',
+                    {name: 'delete', type: 'danger', min: 1, max: 25, label: 'Delete', icon: 'trash', loc: 'right'}
                 ]"
                 :rowActions="[
                     { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
                     { type: 'view', label: 'View', icon: 'eye', colorClass: 'text-green-600 hover:bg-green-50' },
-                    { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
+                    { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50' }
                 ]"
                 @actionHandler="handleCustomAction"
                 @rowActionHandler="handleAction"

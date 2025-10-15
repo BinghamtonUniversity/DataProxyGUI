@@ -28,6 +28,7 @@
                 :title="getActionTooltip(action)"
                 :class="action.buttonClass"
               >
+                <font-awesome-icon v-if="action.icon" :icon="action.icon" class="mr-2" />
                 {{ action.label }}
               </button>
             </template>
@@ -50,6 +51,7 @@
                   :title="getActionTooltip(action)"
                   :class="action.buttonClass"
                 >
+                  <font-awesome-icon v-if="action.icon" :icon="action.icon" class="mr-2" />
                   {{ action.label }}
                 </button>
               </template>
@@ -302,8 +304,8 @@
             </td>
             <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.cell]">
               <!-- Render option badges if column has options -->
-              <span v-if="col.options && row[col.key]">
-                <span v-if="typeof col.options[0] === 'object'">
+              <span v-if="col.options && row[col.key] !== undefined && row[col.key] !== null">
+                <span v-if="col.options.length > 0 && typeof col.options[0] === 'object'">
                   <!-- Option objects with label and color -->
                   <span 
                     v-for="option in col.options" 
@@ -340,6 +342,7 @@
                   @click="emitAction(rowActions[0].type, row)" 
                   :class="[currentTheme.menuButton, rowActions[0].colorClass]"
                 >
+                  <font-awesome-icon v-if="rowActions[0].icon" :icon="rowActions[0].icon" class="mr-2" />
                   {{ rowActions[0].label }}
                 </button>
                 
@@ -361,6 +364,7 @@
                         @click="emitAction(action.type, row); closeMenu()" 
                         :class="[currentTheme.dropdownItem, action.colorClass]"
                       >
+                        <font-awesome-icon v-if="action.icon" :icon="action.icon" class="mr-2" />
                         {{ action.label }}
                       </button>
                     </slot>
@@ -626,6 +630,7 @@ const allColumns = computed(() => {
 
 // Filter columns based on visibility selection and showColumn property
 const computedColumns = computed(() => {
+ 
   // First filter by showColumn property
   let filteredColumns = allColumns.value.filter(col => col.showColumn !== false);
   
@@ -633,7 +638,6 @@ const computedColumns = computed(() => {
   if (props.columns && visibleColumns.value.size > 0) {
     filteredColumns = filteredColumns.filter(col => visibleColumns.value.has(col.key));
   }
-  
   return filteredColumns;
 });
 
@@ -782,17 +786,28 @@ const filteredRows = computed(() => {
   // Per-column filters (only if filter is enabled)
   if (props.filter) {
     Object.entries(filters.value).forEach(([key, val]) => {
+      console.log('Filter value', key, val);
       if (val) {
         // Find the column configuration to check if it has options
         const column = computedColumns.value.find(col => col.key === key);
-        
+        console.log('Column configuration', column);
         if (column && column.options) {
           // For select fields with options, do exact match on the value
-          result = result.filter(row => String(row[key] ?? '') === String(val));
+          // Special handling for boolean values
+          if (val === 'true' || val === 'false' || val === true || val === false) {
+            const boolVal = val === 'true' || val === true;
+            result = result.filter(row => Boolean(row[key]) === boolVal);
+          } else {
+            result = result.filter(row => String(row[key] ?? '') === String(val));
+          }
         } else {
+
           // For regular text fields, use substring match
           result = result.filter(row => String(row[key] ?? '').toLowerCase().includes(String(val).toLowerCase()));
         }
+      }
+      else if (val === 'false' || val === false) {
+        result = result.filter(row => Boolean(row[key]) === false);
       }
     });
   }
@@ -821,19 +836,8 @@ const filteredRows = computed(() => {
 const totalResults = computed(() => filteredRows.value.length);
 const totalPages = computed(() => Math.max(1, Math.ceil(totalResults.value / pageSize.value)));
 const paginatedRows = computed(() => {
-  // Separate selected and unselected rows
-  const selectedRowsData = filteredRows.value.filter(row => 
-    selectedRows.value.includes(row.id || row.name)
-  );
-  const unselectedRowsData = filteredRows.value.filter(row => 
-    !selectedRows.value.includes(row.id || row.name)
-  );
-  
-  // Combine: selected rows first, then unselected rows
-  const sortedRows = [...selectedRowsData, ...unselectedRowsData];
-  
   const start = (currentPage.value - 1) * pageSize.value;
-  return sortedRows.slice(start, start + pageSize.value);
+  return filteredRows.value.slice(start, start + pageSize.value);
 });
 
 watch([filteredRows, pageSize], () => {

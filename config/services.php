@@ -37,6 +37,7 @@ return [
 
     'django' => [
         'base_url' => env('VITE_DJANGO_BASEURL'),
+        'hermes_base_url' => env('VITE_HERMES_BASEURL'),
         'api_user' => env('API_USER'),
         'unique_id' => env('B_NUMBER'),
         'api_password' => env('API_PASSWORD'),

@@ -7,6 +7,7 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
 import { install as VueMonacoEditorPlugin, loader } from '@guolao/vue-monaco-editor';
+import { FontAwesomeIcon } from './lib/fontawesome';
 
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -29,6 +30,7 @@ createInertiaApp({
                     vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs'
                 }
                 })
+            .component('font-awesome-icon', FontAwesomeIcon)
             .mount(el);
     },
     progress: {

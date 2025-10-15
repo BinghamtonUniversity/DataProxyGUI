@@ -29,6 +29,8 @@ interface Props {
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
     refreshApiData: () => void
+    highlightQuery?: string
+    highlightTarget?: string
 }
 
 const props = defineProps<Props>()
