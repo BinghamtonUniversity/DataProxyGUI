@@ -20,7 +20,8 @@ import { router } from '@inertiajs/vue3'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
-
+import FormViewer from '@/components/formviewer/FormViewer.vue';
+import AlertModal from '@/components/AlertModal.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -38,6 +39,49 @@ const { success, error, warning, info } = useToaster();
 
 const loading = ref(true)
 
+const formConfig = {
+  label: '',
+  description: '',
+  name: "api-instances-form",
+  files: false,
+  fields: [
+    {
+      name: "name",
+      label: "Name",
+      type: "text",
+      placeholder: "API Instance Name",
+      value: "",
+      required: true,
+    },
+    {
+      name: "route",
+      label: "Slug",
+      type: "text",
+      placeholder: "Route/Slug",
+      value: "",
+      required: true,
+      
+    },
+    {
+      name: "environment_id",
+      label: "Environment",
+      type: "select",
+      placeholder: "Environment ID",
+      value: "",
+      options: [],
+      required: true,
+    },
+    {
+      name: "api_id",
+      label: "API",
+      type: "select",
+      placeholder: "API",
+      value: "",
+      options: [],
+      required: true,
+    }
+  ]
+}
 // DataGrid schema for API instances
 const apiInstancesSchema = {
     label: '',
@@ -136,6 +180,18 @@ const apiInstancesSchema = {
             info: "Resources of the API instance",
             width: "12",
             offset: "0",
+            options: [
+              {
+                label: 'Error: All',
+                value: 'All',
+                color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+              },
+              {
+                label: 'Error: None',
+                value: null,
+                color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              }
+            ],
             required: false,
             showColumn: true
         },
@@ -231,9 +287,20 @@ const closeNewApiInstanceDialog = () => {
   isEditMode.value = false
   editingApiInstanceId.value = null
 }
-
-const submitNewApiInstance = async (e: Event) => {
-  e.preventDefault()
+// Handle FormViewer action events
+const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
+    console.log('FormViewer action:', actionData);
+    
+    switch (actionData.type) {
+        case 'close':
+            closeNewApiInstanceDialog();
+            break;
+        default:
+            console.log('Unknown FormViewer action type:', actionData.type);
+    }
+};
+const submitNewApiInstance = async ( formData: any) => {
+  
   newApiInstanceLoading.value = true
   newApiInstanceError.value = ''
 
@@ -264,8 +331,8 @@ const submitNewApiInstance = async (e: Event) => {
     }
 
     const body = isEditMode.value && editingApiInstanceId.value
-      ? { ...newApiInstanceForm.value, id: editingApiInstanceId.value }
-      : { ...newApiInstanceForm.value }
+      ? { ...formData, id: editingApiInstanceId.value }
+      : { ...formData }
 
     const response = await fetch(url, {
       method: request_method,
@@ -411,8 +478,8 @@ const fetchApiInstances = async () => {
 
     // Set api_version_id to -1 if it is null
     api_instances.value.forEach((instance: any) => {
-        if(instance.api_version_id === null) {
-            instance.api_version_id = -1
+        if(instance.api_version_id_id === null) {
+            instance.api_version_id_id = -1
         }
     });
   } catch (e) {
@@ -454,20 +521,25 @@ const fetchAllData = async () => {
       apisResponse.json(),
       apiVersionsResponse.json(),
     ])
-    
-
 
     api_instances.value = apiInstancesData
     environments.value = environmentsData
     apis.value = apisData
     api_versions.value = apiVersionsData
     
-
-
     apiInstancesSchema.fields[3].options = environmentsData.map((env: any) => ({
         label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
         value: env.id,
         color: env.type === 'test' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : env.type === 'dev' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+    }));
+
+    formConfig.fields[2].options = environmentsData.map((env: any) => ({
+        label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
+        value: env.id,
+    }));
+    formConfig.fields[3].options = apisData.map((api: any) => ({
+        label: api.name  || `API ${api.id}`,
+        value: api.id,
     }));
 
     apiInstancesSchema.fields[4].options = apisData.map((api: any) => ({
@@ -482,6 +554,7 @@ const fetchAllData = async () => {
         value: apiVersion.id,
         color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     }));
+
     api_instances.value.forEach((instance: any) => {
         if(instance.api_version_id_id === null) {
             instance.api_version_id_id = -1
@@ -585,7 +658,23 @@ const handleDataGridRowClick = (row: any) => {
           />
         </template>
 
-        <!-- Create/Edit Dialog -->
+        <!-- Form Viewer -->
+        <AlertModal 
+            :isOpen="newApiInstanceDialogOpen"
+            :title="isEditMode ? 'Edit API Instance' : 'Create New API Instance'"
+            @close="closeNewApiInstanceDialog"
+        >
+        <FormViewer 
+            :formConfig="formConfig" 
+            :initialData="newApiInstanceForm"
+            :cancelAction="'close'"
+            @submit="submitNewApiInstance"
+            @action="handleFormAction"
+            :disabled="newApiInstanceLoading"
+            />
+        </AlertModal>
+        />
+        <!-- Create/Edit Dialog 
         <Dialog v-model:open="newApiInstanceDialogOpen">
           <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
             <form @submit="submitNewApiInstance" class="space-y-6">
@@ -593,7 +682,7 @@ const handleDataGridRowClick = (row: any) => {
                 <DialogTitle>{{ isEditMode ? 'Edit API Instance' : 'Create New API Instance' }}</DialogTitle>
               </DialogHeader>
               <div class="grid gap-6">
-                <!-- Environment Selection -->
+                
                 <div class="relative">
                   <Label for="environment-id" class="mb-1">Environment</Label>
                   <DropdownMenu>
@@ -620,7 +709,7 @@ const handleDataGridRowClick = (row: any) => {
                   </DropdownMenu>
                 </div>
 
-                <!-- API Selection -->
+            
                 <div class="relative">
                   <Label for="api-id" class="mb-1">API</Label>
                   <DropdownMenu>
@@ -647,19 +736,19 @@ const handleDataGridRowClick = (row: any) => {
                   </DropdownMenu>
                 </div>
 
-                <!-- API Version -->
+           
                 <div>
                   <Label for="api-version" class="mb-1">API Version</Label>
                   <Input id="api-version" v-model="newApiInstanceForm.api_version_id" placeholder="API Version" />
                 </div>
 
-                <!-- Name -->
+           
                 <div>
                   <Label for="instance-name" class="mb-1">Name</Label>
                   <Input id="instance-name" v-model="newApiInstanceForm.name" required placeholder="API Instance Name" />
                 </div>
 
-                <!-- Route/Slug -->
+               
                 <div>
                   <Label for="instance-route" class="mb-1">Slug</Label>
                   <Input id="instance-route" v-model="newApiInstanceForm.route" required placeholder="Route/Slug" />
@@ -679,7 +768,7 @@ const handleDataGridRowClick = (row: any) => {
             </form>
           </DialogContent>
         </Dialog>
-
+      -->
         
       </div>
     </div>
