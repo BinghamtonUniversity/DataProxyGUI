@@ -8,6 +8,7 @@ import AlertModal from '@/components/AlertModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted } from 'vue';
+import TextField from '@/components/fields/TextField.vue';
 
 // Use Laravel API routes instead of direct Django calls to avoid CORS
 const apiBaseUrl = '/api';
@@ -24,6 +25,11 @@ const showModal = ref(false);
 const modalMode = ref<'new' | 'edit'>('new');
 const editingRow = ref<any>(null);
 const submitting = ref(false);
+
+// Secret modal state
+const showSecretModal = ref(false);
+const decryptedSecret = ref('');
+const secretLoading = ref(false);
 
 // Data state
 const users = ref<any[]>([]);
@@ -227,6 +233,65 @@ const closeModal = () => {
     editingRow.value = null;
 };
 
+const closeSecretModal = () => {
+    showSecretModal.value = false;
+    decryptedSecret.value = '';
+};
+
+// Fetch decrypted secret from backend
+const fetchDecryptedSecret = async (userId: number): Promise<string> => {
+    try {
+        const response = await fetch(`${apiBaseUrl}/api_users/${userId}/decrypted_secret`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data.app_secret || 'No secret found';
+        
+    } catch (error) {
+        console.error('Error fetching decrypted secret:', error);
+        throw new Error('Failed to fetch decrypted secret');
+    }
+};
+
+const showUserSecret = async (user: any) => {
+    if (user.id) {
+        secretLoading.value = true;
+        showSecretModal.value = true;
+        
+        try {
+            const decrypted = await fetchDecryptedSecret(user.id);
+            decryptedSecret.value = decrypted;
+        } catch (error) {
+            console.error('Failed to fetch secret:', error);
+            decryptedSecret.value = 'Failed to fetch secret';
+        } finally {
+            secretLoading.value = false;
+        }
+    } else {
+        warning('No user ID found.', 'No User');
+    }
+};
+
+const copyToClipboard = async () => {
+    try {
+        await navigator.clipboard.writeText(decryptedSecret.value);
+        success('Secret copied to clipboard!', 'Copied');
+    } catch (err) {
+        showError('Failed to copy to clipboard', 'Copy Error');
+    }
+};
+
 const handleFormSubmit = async (formValues: any) => {
     try {
         submitting.value = true;
@@ -399,6 +464,14 @@ const handleCustomAction = (actionData: { action: string; selectedRows: any[]; s
                 handleDelete(actionData.selectedRows);
             }
             break;
+        case 'show_secret':
+            // Show decrypted secret for selected users
+            if (actionData.selectedData.length > 0) {
+                showUserSecret(actionData.selectedData[0]);
+            } else {
+                warning('Please select a user to show their secret.', 'Selection Required');
+            }
+            break;
         default:
             info(`Please implement the ${actionData.action} function`, 'Action Not Implemented');
     }
@@ -442,7 +515,7 @@ onMounted(async () => {
                 :actions="[
                     {name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus'},
                     '|',
-                    {name: 'show_secret', type: 'info', min: 0, label: 'Show Secret', icon: 'eye', loc: 'left'},
+                    {name: 'show_secret', type: 'info', min: 1,max:1, label: 'Show Secret', icon: 'eye', loc: 'left'},
                     '|',
                     {name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right'},
                     '|',
@@ -473,6 +546,48 @@ onMounted(async () => {
                     @action="handleFormAction"
                     :disabled="submitting"
                 />
+            </AlertModal>
+
+            <!-- Modal for showing decrypted secret -->
+            <AlertModal 
+                :isOpen="showSecretModal"
+                title="Decrypted App Secret"
+                width="sm:max-w-2xl"
+                @close="closeSecretModal"
+            >
+                <div class="p-6">
+                    <div v-if="secretLoading" class="flex items-center justify-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="ml-3 text-gray-600 dark:text-gray-300">Decrypting secret...</span>
+                    </div>
+                    <div v-else>
+                        <div class="mb-4">
+                            <div class="relative">
+                               
+                                <TextField
+                                    :value="decryptedSecret"
+                                    :disabled="true"
+                                    :edit="false"
+                                />
+                                <button 
+                                    @click="copyToClipboard"
+                                    class="absolute top-2 right-2 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                    title="Copy to clipboard"
+                                >
+                                    <font-awesome-icon icon="copy" class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button 
+                                @click="closeSecretModal"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </AlertModal>
             
             <!-- Global Toaster -->

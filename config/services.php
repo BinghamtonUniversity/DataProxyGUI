@@ -42,5 +42,6 @@ return [
         'unique_id' => env('B_NUMBER'),
         'api_password' => env('API_PASSWORD'),
     ],
+    'appkey' => env('LARAVEL_APP_KEY'),
 
 ];

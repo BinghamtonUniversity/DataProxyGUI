@@ -23,7 +23,8 @@ import {
   faChevronRight,
   faSave,
   faCancel,
-  faSpinner
+  faSpinner,
+  faCopy
 } from '@fortawesome/free-solid-svg-icons'
 
 // Add icons to library
@@ -48,7 +49,8 @@ library.add(
   faChevronRight,
   faSave,
   faCancel,
-  faSpinner
+  faSpinner,
+  faCopy
 )
 
 export { FontAwesomeIcon }

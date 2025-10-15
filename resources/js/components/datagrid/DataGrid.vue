@@ -2,7 +2,7 @@
 
 <template>
   <div :class="currentTheme.container">
-    <!-- Header with title and actions -->
+    <!-- Header with title, actions, and search -->
     <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
       <!-- Title and Description -->
       <div class="flex flex-col gap-0.5">
@@ -78,12 +78,11 @@
             </template>
           </slot>
         </div>
-      </div>      
-    </div>
-    </div>
-    <!-- Built-in search bar below header (conditional) -->
-    <div v-if="search" class="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-      <div class="relative flex-1 max-w-sm">
+      </div>
+
+      <!-- Search bar (conditional) -->
+      <div v-if="search" class="flex items-center justify-between gap-2 mt-3">
+        <div class="relative flex-1 max-w-sm">
           <TextField
           :required="false"
           :value="searchQuery"
@@ -92,7 +91,7 @@
           @change="onSearchInput"
           @keydown="handleSearchKeydown"
           name="searchQuery"
-          label="Search"
+          label=""
           placeholder="Search (e.g. column_name:contains:string)"
           autocomplete="off"
           spellcheck="false"
@@ -113,93 +112,94 @@
           </div>
         </div>
 
-      </div>
-      <div class="flex items-center gap-1">
-        <div v-if="upload || download || columns" class="flex items-center justify-end  mt-4">
-        <div class="flex border border-gray-200 dark:border-gray-700 rounded-md">
-          <input
-            v-if="upload"
-            ref="fileInput"
-            type="file"
-            accept=".csv"
-            @change="handleFileUpload"
-            class="hidden"
-          />
-          <button
-            v-if="download"
-            @click="downloadCSV"
-            class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
-            title="Download CSV"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-          </button>
-          <button
-            v-if="upload"
-            @click="$refs.fileInput.click()"
-            class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
-            title="Upload CSV"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-            </svg>
-          </button>
-          <!-- Column visibility toggle button -->
-          <div v-if="columns" class="relative column-selector-container">
-            <button
-              @click="toggleColumnSelector"
-              class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title="Toggle Column Visibility"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-              </svg>
-            </button>
-            
-            <!-- Column selector dropdown -->
-            <div v-if="showColumnSelector" class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
-              <div class="p-4">
-                <div class="flex items-center justify-between mb-3">
-                  <h3 class="text-sm font-medium text-gray-900 dark:text-white">Show Columns</h3>
-                  <div class="flex gap-2">
-                    <button
-                      @click="selectAllColumns"
-                      class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                    >
-                      Select All
-                    </button>
-                    <button
-                      @click="deselectAllColumns"
-                      class="text-xs text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                    >
-                      Deselect All
-                    </button>
+        </div>
+        <div class="flex items-center gap-1">
+          <div v-if="upload || download || columns" class="flex items-center justify-end  mt-4">
+            <div class="flex border border-gray-200 dark:border-gray-700 rounded-md">
+              <input
+                v-if="upload"
+                ref="fileInput"
+                type="file"
+                accept=".csv"
+                @change="handleFileUpload"
+                class="hidden"
+              />
+              <button
+                v-if="download"
+                @click="downloadCSV"
+                class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
+                title="Download CSV"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+              </button>
+              <button
+                v-if="upload"
+                @click="$refs.fileInput.click()"
+                class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
+                title="Upload CSV"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+              </button>
+              <!-- Column visibility toggle button -->
+              <div v-if="columns" class="relative column-selector-container">
+                <button
+                  @click="toggleColumnSelector"
+                  class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Toggle Column Visibility"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                  </svg>
+                </button>
+                
+                <!-- Column selector dropdown -->
+                <div v-if="showColumnSelector" class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
+                  <div class="p-4">
+                    <div class="flex items-center justify-between mb-3">
+                      <h3 class="text-sm font-medium text-gray-900 dark:text-white">Show Columns</h3>
+                      <div class="flex gap-2">
+                        <button
+                          @click="selectAllColumns"
+                          class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          Select All
+                        </button>
+                        <button
+                          @click="deselectAllColumns"
+                          class="text-xs text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                        >
+                          Deselect All
+                        </button>
+                      </div>
+                    </div>
+                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                      <label
+                        v-for="col in allColumns.filter(c => c.showColumn !== false)"
+                        :key="col.key"
+                        class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-1 rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          :checked="visibleColumns.has(col.key)"
+                          @change="toggleColumnVisibility(col.key)"
+                          class="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
+                        />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ col.label || col.key }}</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
-                <div class="space-y-2 max-h-48 overflow-y-auto">
-                  <label
-                    v-for="col in allColumns.filter(c => c.showColumn !== false)"
-                    :key="col.key"
-                    class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-1 rounded"
-                  >
-                    <input
-                      type="checkbox"
-                      :checked="visibleColumns.has(col.key)"
-                      @change="toggleColumnVisibility(col.key)"
-                      class="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
-                    />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ col.label || col.key }}</span>
-                  </label>
-                </div>
-              </div></div>
+              </div>
             </div>
           </div>
         </div>
-
       </div>
-      
     </div>
+    
     <div class="overflow-x-auto">
       <table :class="currentTheme.table">
         <thead>
@@ -408,6 +408,7 @@
         <button @click="lastPage" :disabled="currentPage === totalPages" class="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none disabled:opacity-50" aria-label="Last page">&raquo;</button>
       </div>
     </div>
+  </div>
  
 </template>
 
