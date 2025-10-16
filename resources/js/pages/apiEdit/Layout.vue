@@ -796,25 +796,19 @@ const handleSave = async () => {
 
 // Navigation helper
 const navigateToTab = (tabId: string) => {
-    // hasUnsavedChanges.value = checkForUnsavedChanges()
-    // if (hasUnsavedChanges.value) {
-    //     if (confirm('You have unsaved changes. Do you want to leave?')) {
-    //         router.get(`/apis/${props.api_id}/${tabId}`, {}, {
-    //             preserveState: true,
-    //             preserveScroll: true,
-    //             // only: ['activeTab'] // Only update the activeTab prop
-    //         })
-    //     } else {
-    //         // Cancel tab change
-    //         return
-    //     }
-    // }
+
     router.get(`/apis/${props.api_id}/${tabId}`, {}, {
         preserveState: true,
         preserveScroll: true,
         // only: ['activeTab'] // Only update the activeTab prop
     })
     
+}
+
+const isNavigatingWithinSameApi = (url: string): boolean => {
+    // Check if the URL is navigating to a different tab of the same API
+    const urlPattern = new RegExp(`^/apis/${props.api_id}(/[^/]+)?$`)
+    return urlPattern.test(url)
 }
 
 // Browser/tab close warning
@@ -880,7 +874,7 @@ onMounted(() => {
     
     // Add Inertia navigation hook
     removeInertiaHook = router.on('before', (event) => {
-        if (hasUnsavedChanges.value) {
+        if (hasUnsavedChanges.value && !isNavigatingWithinSameApi(event.detail.visit.url.pathname)) {
             // Show confirmation dialog
             const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
             if (!confirmed) {

@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
-import { Trash2 } from 'lucide-vue-next'
+import { Trash2, Pencil } from 'lucide-vue-next'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 
@@ -46,6 +46,9 @@ const isNewViewDialogOpen = ref(false)
 const newViewName = ref('')
 const isCreatingView = ref(false)
 const createViewError = ref<string | null>(null)
+
+const viewBeingEdited = ref<ApiVersionFunction | null>(null)
+const isEditingView = ref(false)
 
 // Toaster
 const { success, error, warning, info } = useToaster();
@@ -107,14 +110,39 @@ const handleSave = async (updatedCode: string) => {
     }
 }
 
+const editFileName = (view: ApiVersionFunction) => {
+  isEditingView.value = true
+  viewBeingEdited.value = view
+  newViewName.value = view.name
+  isNewViewDialogOpen.value = true
+}
+
 const handleCreateNewView = async () => {
-    if (!newViewName.value.trim() || !props.apiData) {
+    const name = newViewName.value.trim();
+
+    if (!name || !props.apiData) {
         createViewError.value = 'Please enter a valid file/function name'
         return
     }
 
+    if (!name.endsWith('.py')) {
+        createViewError.value = 'Function name must end with ".py" (e.g., "process_data.py").';
+        return;
+    }
+
+    // Remove the ".py" temporarily for validation
+    const baseName = name.slice(0, -3);
+
+    const validNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+    if (!validNamePattern.test(baseName)) {
+        createViewError.value =
+        'Invalid function name. Use letters, numbers, and underscores only, and do not start with a number (e.g., "process_data.py").';
+        return;
+    }
+
+
     // Check if file name already exists
-    const existingFile = props.apiData.version_files.find(func => func.name === newViewName.value.trim())
+    const existingFile = props.apiData.version_files.find(func => func.name === name)
     if (existingFile) {
         createViewError.value = 'A function/file with this name already exists'
         return
@@ -126,34 +154,17 @@ const handleCreateNewView = async () => {
     try {
         // TO-DO:: PHP function template
         const newFunction: ApiVersionFunction = {
-            name: newViewName.value.trim(),
-            content: `# Define the function ${newViewName.value.trim()} here\n`,
+            name,
+            content: `# Define the function ${name} here\n`,
         }
 
         const updatedApiData = {
             ...props.apiData,
             version_files: [...props.apiData.version_files, newFunction]
         }
-        console.log('Updated API Data:', updatedApiData)
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
-
-        const result = await response.json()
         
         // Update the local state through parent
-        props.updateApiData(result || updatedApiData)
+        props.updateApiData(updatedApiData)
         
         // Select the newly created function
         selectedFile.value = newFunction
@@ -169,6 +180,74 @@ const handleCreateNewView = async () => {
     } finally {
         isCreatingView.value = false
     }
+}
+
+const handleUpdateFileName = async () => {
+  if (!props.apiData || !viewBeingEdited.value) {
+    createViewError.value = 'No file selected for editing'
+    return
+  }
+
+  const trimmedName = newViewName.value.trim()
+  if (!trimmedName) {
+    createViewError.value = 'File name cannot be empty'
+    return
+  }
+
+  if (!trimmedName.endsWith('.py')) {
+    createViewError.value = 'Function name must end with ".py" (e.g., "process_data.py").';
+    return
+  }
+
+    // Remove the ".py" temporarily for validation
+    const baseName = trimmedName.slice(0, -3);
+
+    const validNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+    if (!validNamePattern.test(baseName)) {
+        createViewError.value =
+        'Invalid function name. Use letters, numbers, and underscores only, and do not start with a number (e.g., "process_data.py").';
+        return;
+    }
+
+  // Prevent duplicates
+  const nameExists = props.apiData.version_files.some(
+    func => func.name === trimmedName && func !== viewBeingEdited.value
+  )
+  if (nameExists) {
+    createViewError.value = 'A file with this name already exists'
+    return
+  }
+
+  isCreatingView.value = true
+  createViewError.value = null
+
+  try {
+    const updatedApiData = {
+      ...props.apiData,
+      version_views: props.apiData.version_files.map(file =>
+        file.name === viewBeingEdited.value?.name
+          ? { ...file, name: trimmedName }
+          : file
+      )
+    }
+
+    props.updateApiData(updatedApiData)
+
+    // If editing currently selected function, update reference
+    if (selectedFile.value?.name === viewBeingEdited.value.name) {
+      selectedFile.value.name = trimmedName
+    }
+
+    success(`File name updated to "${trimmedName}"`, 'Function Updated')
+    isNewViewDialogOpen.value = false
+  } catch (e: any) {
+    console.error('Update file name error:', e)
+    createViewError.value = e.message || 'Failed to update file name'
+  } finally {
+    isCreatingView.value = false
+    isEditingView.value = false
+    viewBeingEdited.value = null
+  }
 }
 
 const handleDeleteFile = async (file: ApiVersionFunction ) =>{
@@ -218,6 +297,8 @@ const resetNewViewDialog = () => {
     newViewName.value = ''
     createViewError.value = null
     isCreatingView.value = false
+    isEditingView.value = false
+    viewBeingEdited.value = null
 }
 
 // Handle search result selection
@@ -413,7 +494,7 @@ onUnmounted(() => {
                                 </DialogTrigger>
                                 <DialogContent class="sm:max-w-md">
                                     <DialogHeader>
-                                        <DialogTitle>Create New File</DialogTitle>
+                                        <DialogTitle>{{ isEditingView ? 'Edit File Name' : 'Create New File' }}</DialogTitle>
                                     </DialogHeader>
                                     <div class="space-y-4">
                                         <div class="space-y-2">
@@ -423,7 +504,7 @@ onUnmounted(() => {
                                                 v-model="newViewName"
                                                 placeholder="Enter file name"
                                                 :disabled="isCreatingView"
-                                                @keyup.enter="handleCreateNewView"
+                                                @keyup.enter="isEditingView ? handleUpdateFileName() : handleCreateNewView()"
                                             />
                                         </div>
                                         
@@ -440,11 +521,14 @@ onUnmounted(() => {
                                                 Cancel
                                             </Button>
                                             <Button 
-                                                @click="handleCreateNewView"
+                                                @click="isEditingView? handleUpdateFileName() : handleCreateNewView()"
                                                 :disabled="!newViewName.trim() || isCreatingView"
                                             >
                                                 <div v-if="isCreatingView" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                                {{ isCreatingView ? 'Creating...' : 'Create' }}
+                                                {{ isCreatingView 
+                                                    ? (isEditingView ? 'Updating...' : 'Creating...') 
+                                                    : (isEditingView ? 'Update' : 'Create') 
+                                                }}
                                             </Button>
                                         </div>
                                     </div>
@@ -473,6 +557,14 @@ onUnmounted(() => {
                                     @click="selectedFile = item"             
                                 >
                                     {{ item.name }}
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    @click.stop="editFileName(item)"
+                                    class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                                >
+                                    <Pencil :size="1" />
                                 </Button>
                                 <Button
                                     variant="ghost"
