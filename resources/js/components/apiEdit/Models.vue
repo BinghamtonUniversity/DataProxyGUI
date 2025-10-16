@@ -289,11 +289,11 @@ const submitNewModel = async (e: Event) => {
     return
   }
 
-  if (!newModelForm.value.content.trim()) {
-    newModelError.value = 'Model Content is required.'
-    newModelLoading.value = false
-    return
-  }
+  // if (!newModelForm.value.content.trim()) {
+  //   newModelError.value = 'Model Content is required.'
+  //   newModelLoading.value = false
+  //   return
+  // }
   
   try {
     const rawName = newModelForm.value.name.trim();
