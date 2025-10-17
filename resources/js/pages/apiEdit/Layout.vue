@@ -1047,7 +1047,7 @@ onUnmounted(() => {
                     </Button>
                 </nav>
 
-                <div class="flex-1 w-11/12">
+                <div class="flex-1">
                     <section class="w-full space-y-12">
                         <!-- Dynamic component rendering -->
                         <component

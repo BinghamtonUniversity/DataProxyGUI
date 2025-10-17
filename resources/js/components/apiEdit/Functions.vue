@@ -188,23 +188,23 @@ const handleDeleteFunction = async (view: ApiVersionFunction ) =>{
         }
         // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
 
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
+        // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+        //     method: 'PUT',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'Accept': 'application/json',
+        //         'X-CSRF-TOKEN': getCsrfToken() || '',
+        //     },
+        //     body: JSON.stringify(updatedApiData)
+        // })
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
+        // if (!response.ok) {
+        //     const errorData = await response.json().catch(() => ({}))
+        //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        // }
 
-        const responseData = await response.json()
-        props.updateApiData(responseData || updatedApiData)
+        // const responseData = await response.json()
+        props.updateApiData(updatedApiData)
         selectedFunction.value = null
         success(`Function "${view.name}" deleted successfully`, 'Function Deleted');
 
@@ -474,7 +474,7 @@ onUnmounted(() => {
             <template v-else-if="apiData?.version_views">
                 <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
                     <!-- Function List Sidebar -->
-                   <aside class="max-w-xs lg:w-40 lg:min-w-40 lg:flex-shrink-0">
+                   <aside class="max-w-xs lg:w-50 lg:min-w-50 lg:flex-shrink-0">
                         <!-- New View Button -->
                         <div class="mb-4">
                             <Dialog v-model:open="isNewViewDialogOpen" @update:open="resetNewViewDialog">

@@ -414,88 +414,108 @@ const editMethodName = (method: { name: string; params: string; content: string 
     isNewMethodDialogOpen.value = true
 }
 
-const handleCreateNewMethod = async () => {
-    const name = newMethod.value.name.trim();
+// Validation Functions for method creation and editing
+const validateMethodName = (name: string): string | null => {
+  if (!name) return 'Please enter a valid method name'
 
-    if (!name || !props.apiData) {
-        createMethodError.value = 'Please enter a valid method name'
-        return
-    }
+  const validNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/
+  if (!validNamePattern.test(name)) {
+    return 'Invalid method name. Use letters, numbers, and underscores only, and do not start with a number.'
+  }
 
-    // Validate function name syntax
-    const validNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
-    if (!validNamePattern.test(name)) {
-        createMethodError.value = 'Invalid method name. Use letters, numbers, and underscores only, and do not start with a number.'
-        return;
-    }
-
-    // Check if function name already exists
-    const existingMethod = selectedModel.value?.class_methods.find(m => m.name === name)
-    if (existingMethod) {
-        createMethodError.value = 'A method with this name already exists'
-        return
-    }
-
-    // Validate comma-separated parameters
-    const rawParams = newMethod.value.params.trim()
-
-    // If it contains spaces but no commas
-    if (rawParams.includes(' ') && !rawParams.includes(',')) {
-        createMethodError.value = 'Parameters must be comma-separated (e.g. self, param1)'
-        return
-    }
-
-    const paramsArray = rawParams
-        .split(',')
-        .map(p => p.trim())
-        .filter(p => p)
-
-    // Handle empty case
-    if (paramsArray.length === 0) {
-        createMethodError.value = 'Please enter at least one parameter'
-        return
-    }
-
-    isCreatingMethod.value = true
-    createMethodError.value = null
-
-    try {
-        const methodToCreate = {
-            name,
-            params: paramsArray.join(', '),
-            content: ``
-        }
-        
-        if (!selectedModel.value) {
-          createMethodError.value = 'No model selected.'
-          error(createMethodError.value, 'Error');
-          return
-        }
-        selectedModel.value?.class_methods?.push
-        ? selectedModel.value.class_methods.push(methodToCreate)
-        : selectedModel.value.class_methods = [methodToCreate]
-        
-        
-        
-        // Update the local state through parent
-        // props.updateApiData(updatedApiData)
-        
-        
-        // Reset dialog state
-        newMethod.value.name = ''
-        newMethod.value.params = ''
-        newMethod.value.content = ''
-        // paramsInputValue.value = ''
-        isNewMethodDialogOpen.value = false
-
-    } catch (e) {
-        console.error('Create view error:', e)
-        createMethodError.value = e instanceof Error ? e.message : 'Failed to create new method'
-        error(createMethodError.value, 'Error');
-    } finally {
-        isCreatingMethod.value = false
-    }
+  return null
 }
+
+const validateAndNormalizeParams = (rawParams: string): { error?: string, params?: string[] } => {
+  const trimmed = rawParams.trim()
+
+  if (trimmed.includes(' ') && !trimmed.includes(',')) {
+    return { error: 'Parameters must be comma-separated (e.g. self, param1)' }
+  }
+
+  const paramsArray = trimmed
+    .split(',')
+    .map(p => p.trim())
+    .filter(p => p)
+
+  if (paramsArray.length === 0) {
+    return { error: 'Please enter at least one parameter' }
+  }
+
+  // Ensure "self" is always the first parameter
+  if (!paramsArray.includes('self')) {
+    paramsArray.unshift('self')
+  }
+
+  return { params: paramsArray }
+}
+
+
+const handleCreateNewMethod = async () => {
+  const name = newMethod.value.name.trim()
+
+  if (!name || !props.apiData) {
+    createMethodError.value = 'Please enter a valid method name'
+    return
+  }
+
+  // Validate method name
+  const nameError = validateMethodName(name)
+  if (nameError) {
+    createMethodError.value = nameError
+    return
+  }
+
+  // Duplicate check
+  const existingMethod = selectedModel.value?.class_methods.find(m => m.name === name)
+  if (existingMethod) {
+    createMethodError.value = 'A method with this name already exists'
+    return
+  }
+
+  // Validate and normalize parameters
+  const { error: paramError, params } = validateAndNormalizeParams(newMethod.value.params)
+  if (paramError) {
+    createMethodError.value = paramError
+    return
+  }
+
+  isCreatingMethod.value = true
+  createMethodError.value = null
+
+  try {
+    const methodToCreate = {
+      name,
+      params: params!.join(', '),
+      content: ``
+    }
+
+    if (!selectedModel.value) {
+      createMethodError.value = 'No model selected.'
+      error(createMethodError.value, 'Error')
+      return
+    }
+
+    if (selectedModel.value.class_methods?.push) {
+      selectedModel.value.class_methods.push(methodToCreate)
+    } else {
+      selectedModel.value.class_methods = [methodToCreate]
+    }
+
+    // Reset form and close dialog
+    newMethod.value.name = ''
+    newMethod.value.params = ''
+    newMethod.value.content = ''
+    isNewMethodDialogOpen.value = false
+  } catch (e) {
+    console.error('Create method error:', e)
+    createMethodError.value = e instanceof Error ? e.message : 'Failed to create new method'
+    error(createMethodError.value, 'Error')
+  } finally {
+    isCreatingMethod.value = false
+  }
+}
+
 
 const handleUpdateMethodName = async () => {
   if (!props.apiData || !methodBeingEdited.value) {
@@ -509,47 +529,42 @@ const handleUpdateMethodName = async () => {
     return
   }
 
-  // Check if function name already exists
-    const existingMethod = selectedModel.value?.class_methods.find(m => m.name === trimmedName && m !== methodBeingEdited.value)
-    if (existingMethod) {
-        createMethodError.value = 'A method with this name already exists'
-        return
-    }
+  // Validate method name
+  const nameError = validateMethodName(trimmedName)
+  if (nameError) {
+    createMethodError.value = nameError
+    return
+  }
 
-    // Validate comma-separated parameters
-    const rawParams = newMethod.value.params.trim()
+  // Duplicate check
+  const existingMethod = selectedModel.value?.class_methods.find(
+    m => m.name === trimmedName && m !== methodBeingEdited.value
+  )
+  if (existingMethod) {
+    createMethodError.value = 'A method with this name already exists'
+    return
+  }
 
-    // If it contains spaces but no commas
-    if (rawParams.includes(' ') && !rawParams.includes(',')) {
-        createMethodError.value = 'Parameters must be comma-separated (e.g. self, param1)'
-        return
-    }
-
-    const paramsArray = rawParams
-        .split(',')
-        .map(p => p.trim())
-        .filter(p => p)
-
-    // Handle empty case
-    if (paramsArray.length === 0) {
-        createMethodError.value = 'Please enter at least one parameter'
-        return
-    }
+  // Validate and normalize parameters
+  const { error: paramError, params } = validateAndNormalizeParams(newMethod.value.params)
+  if (paramError) {
+    createMethodError.value = paramError
+    return
+  }
 
   isCreatingMethod.value = true
   createMethodError.value = null
 
   try {
-    // Update method in selected model
-    if (selectedModel.value && selectedModel.value.class_methods) {
+    // Update the method
+    if (selectedModel.value?.class_methods) {
       const methodIndex = selectedModel.value.class_methods.findIndex(m => m === methodBeingEdited.value)
       if (methodIndex !== -1) {
         selectedModel.value.class_methods[methodIndex].name = trimmedName
-        selectedModel.value.class_methods[methodIndex].params = paramsArray.join(', ')
-        // selectedModel.value.class_methods[methodIndex].content = newMethod.value.content
+        selectedModel.value.class_methods[methodIndex].params = params!.join(', ')
       }
     }
-    
+
     isNewMethodDialogOpen.value = false
   } catch (e: any) {
     console.error('Update method name error:', e)
@@ -560,6 +575,7 @@ const handleUpdateMethodName = async () => {
     methodBeingEdited.value = null
   }
 }
+
 
 const handleDeleteMethod = (method: { name: string; params: string; content: string }) => {
     if (!selectedModel.value || !selectedModel.value.class_methods) {
@@ -658,7 +674,7 @@ const columns: ColumnDef<ModelData>[] = [
     cell: ({ row }) => {
             const model = row.original
             const index = row.index
-            return h('div', { 'data-actions-cell': true }, [
+            return h('div', { class: 'flex gap-2' }, [
                 h(Button, {
                   variant: 'ghost',
                   size: 'sm',
@@ -997,7 +1013,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                         <div class="flex-1 overflow-hidden px-6 pb-6">
                           <div class="flex space-y-8 md:space-y-0 lg:space-y-0 lg:space-x-8 h-full">
                             <!-- Sidebar with sections -->
-                            <aside class="max-w-xs lg:w-48 lg:min-w-48 lg:flex-shrink-0">
+                            <aside class="max-w-xs lg:w-64 lg:min-w-64 lg:flex-shrink-0">
                               <!-- New View Button -->
                               <div class="mb-4">
                                   <Dialog v-model:open="isNewMethodDialogOpen" @update:open="resetNewMethodDialog">
@@ -1088,7 +1104,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                       ]"
                                       @click="selectSection({ type: 'method', index })"
                                     >
-                                      {{ method.name || `Method ${index + 1}` }}
+                                      {{ method.name || `Method ${index + 1}` }} {{ method.params ? `(${method.params})` : '()' }}
                                     </Button>
                                     <Button
                                         variant="ghost"
