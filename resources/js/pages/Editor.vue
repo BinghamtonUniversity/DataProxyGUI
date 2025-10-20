@@ -53,6 +53,12 @@ const editorOptions = {
   automaticLayout: true,
   formatOnType: true,
   formatOnPaste: true,
+  ...(props.language === 'python' ? {
+    tabSize: 4,
+    insertSpaces: true,
+    autoIndent: 'full' as const,
+    detectIndentation: false,
+  } : {})
 }
 
 

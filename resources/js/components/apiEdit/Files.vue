@@ -117,7 +117,7 @@ const editFileName = (view: ApiVersionFunction) => {
   isNewViewDialogOpen.value = true
 }
 
-const handleCreateNewView = async () => {
+const handleCreateNewFile = async () => {
     const name = newViewName.value.trim();
 
     if (!name || !props.apiData) {
@@ -267,23 +267,23 @@ const handleDeleteFile = async (file: ApiVersionFunction ) =>{
         }
         // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
 
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
+        // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+        //     method: 'PUT',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'Accept': 'application/json',
+        //         'X-CSRF-TOKEN': getCsrfToken() || '',
+        //     },
+        //     body: JSON.stringify(updatedApiData)
+        // })
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
+        // if (!response.ok) {
+        //     const errorData = await response.json().catch(() => ({}))
+        //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        // }
 
-        const responseData = await response.json()
-        props.updateApiData(responseData || updatedApiData)
+        // const responseData = await response.json()
+        props.updateApiData(updatedApiData)
         selectedFile.value = null
         success(`File "${file.name}" deleted successfully`, 'File Deleted');
 
@@ -504,7 +504,7 @@ onUnmounted(() => {
                                                 v-model="newViewName"
                                                 placeholder="Enter file name"
                                                 :disabled="isCreatingView"
-                                                @keyup.enter="isEditingView ? handleUpdateFileName() : handleCreateNewView()"
+                                                @keyup.enter="isEditingView ? handleUpdateFileName() : handleCreateNewFile()"
                                             />
                                         </div>
                                         
@@ -521,7 +521,7 @@ onUnmounted(() => {
                                                 Cancel
                                             </Button>
                                             <Button 
-                                                @click="isEditingView? handleUpdateFileName() : handleCreateNewView()"
+                                                @click="isEditingView? handleUpdateFileName() : handleCreateNewFile()"
                                                 :disabled="!newViewName.trim() || isCreatingView"
                                             >
                                                 <div v-if="isCreatingView" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
