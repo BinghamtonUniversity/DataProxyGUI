@@ -157,7 +157,7 @@ const apiInstancesSchema = {
             showColumn: true
         },
         {
-            name: "api_version_id_id",
+            name: "api_version_id",
             label: "API Version",
             type: "text",
             placeholder: "API Version ID",
@@ -182,14 +182,15 @@ const apiInstancesSchema = {
             offset: "0",
             options: [
               {
-                label: 'Error: All',
-                value: 'All',
-                color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                label: 'All',
+                value: 'all',
+                color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
               },
               {
-                label: 'Error: None',
-                value: null,
-                color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                label: 'None',
+                value: 'none',
+                color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                
               }
             ],
             required: false,
@@ -478,8 +479,8 @@ const fetchApiInstances = async () => {
 
     // Set api_version_id to -1 if it is null
     api_instances.value.forEach((instance: any) => {
-        if(instance.api_version_id_id === null) {
-            instance.api_version_id_id = -1
+        if(instance.api_version_id === null) {
+            instance.api_version_id = -1
         }
     });
   } catch (e) {
@@ -556,8 +557,8 @@ const fetchAllData = async () => {
     }));
 
     api_instances.value.forEach((instance: any) => {
-        if(instance.api_version_id_id === null) {
-            instance.api_version_id_id = -1
+        if(instance.api_version_id === null) {
+            instance.api_version_id = -1
         }
     });
      apiInstancesSchema.fields[5]!.options!.unshift!({
@@ -625,22 +626,22 @@ const handleDataGridRowClick = (row: any) => {
   <Head title="APIs" />
   
     <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
-      <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
+    
+      <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
         
         <!-- Loading State -->
-        <template v-if="loading">
+        <div v-if="loading">
           <div class="flex items-center justify-center h-32">
             <div class="text-center">
               <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
               <p class="mt-2">Loading APIs...</p>
             </div>
           </div>
-        </template>
+        </div>
 
         <!-- DataGrid Implementation -->
-        <template v-else>
-          <DataGrid 
+ 
+          <DataGrid v-else
             :schema="apiInstancesSchema"
             :data="api_instances"
             theme="default"
@@ -656,7 +657,6 @@ const handleDataGridRowClick = (row: any) => {
             @rowActionHandler="handleDataGridAction"
             @rowClick="handleDataGridRowClick"
           />
-        </template>
 
         <!-- Form Viewer -->
         <AlertModal 
@@ -673,7 +673,7 @@ const handleDataGridRowClick = (row: any) => {
             :disabled="newApiInstanceLoading"
             />
         </AlertModal>
-        />
+        
         <!-- Create/Edit Dialog 
         <Dialog v-model:open="newApiInstanceDialogOpen">
           <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -771,7 +771,7 @@ const handleDataGridRowClick = (row: any) => {
       -->
         
       </div>
-    </div>
+    
   </AppLayout>
   <Toaster />
 </template>

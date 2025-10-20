@@ -333,9 +333,7 @@ const fetchInstances = async () => {
 
 // View instance - redirect to instance URL
 const viewInstance = (instance: any) => {
-    // Close the modal first
-    showInstancesModal.value = false
-    
+
     // Construct the instance URL based on the pattern you provided
     // Format: http://127.0.0.1:8001/api_instances/{instance_id}/main
     const instanceUrl = `${window.location.origin}/api_instances/${instance.id}/main`
@@ -345,17 +343,20 @@ const viewInstance = (instance: any) => {
 }
 // View instance - redirect to instance URL
 const directToInstanceRoute = (instance: any) => {
-    // Close the modal first
-    showInstancesModal.value = false
+
     let instanceUrl;
     // Construct the instance URL based on the pattern you provided
     // Format: http://127.0.0.1:8001/api_instances/{instance_id}/main
     if (api.value?.api_type === 'php') {
          instanceUrl = `${hermesBaseUrl}/api_instances/${instance.id}/main`
     } else {
-         instanceUrl = `${djangoBaseUrl}/api/${instance.route}`
+        let domain = environment.value.find((env: Environment) => env.id === instance.environment_id)?.domain
+        // Extract just the base domain part (remove the path)
+        const baseDomain = domain?.split('/').slice(0, 3).join('/') // Keep only protocol://domain:port
+        instanceUrl = `http://${baseDomain}:8000/${instance.route}`
     }
-    // Open in new tab
+    console.log(instanceUrl)
+    // Navigate to the instance URL
     window.open(instanceUrl, '_blank')
 }
 
@@ -590,6 +591,75 @@ const fetchVersionDetails = async (versionId: number) => {
     }
 }
 
+// Switch to a different version
+const switchToVersion = async (version: any) => {
+    try {
+        const response = await fetch(`/ajax/apis/${props.api_id}/versions/${version.id}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const versionData = await response.json()
+        
+        // Update the API data with the fetched version
+        updateApiData(versionData)
+        originalApiData.value = JSON.parse(JSON.stringify(versionData))
+        hasUnsavedChanges.value = true
+        
+        // Close the versions modal
+        showVersionsModal.value = false
+        
+        success(`Switched to version: ${version.summary || 'Latest/Working'}`, 'Version Switched')
+        
+    } catch (e: any) {
+        showError(e.message || 'Failed to switch to version. Please try again.', 'Switch Error')
+    }
+}
+
+// Switch back to the latest version
+const switchToLatestVersion = async () => {
+    try {
+        // Fetch the latest version data
+        const response = await fetch(`/ajax/apis/${props.api_id}/versions/latest`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const versionData = await response.json()
+        
+        // Update the API data with the latest version
+        updateApiData(versionData)
+        originalApiData.value = JSON.parse(JSON.stringify(versionData))
+        hasUnsavedChanges.value = true
+        
+        // Close the versions modal
+        showVersionsModal.value = false
+        
+        success('Switched back to latest version', 'Version Switched')
+        
+    } catch (e: any) {
+        showError(e.message || 'Failed to switch to latest version. Please try again.', 'Switch Error')
+    }
+}
+
 // Open view version modal
 const openViewVersionModal = async (version: any) => {
     selectedVersion.value = version
@@ -605,8 +675,8 @@ const openDiffModal = async (version: any) => {
     const isLatest = versions.value.length > 0 && version.id === versions.value[versions.value.length - 1].id
     
     if (isLatest) {
-        // If it's the latest version, just show regular view
-        await openViewVersionModal(version)
+        // If it's the latest version, switch back to latest (like switchToVersion but for latest)
+        await switchToLatestVersion()
         return
     }
     
@@ -624,11 +694,8 @@ const isLatestVersionStable = computed(() => {
 const currentVersionName = computed(() => {
     if (!apiData.value) return 'Loading...'
     
-    if (apiData.value.stable) {
-        return 'Latest'
-    } else {
-        return 'Latest/Working'
-    }
+    // Use the summary from the current API data
+    return apiData.value.summary || (apiData.value.stable ? 'Latest' : 'Latest/Working')
 })
 
 // Open publish modal
@@ -920,7 +987,12 @@ onUnmounted(() => {
                 <!-- Version Display -->
                 <div class="flex items-center gap-2">
                     <span class="text-sm text-gray-600 dark:text-gray-400">Version:</span>
-                    <div class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-sm font-medium rounded-md border border-green-200 dark:border-green-800">
+                    <div :class="[
+                        'px-3 py-1 text-sm font-medium rounded-md border',
+                        apiData?.summary 
+                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                            : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800'
+                    ]">
                         {{ currentVersionName }}
                     </div>
                 </div>
@@ -1225,19 +1297,26 @@ onUnmounted(() => {
                                 <p v-if="version.description" class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                     {{ version.description }}
                                 </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    {{ new Date(version.created_at).toLocaleDateString() }}
+                                </p>
                             </div>
                             <div class="flex items-center gap-3">
-                                <div class="text-right">
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ new Date(version.created_at).toLocaleDateString() }}
-                                    </p>
+                                <div class="flex items-center gap-2">
+                                    <button 
+                                        @click="openDiffModal(version)"
+                                        class="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 rounded-md transition-colors"
+                                    >
+                                        {{ index === versions.length - 1 ? 'View' : 'Compare' }}
+                                    </button>
+                                    <button 
+                                        v-if="version.stable && index !== versions.length - 1"
+                                        @click="switchToVersion(version)"
+                                        class="px-3 py-1 text-xs bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-200 dark:hover:bg-orange-800 rounded-md transition-colors"
+                                    >
+                                        Switch
+                                    </button>
                                 </div>
-                                <button 
-                                    @click="openDiffModal(version)"
-                                    class="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 rounded-md transition-colors"
-                                >
-                                    {{ index === versions.length - 1 ? 'View' : 'Compare' }}
-                                </button>
                             </div>
                         </div>
                     </div>
