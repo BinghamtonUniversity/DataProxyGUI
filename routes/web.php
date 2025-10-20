@@ -3,21 +3,33 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\Auth\OidcController;
 
-Route::get('/', function () {
+Route::get('/welcome', function () {
     return Inertia::render('Welcome');
-})->name('home');
-
-Route::get('dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->name('welcome');
 
 
-//FROM HERE!!!!!!!
-// ============================================
+// OIDC SSO routes
+Route::prefix('oidc')->group(function () {
+    Route::get('/redirect', [OidcController::class, 'redirect'])->name('oidc.redirect');
+    Route::get('/callback', [OidcController::class, 'callback'])->name('oidc.callback');
+});
+
+
+// ===========================================
 // API Export - (JSON export in new tab)
 // ============================================
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
+    Route::post('/logout', [OidcController::class, 'logout'])->name('logout');
+
+    Route::get('dashboard', function () {
+        if (auth()->check()) {
+            return Inertia::render('Dashboard');
+        }
+        return redirect()->route('oidc.redirect');
+    })->name('dashboard');
+
     Route::get('/apis', function () {
         return Inertia::render('Apis');
     })->name('apis');
@@ -212,4 +224,3 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';

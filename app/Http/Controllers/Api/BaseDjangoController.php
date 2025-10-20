@@ -3,20 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class BaseDjangoController extends Controller
 {
     protected $djangoBaseUrl;
-    protected $uniqueId;
     protected $apiUser;
     protected $apiPassword;
 
     public function __construct()
     {
         $this->djangoBaseUrl = config('services.django.base_url');
-        $this->uniqueId = config('services.django.unique_id');
         $this->apiUser = config('services.django.api_user');
         $this->apiPassword = config('services.django.api_password');
     }
@@ -24,7 +23,7 @@ class BaseDjangoController extends Controller
     protected function makeDjangoRequest(string $method, string $endpoint, array $data = [], array $headers = []): array
     {
         $defaultHeaders = [
-            'X-Unique-Id' => $this->uniqueId,
+            'X-Unique-Id' => Auth::user()->unique_id,
             'Accept' => 'application/json',
         ];
 
