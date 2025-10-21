@@ -266,26 +266,8 @@ const handleDelete = async (route: RouteData) => {
                   existingRoute.verb === route.verb)
             ) || []
         }
-        // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
-
-
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
-
-        const responseData = await response.json()
-        props.updateApiData(responseData || updatedApiData)
+        // // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
+        props.updateApiData(updatedApiData)
         success(`Path "${route.path}-${route.verb}" deleted successfully`, 'Route Deleted');
 
     } catch (err: any) {
@@ -640,7 +622,7 @@ const highlightText = (text: string, query: string) => {
                                         <DialogClose as-child>
                                             <Button variant="secondary" type="button" @click="closeNewRouteDialog">Cancel</Button>
                                         </DialogClose>
-                                        <Button type="submit" variant="default" :disabled="newRouteLoading">
+                                        <Button type="submit" variant="default" :disabled="newRouteLoading || !newRouteForm.view_name">
                                             <span v-if="newRouteLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
                                             <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
                                         </Button>

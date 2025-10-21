@@ -39,9 +39,19 @@ return [
         'base_url' => env('VITE_DJANGO_BASEURL'),
         'hermes_base_url' => env('VITE_HERMES_BASEURL'),
         'api_user' => env('API_USER'),
-        'unique_id' => env('B_NUMBER'),
         'api_password' => env('API_PASSWORD'),
     ],
     'appkey' => env('LARAVEL_APP_KEY'),
+
+    'oidc' => [
+        'client_id' => env('OIDC_CLIENT_ID'),
+        'client_secret' => env('OIDC_CLIENT_SECRET'),
+        'redirect' => env('OIDC_REDIRECT_URI'),
+
+        'authorize_url' => env('OIDC_AUTH_URL'),
+        'token_url' => env('OIDC_TOKEN_URL'),
+        'userinfo_url' => env('OIDC_USERINFO_URL')
+    ],
+
 
 ];

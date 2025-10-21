@@ -2,7 +2,7 @@
 import UserInfo from '@/components/UserInfo.vue';
 import { DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import type { User } from '@/types';
-import { Link, router } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import { LogOut, Settings } from 'lucide-vue-next';
 
 interface Props {
@@ -10,7 +10,7 @@ interface Props {
 }
 
 const handleLogout = () => {
-    router.flushAll();
+    router.post(route('logout')); // send POST request to logout route
 };
 
 defineProps<Props>();
@@ -22,20 +22,27 @@ defineProps<Props>();
             <UserInfo :user="user" :show-email="true" />
         </div>
     </DropdownMenuLabel>
+
     <DropdownMenuSeparator />
+
     <DropdownMenuGroup>
         <DropdownMenuItem :as-child="true">
-            <Link class="block w-full" :href="route('profile.edit')" prefetch as="button">
+            <button
+                class="flex w-full items-center text-left"
+                @click="$inertia.visit(route('profile.edit'))"
+            >
                 <Settings class="mr-2 h-4 w-4" />
                 Settings
-            </Link>
+            </button>
         </DropdownMenuItem>
     </DropdownMenuGroup>
+
     <DropdownMenuSeparator />
+
     <DropdownMenuItem :as-child="true">
-        <Link class="block w-full" method="post" :href="route('logout')" @click="handleLogout" as="button">
+        <button class="flex w-full items-center text-left" @click="handleLogout">
             <LogOut class="mr-2 h-4 w-4" />
             Log out
-        </Link>
+        </button>
     </DropdownMenuItem>
 </template>

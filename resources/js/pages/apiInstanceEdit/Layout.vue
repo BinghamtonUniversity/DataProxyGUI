@@ -252,20 +252,7 @@ const updateInstanceVersion = async (version: any) => {
 
 // Navigation helper
 const navigateToTab = (tabId: string) => {
-    // hasUnsavedChanges.value = checkForUnsavedChanges()
-    // if (hasUnsavedChanges.value) {
-    //     if (confirm('You have unsaved changes. Do you want to leave?')) {
-    //         // Proceed with tab change
-    //         router.get(`/api_instances/${props.instance_id}/${tabId}`, {}, {
-    //             preserveState: true,
-    //             preserveScroll: true,
-    //             // only: ['activeTab'] // Only update the activeTab prop
-    //         })
-    //     } else {
-    //         // Cancel tab change
-    //         return
-    //     }
-    // }
+
     router.get(`/api_instances/${props.instance_id}/${tabId}`, {}, {
         preserveState: true,
         preserveScroll: true,
@@ -278,6 +265,12 @@ const navigateToTab = (tabId: string) => {
 const activeComponent = computed(() => {
     return tabs.find(tab => tab.id === props.activeTab)?.component || tabs[0].component
 })
+
+const isNavigatingWithinSameApiInstance = (url: string): boolean => {
+    // Check if the URL is navigating to a different tab of the same API
+    const urlPattern = new RegExp(`^/api_instances/${props.instance_id}(/[^/]+)?$`)
+    return urlPattern.test(url)
+}
 
 // Component props to pass down
 const componentProps = computed(() => ({
@@ -363,7 +356,7 @@ onMounted(() => {
         
         // Add Inertia navigation hook
         removeInertiaHook = router.on('before', (event) => {
-                if (hasUnsavedChanges.value) {
+                if (hasUnsavedChanges.value && !isNavigatingWithinSameApiInstance(event.detail.visit.url.pathname)) {
                     // Show confirmation dialog
                     const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
                     if (!confirmed) {

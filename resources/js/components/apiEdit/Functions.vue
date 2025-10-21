@@ -118,13 +118,22 @@ const handleSave = async (updatedCode: string) => {
 }
 
 const handleCreateNewView = async () => {
-    if (!newViewName.value.trim() || !props.apiData) {
+    const name = newViewName.value.trim();
+
+    if (!name || !props.apiData) {
         createViewError.value = 'Please enter a valid function name'
         return
     }
 
+    // Validate function name syntax
+    const validNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+    if (!validNamePattern.test(name)) {
+        createViewError.value = 'Invalid function name. Use letters, numbers, and underscores only, and do not start with a number.'
+        return;
+    }
+
     // Check if function name already exists
-    const existingFunction = props.apiData.version_views.find(func => func.name === newViewName.value.trim())
+    const existingFunction = props.apiData.version_views.find(func => func.name === name)
     if (existingFunction) {
         createViewError.value = 'A function with this name already exists'
         return
@@ -136,7 +145,7 @@ const handleCreateNewView = async () => {
     try {
         // TO-DO:: PHP function template
         const newFunction: ApiVersionFunction = {
-            name: newViewName.value.trim(),
+            name,
             content: ``,
         }
 
@@ -144,24 +153,6 @@ const handleCreateNewView = async () => {
             ...props.apiData,
             version_views: [...props.apiData.version_views, newFunction]
         }
-
-        // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-        //     method: 'PUT',
-        //     headers: {
-        //         'Content-Type': 'application/json',
-        //         'Accept': 'application/json',
-        //         'X-CSRF-TOKEN': getCsrfToken() || '',
-        //     },
-        //     body: JSON.stringify(updatedApiData)
-        // })
-
-        // if (!response.ok) {
-        //     const errorData = await response.json().catch(() => ({}))
-        //     // error('Failed to create function', 'Error');
-        //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        // }
-
-        // const result = await response.json()
         
         // Update the local state through parent
         props.updateApiData(updatedApiData)
@@ -199,23 +190,23 @@ const handleDeleteFunction = async (view: ApiVersionFunction ) =>{
         }
         // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
 
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
+        // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+        //     method: 'PUT',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'Accept': 'application/json',
+        //         'X-CSRF-TOKEN': getCsrfToken() || '',
+        //     },
+        //     body: JSON.stringify(updatedApiData)
+        // })
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
+        // if (!response.ok) {
+        //     const errorData = await response.json().catch(() => ({}))
+        //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        // }
 
-        const responseData = await response.json()
-        props.updateApiData(responseData || updatedApiData)
+        // const responseData = await response.json()
+        props.updateApiData(updatedApiData)
         selectedFunction.value = null
         success(`Function "${view.name}" deleted successfully`, 'Function Deleted');
 
@@ -252,6 +243,14 @@ const handleUpdateFunctionName = async () => {
   if (!trimmedName) {
     createViewError.value = 'Function name cannot be empty'
     return
+  }
+
+  // Validate function name syntax
+  const validNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+  if (!validNamePattern.test(trimmedName)) {
+    createViewError.value =
+      'Invalid function name. Use letters, numbers, and underscores only, and do not start with a number.';
+    return;
   }
 
   // Prevent duplicates
@@ -477,7 +476,7 @@ onUnmounted(() => {
             <template v-else-if="apiData?.version_views">
                 <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
                     <!-- Function List Sidebar -->
-                   <aside class="max-w-xs lg:w-40 lg:min-w-40 lg:flex-shrink-0">
+                   <aside class="max-w-xs lg:w-50 lg:min-w-50 lg:flex-shrink-0">
                         <!-- New View Button -->
                         <div class="mb-4">
                             <Dialog v-model:open="isNewViewDialogOpen" @update:open="resetNewViewDialog">
@@ -515,7 +514,7 @@ onUnmounted(() => {
                                                 Cancel
                                             </Button>
                                             <Button 
-                                                @click="isEditingView ? handleUpdateFunctionName() : handleCreateNewView()"
+                                                @click=" isEditingView? handleUpdateFunctionName() : handleCreateNewView()"
                                                 :disabled="!newViewName.trim() || isCreatingView"
                                             >
                                                 <div v-if="isCreatingView" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>

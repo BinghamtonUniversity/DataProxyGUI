@@ -3,21 +3,33 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\Auth\OidcController;
 
-Route::get('/', function () {
+
+Route::get('/welcome', function () {
     return Inertia::render('Welcome');
-})->name('home');
+})->name('welcome');
 
-Route::get('dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// OIDC SSO routes
+Route::prefix('oidc')->group(function () {
+    Route::get('/redirect', [OidcController::class, 'redirect'])->name('oidc.redirect');
+    Route::get('/callback', [OidcController::class, 'callback'])->name('oidc.callback');
+});
 
 
-//FROM HERE!!!!!!!
-// ============================================
+// ===========================================
 // API Export - (JSON export in new tab)
 // ============================================
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
+    Route::post('/logout', [OidcController::class, 'logout'])->name('logout');
+
+    Route::get('dashboard', function () {
+        if (auth()->check()) {
+            return Inertia::render('Dashboard');
+        }
+        return redirect()->route('oidc.redirect');
+    })->name('dashboard');
+
     Route::get('/apis', function () {
         return Inertia::render('Apis');
     })->name('apis');
@@ -55,10 +67,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('Schedules');
     })->name('schedules');
 
-    Route::get('/activity-logs', function () {
-        return Inertia::render('ActivityLogs');
-    })->name('activity-logs');
-
     Route::get('/users', function () {
         return Inertia::render('Users');
     })->name('users');
@@ -91,10 +99,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/api_instances/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesUpdate']);
         Route::delete('/api_instances/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesDestroy']);
 
-        //Activity Logs
-        Route::get('/activity_logs', [App\Http\Controllers\Api\ActivityLogsController::class, 'index']);
-
-
         //Schedulers
         Route::get('/schedulers', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersIndex']);
         Route::post('/schedulers', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersStore']);
@@ -106,11 +110,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/api_users', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersStore']);
         Route::put('/api_users/{id}', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersUpdate']);
         Route::delete('/api_users/{id}', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersDestroy']);
-        Route::get('/api_users/{id}/decrypted_secret', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersDecryptedSecret']);
 
         //API Versions
         Route::get('/apis/{id}/api_versions', [App\Http\Controllers\Api\ApiController::class, 'apiVersionsIndex']);
-        Route::get('/api_versions', [App\Http\Controllers\Api\ApiController::class, 'allApiVersionsIndex']);
+
         // API Developer routes
         Route::get('/apis/{id}/developers', [App\Http\Controllers\Api\ApiDevelopersController::class, 'getApiDevelopers']);
         Route::post('/apis/{id}/developers', [App\Http\Controllers\Api\ApiDevelopersController::class, 'createApiDeveloper']);
@@ -221,4 +224,3 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
