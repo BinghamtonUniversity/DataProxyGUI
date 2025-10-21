@@ -31,13 +31,14 @@ const user = page.props.auth.user as User;
 const form = useForm({
     name: user.name,
     email: user.email,
+    b_number: user.unique_id || '',
 });
 
-const submit = () => {
-    form.patch(route('profile.update'), {
-        preserveScroll: true,
-    });
-};
+// const submit = () => {
+//     form.patch(route('profile.update'), {
+//         preserveScroll: true,
+//     });
+// };
 </script>
 
 <template>
@@ -48,10 +49,10 @@ const submit = () => {
             <div class="flex flex-col space-y-6">
                 <HeadingSmall title="Profile information" description="Update your name and email address" />
 
-                <form @submit.prevent="submit" class="space-y-6">
+                <form class="space-y-6">
                     <div class="grid gap-2">
                         <Label for="name">Name</Label>
-                        <Input id="name" class="mt-1 block w-full" v-model="form.name" required autocomplete="name" placeholder="Full name" />
+                        <Input id="name" class="mt-1 block w-full" v-model="form.name" required autocomplete="name" placeholder="Full name"  disabled/>
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
 
@@ -63,13 +64,28 @@ const submit = () => {
                             class="mt-1 block w-full"
                             v-model="form.email"
                             required
-                            autocomplete="username"
+                            autocomplete="email"
                             placeholder="Email address"
+                            disabled
                         />
                         <InputError class="mt-2" :message="form.errors.email" />
                     </div>
+                    <div class="grid gap-2">
+                        <Label for="bnumber">B-Number</Label>
+                        <Input
+                            id="bnumber"
+                            type="bnumber"
+                            class="mt-1 block w-full"
+                            v-model="form.b_number"
+                            required
+                            autocomplete="bnumber"
+                            placeholder="B-Number"
+                            disabled
+                        />
+                        <InputError class="mt-2" :message="form.errors.b_number" />
+                    </div>
 
-                    <div v-if="mustVerifyEmail && !user.email_verified_at">
+                    <!-- <div v-if="mustVerifyEmail && !user.email_verified_at">
                         <p class="-mt-4 text-sm text-muted-foreground">
                             Your email address is unverified.
                             <Link
@@ -85,9 +101,9 @@ const submit = () => {
                         <div v-if="status === 'verification-link-sent'" class="mt-2 text-sm font-medium text-green-600">
                             A new verification link has been sent to your email address.
                         </div>
-                    </div>
+                    </div> -->
 
-                    <div class="flex items-center gap-4">
+                    <!-- <div class="flex items-center gap-4">
                         <Button :disabled="form.processing">Save</Button>
 
                         <Transition
@@ -98,7 +114,7 @@ const submit = () => {
                         >
                             <p v-show="form.recentlySuccessful" class="text-sm text-neutral-600">Saved.</p>
                         </Transition>
-                    </div>
+                    </div> -->
                 </form>
             </div>
 

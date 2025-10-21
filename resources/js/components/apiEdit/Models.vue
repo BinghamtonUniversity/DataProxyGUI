@@ -77,13 +77,13 @@ const newModelForm = ref({
   content: '',
   inheritance: 'models.Model',
   class_meta: [] as { name: string; value: string }[],
-  class_methods: [] as { name: string; params: string; content: string }[]
+  class_methods: [] as { name: string; params: string[]; content: string }[]
 })
 
-// Temporary state for editors
-const tempContent = ref('')
-const tempClassMethods = ref<{ name: string; params: string[]; content: string }[]>([])
-const editingMethodIndex = ref<number | null>(null)
+// // Temporary state for editors
+// const tempContent = ref('')
+// const tempClassMethods = ref<{ name: string; params: string[]; content: string }[]>([])
+// const editingMethodIndex = ref<number | null>(null)
 
 const newModelLoading = ref(false)
 const newModelError = ref('')
@@ -120,7 +120,7 @@ const isCreatingMethod = ref(false)
 const createMethodError = ref<string | null>(null)
 
 //Edit method name state
-const methodBeingEdited = ref<{name: string, params: string, content:string }| null>(null)
+const methodBeingEdited = ref<{name: string, params: string[], content:string }| null>(null)
 const isEditingMethod = ref(false)
 
 const openNewModelDialog = () => {
@@ -404,11 +404,11 @@ const openEditModelDialog = (model: ModelData, index: number) => {
   newModelDialogOpen.value = true
 }
 
-const editMethodName = (method: { name: string; params: string; content: string }) => {
+const editMethodName = (method: { name: string; params: string[]; content: string }) => {
     isEditingMethod.value = true
     methodBeingEdited.value = method
     newMethod.value.name = method.name
-    newMethod.value.params = method.params
+    newMethod.value.params = method.params.join(', ')
     // newMethod.value.content = method.content
     createMethodError.value = null
     isNewMethodDialogOpen.value = true
@@ -430,7 +430,7 @@ const validateAndNormalizeParams = (rawParams: string): { error?: string, params
   const trimmed = rawParams.trim()
 
   if (trimmed.includes(' ') && !trimmed.includes(',')) {
-    return { error: 'Parameters must be comma-separated (e.g. self, param1)' }
+    return { error: 'Parameters must be comma-separated (e.g. param1, param2)' }
   }
 
   const paramsArray = trimmed
@@ -438,14 +438,14 @@ const validateAndNormalizeParams = (rawParams: string): { error?: string, params
     .map(p => p.trim())
     .filter(p => p)
 
-  if (paramsArray.length === 0) {
-    return { error: 'Please enter at least one parameter' }
-  }
+  // if (paramsArray.length === 0) {
+  //   return { error: 'Please enter at least one parameter' }
+  // }
 
   // Ensure "self" is always the first parameter
-  if (!paramsArray.includes('self')) {
-    paramsArray.unshift('self')
-  }
+  // if (!paramsArray.includes('self')) {
+  //   paramsArray.unshift('self')
+  // }
 
   return { params: paramsArray }
 }
@@ -486,7 +486,7 @@ const handleCreateNewMethod = async () => {
   try {
     const methodToCreate = {
       name,
-      params: params!.join(', '),
+      params: params ?? [],
       content: ``
     }
 
@@ -561,7 +561,7 @@ const handleUpdateMethodName = async () => {
       const methodIndex = selectedModel.value.class_methods.findIndex(m => m === methodBeingEdited.value)
       if (methodIndex !== -1) {
         selectedModel.value.class_methods[methodIndex].name = trimmedName
-        selectedModel.value.class_methods[methodIndex].params = params!.join(', ')
+        selectedModel.value.class_methods[methodIndex].params = params || []
       }
     }
 
@@ -577,7 +577,7 @@ const handleUpdateMethodName = async () => {
 }
 
 
-const handleDeleteMethod = (method: { name: string; params: string; content: string }) => {
+const handleDeleteMethod = (method: { name: string; params: string[]; content: string }) => {
     if (!selectedModel.value || !selectedModel.value.class_methods) {
         return
     }
@@ -1039,7 +1039,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                                   <Input
                                                       id="method-params"
                                                       v-model="newMethod.params"
-                                                      placeholder="Enter parameters comma-separated (e.g. self, param1)"
+                                                      placeholder="Enter parameters comma-separated (e.g. param1, param2)"
                                                       :disabled="isCreatingMethod"
                                                   />
                                               </div>
@@ -1104,7 +1104,7 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                       ]"
                                       @click="selectSection({ type: 'method', index })"
                                     >
-                                      {{ method.name || `Method ${index + 1}` }} {{ method.params ? `(${method.params})` : '()' }}
+                                      {{ method.name || `Method ${index + 1}` }} {{ method.params ? `(${method.params.join(',')})` : '()' }}
                                     </Button>
                                     <Button
                                         variant="ghost"
