@@ -35,7 +35,7 @@ const newResourceName = ref('')
 const selectedResourceId = ref('')
 
 const hasExistingResources = computed(() => {
-  return props.apiInstanceData?.api_version==null ? false : props.apiInstanceData.api_version.resources && props.apiInstanceData.api_version.resources.length > 0
+  return props.apiInstanceData?.resources && props.apiInstanceData?.resources.length > 0
 })
 
 const getResourceNameById = (resourceId: string) => {
@@ -120,7 +120,7 @@ const updateResource = (index: number, resource_name: string, value: string) => 
         <div v-if="hasExistingResources" class="space-y-3">
           <h4 class="font-medium">Existing Resources:</h4>
           <div 
-            v-for="(resourceItem, index) in apiInstanceData.api_version.resources" 
+            v-for="(resourceItem, index) in apiInstanceData.resources" 
             :key="index"
             class="flex items-end gap-4"
           >
