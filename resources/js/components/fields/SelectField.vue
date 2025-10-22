@@ -191,7 +191,7 @@
             class="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
             type="button"
           >
-            <i class="fa-solid fa-times text-xs"></i>
+            <FontAwesomeIcon :icon="faTimes" class="text-xs" />
           </button>
         </span>
       </div>
@@ -207,7 +207,7 @@
             class="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
             type="button"
           >
-            <i class="fa-solid fa-times text-xs"></i>
+            <FontAwesomeIcon :icon="faTimes" class="text-xs" />
           </button>
         </span>
       </div>
@@ -218,6 +218,8 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { validateField } from './validation.js';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faTimes } from '@fortawesome/free-solid-svg-icons';
 
 // Props
 const props = defineProps({
@@ -539,6 +541,14 @@ onMounted(() => {
     validate();
   }
 });
+</script>
+
+<script>
+export default {
+  components: {
+    FontAwesomeIcon
+  }
+}
 </script>
 
 <style scoped>
