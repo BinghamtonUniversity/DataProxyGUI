@@ -7,7 +7,7 @@ import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
-import { type BreadcrumbItem, type Api } from '@/types';
+import { type BreadcrumbItem, type Api, ApiUser } from '@/types';
 import { getCsrfToken } from '@/lib/utils';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -25,6 +25,7 @@ const submitting = ref(false);
 
 // Data state
 const apis = ref<Api[]>([]);
+const apiUsers = ref<ApiUser[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
@@ -246,10 +247,32 @@ const cleanFormData = (formData: any) => {
     
     return cleaned;
 };
-
+const fetchApiUsers = async () => {
+    try {
+        const response = await fetch('/api/api_users', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        apiUsers.value = data;
+    } catch (err: any) {
+        error.value = err.message || 'Failed to fetch API users';
+        showError('Failed to fetch API users. Please try again.', 'Error');
+        console.error('Error fetching API users:', err);
+    }
+};
 // Fetch APIs from API
 const fetchApis = async () => {
     try {
+        await fetchApiUsers();
         loading.value = true;
         error.value = null;
         
@@ -272,7 +295,7 @@ const fetchApis = async () => {
         apis.value = data.map((api: Api) => ({
             ...api,
             created_at: api.created_at ? new Date(api.created_at).toLocaleDateString() : '',
-            created_by_id: api.created_by_id ? `User ${api.created_by_id}` : ''
+            created_by_id: api.created_by_id ? apiUsers.value.find((user: ApiUser) => user.id === api.created_by_id)?.app_name : ''
         }));
         
     } catch (err: any) {

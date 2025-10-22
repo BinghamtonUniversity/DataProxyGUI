@@ -23,8 +23,10 @@ interface Props {
 }
 const props = defineProps<Props>()
 
+const isChanged = ref(false)
+
 const formConfig = computed(() => {
-    return {label: ' ',
+    return {label: ' Options',
     description: '',
     name: "options",
     files: false,
@@ -38,57 +40,67 @@ const initialData = computed(() => {
     return props.apiInstanceData?.options || []
 })
 
-const handleSave = async (data: any) => {
+// const handleSave = async (data: any) => {
 
     
+//     if (!props.apiInstanceData) return
+
+//     const requestData = {
+//     id: props.apiInstanceData.id,
+//     name: props.apiInstanceData.name,
+//     route: props.apiInstanceData.route, 
+//     route_user_map: props.apiInstanceData.route_user_map,
+//     resources: props.apiInstanceData.resources, 
+//     options: data,
+//     public: props.apiInstanceData.public,
+//     api_id: props.apiInstanceData.api.id,
+//     api_version_id: props.apiInstanceData.api_version_id,
+//     environment_id: props.apiInstanceData.environment.id
+//   }
+//   console.log('Saving request data:', requestData)
+
+//   const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
+//         method: 'PUT',
+//         headers: {
+//             'Content-Type': 'application/json',
+//             'Accept': 'application/json',
+//             'X-CSRF-TOKEN': getCsrfToken() || '',
+//         },
+//         body: JSON.stringify(requestData)
+//     })
+
+//     if (!response.ok) {
+//         const errorData = await response.json().catch(() => ({}))
+//         showError(errorData.message || `HTTP error! status: ${response.status}`)
+//         throw new Error(errorData.message || `HTTP error! status: ${response.status}`)  
+        
+//     }
+
+//   const responseData = await response.json()
+//   props.updateApiInstanceData(responseData)
+//   success('Options saved successfully!')   
+// }
+
+
+const handleFormDataUpdate = (data: any) => {
+
+    if (props.apiInstanceData?.options === data) return;
     if (!props.apiInstanceData) return
 
     const requestData = {
-    id: props.apiInstanceData.id,
-    name: props.apiInstanceData.name,
-    route: props.apiInstanceData.route, 
-    route_user_map: props.apiInstanceData.route_user_map,
-    resources: props.apiInstanceData.resources, 
-    options: data,
-    public: props.apiInstanceData.public,
-    api_id: props.apiInstanceData.api.id,
-    api_version_id: props.apiInstanceData.api_version_id,
-    environment_id: props.apiInstanceData.environment.id
-  }
-  console.log('Saving request data:', requestData)
-
-  const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken() || '',
-        },
-        body: JSON.stringify(requestData)
-    })
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        showError(errorData.message || `HTTP error! status: ${response.status}`)
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)  
-        
-    }
-
-  const responseData = await response.json()
-  props.updateApiInstanceData(responseData)
-  success('Options saved successfully!')   
-}
-
-const handleCustomAction = (action: any) => {
-  
-    switch (action.type) {
-        case 'save':
-            handleSave(action.formData)
-            break;
-        default:
-            console.log('Unknown custom action type:', action.type)
-    }
-}
+        id: props.apiInstanceData.id,
+        name: props.apiInstanceData.name,
+        route: props.apiInstanceData.route, 
+        route_user_map: props.apiInstanceData.route_user_map,
+        resources: props.apiInstanceData.resources, 
+        options: data,
+        public: props.apiInstanceData.public,
+        api_id: props.apiInstanceData.api.id,
+        api_version_id: props.apiInstanceData.api_version_id,
+        environment_id: props.apiInstanceData.environment.id
+        }
+    props.updateApiInstanceData(requestData  as ApiInstance);
+};
 </script>
 
 <template>
@@ -102,14 +114,16 @@ const handleCustomAction = (action: any) => {
             <Skeleton class="h-10 col-span-12 md:col-span-4" />
         </div>
     </div>
+    <div v-else class="max-w-2xl mx-auto border border-gray-200 dark:border-gray-800 rounded-lg p-4">
     <FormViewer
-        v-else
+       
         :formConfig="formConfig "
         :initialData="initialData"
         :actions="[{ type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' }]"
-        :actionHandler="handleCustomAction"
+        @update:modelValue="handleFormDataUpdate"
+        :showActions="false"
     />
-    
+    </div>
     <!-- Global Toaster -->
     <Toaster />
 </template>

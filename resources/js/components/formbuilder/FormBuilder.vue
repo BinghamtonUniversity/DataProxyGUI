@@ -1098,6 +1098,8 @@ function getFieldTypesByCategory(category) {
 
 const fields = ref(props.formData.fields || []);
 
+// Flag to prevent recursive updates
+const isUpdatingFromProps = ref(false);
 
 const selectedFieldIndex = ref(null);
 const isJsonModalOpen = ref(false);
@@ -1572,7 +1574,6 @@ function closePreviewModal() {
 
 function copyToClipboard() {
   navigator.clipboard.writeText(generatedJson.value).then(() => {
-    console.log('JSON copied to clipboard');
   }).catch(err => {
     console.error('Failed to copy: ', err);
   });
@@ -1583,15 +1584,15 @@ function handlePreviewSubmit() {
   if (formViewerRef.value && formViewerRef.value.submitForm) {
     const isValid = formViewerRef.value.submitForm();
     if (isValid) {
-      console.log('Preview form submitted:', previewFormData.value);
-      alert('Form submitted successfully! Check console for form data.');
+
+      alert('Form submitted successfully!');
       closePreviewModal();
     } else {
-      console.log('Form validation failed');
+      alert('Form validation failed');
     }
   } else {
-    console.log('Preview form submitted:', previewFormData.value);
-    alert('Form submitted successfully! Check console for form data.');
+
+    alert('Form submitted successfully!');
     closePreviewModal();
   }
 }
@@ -2133,8 +2134,35 @@ watch(
   }
 );
 
+// Watch for changes in formData prop to update internal state
+watch(() => props.formData, (newFormData) => {
+  if (isUpdatingFromProps.value) return;
+  isUpdatingFromProps.value = true;
+  
+  if (newFormData) {
+    if (newFormData.fields && Array.isArray(newFormData.fields)) {
+      // Clean the fields by removing internal properties like updateKey
+      fields.value = newFormData.fields.map(field => {
+        const cleanField = { ...field };
+        delete cleanField.updateKey;
+        return cleanField;
+      });
+    }
+    if (newFormData.name) {
+      formName.value = newFormData.name;
+    }
+  }
+  
+  // Reset flag after a short delay
+  setTimeout(() => {
+    isUpdatingFromProps.value = false;
+  }, 100);
+}, { deep: true, immediate: true });
+
 // Watch for changes in formName and fields to emit updates
 watch([formName, fields], () => {
+  if (isUpdatingFromProps.value) return;
+  
   emit('update:formData', {
     name: formName.value,
     files: false,
@@ -2153,7 +2181,12 @@ onMounted(() => {
   
   // Initialize with props data
   if (props.formData.fields && props.formData.fields.length > 0) {
-    fields.value = [...props.formData.fields];
+    // Clean the fields by removing internal properties like updateKey
+    fields.value = props.formData.fields.map(field => {
+      const cleanField = { ...field };
+      delete cleanField.updateKey;
+      return cleanField;
+    });
   }
   if (props.formData.name) {
     formName.value = props.formData.name;

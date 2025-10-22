@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, onUnmounted, watch } from 'vue'
+import { onMounted, ref, computed, onUnmounted, watch, h } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem, Api, ApiData, ApiInstance, Environment } from '@/types'
@@ -99,10 +99,9 @@ const handleApiDataImport = (formData: any) => {
         if (missingFields.length > 0) {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
         }
-        
-        // Update the API data with imported data
         updateApiData(importedData)
-        
+        originalApiData.value = JSON.parse(JSON.stringify(importedData))
+        hasUnsavedChanges.value = true
         closeApiDataImportModal()
         success('API data imported successfully!', 'Import Successful')
         
@@ -111,22 +110,6 @@ const handleApiDataImport = (formData: any) => {
     }
 }
 
-const exportApiData = () => {
-    if (!apiData.value) {
-        showError('No API data available to export', 'Export Error')
-        return
-    }
-    
-    const dataStr = JSON.stringify(apiData.value, null, 2)
-    const dataBlob = new Blob([dataStr], { type: 'application/json' })
-    const url = URL.createObjectURL(dataBlob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `api-data-${api.value?.name || 'export'}.json`
-    link.click()
-    URL.revokeObjectURL(url)
-    success('API data exported successfully!', 'Export Successful')
-}
 
 const publishFormConfig = ref({
     label: 'Publish New Version',
@@ -168,7 +151,7 @@ const apiDataImportFormConfig = ref({
             help: 'Paste the complete JSON configuration for your API data',
             info: 'The JSON should contain all API data including routes, resources, functions, models, and files',
             language: 'json',
-            height: 600
+            height: 400
         }
     ]
 })
@@ -227,6 +210,8 @@ const environment = ref<Environment[]>([])
 const loadingApiData = ref(true)
 const apiError = ref('')
 const apiBaseUrl = '/api'
+const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL 
+const hermesBaseUrl = import.meta.env.VITE_HERMES_BASEURL
 
 // Modal state for API Developers
 const showApiDevelopersModal = ref(false)
@@ -348,16 +333,33 @@ const fetchInstances = async () => {
 
 // View instance - redirect to instance URL
 const viewInstance = (instance: any) => {
-    // Close the modal first
-    showInstancesModal.value = false
-    
+
     // Construct the instance URL based on the pattern you provided
     // Format: http://127.0.0.1:8001/api_instances/{instance_id}/main
-    const instanceUrl = `http://127.0.0.1:8001/api_instances/${instance.id}/main`
+    const instanceUrl = `${window.location.origin}/api_instances/${instance.id}/main`
     
     // Open in new tab
     window.open(instanceUrl, '_blank')
 }
+// View instance - redirect to instance URL
+const directToInstanceRoute = (instance: any) => {
+
+    let instanceUrl;
+    // Construct the instance URL based on the pattern you provided
+    // Format: http://127.0.0.1:8001/api_instances/{instance_id}/main
+    if (api.value?.api_type === 'php') {
+         instanceUrl = `${hermesBaseUrl}/api_instances/${instance.id}/main`
+    } else {
+        let domain = environment.value.find((env: Environment) => env.id === instance.environment_id)?.domain
+        // Extract just the base domain part (remove the path)
+        const baseDomain = domain?.split('/').slice(0, 3).join('/') // Keep only protocol://domain:port
+        instanceUrl = `http://${baseDomain}:8000/${instance.route}`
+    }
+    console.log(instanceUrl)
+    // Navigate to the instance URL
+    window.open(instanceUrl, '_blank')
+}
+
 
 // Search functionality
 const performSearch = () => {
@@ -372,25 +374,20 @@ const performSearch = () => {
 
     const data = apiData.value as any
     
-    // Debug: Log the API data structure
-    console.log('API Data structure:', data)
-    console.log('Available properties:', Object.keys(data))
+
 
     // Try different possible property names for each category
     const searchInArray = (items: any[], category: string, type: string) => {
         if (!items || !Array.isArray(items)) {
-            console.log(`No items found for ${category}`)
             return
         }
-        
-        console.log(`Searching in ${category}:`, items.length, 'items')
-        
+
         items.forEach((item: any, index: number) => {
-            console.log(`${category} item ${index}:`, item)
+
             
             // Try different possible name fields
             const name = item.name || item.title || item.function_name || item.route_name || item.model_name || item.file_name || item.view_name || item.url_name
-            console.log(`  Name found: "${name}"`)
+
             
             // Search in name
             const nameMatch = name && name.toLowerCase().includes(query)
@@ -413,7 +410,7 @@ const performSearch = () => {
             )
             
             if (nameMatch || contentMatch || otherFieldsMatch) {
-                console.log(`  ✓ Match found:`, { nameMatch, contentMatch, otherFieldsMatch })
+
                 results.push({
                     category: category,
                     type: type,
@@ -421,30 +418,23 @@ const performSearch = () => {
                     description: item.description || item.path || item.content || 'No description',
                     data: item
                 })
-            } else {
-                console.log(`  ✗ No match: "${name}" does not contain "${query}"`)
             }
         })
     }
 
     // Search in routes - using version_urls (which seems to be the routes)
-    console.log('Checking routes (version_urls):', data.version_urls)
     searchInArray(data.version_urls || [], 'Routes', 'route')
 
     // Search in resources - using resources property
-    console.log('Checking resources:', data.resources)
     searchInArray(data.resources || [], 'Resources', 'resource')
 
     // Search in functions - using version_views (which might be functions/views)
-    console.log('Checking functions (version_views):', data.version_views)
     searchInArray(data.version_views || [], 'Functions', 'function')
 
     // Search in models - using version_models
-    console.log('Checking models:', data.version_models)
     searchInArray(data.version_models || [], 'Models', 'model')
 
     // Search in files - using version_files
-    console.log('Checking files:', data.version_files)
     searchInArray(data.version_files || [], 'Files', 'file')
 
     // Search in top-level API data fields
@@ -465,7 +455,6 @@ const performSearch = () => {
         }
     })
 
-    console.log('Search completed. Results:', results)
     searchResults.value = results
     isSearching.value = false
 }
@@ -602,6 +591,75 @@ const fetchVersionDetails = async (versionId: number) => {
     }
 }
 
+// Switch to a different version
+const switchToVersion = async (version: any) => {
+    try {
+        const response = await fetch(`/ajax/apis/${props.api_id}/versions/${version.id}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const versionData = await response.json()
+        
+        // Update the API data with the fetched version
+        updateApiData(versionData)
+        originalApiData.value = JSON.parse(JSON.stringify(versionData))
+        hasUnsavedChanges.value = true
+        
+        // Close the versions modal
+        showVersionsModal.value = false
+        
+        success(`Switched to version: ${version.summary || 'Latest/Working'}`, 'Version Switched')
+        
+    } catch (e: any) {
+        showError(e.message || 'Failed to switch to version. Please try again.', 'Switch Error')
+    }
+}
+
+// Switch back to the latest version
+const switchToLatestVersion = async () => {
+    try {
+        // Fetch the latest version data
+        const response = await fetch(`/ajax/apis/${props.api_id}/versions/latest`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const versionData = await response.json()
+        
+        // Update the API data with the latest version
+        updateApiData(versionData)
+        originalApiData.value = JSON.parse(JSON.stringify(versionData))
+        hasUnsavedChanges.value = true
+        
+        // Close the versions modal
+        showVersionsModal.value = false
+        
+        success('Switched back to latest version', 'Version Switched')
+        
+    } catch (e: any) {
+        showError(e.message || 'Failed to switch to latest version. Please try again.', 'Switch Error')
+    }
+}
+
 // Open view version modal
 const openViewVersionModal = async (version: any) => {
     selectedVersion.value = version
@@ -617,8 +675,8 @@ const openDiffModal = async (version: any) => {
     const isLatest = versions.value.length > 0 && version.id === versions.value[versions.value.length - 1].id
     
     if (isLatest) {
-        // If it's the latest version, just show regular view
-        await openViewVersionModal(version)
+        // If it's the latest version, switch back to latest (like switchToVersion but for latest)
+        await switchToLatestVersion()
         return
     }
     
@@ -636,11 +694,8 @@ const isLatestVersionStable = computed(() => {
 const currentVersionName = computed(() => {
     if (!apiData.value) return 'Loading...'
     
-    if (apiData.value.stable) {
-        return 'Latest'
-    } else {
-        return 'Latest/Working'
-    }
+    // Use the summary from the current API data
+    return apiData.value.summary || (apiData.value.stable ? 'Latest' : 'Latest/Working')
 })
 
 // Open publish modal
@@ -711,13 +766,12 @@ const handleDevelopersAction = (action: string) => {
     
     switch (action) {
         case 'export':
-            console.log('Export API data')
-            // Export complete API data as JSON
-            exportApiData()
+            // Open export URL in new tab for other tabs
+            const exportUrl = `http://127.0.0.1:8001/apis/${props.api_id}/version/latest`
+            window.open(exportUrl, '_blank')
             
             break
         case 'import':
-            console.log('Import API data')
             // Open import modal for complete API data
             openApiDataImportModal()
             
@@ -927,7 +981,12 @@ onUnmounted(() => {
                 <!-- Version Display -->
                 <div class="flex items-center gap-2">
                     <span class="text-sm text-gray-600 dark:text-gray-400">Version:</span>
-                    <div class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-sm font-medium rounded-md border border-green-200 dark:border-green-800">
+                    <div :class="[
+                        'px-3 py-1 text-sm font-medium rounded-md border',
+                        apiData?.summary 
+                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                            : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800'
+                    ]">
                         {{ currentVersionName }}
                     </div>
                 </div>
@@ -1232,19 +1291,26 @@ onUnmounted(() => {
                                 <p v-if="version.description" class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                     {{ version.description }}
                                 </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    {{ new Date(version.created_at).toLocaleDateString() }}
+                                </p>
                             </div>
                             <div class="flex items-center gap-3">
-                                <div class="text-right">
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ new Date(version.created_at).toLocaleDateString() }}
-                                    </p>
+                                <div class="flex items-center gap-2">
+                                    <button 
+                                        @click="openDiffModal(version)"
+                                        class="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 rounded-md transition-colors"
+                                    >
+                                        {{ index === versions.length - 1 ? 'View' : 'Compare' }}
+                                    </button>
+                                    <button 
+                                        v-if="version.stable && index !== versions.length - 1"
+                                        @click="switchToVersion(version)"
+                                        class="px-3 py-1 text-xs bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-200 dark:hover:bg-orange-800 rounded-md transition-colors"
+                                    >
+                                        Switch
+                                    </button>
                                 </div>
-                                <button 
-                                    @click="openDiffModal(version)"
-                                    class="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 rounded-md transition-colors"
-                                >
-                                    {{ index === versions.length - 1 ? 'View' : 'Compare' }}
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -1305,9 +1371,15 @@ onUnmounted(() => {
                             <div class="flex items-center space-x-3">
                                 <button 
                                     @click="viewInstance(instance)"
-                                    class="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 rounded-md transition-colors"
+                                    class="px-3 py-1 text-xs bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-200 dark:hover:bg-orange-800 rounded-md transition-colors"
                                 >
-                                    View
+                                    Edit
+                                </button>
+                                <button 
+                                    @click="directToInstanceRoute(instance)"
+                                    class="px-3 py-1 text-xs bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-orange-800 rounded-md transition-colors"
+                                >
+                                    Route
                                 </button>
                             </div>
                         </div>
@@ -1404,6 +1476,7 @@ onUnmounted(() => {
         <AlertModal
             :isOpen="showApiDataImportModal"
             title="Import API Data"
+            width="sm:max-w-4xl"
             @close="closeApiDataImportModal"
         >
             <FormViewer

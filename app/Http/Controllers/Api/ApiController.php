@@ -546,6 +546,20 @@ class ApiController extends BaseDjangoController
             'error' => "Failed to fetch version details for API version {$version_id}",
         ], 500);
     }
+    public function apiVersionsList(): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', 'api_versions');
+        return response()->json($result['data']);
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch API versions",
+            'status' => $result['status']
+        ], $result['status']);
+        
+    }
 
     /**
      * Export API Version - Display JSON in new tab
@@ -574,6 +588,20 @@ class ApiController extends BaseDjangoController
         return response()->json([
             'error' => "Failed to fetch API version for export",
             'api_id' => $api_id,
+            'status' => $result['status']
+        ], $result['status']);
+    }
+
+    public function allApiVersionsIndex(): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', 'api_versions');
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch all API versions",
             'status' => $result['status']
         ], $result['status']);
     }
