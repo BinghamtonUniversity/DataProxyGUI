@@ -69,8 +69,6 @@ const { success, error, warning, info } = useToaster();
 
 // --- Dialog State and Handlers ---
 const newModelDialogOpen = ref(false)
-const contentEditorDialogOpen = ref(false)
-const classMethodsEditorDialogOpen = ref(false)
 
 const newModelForm = ref({
   name: '',
@@ -79,11 +77,6 @@ const newModelForm = ref({
   class_meta: [] as { name: string; value: string }[],
   class_methods: [] as { name: string; params: string[]; content: string }[]
 })
-
-// // Temporary state for editors
-// const tempContent = ref('')
-// const tempClassMethods = ref<{ name: string; params: string[]; content: string }[]>([])
-// const editingMethodIndex = ref<number | null>(null)
 
 const newModelLoading = ref(false)
 const newModelError = ref('')
@@ -214,7 +207,7 @@ const handleCodeSave = async (updatedCode: string) => {
       saveCodeSuccess.value = false
     }, 3000)
 
-    success('Code saved successfully', 'Success')
+    // success('Code saved successfully', 'Success')
   } catch (error) {
     console.error('Save error:', error)
     saveCodeError.value = error instanceof Error ? error.message : 'Failed to save changes'
@@ -222,44 +215,6 @@ const handleCodeSave = async (updatedCode: string) => {
     isSavingCode.value = false
   }
 }
-
-// Content Editor Handlers
-// const openContentEditor = () => {
-//   tempContent.value = newModelForm.value.content
-//   contentEditorDialogOpen.value = true
-// }
-
-// const saveContentEditor = () => {
-//   newModelForm.value.content = tempContent.value
-//   contentEditorDialogOpen.value = false
-// }
-
-// const cancelContentEditor = () => {
-//   contentEditorDialogOpen.value = false
-// }
-
-// // Class Methods Editor Handlers
-// const openClassMethodsEditor = () => {
-//   tempClassMethods.value = JSON.parse(JSON.stringify(newModelForm.value.class_methods))
-//   classMethodsEditorDialogOpen.value = true
-// }
-
-// const saveClassMethodsEditor = () => {
-//   newModelForm.value.class_methods = JSON.parse(JSON.stringify(tempClassMethods.value))
-//   classMethodsEditorDialogOpen.value = false
-// }
-
-// const cancelClassMethodsEditor = () => {
-//   classMethodsEditorDialogOpen.value = false
-// }
-
-// const addClassMethod = () => {
-//   tempClassMethods.value.push({ name: '', params: [], content: '' })
-// }
-
-// const removeClassMethod = (index: number) => {
-//   tempClassMethods.value.splice(index, 1)
-// }
 
 // Meta properties handlers
 const addNewModelMetaProperty = () => {
@@ -269,14 +224,6 @@ const addNewModelMetaProperty = () => {
 const removeNewModelMetaProperty = (index: number) => {
   newModelForm.value.class_meta.splice(index, 1)
 }
-
-// const addNewModelClassMethods = () => {
-//   newModelForm.value.class_methods.push({ name: '', params: '', content: '' })
-// }
-
-// const removeNewModelClassMethod = (index: number) => {
-//   newModelForm.value.class_methods.splice(index, 1)
-// }
 
 const submitNewModel = async (e: Event) => {
   e.preventDefault()
@@ -288,12 +235,6 @@ const submitNewModel = async (e: Event) => {
     newModelLoading.value = false
     return
   }
-
-  // if (!newModelForm.value.content.trim()) {
-  //   newModelError.value = 'Model Content is required.'
-  //   newModelLoading.value = false
-  //   return
-  // }
   
   try {
     const rawName = newModelForm.value.name.trim();
@@ -437,15 +378,6 @@ const validateAndNormalizeParams = (rawParams: string): { error?: string, params
     .split(',')
     .map(p => p.trim())
     .filter(p => p)
-
-  // if (paramsArray.length === 0) {
-  //   return { error: 'Please enter at least one parameter' }
-  // }
-
-  // Ensure "self" is always the first parameter
-  // if (!paramsArray.includes('self')) {
-  //   paramsArray.unshift('self')
-  // }
 
   return { params: paramsArray }
 }
@@ -847,43 +779,6 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                               </Button>
                             </div>
 
-                            <!-- <div class="flex flex-col gap-4 border-t pt-4">
-                              <div class="flex items-center justify-between">
-                                <h3 class="text-lg font-medium">Model Content</h3>
-                                <Button 
-                                  type="button" 
-                                  variant="outline"
-                                  @click="openContentEditor"
-                                >
-                                  Edit Content
-                                </Button>
-                              </div>
-                              <div class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
-                                <span v-if="newModelForm.content">
-                                  Content defined ({{ newModelForm.content.split('\n').length }} lines)
-                                </span>
-                                <span v-else>No content defined</span>
-                              </div>
-                            </div>
-\
-                            <div class="flex flex-col gap-4 border-t pt-4">
-                              <div class="flex items-center justify-between">
-                                <h3 class="text-lg font-medium">Class Methods</h3>
-                                <Button 
-                                  type="button" 
-                                  variant="outline"
-                                  @click="openClassMethodsEditor"
-                                >
-                                  Edit Methods
-                                </Button>
-                              </div>
-                              <div class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
-                                <span v-if="newModelForm.class_methods.length > 0">
-                                  {{ newModelForm.class_methods.length }} method(s) defined
-                                </span>
-                                <span v-else>No methods defined</span>
-                              </div>
-                            </div>-->
                           </div> 
                             
                           <!-- Error Display -->
@@ -905,105 +800,10 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                         </form>
                       </DialogContent>
                     </Dialog>
-
-                    <!-- Content Editor Dialog -->
-                    <!-- <Dialog v-model:open="contentEditorDialogOpen">
-                      <DialogContent class="sm:max-w-5xl max-h-[90vh]">
-                        <DialogHeader>
-                          <DialogTitle aria-describedby="edit-model-content">Edit Model Content</DialogTitle>
-                        </DialogHeader>
-                        <div class="py-4 h-[60vh]">
-                          <Editor 
-                            v-model:code="tempContent" 
-                            :language="'python'"
-                            class="h-full border rounded-md"
-                          />
-                        </div>
-                        <DialogFooter class="gap-2">
-                          <Button variant="secondary" @click="cancelContentEditor">
-                            Cancel
-                          </Button>
-                          <Button variant="default" @click="saveContentEditor">
-                            Save Content
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog> -->
-
-                    <!-- Class Methods Editor Dialog -->
-                    <!-- <Dialog v-model:open="classMethodsEditorDialogOpen">
-                      <DialogContent class="sm:max-w-6xl max-h-[90vh] flex flex-col p-0">
-                        <DialogHeader class="px-6 pt-6">
-                          <DialogTitle aria-describedby="edit-class-methods">Edit Class Methods</DialogTitle>
-                        </DialogHeader>
-                        <div class="flex-1 overflow-y-auto px-6 py-4 sapce-y-4 min-h-0">
-                          <div v-if="tempClassMethods.length === 0" class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
-                            No class methods defined.
-                          </div>
-                          
-                          <div v-for="(method, index) in tempClassMethods" :key="index" class="border rounded-lg p-4 space-y-3">
-                            <div class="flex items-center gap-2">
-                              <div class="flex-1 grid grid-cols-2 gap-2">
-                                <div>
-                                  <Label class="text-sm">Method Name</Label>
-                                  <Input 
-                                    v-model="method.name" 
-                                    placeholder="method_name" 
-                                  />
-                                </div>
-                                <div>
-                                  <Label class="text-sm">Parameters</Label>
-                                  <Input 
-                                    v-model="method.params" 
-                                    placeholder="self, param1, param2" 
-                                  /> 
-                                </div>
-                              </div>
-                              <Button 
-                                type="button" 
-                                variant="destructive" 
-                                size="sm"
-                                @click="removeClassMethod(index)"
-                                class="mt-5"
-                              >
-                                <Trash2 class="h-2 w-2" />
-                              </Button>
-                            </div>
-                            <div>
-                              <Label class="text-sm mb-2 block">Method Content</Label>
-                              <div style="height: 200px;">
-                                <Editor 
-                                  v-model:code="method.content" 
-                                  :language="'python'"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            @click="addClassMethod"
-                            class="w-full"
-                          >
-                            <Plus class="mr-2 h-4 w-4" />
-                            Add Class Method
-                          </Button>
-                        </div>
-                        <DialogFooter class="gap-2">
-                          <Button variant="secondary" @click="cancelClassMethodsEditor">
-                            Cancel
-                          </Button>
-                          <Button variant="default" @click="saveClassMethodsEditor">
-                            Save Methods
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog> -->
           
                     <!-- Code Editor Dialog (Functions-like structure) -->
                     <Dialog v-model:open="codeEditorDialogOpen">
-                      <DialogContent class="sm:max-w-[90vw] max-h-[90vh] flex flex-col p-0">
+                      <DialogContent class="sm:max-w-[90vw] max-h-[90vh] flex flex-col p-0" @escapeKeyDown.prevent>
                         <DialogHeader class="px-6 pt-6 pb-4">
                           <DialogTitle aria-describedby="code-editor-dialog">
                             Edit Model Content: {{ selectedModel?.name }}
@@ -1014,9 +814,9 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                           <div class="flex space-y-8 md:space-y-0 lg:space-y-0 lg:space-x-8 h-full">
                             <!-- Sidebar with sections -->
                             <aside class="max-w-xs lg:w-64 lg:min-w-64 lg:flex-shrink-0">
-                              <!-- New View Button -->
+                              <!-- New Method Button -->
                               <div class="mb-4">
-                                  <Dialog v-model:open="isNewMethodDialogOpen" @update:open="resetNewMethodDialog">
+                                  <Dialog v-model:open="isNewMethodDialogOpen" @update:open="resetNewMethodDialog" @escapeKeyDown.prevent>
                                       <DialogTrigger as-child>
                                           <Button variant="outline" class="w-full text-xs">
                                               + Add Class Method
