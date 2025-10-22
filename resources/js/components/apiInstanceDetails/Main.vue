@@ -84,7 +84,7 @@ updateLocalData()
 // Computed properties for read-only fields
 const readOnlyData = computed(() => ({
     api: props.apiInstanceData?.api.name,
-    api_version: props.apiInstanceData?.api_version.stable === false ? 'Latest working version' : props.apiInstanceData?.api_version.summary ?? undefined,
+    api_version: props.apiInstanceData?.api_version==null ? 'Latest working version' : props.apiInstanceData?.api_version.stable === false ? 'Latest working version' : props.apiInstanceData?.api_version.summary ?? undefined,
     environment: props.apiInstanceData?.environment.name
 }))
 

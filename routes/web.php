@@ -110,9 +110,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/api_users', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersStore']);
         Route::put('/api_users/{id}', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersUpdate']);
         Route::delete('/api_users/{id}', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersDestroy']);
+        Route::get('/api_users/{id}/decrypted_secret', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersDecryptedSecret']);
 
         //API Versions
         Route::get('/apis/{id}/api_versions', [App\Http\Controllers\Api\ApiController::class, 'apiVersionsIndex']);
+        Route::get('/api_versions', [App\Http\Controllers\Api\ApiController::class, 'apiVersionsList']);
 
         // API Developer routes
         Route::get('/apis/{id}/developers', [App\Http\Controllers\Api\ApiDevelopersController::class, 'getApiDevelopers']);

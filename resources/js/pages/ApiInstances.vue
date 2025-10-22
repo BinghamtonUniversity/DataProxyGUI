@@ -533,7 +533,7 @@ const fetchAllData = async () => {
         value: env.id,
         color: env.type === 'test' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : env.type === 'dev' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
     }));
-
+    console.log("apiInstancesSchema.fields[3]", apiInstancesSchema.fields[3]);
     formConfig.fields[2].options = environmentsData.map((env: any) => ({
         label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
         value: env.id,
