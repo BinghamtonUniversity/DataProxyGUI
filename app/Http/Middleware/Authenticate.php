@@ -12,6 +12,7 @@ class Authenticate
     {
         if (!auth()->check()) {
             // Important: use 'away' to force a full-page redirect
+            $request->session()->put('url.intended', $request->fullUrl());
             return redirect()->away(route('oidc.redirect'));
         }
 
