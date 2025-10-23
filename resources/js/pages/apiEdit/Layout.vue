@@ -66,6 +66,7 @@ const instancesError = ref('')
 const showSearchModal = ref(false)
 const searchQuery = ref('')
 const searchResults = ref<any[]>([])
+const isVersionSwitch = ref(false)
 const isSearching = ref(false)
 
 // API Data Import/Export state
@@ -607,7 +608,7 @@ const switchToVersion = async (version: any) => {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`)
         }
-
+        isVersionSwitch.value = true
         const versionData = await response.json()
         
         // Update the API data with the fetched version
@@ -642,7 +643,7 @@ const switchToLatestVersion = async () => {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`)
         }
-
+        isVersionSwitch.value = false
         const versionData = await response.json()
         
         // Update the API data with the latest version
@@ -715,6 +716,13 @@ const openPublishModal = () => {
 
 // Publish API version
 const publishApiVersion = async (formData: any) => {
+    if (isVersionSwitch.value) {
+        const confirmed = confirm('You have switched to a different version. Are you sure you want to publish?')
+        if (!confirmed) {
+            isVersionSwitch.value = false
+            return
+        }
+    }
     try {
         const response = await fetch(`/ajax/apis/${props.api_id}/publish`, {
             method: 'PUT',
@@ -804,6 +812,13 @@ const handleSave = async () => {
     ) {
         showError('No version views found to save.')
         return
+    }
+    if (isVersionSwitch.value) {
+        const confirmed = confirm('You have switched to a different version. Are you sure you want to save?')
+        if (!confirmed) {
+            isVersionSwitch.value = false
+            return
+        }
     }
 
     const emptyViews = apiData.value.version_views.filter(

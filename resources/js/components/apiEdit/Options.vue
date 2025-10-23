@@ -23,6 +23,7 @@ interface Props {
     refreshApiData: () => void
     highlightQuery?: string
     highlightTarget?: string
+    isVersionSwitch?: boolean
 }
 
 const props = defineProps<Props>()
@@ -106,15 +107,15 @@ const isUpdatingFromApiData = ref(false);
 watch(() => props.apiData, (newApiData: ApiData | null) => {
     if (isUpdatingFromApiData.value) return;
     
-    console.log('API data changed, updating form data:', newApiData);
+
     isUpdatingFromApiData.value = true;
     
     if (newApiData && newApiData.options) {
-        console.log('Updating form data with new API data');
+   
         formData.value = newApiData.options;
     }
     else{
-        console.log('Initializing form data with empty fields');
+       
         formData.value = {
             name: 'options',
             fields: []
@@ -187,7 +188,7 @@ const handleImportSubmit = (formValues: any) => {
         }
         
         closeImportModal();
-        console.log('Options imported successfully:', formData.value);
+        
     } catch (error) {
         console.error('Import error:', error);
         alert('Invalid JSON format. Please check your JSON and try again.');

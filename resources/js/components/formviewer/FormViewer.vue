@@ -184,7 +184,7 @@ const props = defineProps({
   // Whether to show default actions when no custom actions are provided
   showDefaultActions: {
     type: Boolean,
-    default: true
+    default: null
   },
   // Custom cancel action - can be 'reset', 'close', or a custom function
   cancelAction: {
@@ -340,12 +340,10 @@ const getFieldComponent = (fieldType) => {
 // Handle field value changes
 const handleFieldChange = (fieldName, value) => {
 
-  
   // Check if this is a fieldset field
   const field = props.formConfig.fields.find(f => f && f.name === fieldName);
   if (field && field.type === 'fieldset') {
 
-    
     // If fieldset has array attribute, ensure it's an array
     if (field.array) {
       if (!Array.isArray(value)) {
@@ -366,10 +364,15 @@ const handleFieldChange = (fieldName, value) => {
     ...formData.value,
     [fieldName]: value
   };
-
-
   emit('update:modelValue', formData.value);
-  validateField(fieldName);
+  const errors = validateField(value, field);
+  if (errors.length > 0) {
+    handleValidationError(fieldName, { errors: errors });
+  } else {
+    handleValidationSuccess(fieldName, { value: value });
+  }
+  emit('validation-error', { field: fieldName, errors: errors });
+  
 };
 
 // Handle field validation errors
@@ -458,6 +461,7 @@ const getActionClasses = (action) => {
 
 // Validation functions
 const validateFieldLocal = (fieldName) => {
+
   const field = props.formConfig.fields.find(f => f.name === fieldName);
   if (!field) return true;
 
@@ -558,13 +562,13 @@ const handleAction = async (action) => {
 // Enhanced submit form with toastr support
 const submitForm = async () => {
   isSubmitting.value = true;
-  
+
   try {
     const isValid = validateForm();
     
     if (isValid) {
       emit('submit', formData.value);
-      
+     
       // Show success message if toastr is available
       if (typeof window !== 'undefined' && window.toastr) {
         window.toastr.success('Form submitted successfully!');
@@ -572,6 +576,7 @@ const submitForm = async () => {
         window.showToast('Form submitted successfully!', 'success');
       }
     } else {
+ 
       // Don't show toast messages for validation errors - let parent handle this
       // Just scroll to the first validation error field
       if (validationErrors.value.length > 0) {
