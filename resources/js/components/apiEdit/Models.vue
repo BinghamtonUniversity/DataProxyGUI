@@ -71,9 +71,13 @@ const saveCodeError = ref<string | null>(null)
 const saveCodeSuccess = ref(false)
 
 const isNewMethodDialogOpen = ref(false)
-const newMethod = ref({
+const newMethod = ref<{
+  name: string
+  params: string[]
+  content: string
+}>({
   name: '',
-  params: '',
+  params: [],
   content: ''
 })
 
@@ -125,7 +129,7 @@ const openEditor = (model: ModelData, index: number) => {
 
 const resetNewMethodDialog = () => {
     newMethod.value.name = ''
-    newMethod.value.params = ''
+    newMethod.value.params = []
     newMethod.value.content = ''
     createMethodError.value = null
     isCreatingMethod.value = false
@@ -179,7 +183,12 @@ const handleCodeSave = async (updatedCode: string) => {
     if (selectedSection.value === 'content') {
       updatedModel.content = updatedCode
     } else if (typeof selectedSection.value === 'object' && selectedSection.value?.type === 'method') {
-      if (updatedModel.class_methods) {
+      if (
+        Array.isArray(updatedModel.class_methods) &&
+        updatedModel.class_methods.length > 0 &&
+        selectedSection.value?.index != null &&
+        updatedModel.class_methods[selectedSection.value.index]
+      ) {
         updatedModel.class_methods[selectedSection.value.index].content = updatedCode
       }
     }
@@ -221,6 +230,15 @@ const addNewModelMetaProperty = () => {
 
 const removeNewModelMetaProperty = (index: number) => {
   newModelForm.value.class_meta.splice(index, 1)
+}
+
+// Paramaters handlers for new model
+const addMethodParam = () => {
+  newMethod.value.params.push('')
+}
+
+const removeMethodParam = (index: number) => {
+  newMethod.value.params.splice(index, 1)
 }
 
 const submitNewModel = async (e: Event) => {
@@ -352,7 +370,7 @@ const editMethodName = (method: { name: string; params: string[]; content: strin
     isEditingMethod.value = true
     methodBeingEdited.value = method
     newMethod.value.name = method.name
-    newMethod.value.params = method.params.join(', ')
+    newMethod.value.params = method.params ?? []
     // newMethod.value.content = method.content
     createMethodError.value = null
     isNewMethodDialogOpen.value = true
@@ -370,19 +388,14 @@ const validateMethodName = (name: string): string | null => {
   return null
 }
 
-const validateAndNormalizeParams = (rawParams: string): { error?: string, params?: string[] } => {
-  const trimmed = rawParams.trim()
+const validateAndNormalizeParams = (rawParams: string[]): { error?: string, params?: string[] } => {
 
-  if (trimmed.includes(' ') && !trimmed.includes(',')) {
-    return { error: 'Parameters must be comma-separated (e.g. param1, param2)' }
+  //if rawParams includes 'self', error
+  if(rawParams.includes('self')) {
+    return { error: 'The parameter "self" is not allowed. It is automatically included in instance methods.' }
   }
 
-  const paramsArray = trimmed
-    .split(',')
-    .map(p => p.trim())
-    .filter(p => p)
-
-  return { params: paramsArray }
+  return { params: rawParams }
 }
 
 
@@ -439,7 +452,7 @@ const handleCreateNewMethod = async () => {
 
     // Reset form and close dialog
     newMethod.value.name = ''
-    newMethod.value.params = ''
+    newMethod.value.params = []
     newMethod.value.content = ''
     isNewMethodDialogOpen.value = false
   } catch (e) {
@@ -674,7 +687,7 @@ onUnmounted(() => {
                                 ]" 
                                 @click="
                                   selectedModel = item;
-                                  selectedSection = 'properties'
+                                  selectSection('properties');
                                 "             
                             >
                                 {{ item.name }}
@@ -790,12 +803,50 @@ onUnmounted(() => {
                                 :disabled="isCreatingMethod"
                               />
                               <Label for="method-params">Method Parameters</Label>
-                              <Input
+                              <!-- <Input
                                 id="method-params"
                                 v-model="newMethod.params"
                                 placeholder="Enter parameters comma-separated (e.g. param1, param2)"
                                 :disabled="isCreatingMethod"
-                              />
+                              /> -->
+                              <div class="flex flex-col gap-4 border-t pt-4">
+                                <h3 class="text-lg font-medium">Method Parameters</h3>
+                                <div v-if="newMethod.params.length > 0" class="space-y-3">
+                                  <div class="grid grid-cols-9 items-center gap-2">
+                                    <Label class="col-span-4 text-sm font-semibold">Param</Label>
+                                  </div>
+                                  <div v-for="(param, index) in newMethod.params" :key="index" class="grid grid-cols-9 items-center gap-2">
+                                    <Input 
+                                      v-model="newMethod.params[index]" 
+                                      placeholder="Param" 
+                                      class="col-span-3"
+                                      required
+                                    />
+                                    <Button 
+                                      type="button" 
+                                      variant="destructive" 
+                                      size="sm"
+                                      @click="removeMethodParam(index)"
+                                      class="col-span-1"
+                                    >
+                                      ×
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
+                                  No parameters defined.
+                                </div>
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  size="sm"
+                                  @click="addMethodParam"
+                                  class="self-start"
+                                >
+                                  <Plus>Add</Plus> 
+                                </Button>
+                              </div>
+
                               
                             </div>
                             
