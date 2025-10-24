@@ -328,8 +328,16 @@
                            label="Name"
                            name="fieldName"
                            placeholder="Name"
-                           class="w-full"
+                           :class="[
+                             'w-full',
+                             !isFieldNameValid ? 'border-red-500 focus:border-red-500' : ''
+                           ]"
+                         
                          />
+                         <div v-if="!isFieldNameValid" class="mt-1 text-xs text-red-600">
+                           <i class="fas fa-exclamation-triangle mr-1"></i>
+                           Invalid characters will be automatically removed
+                         </div>
                        </div>
                      </div>
                     
@@ -1528,7 +1536,7 @@ function createAndAddField(event, position) {
         validationWhen: true, // Todo
         type: defaultType,
         label: defaultLabel,
-        name: `${defaultType}_${Date.now()}`,
+        name: `${defaultType}_${Date.now()}`.replace(/[^a-zA-Z0-9_-]/g, ''),
         placeholder: '',
         value: (type.category === 'boolean') ? 'false' : '',
         help: '',
@@ -1807,6 +1815,12 @@ const selectedField = computed(() => {
   }
   
   return field;
+});
+
+// Computed property to check if field name is valid
+const isFieldNameValid = computed(() => {
+  if (!selectedField.value?.name) return true;
+  return /^[a-zA-Z0-9_-]+$/.test(selectedField.value.name);
 });
 
 function getFieldJson(field) {
@@ -2323,13 +2337,27 @@ watch(
       const field = selectedField.value;
       if (!field.validate || field.validate.length === 0) {
         field.validate = [{
-          type: 'matches',
-          name: '',
+          type: 'none',
           conditions: true
         }];
       }
     }
   }
+);
+
+// Watch for name field changes to sanitize input
+watch(
+  () => selectedField.value?.name,
+  (newValue) => {
+    if (newValue && selectedField.value) {
+      // Remove invalid characters: only allow letters, numbers, underscores, and hyphens
+      const sanitized = newValue.replace(/[^a-zA-Z0-9_-]/g, '');
+      
+      selectedField.value.name = sanitized;
+      
+    }
+  },
+  { immediate: true }
 );
 
 // Watch for changes in formData prop to update internal state

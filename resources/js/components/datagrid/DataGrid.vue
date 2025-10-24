@@ -284,7 +284,8 @@
             :class="[
               currentTheme.row,
               idx % 2 === 0 ? currentTheme.rowEven : currentTheme.rowOdd,
-              currentTheme.rowHover
+              currentTheme.rowHover,
+              props.clickableRows ? 'cursor-pointer' : ''
             ]"
           >
             <td :class="[currentTheme.cell, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']" @click.stop>
@@ -303,8 +304,26 @@
               />
             </td>
             <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.cell]">
+              <!-- Render merged array objects if this column is a merge target -->
+              <span v-if="col.mergedFrom && getMergedArrayData(row, col.mergedFrom).length > 0">
+                <div class="flex flex-wrap gap-1">
+                  <div 
+                    v-for="(item, itemIndex) in getMergedArrayData(row, col.mergedFrom)" 
+                    :key="itemIndex"
+                    :class="[
+                      'inline-flex flex-col p-1 rounded-lg border shadow-sm max-w-32',
+                      item.targetColor || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                    ]"
+                  >
+                    <div class="text-xs font-semibold truncate">
+                      {{ item[item.targetObjectAttribute] || item.name || item }}
+                    </div>
+                  </div>
+                </div>
+              </span>
+              
               <!-- Render array of objects if isArrayObject is true -->
-              <span v-if="col.isArrayObject && getArrayData(row[col.key]) && getArrayData(row[col.key]).length > 0">
+              <span v-else-if="col.isArrayObject && getArrayData(row[col.key]) && getArrayData(row[col.key]).length > 0">
                 <div class="flex flex-wrap gap-1">
                   <div 
                     v-for="(item, itemIndex) in getArrayData(row[col.key])" 
@@ -352,7 +371,10 @@
                 </span>
               </span>
               <!-- Regular text for non-option columns -->
-              <span v-else>
+              <span v-else :class="col.labelColor ? [
+                'inline-flex items-center px-2 py-1 rounded border text-sm',
+                col.labelColor
+              ] : ''">
                 {{ row[col.key] }}
               </span>
             </td>
@@ -362,35 +384,53 @@
                 <button 
                   v-if="rowActions.length === 1"
                   @click="emitAction(rowActions[0].type, row)" 
-                  :class="[currentTheme.menuButton, rowActions[0].colorClass]"
+                  :class="[currentTheme.menuButton, rowActions[0].colorClass, 'cursor-pointer']"
+                  :title="!props.rowActionLabels ? rowActions[0].label : ''"
                 >
-                  <font-awesome-icon v-if="rowActions[0].icon" :icon="rowActions[0].icon" class="mr-2" />
-                  {{ rowActions[0].label }}
+                  <font-awesome-icon v-if="rowActions[0].icon" :icon="rowActions[0].icon" :class="props.rowActionLabels ? 'mr-2' : ''" />
+                  <span v-if="props.rowActionLabels">{{ rowActions[0].label }}</span>
                 </button>
                 
-                <!-- Dropdown menu when multiple actions -->
+                <!-- Multiple actions as individual buttons when rowActionDropdown is false -->
+                <div v-else-if="!props.rowActionDropdown" class="flex gap-1">
+                  <button 
+                    v-for="action in rowActions" 
+                    :key="action.type"
+                    @click="emitAction(action.type, row)" 
+                    :class="[currentTheme.menuButton, action.colorClass, 'text-sm px-3 py-2 cursor-pointer']"
+                    :title="!props.rowActionLabels ? action.label : ''"
+                  >
+                    <font-awesome-icon v-if="action.icon" :icon="action.icon" :class="props.rowActionLabels ? 'mr-1.5' : ''" />
+                    <span v-if="props.rowActionLabels">{{ action.label }}</span>
+                  </button>
+                </div>
+                
+                <!-- Dropdown menu when multiple actions and rowActionDropdown is true -->
                 <div v-else>
-                  <button @click="toggleMenu(row.id || row.name || idx)" :class="currentTheme.menuButton">
+                  <button @click="toggleMenu(row.id || row.name || idx)" :class="[currentTheme.menuButton, 'cursor-pointer']" :data-row-id="row.id || row.name || idx">
                     <svg :class="currentTheme.menuIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <circle cx="12" cy="5" r="1.5"/>
                       <circle cx="12" cy="12" r="1.5"/>
                       <circle cx="12" cy="19" r="1.5"/>
                     </svg>
                   </button>
-                  <div v-if="openMenuId === (row.id || row.name || idx)" :class="currentTheme.dropdown">
-                    <slot name="row-actions" :row="row" :close-menu="closeMenu">
-                      <!-- Configurable row actions -->
-                      <button 
-                        v-for="action in rowActions" 
-                        :key="action.type"
-                        @click="emitAction(action.type, row); closeMenu()" 
-                        :class="[currentTheme.dropdownItem, action.colorClass]"
-                      >
-                        <font-awesome-icon v-if="action.icon" :icon="action.icon" class="mr-2" />
-                        {{ action.label }}
-                      </button>
-                    </slot>
-                  </div>
+                  <Teleport to="body">
+                    <div v-if="openMenuId === (row.id || row.name || idx)" :class="[currentTheme.dropdown, 'fixed z-50']" :style="getDropdownPosition(row.id || row.name || idx)">
+                      <slot name="row-actions" :row="row" :close-menu="closeMenu">
+                        <!-- Configurable row actions -->
+                        <button 
+                          v-for="action in rowActions" 
+                          :key="action.type"
+                          @click="emitAction(action.type, row); closeMenu()" 
+                          :class="[currentTheme.dropdownItem, action.colorClass, 'cursor-pointer']"
+                          :title="!props.rowActionLabels ? action.label : ''"
+                        >
+                          <font-awesome-icon v-if="action.icon" :icon="action.icon" :class="props.rowActionLabels ? 'mr-2' : ''" />
+                          <span v-if="props.rowActionLabels">{{ action.label }}</span>
+                        </button>
+                      </slot>
+                    </div>
+                  </Teleport>
                 </div>
               </div>
             </td>
@@ -435,7 +475,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue';
 import { getThemeClasses, getDynamicColor } from '../Theme.js';
 import TextField from '../fields/TextField.vue';
 import CheckboxField from '../fields/CheckboxField.vue';
@@ -526,6 +566,21 @@ const props = defineProps({
   formData: {
     type: Array,
     default: () => []
+  },
+  // Control cursor behavior
+  clickableRows: {
+    type: Boolean,
+    default: false
+  },
+  // Control row action display
+  rowActionDropdown: {
+    type: Boolean,
+    default: true
+  },
+  // Control row action labels
+  rowActionLabels: {
+    type: Boolean,
+    default: true
   }
 });
 const emit = defineEmits(['rowClick', 'rowActionHandler', 'create', 'edit', 'multiple-edit', 'delete', 'upload', 'actionHandler', 'action']);
@@ -636,7 +691,7 @@ const allColumns = computed(() => {
   const config = props.schema || props.formConfig;
   
   if (config?.fields && config.fields.length > 0) {
-    return config.fields.map(field => ({
+    const columns = config.fields.map(field => ({
       key: field.name,
       label: field.label || field.name,
       type: field.type,
@@ -646,8 +701,28 @@ const allColumns = computed(() => {
       showColumn: field.showColumn !== false, // Default to true if not specified
       isArrayObject: field.isArrayObject || false,
       targetObjectAttribute: field.targetObjectAttribute || null,
-      targetColor: field.targetColor || null
+      targetColor: field.targetColor || null,
+      labelColor: field.labelColor || null,
+      mergedTo: field.mergedTo || null,
+      mergedFrom: null // Will be set below
     }));
+    
+    // Process mergedTo relationships
+    columns.forEach(col => {
+      if (col.mergedTo) {
+        const targetCol = columns.find(c => c.key === col.mergedTo);
+        if (targetCol) {
+          targetCol.mergedFrom = targetCol.mergedFrom || [];
+          targetCol.mergedFrom.push({
+            sourceKey: col.key,
+            targetColor: col.targetColor,
+            targetObjectAttribute: col.targetObjectAttribute
+          });
+        }
+      }
+    });
+    
+    return columns;
   }
   
   // Fall back to provided columns prop
@@ -710,6 +785,30 @@ function getArrayData(data) {
   }
 
   return null;
+}
+
+// Helper function to get merged array data from multiple source columns
+function getMergedArrayData(row, mergedFrom) {
+  if (!mergedFrom || !Array.isArray(mergedFrom)) {
+    return [];
+  }
+  
+  const mergedData = [];
+  
+  mergedFrom.forEach(source => {
+    const sourceData = getArrayData(row[source.sourceKey]);
+    if (sourceData && sourceData.length > 0) {
+      sourceData.forEach(item => {
+        mergedData.push({
+          ...item,
+          targetColor: source.targetColor,
+          targetObjectAttribute: source.targetObjectAttribute
+        });
+      });
+    }
+  });
+  
+  return mergedData;
 }
 
 function onSearchInput() {
@@ -1144,6 +1243,11 @@ onMounted(() => {
     if (showColumnSelector.value && !event.target.closest('.column-selector-container')) {
       showColumnSelector.value = false;
     }
+    
+    // Close dropdown menu when clicking outside
+    if (openMenuId.value && !event.target.closest('[data-row-id]') && !event.target.closest('.fixed.z-50')) {
+      openMenuId.value = null;
+    }
   });
 });
 function emitRowClick(row) {
@@ -1160,6 +1264,35 @@ function toggleMenu(id) {
 function closeMenu() {
   console.log('Closing menu, current openMenuId:', openMenuId.value);
   openMenuId.value = null;
+}
+
+// Calculate dropdown position
+function getDropdownPosition(rowId) {
+  const button = document.querySelector(`[data-row-id="${rowId}"]`);
+  if (!button) return {};
+  
+  const rect = button.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  // Calculate position
+  let left = rect.right;
+  let top = rect.top;
+  
+  // Adjust if dropdown would go off-screen
+  if (left + 200 > viewportWidth) {
+    left = rect.left - 200; // Show to the left instead
+  }
+  
+  if (top + 150 > viewportHeight) {
+    top = rect.bottom - 150; // Show above instead
+  }
+  
+  return {
+    left: `${left}px`,
+    top: `${top}px`,
+    minWidth: '200px'
+  };
 }
 
 function onCreate() {
