@@ -260,17 +260,19 @@ const submitNewModel = async (e: Event) => {
       return;
     }
 
+    const isEditing = isEditMode.value && editingModelIndex.value !== null
+
     const newModel = {
       name: rawName,
-      content: newModelForm.value.content,
+      content: isEditing ? selectedModel.value?.content || '' : '',
       inheritance: newModelForm.value.inheritance,
       class_meta: newModelForm.value.class_meta.filter(meta => meta.name.trim() && meta.value.trim()),
-      class_methods: []
+      class_methods: isEditing ? selectedModel.value?.class_methods || [] : []
     }
     
     let updatedApiData
 
-    if (isEditMode.value && editingModelIndex.value !== null) {
+    if (isEditing) {
       // Edit existing model
       updatedApiData = {
         ...props.apiData,
@@ -289,6 +291,9 @@ const submitNewModel = async (e: Event) => {
     }
     // console.log('Updated API Data:', updatedApiData)
     props.updateApiData(updatedApiData)
+    if (selectedModel.value) {
+      selectedModel.value = newModel
+    }
     if(isEditMode.value) {
       success('Updated successfully', 'Model Updated');
     } else {
@@ -338,7 +343,7 @@ const openEditModelDialog = (model: ModelData, index: number) => {
     content: model.content || '',
     inheritance: model.inheritance || 'models.Model',
     class_meta: model.class_meta ? JSON.parse(JSON.stringify(model.class_meta)) : [],
-    class_methods: []
+    class_methods: selectedModel.value?.class_methods || []
   }
   newModelDialogOpen.value = true
 }
@@ -397,7 +402,7 @@ const handleCreateNewMethod = async () => {
   }
 
   // Duplicate check
-  const existingMethod = selectedModel.value?.class_methods.find(m => m.name === name)
+  const existingMethod = selectedModel.value?.class_methods?.find(m => m.name === name)
   if (existingMethod) {
     createMethodError.value = 'A method with this name already exists'
     return
@@ -467,7 +472,7 @@ const handleUpdateMethodName = async () => {
   }
 
   // Duplicate check
-  const existingMethod = selectedModel.value?.class_methods.find(
+  const existingMethod = selectedModel.value?.class_methods?.find(
     m => m.name === trimmedName && m !== methodBeingEdited.value
   )
   if (existingMethod) {
@@ -516,7 +521,7 @@ const handleDeleteMethod = (method: { name: string; params: string[]; content: s
         return
     }
 
-    selectedModel.value.class_methods = selectedModel.value.class_methods.filter(m => m.name !== method.name)
+    selectedModel.value.class_methods = selectedModel.value.class_methods?.filter(m => m.name !== method.name)
 }
 
 // Clean up timeouts when component unmounts
@@ -667,7 +672,10 @@ onUnmounted(() => {
                                     'text-xs',
                                     selectedModel?.name === item.name ? 'bg-accent' : ''
                                 ]" 
-                                @click="selectedModel = item"             
+                                @click="
+                                  selectedModel = item;
+                                  selectedSection = 'properties'
+                                "             
                             >
                                 {{ item.name }}
                             </Button>
@@ -788,6 +796,7 @@ onUnmounted(() => {
                                 placeholder="Enter parameters comma-separated (e.g. param1, param2)"
                                 :disabled="isCreatingMethod"
                               />
+                              
                             </div>
                             
                             <div v-if="createMethodError" class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
