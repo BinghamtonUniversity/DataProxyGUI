@@ -14,6 +14,7 @@ const props = defineProps<{
   isSaving?: boolean
   saveError?: string,
   saveSuccess?: Boolean,
+  hasUnsavedChanges?: Boolean
 }>()
 
 const emit = defineEmits<{
@@ -23,11 +24,11 @@ const emit = defineEmits<{
 
 const language = ref(props.language ?? 'python')
 const code = ref(props.code)
-const hasUnsavedChanges = ref(false)
+// const hasUnsavedChanges = ref(false)
 
 watch(() => props.code, (val) => { 
   code.value = val
-  hasUnsavedChanges.value = false
+  // props.hasUnsavedChanges.value = false
 })
 watch(() => props.language, (val) => { 
   if (val) language.value = val 
@@ -35,7 +36,7 @@ watch(() => props.language, (val) => {
 
 // Track changes to show unsaved status
 watch(code, (newCode) => {
-  hasUnsavedChanges.value = newCode !== props.code
+  // hasUnsavedChanges.value = newCode !== props.code
   emit('update:code', newCode)
 })
 
