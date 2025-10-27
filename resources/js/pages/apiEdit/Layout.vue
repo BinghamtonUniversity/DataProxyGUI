@@ -3,10 +3,8 @@ import { onMounted, ref, computed, onUnmounted, watch, h } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem, Api, ApiData, ApiInstance, Environment } from '@/types'
-import Heading from '@/components/Heading.vue'
 import { Button } from '@/components/ui/button'
 
-// Import your components (convert them to pure components)
 import Routes from '@/components/apiEdit/Routes.vue'
 import Resources from '@/components/apiEdit/Resources.vue'
 import Functions from '@/components/apiEdit/Functions.vue'
@@ -23,10 +21,13 @@ import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
     api_id: string
-    activeTab: string
+    activeTab?: string 
 }
 
 const props = defineProps<Props>()
+
+// Local state for active tab (client-side only)
+const currentTab = ref(props.activeTab || 'routes')
 
 // Track unsaved changes
 const hasUnsavedChanges = ref(false)
@@ -35,81 +36,91 @@ const originalApiData = ref<ApiData | null>(null)
 // Toaster
 const { success, error: showError, warning, info } = useToaster()
 
-// Versions modal state
 const showVersionsModal = ref(false)
 const versions = ref<any[]>([])
 const loadingVersions = ref(false)
 const versionsError = ref('')
 
-// View version modal state
 const showViewVersionModal = ref(false)
 const selectedVersion = ref<any>(null)
 const loadingVersionDetails = ref(false)
 const versionDetailsError = ref('')
 
-// Diff view state
-
-// Publish modal state
 const showPublishModal = ref(false)
 const publishFormData = ref({
     summary: '',
     description: ''
 })
 
-// Instances modal state
 const showInstancesModal = ref(false)
 const instances = ref<ApiInstance[]>([])
 const loadingInstances = ref(false)
 const instancesError = ref('')
 
-// Search functionality state
 const showSearchModal = ref(false)
 const searchQuery = ref('')
 const searchResults = ref<any[]>([])
 const isSearching = ref(false)
 
-// API Data Import/Export state
 const showApiDataImportModal = ref(false)
 const apiDataImportJson = ref('')
 
-// API Data Import/Export functions
-const openApiDataImportModal = () => {
-    showApiDataImportModal.value = true
-    apiDataImportJson.value = JSON.stringify(apiData.value, null, 2)
-}
+const showApiDevelopersModal = ref(false)
+const showDevelopersDropdown = ref(false)
+const dropdownRef = ref<HTMLElement | null>(null)
 
-const closeApiDataImportModal = () => {
-    showApiDataImportModal.value = false
-    apiDataImportJson.value = ''
-}
+const apiData = ref<ApiData | null>(null)
+const api = ref<Api | null>(null)
+const environment = ref<Environment[]>([])
+const loadingApiData = ref(true)
+const apiError = ref('')
+const apiBaseUrl = '/api'
+const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL 
+const hermesBaseUrl = import.meta.env.VITE_HERMES_BASEURL
 
-const handleApiDataImport = (formData: any) => {
-    try {
-        const importedData = JSON.parse(formData.jsonData)
-        
-        // Validate the imported data structure
-        if (!importedData || typeof importedData !== 'object') {
-            throw new Error('Invalid JSON structure')
-        }
-        
-        // Validate required API data fields
-        const requiredFields = ['version_urls', 'version_views', 'version_models', 'version_files', 'resources']
-        const missingFields = requiredFields.filter(field => !importedData.hasOwnProperty(field))
-        
-        if (missingFields.length > 0) {
-            throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
-        }
-        updateApiData(importedData)
-        originalApiData.value = JSON.parse(JSON.stringify(importedData))
-        hasUnsavedChanges.value = true
-        closeApiDataImportModal()
-        success('API data imported successfully!', 'Import Successful')
-        
-    } catch (error: any) {
-        showError(error.message || 'Invalid JSON format. Please check your JSON and try again.', 'Import Error')
+const highlightQuery = ref<string>('')
+const highlightTarget = ref<string>('')
+
+const breadcrumbItems: BreadcrumbItem[] = [
+    {
+        title: `API Edit`,
+        href: `/apis/${props.api_id}/routes`,
+    },
+]
+
+// Tab configuration
+const tabs = [
+    { 
+        id: 'routes', 
+        title: 'Routes', 
+        component: Routes
+    },
+    { 
+        id: 'resources', 
+        title: 'Resources', 
+        component: Resources
+    },
+    { 
+        id: 'functions', 
+        title: 'Functions', 
+        component: Functions
+    },
+    { 
+        id: 'models', 
+        title: 'Models', 
+        component: Models
+    },
+    { 
+        id: 'files', 
+        title: 'Files', 
+        component: Files
+    },
+    { 
+        id: 'options', 
+        title: 'Options', 
+        component: Options
     }
-}
-
+]
 
 const publishFormConfig = ref({
     label: 'Publish New Version',
@@ -135,7 +146,6 @@ const publishFormConfig = ref({
     ]
 })
 
-// API Data Import form configuration
 const apiDataImportFormConfig = ref({
     label: 'Import API Data',
     description: 'Import complete API data from JSON',
@@ -156,82 +166,15 @@ const apiDataImportFormConfig = ref({
     ]
 })
 
-const breadcrumbItems: BreadcrumbItem[] = [
-    {
-        title: `API Edit`,
-        href: `/apis/${props.api_id}/routes`,
-    },
-]
-
-// Tab configuration
-const tabs = [
-    { 
-        id: 'routes', 
-        title: 'Routes', 
-        component: Routes,
-        routeName: 'apiEdit.index'
-    },
-    { 
-        id: 'resources', 
-        title: 'Resources', 
-        component: Resources,
-        routeName: 'apiEdit.index'
-    },
-    { 
-        id: 'functions', 
-        title: 'Functions', 
-        component: Functions,
-        routeName: 'apiEdit.index'
-    },
-    { 
-        id: 'models', 
-        title: 'Models', 
-        component: Models,
-        routeName: 'apiEdit.index'
-    },
-    { 
-        id: 'files', 
-        title: 'Files', 
-        component: Files,
-        routeName: 'apiEdit.index'
-    },
-    { 
-        id: 'options', 
-        title: 'Options', 
-        component: Options,
-        routeName: 'apiEdit.index'
-    }
-]
-
-// Data fetching logic - runs once when component mounts
-const apiData = ref<ApiData | null>(null)
-const api = ref<Api | null>(null)
-const environment = ref<Environment[]>([])
-const loadingApiData = ref(true)
-const apiError = ref('')
-const apiBaseUrl = '/api'
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL 
-const hermesBaseUrl = import.meta.env.VITE_HERMES_BASEURL
-
-// Modal state for API Developers
-const showApiDevelopersModal = ref(false)
-
-// Dropdown state for Developers button
-const showDevelopersDropdown = ref(false)
-const dropdownRef = ref<HTMLElement | null>(null)
-
-
 const fetchApi = async () => {
     const response = await fetch(`/ajax/apis/${props.api_id}`)
     if (!response.ok) throw new Error('Failed to fetch API')
-    
     api.value = await response.json()
 }
 
 const fetchEnvironment = async () => {
     const response = await fetch(`/api/environments`)
     if (!response.ok) throw new Error('Failed to fetch Environment')
-    
     environment.value = await response.json()
 }
 
@@ -239,15 +182,11 @@ const fetchApiData = async () => {
     loadingApiData.value = true
     apiError.value = ''
     try {
-
         const response = await fetch(`/ajax/apis/${props.api_id}/versions/latest`)
-        // console.log('Fetch response:', response)
-
         if (!response.ok) throw new Error('Failed to fetch API data')
         const data = await response.json()
         apiData.value = data
-
-        originalApiData.value = JSON.parse(JSON.stringify(data)) // Deep clone
+        originalApiData.value = JSON.parse(JSON.stringify(data))
         hasUnsavedChanges.value = false
     } catch (e: any) {
         apiError.value = e.message || 'Error fetching API data'
@@ -257,13 +196,21 @@ const fetchApiData = async () => {
     }
 }
 
-// Watch for changes in apiData
-watch(apiData, (newVal) => {
-    if (originalApiData.value && newVal) {
-        // Compare to detect changes
+watch(apiData, (newVal, oldVal) => {
+    // Guard against null values
+    if (!newVal || !originalApiData.value || !oldVal) {
+        hasUnsavedChanges.value = false
+        return
+    }
+    
+    try {
         hasUnsavedChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalApiData.value)
+    } catch (error) {
+        console.error('Error comparing API data:', error)
+        hasUnsavedChanges.value = false
     }
 }, { deep: true })
+
 
 const updateApiData = (updatedApiData: ApiData) => {
     apiData.value = updatedApiData
@@ -274,7 +221,7 @@ const refreshApiData = () => {
     fetchApiData()
 }
 
-// Fetch API versions
+
 const fetchVersions = async () => {
     loadingVersions.value = true
     versionsError.value = ''
@@ -302,7 +249,6 @@ const fetchVersions = async () => {
     }
 }
 
-// Fetch API instances
 const fetchInstances = async () => {
     loadingInstances.value = true
     instancesError.value = ''
@@ -331,37 +277,23 @@ const fetchInstances = async () => {
     }
 }
 
-// View instance - redirect to instance URL
 const viewInstance = (instance: any) => {
-
-    // Construct the instance URL based on the pattern you provided
-    // Format: http://127.0.0.1:8001/api_instances/{instance_id}/main
     const instanceUrl = `${window.location.origin}/api_instances/${instance.id}/main`
-    
-    // Open in new tab
     window.open(instanceUrl, '_blank')
 }
-// View instance - redirect to instance URL
-const directToInstanceRoute = (instance: any) => {
 
+const directToInstanceRoute = (instance: any) => {
     let instanceUrl;
-    // Construct the instance URL based on the pattern you provided
-    // Format: http://127.0.0.1:8001/api_instances/{instance_id}/main
     if (api.value?.api_type === 'php') {
          instanceUrl = `${hermesBaseUrl}/api_instances/${instance.id}/main`
     } else {
         let domain = environment.value.find((env: Environment) => env.id === instance.environment_id)?.domain
-        // Extract just the base domain part (remove the path)
-        const baseDomain = domain?.split('/').slice(0, 3).join('/') // Keep only protocol://domain:port
+        const baseDomain = domain?.split('/').slice(0, 3).join('/')
         instanceUrl = `http://${baseDomain}:8000/${instance.route}`
     }
-    console.log(instanceUrl)
-    // Navigate to the instance URL
     window.open(instanceUrl, '_blank')
 }
 
-
-// Search functionality
 const performSearch = () => {
     if (!apiData.value || !searchQuery.value.trim()) {
         searchResults.value = []
@@ -371,32 +303,16 @@ const performSearch = () => {
     isSearching.value = true
     const query = searchQuery.value.toLowerCase().trim()
     const results: any[] = []
-
     const data = apiData.value as any
-    
 
-
-    // Try different possible property names for each category
     const searchInArray = (items: any[], category: string, type: string) => {
-        if (!items || !Array.isArray(items)) {
-            return
-        }
+        if (!items || !Array.isArray(items)) return
 
-        items.forEach((item: any, index: number) => {
-
-            
-            // Try different possible name fields
+        items.forEach((item: any) => {
             const name = item.name || item.title || item.function_name || item.route_name || item.model_name || item.file_name || item.view_name || item.url_name
-
-            
-            // Search in name
             const nameMatch = name && name.toLowerCase().includes(query)
-            
-            // Search in content/description fields
             const content = item.content || item.description || item.path || ''
             const contentMatch = content && content.toLowerCase().includes(query)
-            
-            // Search in other text fields
             const otherFields = [
                 item.verb,
                 item.model_name,
@@ -404,13 +320,11 @@ const performSearch = () => {
                 ...(item.required || []),
                 ...(item.optional || [])
             ].filter(Boolean)
-            
             const otherFieldsMatch = otherFields.some(field => 
                 field && field.toString().toLowerCase().includes(query)
             )
             
             if (nameMatch || contentMatch || otherFieldsMatch) {
-
                 results.push({
                     category: category,
                     type: type,
@@ -422,22 +336,12 @@ const performSearch = () => {
         })
     }
 
-    // Search in routes - using version_urls (which seems to be the routes)
     searchInArray(data.version_urls || [], 'Routes', 'route')
-
-    // Search in resources - using resources property
     searchInArray(data.resources || [], 'Resources', 'resource')
-
-    // Search in functions - using version_views (which might be functions/views)
     searchInArray(data.version_views || [], 'Functions', 'function')
-
-    // Search in models - using version_models
     searchInArray(data.version_models || [], 'Models', 'model')
-
-    // Search in files - using version_files
     searchInArray(data.version_files || [], 'Files', 'file')
 
-    // Search in top-level API data fields
     const topLevelFields = [
         { value: data.summary, label: 'Summary' },
         { value: data.description, label: 'Description' }
@@ -459,37 +363,25 @@ const performSearch = () => {
     isSearching.value = false
 }
 
-// Open search modal
 const openSearchModal = () => {
     showSearchModal.value = true
     searchQuery.value = ''
     searchResults.value = []
 }
 
-// Close search modal
 const closeSearchModal = () => {
     showSearchModal.value = false
     searchQuery.value = ''
     searchResults.value = []
 }
 
-// Search highlighting state
-const highlightQuery = ref<string>('')
-const highlightTarget = ref<string>('')
-
-// Handle search result click
 const handleSearchResultClick = (result: any) => {
-    // Store the search query before closing the modal
     const currentSearchQuery = searchQuery.value
-    
-    // Close the search modal
     closeSearchModal()
     
-    // Set highlighting state
     highlightQuery.value = currentSearchQuery
     highlightTarget.value = result.name
     
-    // Navigate to the appropriate tab based on the result category
     switch (result.category) {
         case 'Routes':
             navigateToTab('routes')
@@ -507,27 +399,23 @@ const handleSearchResultClick = (result: any) => {
             navigateToTab('files')
             break
         case 'API Info':
-            // For API info, we could show a toast or stay on current tab
             info(`Found in API ${result.name}: ${result.description}`)
             return
     }
     
-    // Handle highlighting for Routes and Resources (UI highlighting)
     if (result.category === 'Routes' || result.category === 'Resources') {
         setTimeout(() => {
             const element = document.querySelector(`[data-${result.category.toLowerCase()}-name="${result.name}"]`)
             if (element) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                // Add a temporary highlight effect
                 element.classList.add('search-highlight-item')
                 setTimeout(() => {
                     element.classList.remove('search-highlight-item')
                 }, 3000)
             }
-        }, 500) // Increased delay to ensure tab navigation and component mounting
+        }, 500)
     }
     
-    // Emit custom event for Functions and Files (editor highlighting)
     if (result.category === 'Functions' || result.category === 'Files') {
         setTimeout(() => {
             window.dispatchEvent(new CustomEvent('search-result-selected', {
@@ -539,11 +427,10 @@ const handleSearchResultClick = (result: any) => {
                     searchQuery: currentSearchQuery
                 }
             }))
-        }, 1000) // Increased delay to ensure editor is ready
+        }, 1000)
     }
 }
 
-// Group search results by category
 const getGroupedResults = () => {
     const grouped: { [key: string]: any[] } = {}
     
@@ -560,7 +447,6 @@ const getGroupedResults = () => {
     }))
 }
 
-// Fetch version details for viewing
 const fetchVersionDetails = async (versionId: number) => {
     loadingVersionDetails.value = true
     versionDetailsError.value = ''
@@ -591,7 +477,6 @@ const fetchVersionDetails = async (versionId: number) => {
     }
 }
 
-// Switch to a different version
 const switchToVersion = async (version: any) => {
     try {
         const response = await fetch(`/ajax/apis/${props.api_id}/versions/${version.id}`, {
@@ -609,15 +494,10 @@ const switchToVersion = async (version: any) => {
         }
 
         const versionData = await response.json()
-        
-        // Update the API data with the fetched version
         updateApiData(versionData)
         originalApiData.value = JSON.parse(JSON.stringify(versionData))
         hasUnsavedChanges.value = true
-        
-        // Close the versions modal
         showVersionsModal.value = false
-        
         success(`Switched to version: ${version.summary || 'Latest/Working'}`, 'Version Switched')
         
     } catch (e: any) {
@@ -625,10 +505,8 @@ const switchToVersion = async (version: any) => {
     }
 }
 
-// Switch back to the latest version
 const switchToLatestVersion = async () => {
     try {
-        // Fetch the latest version data
         const response = await fetch(`/ajax/apis/${props.api_id}/versions/latest`, {
             method: 'GET',
             headers: {
@@ -644,15 +522,10 @@ const switchToLatestVersion = async () => {
         }
 
         const versionData = await response.json()
-        
-        // Update the API data with the latest version
         updateApiData(versionData)
         originalApiData.value = JSON.parse(JSON.stringify(versionData))
         hasUnsavedChanges.value = true
-        
-        // Close the versions modal
         showVersionsModal.value = false
-        
         success('Switched back to latest version', 'Version Switched')
         
     } catch (e: any) {
@@ -660,47 +533,34 @@ const switchToLatestVersion = async () => {
     }
 }
 
-// Open view version modal
 const openViewVersionModal = async (version: any) => {
     selectedVersion.value = version
     showViewVersionModal.value = true
-    // Fetch detailed version data
     await fetchVersionDetails(version.id)
 }
 
-
-// Open diff modal - navigate to comparison page
 const openDiffModal = async (version: any) => {
-    // Check if this is the latest version by comparing with the last item in versions array
     const isLatest = versions.value.length > 0 && version.id === versions.value[versions.value.length - 1].id
     
     if (isLatest) {
-        // If it's the latest version, switch back to latest (like switchToVersion but for latest)
         await switchToLatestVersion()
         return
     }
     
-    // Navigate to comparison page
     window.location.href = `/apis/${props.api_id}/compare/${version.id}`
 }
 
-// Check if latest version is already stable
 const isLatestVersionStable = computed(() => {
     if (!apiData.value) return false
     return apiData.value.stable === true
 })
 
-// Get current version name for display
 const currentVersionName = computed(() => {
     if (!apiData.value) return 'Loading...'
-    
-    // Use the summary from the current API data
     return apiData.value.summary || (apiData.value.stable ? 'Latest' : 'Latest/Working')
 })
 
-// Open publish modal
 const openPublishModal = () => {
-    // Check if latest version is already stable
     if (isLatestVersionStable.value) {
         warning('The latest version is already published. Please make some changes to create a new version.', 'Version Already Published')
         return
@@ -713,7 +573,6 @@ const openPublishModal = () => {
     showPublishModal.value = true
 }
 
-// Publish API version
 const publishApiVersion = async (formData: any) => {
     try {
         const response = await fetch(`/ajax/apis/${props.api_id}/publish`, {
@@ -737,8 +596,6 @@ const publishApiVersion = async (formData: any) => {
 
         const publishedVersion = await response.json()
         success('API version published successfully!', 'Version Published')
-        
-        // Close modal and refresh API data
         showPublishModal.value = false
         await fetchApiData()
         
@@ -747,7 +604,6 @@ const publishApiVersion = async (formData: any) => {
     }
 }
 
-// Modal functions for API Developers
 const openApiDevelopersModal = () => {
     showApiDevelopersModal.value = true
 }
@@ -756,7 +612,6 @@ const closeApiDevelopersModal = () => {
     showApiDevelopersModal.value = false
 }
 
-// Dropdown functions for Developers button
 const toggleDevelopersDropdown = () => {
     showDevelopersDropdown.value = !showDevelopersDropdown.value
 }
@@ -766,23 +621,17 @@ const handleDevelopersAction = (action: string) => {
     
     switch (action) {
         case 'export':
-            // Open export URL in new tab for other tabs
             const exportUrl = `http://127.0.0.1:8001/apis/${props.api_id}/version/latest`
             window.open(exportUrl, '_blank')
-            
             break
         case 'import':
-            // Open import modal for complete API data
             openApiDataImportModal()
-            
             break
         case 'versions':
-
             showVersionsModal.value = true
             fetchVersions()
             break
         case 'instances':
-
             showInstancesModal.value = true
             fetchEnvironment()
             fetchInstances()
@@ -795,7 +644,41 @@ const handleDevelopersAction = (action: string) => {
     }
 }
 
-// Save function
+const openApiDataImportModal = () => {
+    showApiDataImportModal.value = true
+    apiDataImportJson.value = JSON.stringify(apiData.value, null, 2)
+}
+
+const closeApiDataImportModal = () => {
+    showApiDataImportModal.value = false
+    apiDataImportJson.value = ''
+}
+
+const handleApiDataImport = (formData: any) => {
+    try {
+        const importedData = JSON.parse(formData.jsonData)
+        
+        if (!importedData || typeof importedData !== 'object') {
+            throw new Error('Invalid JSON structure')
+        }
+        
+        const requiredFields = ['version_urls', 'version_views', 'version_models', 'version_files', 'resources']
+        const missingFields = requiredFields.filter(field => !importedData.hasOwnProperty(field))
+        
+        if (missingFields.length > 0) {
+            throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
+        }
+        updateApiData(importedData)
+        originalApiData.value = JSON.parse(JSON.stringify(importedData))
+        hasUnsavedChanges.value = true
+        closeApiDataImportModal()
+        success('API data imported successfully!', 'Import Successful')
+        
+    } catch (error: any) {
+        showError(error.message || 'Invalid JSON format. Please check your JSON and try again.', 'Import Error')
+    }
+}
+
 const handleSave = async () => {
     if (
         !apiData.value ||
@@ -835,75 +718,75 @@ const handleSave = async () => {
     const responseData = await response.json()
     updateApiData(responseData)
 
-    // Reset dirty state after successful save
     originalApiData.value = JSON.parse(JSON.stringify(responseData))
     hasUnsavedChanges.value = false
 }
 
-// Add a method to check for changes
-// const checkForUnsavedChanges = () => {
-//     if (originalApiData.value && originalApiData.value) {
-//         return JSON.stringify(apiData.value) !== JSON.stringify(originalApiData.value)
-//     }
-//     return false
-// }
-
-// Navigation helper
+// UPDATED: Client-side only tab navigation (no XHR)
 const navigateToTab = (tabId: string) => {
-
-    router.get(`/apis/${props.api_id}/${tabId}`, {}, {
-        preserveState: true,
-        preserveScroll: true,
-        // only: ['activeTab'] // Only update the activeTab prop
-    })
+    currentTab.value = tabId
     
+    // This uses History API to update the URL without triggering navigation
+    const newUrl = `/apis/${props.api_id}/${tabId}`
+    window.history.pushState({ tab: tabId }, '', newUrl)
 }
 
-const isNavigatingWithinSameApi = (url: string): boolean => {
-    // Check if the URL is navigating to a different tab of the same API
-    const urlPattern = new RegExp(`^/apis/${props.api_id}(/[^/]+)?$`)
-    return urlPattern.test(url)
-}
-
-// Browser/tab close warning
-const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (hasUnsavedChanges.value) {
-        event.preventDefault()
-        // use @ts-ignore to avoid type error
-        // @ts-ignore
-        event.returnValue = '' // Chrome requires returnValue to be set but use @ts-ignore to avoid type error
-    }
-}
-
-// Inertia navigation warning
-let removeInertiaHook: (() => void) | null = null
-
-
-// Get current active component
+// Get current active component based on local state
 const activeComponent = computed(() => {
-    return tabs.find(tab => tab.id === props.activeTab)?.component || tabs[0].component
+    return tabs.find(tab => tab.id === currentTab.value)?.component || tabs[0].component
 })
 
 // Component props to pass down
 const componentProps = computed(() => ({
     api_id: props.api_id,
-    api_type: 'php', // Default value since you're removing it from URL
+    api_type: 'php',
     api: api.value,
-    apiData: apiData.value,
+    apiData: apiData.value || null,
     loadingApiData: loadingApiData.value,
-    apiError: apiError.value,
+    apiError: apiError.value || "",
     updateApiData,
     refreshApiData,
-    highlightQuery: highlightQuery.value,
-    highlightTarget: highlightTarget.value
+    highlightQuery: highlightQuery.value || "",
+    highlightTarget: highlightTarget.value || ""
 }))
 
+
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (hasUnsavedChanges.value) {
+        event.preventDefault()
+        // @ts-ignore
+        event.returnValue = ''
+    }
+}
+
+let removeInertiaHook: (() => void) | null = null
 let keydownHandler: ((event: KeyboardEvent) => void) | null = null
 let clickHandler: ((event: MouseEvent) => void) | null = null
-// Fetch data on mount
+
+// Handle browser back/forward buttons
+const handlePopState = (event: PopStateEvent) => {
+    // Extract tab from URL
+    const urlParts = window.location.pathname.split('/')
+    const tabFromUrl = urlParts[urlParts.length - 1]
+    
+    // Check if it's a valid tab
+    const validTab = tabs.find(tab => tab.id === tabFromUrl)
+    if (validTab) {
+        currentTab.value = validTab.id
+    }
+}
+
 onMounted(() => {
     fetchApi()
     fetchApiData()
+    
+    // Initialize tab from URL
+    const urlParts = window.location.pathname.split('/')
+    const tabFromUrl = urlParts[urlParts.length - 1]
+    const validTab = tabs.find(tab => tab.id === tabFromUrl)
+    if (validTab) {
+        currentTab.value = validTab.id
+    }
     
     keydownHandler = (event: KeyboardEvent) => {
         if ((event.ctrlKey || event.metaKey) && event.key === 's') {
@@ -922,23 +805,25 @@ onMounted(() => {
     
     document.addEventListener('keydown', keydownHandler)
     document.addEventListener('click', clickHandler)
-
-    // Add beforeunload listener
     window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('popstate', handlePopState)
     
-    // Add Inertia navigation hook
+    // Keep Inertia hook for navigation AWAY from this page
     removeInertiaHook = router.on('before', (event) => {
-        if (hasUnsavedChanges.value && !isNavigatingWithinSameApi(event.detail.visit.url.pathname)) {
-            // Show confirmation dialog
-            const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
-            if (!confirmed) {
-                return false // Cancel navigation
+        const targetUrl = event.detail.visit.url.pathname
+        
+        // Check if navigating to a different page (not just a tab change)
+        if (!targetUrl.startsWith(`/apis/${props.api_id}/`)) {
+            if (hasUnsavedChanges.value) {
+                const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
+                if (!confirmed) {
+                    return false
+                }
             }
         }
     })
 })
 
-// Clean up event listeners when component unmounts
 onUnmounted(() => {
     if (keydownHandler) {
         document.removeEventListener('keydown', keydownHandler)
@@ -946,8 +831,8 @@ onUnmounted(() => {
     if (clickHandler) {
         document.removeEventListener('click', clickHandler)
     }
-
     window.removeEventListener('beforeunload', handleBeforeUnload)
+    window.removeEventListener('popstate', handlePopState)
     if (removeInertiaHook) {
         removeInertiaHook()
     }
@@ -1107,13 +992,55 @@ onUnmounted(() => {
                 </nav>
 
                 <div class="flex-1">
-                    <section class="w-full space-y-12">
+                    <section v-if="apiData && originalApiData && !loadingApiData" class="w-full space-y-12">
+                        <Routes v-if="currentTab === 'routes'" v-bind="componentProps" />
+                        <Resources v-if="currentTab === 'resources'" v-bind="componentProps" />
+                        <Functions v-if="currentTab === 'functions'" v-bind="componentProps" />
+                        <Models v-if="currentTab === 'models'" v-bind="componentProps" />
+                        <Files v-if="currentTab === 'files'" v-bind="componentProps" />
+                        <Options v-if="currentTab === 'options'" v-bind="componentProps" />
+                        <!-- Render all components but only show the active one -->
+                        <!-- <div v-show="currentTab === 'routes'">
+                            <Routes v-bind="componentProps" />
+                        </div>
+                        <div v-show="currentTab === 'resources'">
+                            <Resources v-bind="componentProps" />
+                        </div>
+                        <div v-show="currentTab === 'functions'">
+                            <Functions v-bind="componentProps" />
+                        </div>
+                        <div v-show="currentTab === 'models'">
+                            <Models v-bind="componentProps" />
+                        </div>
+                        <div v-show="currentTab === 'files'">
+                            <Files v-bind="componentProps" />
+                        </div>
+                        <div v-show="currentTab === 'options'">
+                            <Options v-bind="componentProps" />
+                        </div> -->
                         <!-- Dynamic component rendering -->
-                        <component
+                        <!-- <component
                             :is="activeComponent"
                             v-bind="componentProps"
-                        />
+                        /> -->
                     </section>
+
+                    <!-- Loading state -->
+                        <div v-else-if="loadingApiData" class="flex justify-center items-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="ml-3 text-gray-600 dark:text-gray-300">Loading API data...</span>
+                        </div>
+                        
+                        <!-- Error state -->
+                        <div v-else-if="apiError" class="text-center py-8">
+                        <div class="text-red-600 dark:text-red-400">
+                            <p class="text-lg font-semibold">Error loading API data</p>
+                            <p class="text-sm">{{ apiError }}</p>
+                            <button @click="fetchApiData" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            Try Again
+                            </button>
+                        </div>
+                        </div>
                 </div>
             </div>
         </div>

@@ -18,7 +18,7 @@ import { useToaster } from '@/composables/useToaster';
 interface Props {
     instance_id: string
     apiInstanceData: ApiInstance | null,
-    api: Api | null,
+    // api: Api | null,
     apiUsers: ApiUser[] | null,
     resources: Resource[] | null,
     loading: boolean,
