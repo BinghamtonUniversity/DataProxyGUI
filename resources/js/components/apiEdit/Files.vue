@@ -53,6 +53,43 @@ const isEditingView = ref(false)
 // Toaster
 const { success, error, warning, info } = useToaster();
 
+const handleUpdateCode = (updatedCode: string) => {
+    if (!selectedFile.value || !props.apiData) {
+        saveError.value = 'No file selected or file data not available'
+        return
+    }
+    isSaving.value = true
+    saveError.value = null
+    saveSuccess.value = false
+    try {
+        const updatedApiData = {
+            ...props.apiData,
+            version_files: props.apiData.version_files.map(func => 
+                func.name === selectedFile.value?.name 
+                    ? { ...func, content: updatedCode }
+                    : func
+            )
+        }
+        // Update the local state through parent
+        props.updateApiData( updatedApiData)
+        
+        if (selectedFile.value) {
+            selectedFile.value.content = updatedCode
+        }
+        
+        saveSuccess.value = true
+        setTimeout(() => {
+            saveSuccess.value = false
+        }, 3000)
+
+    } catch (error) {
+        console.error('Save error:', error)
+        saveError.value = error instanceof Error ? error.message : 'Failed to save changes'
+    } finally {
+        isSaving.value = false
+    }
+}
+
 const handleSave = async (updatedCode: string) => {
     if (!selectedFile.value || !props.apiData) {
         saveError.value = 'No file selected or file data not available'
@@ -598,6 +635,7 @@ onUnmounted(() => {
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"
                             @save="handleSave"
+                            @updateCode="handleUpdateCode"
                         />
                         
                         <!-- No File Selected State -->

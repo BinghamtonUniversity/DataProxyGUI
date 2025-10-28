@@ -54,6 +54,49 @@ const createViewError = ref<string | null>(null)
 const viewBeingEdited = ref<ApiVersionFunction | null>(null)
 const isEditingView = ref(false)
 
+const handleUpdateCode = (updatedCode: string) => {
+    if (!selectedFunction.value || !props.apiData) {
+        saveError.value = 'No function selected or API data not available'
+        return
+    }
+    if (!updatedCode || updatedCode.trim() === '') {
+        saveError.value = 'Function content cannot be empty'
+        return
+    }
+    isSaving.value = true
+    saveError.value = null
+    saveSuccess.value = false
+
+    try {
+        const updatedApiData = {
+            ...props.apiData,
+            version_views: props.apiData.version_views.map(func => 
+                func.name === selectedFunction.value?.name 
+                    ? { ...func, content: updatedCode }
+                    : func
+            )
+        }
+        
+        // Update the local state through parent
+        props.updateApiData(updatedApiData)
+        
+        if (selectedFunction.value) {
+            selectedFunction.value.content = updatedCode
+        }
+        
+        saveSuccess.value = true
+        setTimeout(() => {
+            saveSuccess.value = false
+        }, 3000)
+
+    } catch (error) {
+        console.error('Save error:', error)
+        saveError.value = error instanceof Error ? error.message : 'Failed to save changes'
+    } finally {
+        isSaving.value = false
+    }
+    selectedFunction.value.content = updatedCode
+}
 
 const handleSave = async (updatedCode: string) => {
     if (!selectedFunction.value || !props.apiData) {
@@ -592,6 +635,7 @@ onUnmounted(() => {
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"
                             @save="handleSave"
+                            @update:code="handleUpdateCode"
                         />
                         
                         <!-- No Function Selected State -->
