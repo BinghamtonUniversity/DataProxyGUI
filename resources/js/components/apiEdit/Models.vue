@@ -223,6 +223,50 @@ const handleCodeSave = async (updatedCode: string) => {
   }
 }
 
+const handleUpdateCode = (updatedCode: string) => {
+  if (!selectedModel.value || !props.apiData) {
+    saveCodeError.value = 'No model selected or API data not available'
+    return
+  }
+  
+  try {
+    const updatedModel = { ...selectedModel.value }
+    
+    if (selectedSection.value === 'content') {
+      updatedModel.content = updatedCode
+    } else if (typeof selectedSection.value === 'object' && selectedSection.value?.type === 'method') {
+      if (
+        Array.isArray(updatedModel.class_methods) &&
+        updatedModel.class_methods.length > 0 &&
+        selectedSection.value?.index != null &&
+        updatedModel.class_methods[selectedSection.value.index]
+      ) {
+        updatedModel.class_methods[selectedSection.value.index].content = updatedCode
+      }
+    }
+    
+    const updatedApiData = {
+      ...props.apiData,
+      version_models: props.apiData.version_models?.map(model => 
+        model.name === selectedModel.value?.name ? updatedModel : model
+      ) || []
+    }
+    
+    // Update the local state through parent
+    props.updateApiData(updatedApiData)
+    
+    // Update the selected model
+    selectedModel.value = updatedModel
+    
+    // Update current code
+    currentCode.value = updatedCode
+    
+  } catch (error) {
+    console.error('Update error:', error)
+    saveCodeError.value = error instanceof Error ? error.message : 'Failed to update code'
+  }
+}
+
 // Meta properties handlers
 const addNewModelMetaProperty = () => {
   newModelForm.value.class_meta.push({ name: '', value: '' })
@@ -764,6 +808,7 @@ onUnmounted(() => {
                                 :saveError="saveCodeError || ''"
                                 :saveSuccess="saveCodeSuccess"
                                 @save="handleCodeSave"
+                                @update:code="handleUpdateCode"
                               />
                             </div>
                           </template>

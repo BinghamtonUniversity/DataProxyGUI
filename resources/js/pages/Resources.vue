@@ -573,7 +573,12 @@ onMounted(() => fetchAllData())
                           </div>
                           <div>
                             <Label>TNS</Label>
-                            <Input v-model="newResourceForm.config.tns" placeholder="TNS connection string" />
+                            <textarea
+                              v-model="newResourceForm.config.tns"
+                              placeholder="TNS connection string"
+                              rows="3"
+                              class="w-full p-2 border rounded-md"
+                            ></textarea>
                           </div>
                         </template>
 
