@@ -223,31 +223,24 @@ const canAdd = () => {
 
 const canDuplicate = (index) => {
   const enable = duplicateConfig.value.enable;
-  console.log('canDuplicate debug:', { 
-    enable, 
-    enableType: typeof enable, 
-    index, 
-    duplicateConfig: duplicateConfig.value,
-    arrayLength: arrayValues.value.length,
-    maxItems: maxItems.value
-  });
+
   
   // If enable is explicitly false or 'never', return false
   if (enable === false || enable === 'never') {
-    console.log('canDuplicate: returning false - enable is false or never');
+  
     return false;
   }
   
   // If enable is 'auto', check if we can add more items
   if (enable === 'auto') {
     const canAddMore = arrayValues.value.length < maxItems.value;
-    console.log('canDuplicate: auto mode, canAddMore:', canAddMore);
+ 
     return canAddMore;
   }
   
   // If enable is true or any other truthy value, return true (if we can add more items)
   const result = arrayValues.value.length < maxItems.value;
-  console.log('canDuplicate: enable is true, returning:', result);
+ 
   return result;
 };
 
@@ -287,10 +280,10 @@ const addItemAfter = (index) => {
 };
 
 const duplicateItem = (index) => {
-  console.log('duplicateItem called:', { index, canDuplicate: canDuplicate(index), canAdd: canAdd() });
+
   if (canDuplicate(index) && canAdd()) {
     const clonedValue = JSON.parse(JSON.stringify(arrayValues.value[index]));
-    console.log('duplicateItem: cloning value:', clonedValue);
+
     arrayValues.value.splice(index + 1, 0, clonedValue);
     emit('update:value', arrayValues.value);
   }

@@ -29,6 +29,7 @@ interface Props {
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
     refreshApiData: () => void
+    handleSave?: () => Promise<void>
     highlightQuery?: string
     highlightTarget?: string
 }
@@ -74,21 +75,8 @@ const currentFunctionCode = computed(() => {
     return cachedCode !== undefined ? cachedCode : selectedFunction.value.content
 })
 
-// Handle code changes from the Editor (real-time updates)
-const handleCodeChange = (updatedCode: string) => {
-    if (!selectedFunction.value) return
-    
-    const functionName = selectedFunction.value.name
-    const originalContent = selectedFunction.value.content
-    
-    // If the code is different from the original, cache it
-    if (updatedCode !== originalContent) {
-        unsavedEditsCache.value.set(functionName, updatedCode)
-    } else {
-        // If the code matches the original, remove it from cache
-        unsavedEditsCache.value.delete(functionName)
-    }
-}
+
+
 
 // Check if current function has unsaved changes
 const hasUnsavedChanges = computed(() => {
@@ -98,14 +86,12 @@ const hasUnsavedChanges = computed(() => {
 // ============================================
 
 const handleValidation = (markers: any) => {
-    console.log("Functions.vue - handleValidation called with markers:", markers)
     const errors = markers.filter((m: any) => m.severity >= 8) // Monaco.MarkerSeverity.Error = 8
     const warnings = markers.filter((m: any) => m.severity === 4) // Monaco.MarkerSeverity.Warning = 4
     
     validationErrors.value = errors.length
     validationWarnings.value = warnings.length
     
-    console.log("Functions.vue - validationErrors:", validationErrors.value, "validationWarnings:", validationWarnings.value)
     
     // Provide immediate feedback to user about validation status
     if (errors.length > 0) {
@@ -129,7 +115,7 @@ const handleUpdateCode = (updatedCode: string) => {
         saveError.value = 'No function selected or API data not available'
         return
     }
-    
+
     // Update the local state immediately
     try {
         const updatedApiData = {
@@ -155,71 +141,8 @@ const handleUpdateCode = (updatedCode: string) => {
 }
 
 const handleSave = async (updatedCode: string) => {
-    if (!selectedFunction.value || !props.apiData) {
-        saveError.value = 'No function selected or API data not available'
-        return
-    }
-
-    // Don't save if there are validation errors
-    if (validationErrors.value > 0) {
-        saveError.value = 'Please fix validation errors before saving'
-        return
-    }
-
-    isSaving.value = true
-    saveError.value = null
-    saveSuccess.value = false
-
-    const functionName = selectedFunction.value.name
-
-    try {
-        const updatedApiData = {
-            ...props.apiData,
-            version_views: props.apiData.version_views.map(func => 
-                func.name === functionName
-                    ? { ...func, content: updatedCode }
-                    : func
-            )
-        }
-
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
-
-        const result = await response.json()
-        
-        // Update the local state through parent
-        props.updateApiData(result || updatedApiData)
-        
-        // Update the selected function content
-        if (selectedFunction.value) {
-            selectedFunction.value.content = updatedCode
-        }
-        
-        // Clear the cache for this function after successful save
-        unsavedEditsCache.value.delete(functionName)
-        
-        saveSuccess.value = true
-        setTimeout(() => {
-            saveSuccess.value = false
-        }, 3000)
-
-    } catch (error) {
-        console.error('Save error:', error)
-        saveError.value = error instanceof Error ? error.message : 'Failed to save changes'
-    } finally {
-        isSaving.value = false
+    if (props.handleSave) {
+    await props.handleSave()
     }
 }
 
@@ -696,9 +619,10 @@ onUnmounted(() => {
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"
                             :hasUnsavedChanges="hasUnsavedChanges"
+
                             @save="handleSave"
                             @update:code="handleUpdateCode"
-                            @onValidate="handleValidation"
+                            @validate="handleValidation"
                         />
                         
                         <!-- No Function Selected State -->

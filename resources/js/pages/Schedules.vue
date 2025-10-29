@@ -501,7 +501,7 @@ const openEditModal = (row?: any) => {
             type: row.type
             // Don't include created_at, updated_at as they're server-managed
         };
-        console.log('Opening edit modal with data:', editingRow.value);
+     
         showModal.value = true;
     } else {
         warning('Please select exactly one row to edit.', 'Selection Required');

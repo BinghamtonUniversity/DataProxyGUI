@@ -96,7 +96,7 @@ const saveChanges = async () => {
             name: editableData.value.name,
             route: editableData.value.route
         }
-        // console.log('Updated data to save:', updatedData)
+       
         const requestData = {
             id: updatedData.id,
             name: updatedData.name,

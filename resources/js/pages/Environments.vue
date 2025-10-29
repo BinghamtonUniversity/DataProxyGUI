@@ -141,7 +141,7 @@ const formatTimestamp = (timestamp: string | null | undefined) => {
             return '';
         }
         const formatted = date.toLocaleString();
-        console.log('formatTimestamp: Successfully formatted:', timestamp, '->', formatted);
+
         return formatted;
     } catch (error) {
         console.log('formatTimestamp: Error formatting timestamp:', timestamp, error);
@@ -179,7 +179,7 @@ const fetchEnvironments = async () => {
     try {
         loading.value = true;
         error.value = null;
-        console.log(`${apiBaseUrl}/environments`);
+ 
         
         const response = await fetch(`${apiBaseUrl}/environments`, {
             method: 'GET',
@@ -231,7 +231,7 @@ const openEditModal = (row?: any) => {
             type: row.type
             // Don't include created_at, updated_at as they're server-managed
         };
-        console.log('Opening edit modal with data:', editingRow.value);
+    
         showModal.value = true;
     } else {
         warning('Please select exactly one row to edit.', 'Selection Required');
@@ -267,7 +267,7 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const newEnv = await response.json();
-            console.log('Server response for create:', newEnv);
+        
             
             // Add to local state with server-provided data and formatted timestamps
             const formattedNewEnv = {
@@ -276,7 +276,7 @@ const handleFormSubmit = async (formValues: any) => {
                 created_at: formatTimestamp(newEnv.created_at),
                 updated_at: formatTimestamp(newEnv.updated_at)
             };
-            console.log('Formatted new environment:', formattedNewEnv);
+        
             environments.value.push(formattedNewEnv);
             
             success(`Environment "${formValues.name}" added successfully!`, 'Environment Added');
@@ -300,7 +300,7 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const updatedEnv = await response.json();
-            console.log('Server response for edit:', updatedEnv);
+          
             
             // Update local state with server-provided data
             const index = environments.value.findIndex((env: any) => env.id === editingRow.value.id);
@@ -311,7 +311,7 @@ const handleFormSubmit = async (formValues: any) => {
                     created_at: formatTimestamp(updatedEnv.created_at),
                     updated_at: formatTimestamp(updatedEnv.updated_at)
                 };
-                console.log('Formatted environment for update:', formattedEnv);
+            
                 environments.value[index] = formattedEnv;
             }
             
@@ -328,7 +328,7 @@ const handleFormSubmit = async (formValues: any) => {
 
 // Handle DataGrid action events
 const handleAction = (actionData: { type: string; payload: any }) => {
-    console.log('DataGrid action:', actionData);
+
     
     switch (actionData.type) {
         case 'single-edit':
@@ -339,11 +339,11 @@ const handleAction = (actionData: { type: string; payload: any }) => {
             break;
         case 'view':
             // Handle view action if needed
-            console.log('View environment:', actionData.payload);
+      
             break;
         case 'duplicate':
             // Handle duplicate action if needed
-            console.log('Duplicate environment:', actionData.payload);
+       
             break;
         default:
             console.log('Unknown action type:', actionData.type);
@@ -352,7 +352,7 @@ const handleAction = (actionData: { type: string; payload: any }) => {
 
 // Handle FormViewer action events
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
-    console.log('FormViewer action:', actionData);
+
     
     switch (actionData.type) {
         case 'close':

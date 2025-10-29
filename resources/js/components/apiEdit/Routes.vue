@@ -59,6 +59,7 @@ interface Props {
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
     refreshApiData: () => void
+    handleSave?: () => Promise<void>
     highlightQuery?: string
     highlightTarget?: string
 }
@@ -203,7 +204,7 @@ const routeFormConfig = {
     ]
 }
 
-// console.log('Routes component mounted')
+
 
 const openNewRouteDialog = () => {
   newRouteForm.value = {
@@ -378,7 +379,7 @@ const handleDelete = async (route: RouteData) => {
                   existingRoute.verb === route.verb)
             ) || []
         }
-        // // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
+ 
         props.updateApiData(updatedApiData)
         success(`Path "${route.path}-${route.verb}" deleted successfully`, 'Route Deleted');
 

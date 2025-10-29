@@ -32,6 +32,7 @@ interface Props {
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
     refreshApiData: () => void
+    handleSave?: () => Promise<void>
     highlightQuery?: string
     highlightTarget?: string
 }
@@ -351,7 +352,7 @@ const submitNewModel = async (e: Event) => {
         version_models: [...(props.apiData.version_models || []), newModel]
       }
     }
-    // console.log('Updated API Data:', updatedApiData)
+
     props.updateApiData(updatedApiData)
     if (selectedModel.value) {
       selectedModel.value = newModel
