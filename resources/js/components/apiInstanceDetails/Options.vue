@@ -84,9 +84,10 @@ const initialData = computed(() => {
 
 const handleFormDataUpdate = (data: any) => {
 
-    if (props.apiInstanceData?.options === data) return;
+    if (props.apiInstanceData?.options == data) return;
     if (!props.apiInstanceData) return
-
+    if (isChanged.value) return;
+    isChanged.value = true;
     const requestData = {
         id: props.apiInstanceData.id,
         name: props.apiInstanceData.name,
@@ -100,6 +101,10 @@ const handleFormDataUpdate = (data: any) => {
         environment_id: props.apiInstanceData.environment.id
         }
     props.updateApiInstanceData(requestData  as ApiInstance);
+    // Reset flag after a short delay
+    setTimeout(() => {
+        isChanged.value = false;
+    }, 100);
 };
 </script>
 
