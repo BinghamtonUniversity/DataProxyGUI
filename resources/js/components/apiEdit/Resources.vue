@@ -157,21 +157,7 @@ const submitNewResource = async (e: Event) => {
         resources: [...(props.apiData.resources || []), newResource]
       }
     }
-    // console.log('Updated API Data:', updatedApiData)
-    // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-    //   method: 'PUT',
-    //   headers: {
-    //       'Content-Type': 'application/json',
-    //       'Accept': 'application/json',
-    //       'X-CSRF-TOKEN': getCsrfToken() || '',
-    //   },
-    //   body: JSON.stringify(updatedApiData)
-    // })
 
-    // if (!response.ok) {
-    //   const errorData = await response.json().catch(() => ({}))
-    //   throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    // }
 
     // const responseData = await response.json()
     props.updateApiData(updatedApiData)

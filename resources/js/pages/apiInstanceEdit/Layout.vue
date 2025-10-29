@@ -90,7 +90,7 @@ const fetchApiInstanceData = async () => {
     apiInstanceError.value = ''
     try {
         const response = await fetch(`/ajax/api_instances/${props.instance_id}`)
-        // console.log('Fetch response:', response)
+ 
         if (!response.ok) throw new Error('Failed to fetch API Instance data')
         const data = await response.json()
         apiInstanceData.value = data

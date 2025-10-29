@@ -153,7 +153,7 @@ const formatTimestamp = (timestamp: string | null | undefined) => {
             return '';
         }
         const formatted = date.toLocaleString();
-        console.log('formatTimestamp: Successfully formatted:', timestamp, '->', formatted);
+       
         return formatted;
     } catch (error) {
         console.log('formatTimestamp: Error formatting timestamp:', timestamp, error);

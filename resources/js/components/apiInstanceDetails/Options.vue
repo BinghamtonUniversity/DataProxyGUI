@@ -57,7 +57,7 @@ const initialData = computed(() => {
 //     api_version_id: props.apiInstanceData.api_version_id,
 //     environment_id: props.apiInstanceData.environment.id
 //   }
-//   console.log('Saving request data:', requestData)
+
 
 //   const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
 //         method: 'PUT',

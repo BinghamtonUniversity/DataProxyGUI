@@ -92,7 +92,6 @@ const handleValidation = (markers: any) => {
     validationErrors.value = errors.length
     validationWarnings.value = warnings.length
     
-    console.log("Functions.vue - validationErrors:", validationErrors.value, "validationWarnings:", validationWarnings.value)
     
     // Provide immediate feedback to user about validation status
     if (errors.length > 0) {

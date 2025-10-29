@@ -291,8 +291,7 @@ const handleFormSubmit = async (formValues: any) => {
         if (modalMode.value === 'new') {
             // Create new API developer assignment via API
             const cleanedData = cleanFormData(formValues);
-            console.log('Form values:', formValues);
-            console.log('Cleaned data being sent:', cleanedData);
+
             const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/developers`, {
                 method: 'POST',
                 headers: {
@@ -306,20 +305,17 @@ const handleFormSubmit = async (formValues: any) => {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.log('Error response:', errorData);
-                console.log('Response status:', response.status);
                 throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
             }
 
             const newApiDeveloper = await response.json();
-            console.log('Server response for create:', newApiDeveloper);
+
             
             // Add developer name and add to local state
             const dataWithNames = await addDeveloperNames([newApiDeveloper]);
-            console.log('Data with names for DataGrid:', dataWithNames[0]);
+
             apiDevelopers.value.push(dataWithNames[0]);
-            console.log('Updated apiDevelopers array:', apiDevelopers.value);
-            
+           
             // Refresh available developers for the dropdown
             await fetchAvailableUsers();
             
@@ -336,7 +332,7 @@ const handleFormSubmit = async (formValues: any) => {
 
 // Handle DataGrid action events
 const handleAction = (actionData: { type: string; payload: any }) => {
-    console.log('DataGrid action:', actionData);
+
     
     switch (actionData.type) {
         case 'single-delete':
@@ -344,11 +340,11 @@ const handleAction = (actionData: { type: string; payload: any }) => {
             break;
         case 'view':
             // Handle view action if needed
-            console.log('View API developer:', actionData.payload);
+
             break;
         case 'duplicate':
             // Handle duplicate action if needed
-            console.log('Duplicate API developer:', actionData.payload);
+
             break;
         default:
             console.log('Unknown action type:', actionData.type);
@@ -357,7 +353,7 @@ const handleAction = (actionData: { type: string; payload: any }) => {
 
 // Handle FormViewer action events
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
-    console.log('FormViewer action:', actionData);
+
     
     switch (actionData.type) {
         case 'close':
@@ -371,7 +367,6 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
 const handleDelete = async (selectedRowIds?: number[]) => {
     if (selectedRowIds && selectedRowIds.length > 0) {
         const developersToDelete = apiDevelopers.value.filter(dev => selectedRowIds.includes(dev.id));
-        console.log('Developers to delete:', developersToDelete);
         try {
             // Delete API developer assignments via API
             for (const dev of developersToDelete) {
@@ -418,7 +413,6 @@ const handleDelete = async (selectedRowIds?: number[]) => {
 
 // Handle CSV upload
 const handleCSVUpload = (uploadedData: any[]) => {
-    console.log('CSV Upload received:', uploadedData);
     // Here you can implement logic to process the uploaded CSV data
     // For example, you might want to validate the data or send it to the server
     alert(`CSV uploaded with ${uploadedData.length} rows. Check console for data.`);

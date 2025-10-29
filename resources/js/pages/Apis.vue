@@ -337,7 +337,7 @@ const handleFormSubmit = async (formValues: any) => {
         if (modalMode.value === 'new') {
             // Create new API
             const cleanedData = cleanFormData(formValues);
-            console.log('Creating API with data:', cleanedData);
+   
             
             const response = await fetch('/api/apis', {
                 method: 'POST',
@@ -356,7 +356,7 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const newApi = await response.json();
-            console.log('Server response for create:', newApi);
+      
             
             // Format and add to local state
             apis.value.push({
@@ -369,7 +369,7 @@ const handleFormSubmit = async (formValues: any) => {
         } else {
             // Update existing API
             const cleanedData = cleanFormData(formValues);
-            console.log('Updating API with data:', cleanedData);
+      
             
             const response = await fetch(`/api/apis/${editingRow.value.id}`, {
                 method: 'PUT',
@@ -388,7 +388,7 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const updatedApi = await response.json();
-            console.log('Server response for update:', updatedApi);
+          
             
             // Update local state
             const index = apis.value.findIndex(api => api.id === editingRow.value.id);
@@ -413,7 +413,7 @@ const handleFormSubmit = async (formValues: any) => {
 
 // Handle DataGrid action events
 const handleAction = (actionData: any) => {
-    console.log('DataGrid action:', actionData);
+
     
     switch (actionData.type) {
         case 'single-delete':
@@ -436,7 +436,7 @@ const handleRowClick = (row: any) => {
 };
 
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
-    console.log('FormViewer action:', actionData);
+
     
     switch (actionData.type) {
         case 'close':
@@ -500,7 +500,7 @@ const handleDelete = async (selectedRowIds?: number[]) => {
 
 // Handle CSV upload
 const handleCSVUpload = (uploadedData: any[]) => {
-    console.log('CSV Upload received:', uploadedData);
+
     info(`CSV uploaded with ${uploadedData.length} rows. Feature coming soon!`, 'CSV Upload');
 };
 

@@ -221,7 +221,7 @@ const openEditModal = (row?: any) => {
             environment_id: row.environment_id,
             is_active: row.is_active
         };
-        console.log('Opening edit modal with data:', editingRow.value);
+    
         showModal.value = true;
     } else {
         warning('Please select exactly one row to edit.', 'Selection Required');
@@ -316,7 +316,7 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const newUser = await response.json();
-            console.log('Server response for create:', newUser);
+        
             
             // Add to local state with server-provided data
             users.value.push(newUser);
@@ -342,7 +342,7 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const updatedUser = await response.json();
-            console.log('Server response for edit:', updatedUser);
+
             
             // Update local state with server-provided data
             const index = users.value.findIndex((user: any) => user.id === editingRow.value.id);
@@ -361,12 +361,12 @@ const handleFormSubmit = async (formValues: any) => {
     }
 };
 const handleClick = (row: any) => {
-    console.log('DataGrid click:', row);
+  
     info(`User "${row.app_name}" clicked!`, 'User Clicked');
 };
 // Handle DataGrid action events
 const handleAction = (actionData: { type: string; payload: any }) => {
-    console.log('DataGrid action:', actionData);
+ 
     
     switch (actionData.type) {
         case 'single-edit':
@@ -377,11 +377,11 @@ const handleAction = (actionData: { type: string; payload: any }) => {
             break;
         case 'view':
             // Handle view action if needed
-            console.log('View user:', actionData.payload);
+       
             break;
         case 'duplicate':
             // Handle duplicate action if needed
-            console.log('Duplicate user:', actionData.payload);
+            
             break;
         default:
             console.log('Unknown action type:', actionData.type);
@@ -390,7 +390,7 @@ const handleAction = (actionData: { type: string; payload: any }) => {
 
 // Handle FormViewer action events
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
-    console.log('FormViewer action:', actionData);
+
     
     switch (actionData.type) {
         case 'close':
@@ -448,7 +448,7 @@ const handleDelete = async (selectedRowIds?: number[]) => {
 
 // Handle custom actions from DataGrid
 const handleCustomAction = (actionData: { action: string; selectedRows: any[]; selectedData: any[] }) => {
-    console.log('Custom action triggered:', actionData);
+
     
     switch (actionData.action) {
         case 'create':

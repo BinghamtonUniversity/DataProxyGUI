@@ -290,7 +290,7 @@ const closeNewApiInstanceDialog = () => {
 }
 // Handle FormViewer action events
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
-    console.log('FormViewer action:', actionData);
+ 
     
     switch (actionData.type) {
         case 'close':
@@ -423,7 +423,7 @@ const handleRowClick = (instance: ApiInstance, event: MouseEvent) => {
     return // Don't handle row click if clicking on actions
   }
   
-  // console.log('View details for API:', instance)
+
   router.visit(`/api_instances/${instance.id}/main`)
 }
 
@@ -533,7 +533,7 @@ const fetchAllData = async () => {
         value: env.id,
         color: env.type === 'test' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : env.type === 'dev' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
     }));
-    console.log("apiInstancesSchema.fields[3]", apiInstancesSchema.fields[3]);
+  
     formConfig.fields[2].options = environmentsData.map((env: any) => ({
         label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
         value: env.id,
@@ -566,8 +566,7 @@ const fetchAllData = async () => {
          value: -1,
          color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
      });
-     console.log(apiInstancesSchema.fields[5]!.options!)
-     console.log(api_instances.value)
+
   } catch (error) {
     console.error('Error fetching data:', error)
   } finally {
@@ -587,7 +586,7 @@ onUnmounted(() => {
 
 // DataGrid action handlers
 const handleDataGridAction = (actionData: { type: string; payload: any }) => {
-  console.log('DataGrid action:', actionData);
+ 
   
   switch (actionData.type) {
     case 'single-edit':
@@ -605,7 +604,7 @@ const handleDataGridAction = (actionData: { type: string; payload: any }) => {
 };
 
 const handleDataGridCustomAction = (actionData: { action: string; selectedRows: any[]; selectedData: any[] }) => {
-  console.log('Custom action triggered:', actionData);
+
   
   switch (actionData.action) {
     case 'create':
@@ -617,7 +616,7 @@ const handleDataGridCustomAction = (actionData: { action: string; selectedRows: 
 };
 
 const handleDataGridRowClick = (row: any) => {
-  console.log('DataGrid row click:', row);
+
   router.visit(`/api_instances/${row.id}/main`);
 };
 </script>

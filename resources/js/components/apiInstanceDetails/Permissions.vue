@@ -138,7 +138,7 @@ const submitNewPermission = async (e: Event) => {
                 route_user_map: [...(props.apiInstanceData.route_user_map || []), newPermission]
             }
         }
-        // console.log(updatedApiInstanceData)
+       
 
         const requestData = {
             id: updatedApiInstanceData.id,
