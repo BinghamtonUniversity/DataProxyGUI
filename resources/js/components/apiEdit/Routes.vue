@@ -250,7 +250,10 @@ const addOptionalParam = () => paramsForm.value.optional.push({ name: '', exampl
 const removeOptionalParam = (index: number) => paramsForm.value.optional.splice(index, 1)
 
 const submitParams = async () => {
-  if (!props.apiData || editingParamsIndex.value === null) return
+  if (!props.apiData || editingParamsIndex.value === null || editingParamsIndex.value === undefined){
+    error('API data not available', 'Error')
+    return
+  } 
 
   const updatedRoutes = [...props.apiData.version_urls]
   updatedRoutes[editingParamsIndex.value] = {
@@ -262,8 +265,7 @@ const submitParams = async () => {
   const updatedApiData = { ...props.apiData, version_urls: updatedRoutes }
   
   props.updateApiData(updatedApiData)
-  console.log('Updated API Data:', updatedApiData.version_urls)
-  console.log('Original API Data:', props.apiData.version_urls)
+
   success('Parameters updated successfully', 'Updated')
   closeParamsDialog()
 }
@@ -340,6 +342,7 @@ const submitNewRoute = async (e: Event) => {
 
         // const responseData = await response.json()
         props.updateApiData(updatedApiData)
+        
         if(isEditMode.value) {
             success('Updated successfully', 'Route Updated');
         } else {
@@ -386,6 +389,7 @@ const handleDelete = async (route: RouteData) => {
 }
 
 const openEditRouteDialog = (route: RouteData, index: number) => {
+  
   isEditMode.value = true
   editingRouteIndex.value = index
   newRouteForm.value = {
@@ -598,18 +602,37 @@ const highlightText = (text: string, query: string) => {
 }
 
 // DataGrid action handlers
-const handleDataGridAction = (actionData: { type: string; payload: any }) => {
-    console.log('DataGrid action:', actionData);
+const handleDataGridActionHandler = (actionData: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
+
+
+    switch (actionData.action) {
+        case 'create':
+            openNewRouteDialog();
+            break;
+        case 'edit':
+            openEditRouteDialog(actionData.selectedData[0], actionData.selectedIndex[0]);
+            break;
+        case 'delete':
+            handleDelete(actionData.selectedData[0]);
+            break;
+        default:
+            console.log('Unknown action type:', actionData.action);
+            break;
+    }
+};
+
+// DataGrid row action handlers
+const handleDataGridRowActionHandler = (actionData: { type: string; payload: any, index: number }) => {
     
     switch (actionData.type) {
         case 'single-edit':
-            openEditRouteDialog(actionData.payload, actionData.payload.index);
+            openEditRouteDialog(actionData.payload, actionData.index);
             break;
         case 'single-delete':
             handleDelete(actionData.payload);
             break;
         case 'parameters':
-            openParamsDialog(actionData.payload, actionData.payload.index);
+            openParamsDialog(actionData.payload, actionData.index);
             break;
         default:
             console.log('Unknown action type:', actionData.type);
@@ -664,9 +687,6 @@ const handleDataGridAction = (actionData: { type: string; payload: any }) => {
                         :schema="routeFormConfig"
                         :data="apiData?.version_urls || []"
                         theme="default"
-                        :showNew="true"
-                        :showEdit="true"
-                        :showDelete="true"
                         :clickableRows="true"
                         :rowActionDropdown="false"
                         :rowActionLabels="false"
@@ -675,42 +695,23 @@ const handleDataGridAction = (actionData: { type: string; payload: any }) => {
                             { type: 'parameters', label: 'Parameters', icon: 'cog', colorClass: 'text-green-600 hover:bg-green-50' },
                             { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50' }
                         ]"
-                    
+                        :actions="[
+                            { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
+                            { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
+                            { name: 'delete', type: 'danger', min: 1, max: 25, label: 'Delete', icon: 'trash', loc: 'right' }
+                        ]"
+                        @actionHandler="handleDataGridActionHandler"                    
                         @rowClick="openEditRouteDialog($event, $event.index)"
-                        @create="openNewRouteDialog"    
-                        @edit="openEditRouteDialog"
-                        @delete="handleDelete"
-                        @action="handleDataGridAction"
-                        @rowActionHandler="handleDataGridAction"
+                        @rowActionHandler="handleDataGridRowActionHandler"
                     />
                 </div>
-            </template>
-
-            <!-- No Data State -->
-            <template v-else>
-                <div class="flex items-center justify-center h-32">
-                    <div class="text-center">
-                        <p>No routes available for this API version.</p>
-                    </div>
-                </div>
-
-                <!-- OLD TABLE IMPLEMENTATION -->
-                <div class="w-full">        
-                    <!-- Table Controls -->
-                    <div class="flex items-center py-4">
-                        <Input
-                            class="max-w-sm"
-                            placeholder="Filter by path"
-                            v-model="pathFilterValue"
-                        />
-                        
-                        <Dialog v-model:open="newRouteDialogOpen">
-                            <DialogTrigger as-child>
+                <Dialog v-model:open="newRouteDialogOpen">
+                            <!-- <DialogTrigger as-child>
                                 <Button class="ml-4 text-green-600" variant="outline" @click="openNewRouteDialog">
                                     <Plus class="mr-2 h-4 w-4" />
                                     New Route
                                 </Button>
-                            </DialogTrigger>
+                            </DialogTrigger> -->
                             <DialogContent class="sm:max-w-md">
                                 <form @submit="submitNewRoute" class="space-y-6">
                                     <DialogHeader>
@@ -796,6 +797,27 @@ const handleDataGridAction = (actionData: { type: string; payload: any }) => {
                                 </form>
                             </DialogContent>
                         </Dialog>
+            </template>
+
+            <!-- No Data State -->
+            <template v-else>
+                <div class="flex items-center justify-center h-32">
+                    <div class="text-center">
+                        <p>No routes available for this API version.</p>
+                    </div>
+                </div>
+
+                <!-- OLD TABLE IMPLEMENTATION -->
+                <div class="w-full">        
+                    <!-- Table Controls -->
+                    <div class="flex items-center py-4">
+                        <Input
+                            class="max-w-sm"
+                            placeholder="Filter by path"
+                            v-model="pathFilterValue"
+                        />
+                        
+                        
 
                         <DropdownMenu>
                             <DropdownMenuTrigger as-child>

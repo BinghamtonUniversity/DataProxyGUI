@@ -290,9 +290,9 @@
           >
             <td :class="[currentTheme.cell, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']" @click.stop>
               <CheckboxField
-                :name="'row-select-' + (row.id || row.name)"
-                :value="selectedRows.includes(row.id || row.name)"
-                @update:value="toggleRowSelect(row, $event)"
+                :name="'row-select-' + idx"
+                :value="selectedRows.includes((currentPage - 1) * pageSize + idx) ? 'true' : 'false'"
+                @update:value="toggleRowSelect(row, $event, (currentPage - 1) * pageSize + idx)"
                 :show="true"
                 :edit="true"
                 :required="false"
@@ -383,7 +383,7 @@
                 <!-- Single action button when only one action -->
                 <button 
                   v-if="rowActions.length === 1"
-                  @click="emitAction(rowActions[0].type, row)" 
+                  @click="emitAction(rowActions[0].type, row, (currentPage - 1) * pageSize + idx)" 
                   :class="[currentTheme.menuButton, rowActions[0].colorClass, 'cursor-pointer']"
                   :title="!props.rowActionLabels ? rowActions[0].label : ''"
                 >
@@ -396,7 +396,7 @@
                   <button 
                     v-for="action in rowActions" 
                     :key="action.type"
-                    @click="emitAction(action.type, row)" 
+                    @click="emitAction(action.type, row, (currentPage - 1) * pageSize + idx)" 
                     :class="[currentTheme.menuButton, action.colorClass, 'text-sm px-3 py-2 cursor-pointer']"
                     :title="!props.rowActionLabels ? action.label : ''"
                   >
@@ -421,7 +421,7 @@
                         <button 
                           v-for="action in rowActions" 
                           :key="action.type"
-                          @click="emitAction(action.type, row); closeMenu()" 
+                          @click="emitAction(action.type, row, (currentPage - 1) * pageSize + idx); closeMenu()" 
                           :class="[currentTheme.dropdownItem, action.colorClass, 'cursor-pointer']"
                           :title="!props.rowActionLabels ? action.label : ''"
                         >
@@ -991,6 +991,8 @@ const paginatedRows = computed(() => {
 watch([filteredRows, pageSize], () => {
   // Reset to first page if filters or page size change
   currentPage.value = 1;
+  // Clean up invalid selections (indices that are now out of range)
+  selectedRows.value = selectedRows.value.filter(idx => idx >= 0 && idx < filteredRows.value.length);
 });
 
 function goToPage(page) {
@@ -1010,26 +1012,35 @@ const pageSummary = computed(() => {
 });
 
 const allSelected = computed(() => {
-  return filteredRows.value.length > 0 && filteredRows.value.every(row => selectedRows.value.includes(row.id || row.name));
+  if (filteredRows.value.length === 0) return 'false';
+  const allSelectedBool = filteredRows.value.every((row, index) => selectedRows.value.includes(index));
+  return allSelectedBool ? 'true' : 'false';
 });
 
 function toggleSelectAll(checked) {
   const isChecked = checked === 'true' || checked === true;
+
   if (isChecked) {
-    selectedRows.value = filteredRows.value.map(row => row.id || row.name);
+    // Select all indices in filteredRows - create new array for reactivity
+    selectedRows.value = Array.from({ length: filteredRows.value.length }, (_, index) => index);
+
   } else {
     selectedRows.value = [];
+
   }
 }
-function toggleRowSelect(row, checked) {
-  const rowId = row.id || row.name;
+function toggleRowSelect(row, checked, index) {
+
   const isChecked = checked === 'true' || checked === true;
+  // Index is now passed directly from template
+  const rowIndex = index;
+  
   if (isChecked) {
-    if (!selectedRows.value.includes(rowId)) {
-      selectedRows.value.push(rowId);
+    if (!selectedRows.value.includes(rowIndex)) {
+      selectedRows.value.push(rowIndex);
     }
   } else {
-    selectedRows.value = selectedRows.value.filter(id => id !== rowId);
+    selectedRows.value = selectedRows.value.filter(idx => idx !== rowIndex);
   }
 }
 function clearFilters() {
@@ -1253,16 +1264,18 @@ onMounted(() => {
 function emitRowClick(row) {
   emit('rowClick', row);
 }
-function emitAction(type, payload) {
-  emit('rowActionHandler', { type, payload });
+function emitAction(type, payload, index) {
+  // Calculate the actual index in filteredRows if not provided
+  const actualIndex = index !== undefined ? index : filteredRows.value.findIndex(r => r === payload);
+  emit('rowActionHandler', { type, payload, index: actualIndex });
 }
 function toggleMenu(id) {
-  console.log('Toggle menu for ID:', id, 'Current openMenuId:', openMenuId.value);
+
   openMenuId.value = openMenuId.value === id ? null : id;
-  console.log('New openMenuId:', openMenuId.value);
+
 }
 function closeMenu() {
-  console.log('Closing menu, current openMenuId:', openMenuId.value);
+
   openMenuId.value = null;
 }
 
@@ -1298,29 +1311,31 @@ function getDropdownPosition(rowId) {
 function onCreate() {
   emit('create');
   // Default logic: placeholder (e.g., open modal, log, etc.)
-  // console.log('OnCreate triggered');
+
 }
 function onEdit() {
   if (selectedRows.value.length === 1) {
-    // Find the full row object by ID
-    const rowId = selectedRows.value[0];
-    const row = computedRows.value.find(r => (r.id || r.name) === rowId);
+    // selectedRows now contains indices, get row by index
+    const index = selectedRows.value[0];
+    const row = filteredRows.value[index];
     emit('edit', row);
-    // Default logic: placeholder
-    // console.log('OnEdit triggered', row);
+
   } else if (selectedRows.value.length > 1) {
     onMultipleEdit();
   }
 }
 function onMultipleEdit() {
-  emit('multiple-edit', selectedRows.value);
-  // Default logic: placeholder
-  // console.log('OnMultipleEdit triggered', selectedRows.value);
+  // Get rows by indices
+  const rows = selectedRows.value.map(index => filteredRows.value[index]).filter(Boolean);
+  emit('multiple-edit', rows);
+
+
 }
 function onDelete() {
-  emit('delete', selectedRows.value);
-  // Default logic: placeholder
-  // console.log('OnDelete triggered', selectedRows.value);
+  // Get rows by indices
+  const rows = selectedRows.value.map(index => filteredRows.value[index]).filter(Boolean);
+  emit('delete', rows);
+
 }
 
 // Get tooltip text for action button
@@ -1340,22 +1355,22 @@ function getActionTooltip(action) {
 
 // Handle custom actions
 function handleCustomAction(action) {
-  // Check if the action has a custom handler
-  const hasCustomHandler = emit('actionHandler', {
-    action: action.name,
-    selectedRows: selectedRows.value,
-    selectedData: selectedRows.value.map(id => computedRows.value.find(row => (row.id || row.name) === id))
-  });
+  // selectedRows now contains indices, not IDs
+  // Get the selected rows data by index
+  const selectedData = selectedRows.value
+    .map(index => filteredRows.value[index])
+    .filter(Boolean); // Remove any undefined values
   
-  // If no custom handler is implemented, show info toast
-  if (!hasCustomHandler) {
-    // Import toaster if available, otherwise use console
-    if (typeof window !== 'undefined' && window.toastr) {
-      window.toastr.info(`Please implement the ${action.name} function`, 'Action Not Implemented');
-    } else {
-      console.info(`Please implement the ${action.name} function`);
-    }
-  }
+  // selectedRows.value already contains the indices
+  const selectedIndex = selectedRows.value.filter(idx => idx >= 0 && idx < filteredRows.value.length);
+  
+  // Emit action handler with correct data
+  emit('actionHandler', {
+    action: action.name,
+    selectedRows: selectedRows.value, // These are now indices
+    selectedData: selectedData,
+    selectedIndex: selectedIndex
+  });
 }
 
 const visiblePages = computed(() => {
