@@ -290,7 +290,8 @@ const directToInstanceRoute = (instance: any) => {
     } else {
         let domain = environment.value.find((env: Environment) => env.id === instance.environment_id)?.domain
         const baseDomain = domain?.split('/').slice(0, 3).join('/')
-        instanceUrl = `http://${baseDomain}:8000/${instance.route}`
+        // TODO https or http?
+        instanceUrl = `http://${baseDomain}/${instance.route}`
     }
     window.open(instanceUrl, '_blank')
 }
@@ -740,7 +741,7 @@ const handleSave = async () => {
 // UPDATED: Client-side only tab navigation (no XHR)
 const navigateToTab = (tabId: string) => {
     currentTab.value = tabId
-    
+    // props.activeTab? = tabId 
     // This uses History API to update the URL without triggering navigation
     const newUrl = `/apis/${props.api_id}/${tabId}`
     window.history.pushState({ tab: tabId }, '', newUrl)
@@ -998,7 +999,7 @@ onUnmounted(() => {
                         variant="ghost"
                         :class="[
                             'flex-1 px-4 py-2 rounded-t-md text-center transition-colors',
-                            { 'bg-muted font-semibold': props.activeTab === tab.id }
+                            { 'bg-muted font-semibold': currentTab === tab.id }
                         ]"
                         @click="navigateToTab(tab.id)"
                     >

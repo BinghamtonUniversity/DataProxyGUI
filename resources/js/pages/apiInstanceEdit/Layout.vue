@@ -435,7 +435,7 @@ onUnmounted(() => {
                         variant="ghost"
                         :class="[
                             'flex-1 px-4 py-2 rounded-t-md text-center transition-colors',
-                            { 'bg-muted font-semibold': props.activeTab === tab.id }
+                            { 'bg-muted font-semibold': currentTab === tab.id }
                         ]"
                         @click="navigateToTab(tab.id)"
                     >
