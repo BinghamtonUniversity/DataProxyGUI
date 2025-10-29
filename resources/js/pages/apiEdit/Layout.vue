@@ -1394,7 +1394,7 @@ onUnmounted(() => {
                                     @click="directToInstanceRoute(instance)"
                                     class="px-3 py-1 text-xs bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-orange-800 rounded-md transition-colors"
                                 >
-                                    Route
+                                    Visit
                                 </button>
                             </div>
                         </div>

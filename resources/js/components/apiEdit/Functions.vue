@@ -40,6 +40,8 @@ const isSaving = ref(false)
 const saveError = ref<string | null>(null)
 const saveSuccess = ref(false)
 const editorRef = ref<any>(null)
+const validationErrors = ref<number>(0)
+const validationWarnings = ref<number>(0)
 
 // Toaster
 const { success, error, warning, info } = useToaster();
@@ -54,19 +56,41 @@ const createViewError = ref<string | null>(null)
 const viewBeingEdited = ref<ApiVersionFunction | null>(null)
 const isEditingView = ref(false)
 
+
+const handleValidation = (markers: any) => {
+    console.log("Functions.vue - handleValidation called with markers:", markers)
+    const errors = markers.filter((m: any) => m.severity >= 8) // Monaco.MarkerSeverity.Error = 8
+    const warnings = markers.filter((m: any) => m.severity === 4) // Monaco.MarkerSeverity.Warning = 4
+    
+    validationErrors.value = errors.length
+    validationWarnings.value = warnings.length
+    
+    console.log("Functions.vue - validationErrors:", validationErrors.value, "validationWarnings:", validationWarnings.value)
+    
+    // Provide immediate feedback to user about validation status
+    if (errors.length > 0) {
+        // Show first error message for immediate feedback
+        const firstError = errors[0]
+        saveError.value = `Validation Error: ${firstError.message}${errors.length > 1 ? ` (and ${errors.length - 1} more)` : ''}`
+    } else if (warnings.length > 0) {
+        // Show warning message
+        const firstWarning = warnings[0]
+        saveError.value = `Warning: ${firstWarning.message}${warnings.length > 1 ? ` (and ${warnings.length - 1} more)` : ''}`
+    } else {
+        // Clear any previous validation messages
+        if (saveError.value && (saveError.value.includes('Validation Error') || saveError.value.includes('Warning'))) {
+            saveError.value = null
+        }
+    }
+}
+
 const handleUpdateCode = (updatedCode: string) => {
     if (!selectedFunction.value || !props.apiData) {
         saveError.value = 'No function selected or API data not available'
         return
     }
-    if (!updatedCode || updatedCode.trim() === '') {
-        saveError.value = 'Function content cannot be empty'
-        return
-    }
-    isSaving.value = true
-    saveError.value = null
-    saveSuccess.value = false
-
+    
+    // Update the local state immediately
     try {
         const updatedApiData = {
             ...props.apiData,
@@ -84,18 +108,10 @@ const handleUpdateCode = (updatedCode: string) => {
             selectedFunction.value.content = updatedCode
         }
         
-        saveSuccess.value = true
-        setTimeout(() => {
-            saveSuccess.value = false
-        }, 3000)
-
     } catch (error) {
-        console.error('Save error:', error)
-        saveError.value = error instanceof Error ? error.message : 'Failed to save changes'
-    } finally {
-        isSaving.value = false
+        console.error('Update error:', error)
+        saveError.value = error instanceof Error ? error.message : 'Failed to update code'
     }
-    selectedFunction.value.content = updatedCode
 }
 
 const handleSave = async (updatedCode: string) => {
@@ -104,8 +120,9 @@ const handleSave = async (updatedCode: string) => {
         return
     }
 
-    if (!updatedCode || updatedCode.trim() === '') {
-        saveError.value = 'Function content cannot be empty'
+    // Don't save if there are validation errors
+    if (validationErrors.value > 0) {
+        saveError.value = 'Please fix validation errors before saving'
         return
     }
 
@@ -636,6 +653,7 @@ onUnmounted(() => {
                             :saveSuccess="saveSuccess"
                             @save="handleSave"
                             @update:code="handleUpdateCode"
+                            @onValidate="handleValidation"
                         />
                         
                         <!-- No Function Selected State -->

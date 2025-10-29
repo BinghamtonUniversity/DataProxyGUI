@@ -260,7 +260,10 @@ const submitParams = async () => {
   }
 
   const updatedApiData = { ...props.apiData, version_urls: updatedRoutes }
+  
   props.updateApiData(updatedApiData)
+  console.log('Updated API Data:', updatedApiData.version_urls)
+  console.log('Original API Data:', props.apiData.version_urls)
   success('Parameters updated successfully', 'Updated')
   closeParamsDialog()
 }
