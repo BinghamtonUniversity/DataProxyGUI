@@ -272,7 +272,7 @@ const importFormConfig = {
             <!-- Form Builder -->
             <template v-else>
                 <!-- Initialize form data when apiData is available -->
-                <div v-if="apiData && !formData.fields.length" style="display: none;">
+                <div v-if="apiData && !formData.fields" style="display: none;">
                     {{ initializeFormData(apiData) }}
                 </div>
                 <FormBuilder 
