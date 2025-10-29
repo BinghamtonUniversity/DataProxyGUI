@@ -549,10 +549,11 @@ onMounted(() => {
                     :showNew="true"
                     :showEdit="true"
                     :showDelete="true"
+                    :clickableRows="true"
                     :rowActions="[
                         { type: 'view', label: 'View Details', icon: 'eye', colorClass: 'text-blue-600 hover:bg-blue-50' },
                         { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-green-600 hover:bg-green-50' },
-                        { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
+                        { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50' }
                     ]"
                     @create="openNewModal"
                     @edit="openEditModal"
