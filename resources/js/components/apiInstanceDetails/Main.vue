@@ -11,8 +11,8 @@ import { useToaster } from '@/composables/useToaster';
 interface Props {
     instance_id: string
     apiInstanceData: ApiInstance | null,
-    apiUsers: ApiUser | null,
-    resources: Resource | null,
+    apiUsers: ApiUser[] | null,
+    resources: Resource[] | null,
     loading: boolean,
     apiInstanceError: string
     updateApiInstanceData: (updatedApiInstanceData: Partial<ApiInstance> ) => void

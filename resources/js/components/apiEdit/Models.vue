@@ -1,41 +1,13 @@
 <script setup lang="ts">
-import type {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-} from '@tanstack/vue-table'
-import {
-  FlexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useVueTable,
-} from '@tanstack/vue-table'
 import { ArrowUpDown, ChevronDown, Plus, Trash2, Code, Pencil } from 'lucide-vue-next'
-import { h, ref, computed, watch } from 'vue'
+import { h, ref, computed, watch, onUnmounted } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
 import { type ApiData, ModelData, Api } from '@/types'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuItem
-} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+
+
 import {
   Dialog,
   DialogTrigger,
@@ -71,8 +43,6 @@ const { success, error, warning, info } = useToaster();
 
 // --- Dialog State and Handlers ---
 const newModelDialogOpen = ref(false)
-const contentEditorDialogOpen = ref(false)
-const classMethodsEditorDialogOpen = ref(false)
 
 const newModelForm = ref({
   name: '',
@@ -82,31 +52,32 @@ const newModelForm = ref({
   class_methods: [] as { name: string; params: string[]; content: string }[]
 })
 
-// // Temporary state for editors
-// const tempContent = ref('')
-// const tempClassMethods = ref<{ name: string; params: string[]; content: string }[]>([])
-// const editingMethodIndex = ref<number | null>(null)
-
 const newModelLoading = ref(false)
 const newModelError = ref('')
 const isEditMode = ref(false)
 const editingModelIndex = ref<number | null>(null)
-// const saveLoading = ref(false)
-// const saveError = ref('')
+const isSaving = ref(false)
+
+const saveSuccessTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+const isSavingTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 
 // Code Editor Dialog State
 const codeEditorDialogOpen = ref(false)
 const selectedModel = ref<ModelData | null>(null)
-const selectedSection = ref<'content' | { type: 'method', index: number } | null>(null)
+const selectedSection = ref<'properties' | 'content' | { type: 'method', index: number } | null>(null)
 const currentCode = ref('')
 const isSavingCode = ref(false)
 const saveCodeError = ref<string | null>(null)
 const saveCodeSuccess = ref(false)
 
 const isNewMethodDialogOpen = ref(false)
-const newMethod = ref({
+const newMethod = ref<{
+  name: string
+  params: string[]
+  content: string
+}>({
   name: '',
-  params: '',
+  params: [],
   content: ''
 })
 
@@ -158,7 +129,7 @@ const openEditor = (model: ModelData, index: number) => {
 
 const resetNewMethodDialog = () => {
     newMethod.value.name = ''
-    newMethod.value.params = ''
+    newMethod.value.params = []
     newMethod.value.content = ''
     createMethodError.value = null
     isCreatingMethod.value = false
@@ -166,7 +137,7 @@ const resetNewMethodDialog = () => {
     methodBeingEdited.value = null
 }
 
-const selectSection = (section: 'content' | { type: 'method', index: number }) => {
+const selectSection = (section: 'properties' | 'content' | { type: 'method', index: number }) => {
   if (!selectedModel.value) return
   
   selectedSection.value = section
@@ -179,12 +150,29 @@ const selectSection = (section: 'content' | { type: 'method', index: number }) =
   }
 }
 
+watch(selectedModel, (newModel, oldModel) => {
+  // Only reset to properties if it's a different model (not just an update)
+  if (newModel && (!oldModel || newModel.name !== oldModel?.name) && !isSaving.value) {
+    selectedSection.value = 'properties';
+  }
+});
+
 const handleCodeSave = async (updatedCode: string) => {
   if (!selectedModel.value || !props.apiData) {
     saveCodeError.value = 'No model selected or API data not available'
     return
   }
+  // Clear any existing timeouts
+  if (saveSuccessTimeout.value) {
+    clearTimeout(saveSuccessTimeout.value)
+    saveSuccessTimeout.value = null
+  }
+  if (isSavingTimeout.value) {
+    clearTimeout(isSavingTimeout.value)
+    isSavingTimeout.value = null
+  }
 
+  isSaving.value = true
   isSavingCode.value = true
   saveCodeError.value = null
   saveCodeSuccess.value = false
@@ -195,7 +183,12 @@ const handleCodeSave = async (updatedCode: string) => {
     if (selectedSection.value === 'content') {
       updatedModel.content = updatedCode
     } else if (typeof selectedSection.value === 'object' && selectedSection.value?.type === 'method') {
-      if (updatedModel.class_methods) {
+      if (
+        Array.isArray(updatedModel.class_methods) &&
+        updatedModel.class_methods.length > 0 &&
+        selectedSection.value?.index != null &&
+        updatedModel.class_methods[selectedSection.value.index]
+      ) {
         updatedModel.class_methods[selectedSection.value.index].content = updatedCode
       }
     }
@@ -212,56 +205,23 @@ const handleCodeSave = async (updatedCode: string) => {
     currentCode.value = updatedCode
     
     saveCodeSuccess.value = true
-    setTimeout(() => {
+    saveSuccessTimeout.value = setTimeout(() => {
       saveCodeSuccess.value = false
+      saveSuccessTimeout.value = null
     }, 3000)
 
-    success('Code saved successfully', 'Success')
+    // success('Code saved successfully', 'Success')
   } catch (error) {
     console.error('Save error:', error)
     saveCodeError.value = error instanceof Error ? error.message : 'Failed to save changes'
   } finally {
     isSavingCode.value = false
+    isSavingTimeout.value = setTimeout(() => {
+      isSaving.value = false
+      isSavingTimeout.value = null
+    }, 100)
   }
 }
-
-// Content Editor Handlers
-// const openContentEditor = () => {
-//   tempContent.value = newModelForm.value.content
-//   contentEditorDialogOpen.value = true
-// }
-
-// const saveContentEditor = () => {
-//   newModelForm.value.content = tempContent.value
-//   contentEditorDialogOpen.value = false
-// }
-
-// const cancelContentEditor = () => {
-//   contentEditorDialogOpen.value = false
-// }
-
-// // Class Methods Editor Handlers
-// const openClassMethodsEditor = () => {
-//   tempClassMethods.value = JSON.parse(JSON.stringify(newModelForm.value.class_methods))
-//   classMethodsEditorDialogOpen.value = true
-// }
-
-// const saveClassMethodsEditor = () => {
-//   newModelForm.value.class_methods = JSON.parse(JSON.stringify(tempClassMethods.value))
-//   classMethodsEditorDialogOpen.value = false
-// }
-
-// const cancelClassMethodsEditor = () => {
-//   classMethodsEditorDialogOpen.value = false
-// }
-
-// const addClassMethod = () => {
-//   tempClassMethods.value.push({ name: '', params: [], content: '' })
-// }
-
-// const removeClassMethod = (index: number) => {
-//   tempClassMethods.value.splice(index, 1)
-// }
 
 // Meta properties handlers
 const addNewModelMetaProperty = () => {
@@ -272,13 +232,14 @@ const removeNewModelMetaProperty = (index: number) => {
   newModelForm.value.class_meta.splice(index, 1)
 }
 
-// const addNewModelClassMethods = () => {
-//   newModelForm.value.class_methods.push({ name: '', params: '', content: '' })
-// }
+// Paramaters handlers for new model
+const addMethodParam = () => {
+  newMethod.value.params.push('')
+}
 
-// const removeNewModelClassMethod = (index: number) => {
-//   newModelForm.value.class_methods.splice(index, 1)
-// }
+const removeMethodParam = (index: number) => {
+  newMethod.value.params.splice(index, 1)
+}
 
 const submitNewModel = async (e: Event) => {
   e.preventDefault()
@@ -290,12 +251,6 @@ const submitNewModel = async (e: Event) => {
     newModelLoading.value = false
     return
   }
-
-  // if (!newModelForm.value.content.trim()) {
-  //   newModelError.value = 'Model Content is required.'
-  //   newModelLoading.value = false
-  //   return
-  // }
   
   try {
     const rawName = newModelForm.value.name.trim();
@@ -323,17 +278,19 @@ const submitNewModel = async (e: Event) => {
       return;
     }
 
+    const isEditing = isEditMode.value && editingModelIndex.value !== null
+
     const newModel = {
       name: rawName,
-      content: newModelForm.value.content,
+      content: isEditing ? selectedModel.value?.content || '' : '',
       inheritance: newModelForm.value.inheritance,
       class_meta: newModelForm.value.class_meta.filter(meta => meta.name.trim() && meta.value.trim()),
-      class_methods: []
+      class_methods: isEditing ? selectedModel.value?.class_methods || [] : []
     }
     
     let updatedApiData
 
-    if (isEditMode.value && editingModelIndex.value !== null) {
+    if (isEditing) {
       // Edit existing model
       updatedApiData = {
         ...props.apiData,
@@ -350,8 +307,11 @@ const submitNewModel = async (e: Event) => {
         version_models: [...(props.apiData.version_models || []), newModel]
       }
     }
-    console.log('Updated API Data:', updatedApiData)
+    // console.log('Updated API Data:', updatedApiData)
     props.updateApiData(updatedApiData)
+    if (selectedModel.value) {
+      selectedModel.value = newModel
+    }
     if(isEditMode.value) {
       success('Updated successfully', 'Model Updated');
     } else {
@@ -401,7 +361,7 @@ const openEditModelDialog = (model: ModelData, index: number) => {
     content: model.content || '',
     inheritance: model.inheritance || 'models.Model',
     class_meta: model.class_meta ? JSON.parse(JSON.stringify(model.class_meta)) : [],
-    class_methods: []
+    class_methods: selectedModel.value?.class_methods || []
   }
   newModelDialogOpen.value = true
 }
@@ -410,7 +370,7 @@ const editMethodName = (method: { name: string; params: string[]; content: strin
     isEditingMethod.value = true
     methodBeingEdited.value = method
     newMethod.value.name = method.name
-    newMethod.value.params = method.params.join(', ')
+    newMethod.value.params = method.params ?? []
     // newMethod.value.content = method.content
     createMethodError.value = null
     isNewMethodDialogOpen.value = true
@@ -428,28 +388,14 @@ const validateMethodName = (name: string): string | null => {
   return null
 }
 
-const validateAndNormalizeParams = (rawParams: string): { error?: string, params?: string[] } => {
-  const trimmed = rawParams.trim()
+const validateAndNormalizeParams = (rawParams: string[]): { error?: string, params?: string[] } => {
 
-  if (trimmed.includes(' ') && !trimmed.includes(',')) {
-    return { error: 'Parameters must be comma-separated (e.g. param1, param2)' }
+  //if rawParams includes 'self', error
+  if(rawParams.includes('self')) {
+    return { error: 'The parameter "self" is not allowed. It is automatically included in instance methods.' }
   }
 
-  const paramsArray = trimmed
-    .split(',')
-    .map(p => p.trim())
-    .filter(p => p)
-
-  // if (paramsArray.length === 0) {
-  //   return { error: 'Please enter at least one parameter' }
-  // }
-
-  // Ensure "self" is always the first parameter
-  // if (!paramsArray.includes('self')) {
-  //   paramsArray.unshift('self')
-  // }
-
-  return { params: paramsArray }
+  return { params: rawParams }
 }
 
 
@@ -469,7 +415,7 @@ const handleCreateNewMethod = async () => {
   }
 
   // Duplicate check
-  const existingMethod = selectedModel.value?.class_methods.find(m => m.name === name)
+  const existingMethod = selectedModel.value?.class_methods?.find(m => m.name === name)
   if (existingMethod) {
     createMethodError.value = 'A method with this name already exists'
     return
@@ -506,7 +452,7 @@ const handleCreateNewMethod = async () => {
 
     // Reset form and close dialog
     newMethod.value.name = ''
-    newMethod.value.params = ''
+    newMethod.value.params = []
     newMethod.value.content = ''
     isNewMethodDialogOpen.value = false
   } catch (e) {
@@ -539,7 +485,7 @@ const handleUpdateMethodName = async () => {
   }
 
   // Duplicate check
-  const existingMethod = selectedModel.value?.class_methods.find(
+  const existingMethod = selectedModel.value?.class_methods?.find(
     m => m.name === trimmedName && m !== methodBeingEdited.value
   )
   if (existingMethod) {
@@ -588,161 +534,18 @@ const handleDeleteMethod = (method: { name: string; params: string[]; content: s
         return
     }
 
-    selectedModel.value.class_methods = selectedModel.value.class_methods.filter(m => m.name !== method.name)
+    selectedModel.value.class_methods = selectedModel.value.class_methods?.filter(m => m.name !== method.name)
 }
 
-// --- Table Definition ---
-const sorting = ref<SortingState>([])
-const columnFilters = ref<ColumnFiltersState>([])
-const columnVisibility = ref<VisibilityState>({})
-const rowSelection = ref({})
-
-// Define table columns
-const columns: ColumnDef<ModelData>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => h(Checkbox, {
-      'modelValue': table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate'),
-      'onUpdate:modelValue': value => table.toggleAllPageRowsSelected(!!value),
-      'ariaLabel': 'Select all',
-    }),
-    cell: ({ row }) => h('div', { onClick: e => e.stopPropagation() }, [
-        h(Checkbox, {
-            'modelValue': row.getIsSelected(),
-            'onUpdate:modelValue': value => row.toggleSelected(!!value),
-            'ariaLabel': 'Select row',
-        })
-    ]),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: 'name',
-    header: ({ column }) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Model Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
-    },
-    cell: ({ row }) => h('div', { class: 'font-medium text-blue-600' }, row.getValue('name')),
-  },
-  {
-    accessorKey: 'inheritance',
-    header: 'Inheritance',
-    cell: ({ row }) => {
-      const inheritance = row.getValue('inheritance') as string
-      return h('div', { 
-        class: 'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300' 
-      }, inheritance)
-    },
-  },
-  {
-    id: 'class_meta',
-    header: 'Meta Properties',
-    cell: ({ row }) => {
-      const classMeta = row.original.class_meta
-      if (!classMeta || classMeta.length === 0) {
-        return h('div', { class: 'text-gray-500 text-sm' }, 'No meta')
-      }
-      return h('div', { class: 'flex flex-wrap gap-1' }, 
-        classMeta.map((meta, index) => 
-          h('span', { 
-            key: index,
-            class: 'inline-flex items-center rounded px-2 py-1 text-xs bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-          }, `${meta.name}: ${meta.value}`)
-        )
-      )
-    },
-  },
-  {
-    id: 'content_preview',
-    header: 'Content',
-    cell: ({ row }) => {
-            const content = row.original.content
-            if (!content) {
-                return h('div', { class: 'text-xs text-gray-500' }, 'No content')
-            }
-                
-            const preview = content.substring(0, 50) + (content.length > 50 ? '...' : '')
-            
-            return h('div', { 
-            class: 'max-w-xs text-xs text-gray-600 dark:text-gray-400 truncate font-mono' 
-            }, preview)
-        },
-    },
-    {
-    id: 'actions',
-    enableHiding: false,
-    cell: ({ row }) => {
-            const model = row.original
-            const index = row.index
-            return h('div', { class: 'flex gap-2' }, [
-                h(Button, {
-                  variant: 'ghost',
-                  size: 'sm',
-                  onClick: (e: MouseEvent) => {
-                  e.stopPropagation()
-                  openEditor(model, index)
-                  },
-                  class: 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
-              }, {
-                  default: () => [h(Code, { class: 'h-4 w-4' })]
-              }),
-                h(Button, {
-                    variant: 'ghost',
-                    size: 'sm',
-                    onClick: (e: MouseEvent) => {
-                        e.stopPropagation()
-                        handleDelete(model)
-                    },
-                    class: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20'
-                }, {
-                    default: () => [h(Trash2, { class: 'h-4 w-4' })]
-                })
-            ])
-        },
-    }
-]
-
-const table = computed(() => {
-  if (!props.apiData?.version_models) {
-    return null
+// Clean up timeouts when component unmounts
+onUnmounted(() => {
+  if (saveSuccessTimeout.value) {
+    clearTimeout(saveSuccessTimeout.value)
   }
-
-  return useVueTable({
-    data: props.apiData.version_models,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: updaterOrValue => valueUpdater(updaterOrValue, sorting),
-    onColumnFiltersChange: updaterOrValue => valueUpdater(updaterOrValue, columnFilters),
-    onColumnVisibilityChange: updaterOrValue => valueUpdater(updaterOrValue, columnVisibility),
-    onRowSelectionChange: updaterOrValue => valueUpdater(updaterOrValue, rowSelection),
-    state: {
-      get sorting() { return sorting.value },
-      get columnFilters() { return columnFilters.value },
-      get columnVisibility() { return columnVisibility.value },
-      get rowSelection() { return rowSelection.value },
-    },
-  })
+  if (isSavingTimeout.value) {
+    clearTimeout(isSavingTimeout.value)
+  }
 })
-
-
-// Computed properties
-const headerGroups = computed(() => table.value?.getHeaderGroups() || [])
-const tableRows = computed(() => table.value?.getRowModel().rows || [])
-const hidableColumns = computed(() => table.value?.getAllColumns().filter(column => column.getCanHide()) || [])
-const nameFilterValue = computed({
-  get: () => table.value?.getColumn('name')?.getFilterValue() as string || '',
-  set: (value: string) => table.value?.getColumn('name')?.setFilterValue(value)
-})
-const selectedRowsCount = computed(() => table.value?.getFilteredSelectedRowModel().rows.length || 0)
-const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.length || 0)
-const canPreviousPage = computed(() => table.value?.getCanPreviousPage() || false)
-const canNextPage = computed(() => table.value?.getCanNextPage() || false)
-
 </script>
 
 <template>
@@ -767,371 +570,192 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                     </div>
                 </div>
             </template>
-            
 
-            <!-- Data Table -->
-            <template v-else-if="apiData?.version_models && table">
-                <!-- Table Controls -->
-                <div class="flex items-center py-4">
-                    <Input
-                        class="max-w-sm"
-                        placeholder="Filter by model name..."
-                        v-model="nameFilterValue"
-                    />
-                    
-                    <!-- Main Model Dialog -->
-                    <Dialog v-model:open="newModelDialogOpen">
-                      <DialogTrigger as-child>
-                        <Button class="ml-4 text-green-600" variant="outline" @click="openNewModelDialog">
-                          <Plus class="mr-2 h-4 w-4" />
-                          New Model
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent class="sm:max-w-3xl">
-                        <form @submit="submitNewModel" class="space-y-6">
-                          <DialogHeader>
-                            <DialogTitle aria-describedby="dialog-title">{{ isEditMode ? 'Edit Model' : 'Create New Model' }}</DialogTitle>
-                          </DialogHeader>
-                          <div class="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-6">
-                            <!-- Basic Model Info -->
-                            <div class="grid grid-cols-4 items-center gap-4">
-                              <Label for="new-model-name" class="text-right">Name</Label>
-                              <Input id="new-model-name" v-model="newModelForm.name" required placeholder="Model name" class="col-span-3" />
-                            </div>
-                            <div class="grid grid-cols-4 items-center gap-4">
-                              <Label for="new-model-inheritance" class="text-right">Inheritance</Label>
-                              <Input id="new-model-inheritance" v-model="newModelForm.inheritance" required placeholder="models.Model" class="col-span-3" />
-                            </div>
-                            
-                            <!-- Meta Properties Section -->
-                            <div class="flex flex-col gap-4 border-t pt-4">
-                              <h3 class="text-lg font-medium">Meta Properties</h3>
-                              <div v-if="newModelForm.class_meta.length > 0" class="space-y-3">
-                                <div class="grid grid-cols-9 items-center gap-2">
-                                  <Label class="col-span-4 text-sm font-semibold">Name</Label>
-                                  <Label class="col-span-4 text-sm font-semibold">Value</Label>
-                                </div>
-                                <div v-for="(meta, index) in newModelForm.class_meta" :key="index" class="grid grid-cols-9 items-center gap-2">
-                                  <Input 
-                                    v-model="meta.name" 
-                                    placeholder="Name" 
-                                    class="col-span-3"
-                                    required
-                                  />
-                                  <Input 
-                                    v-model="meta.value" 
-                                    placeholder="Value" 
-                                    class="col-span-4"
-                                    required
-                                  />
-                                  <Button 
-                                    type="button" 
-                                    variant="destructive" 
-                                    size="sm"
-                                    @click="removeNewModelMetaProperty(index)"
-                                    class="col-span-1"
-                                  >
-                                    ×
-                                  </Button>
-                                </div>
-                              </div>
-                              <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
-                                No meta properties defined.
-                              </div>
-                              <Button 
-                                type="button" 
-                                variant="outline" 
-                                size="sm"
-                                @click="addNewModelMetaProperty"
-                                class="self-start"
-                              >
-                                + Add Meta Property
-                              </Button>
-                            </div>
-
-                            <!-- <div class="flex flex-col gap-4 border-t pt-4">
-                              <div class="flex items-center justify-between">
-                                <h3 class="text-lg font-medium">Model Content</h3>
-                                <Button 
-                                  type="button" 
-                                  variant="outline"
-                                  @click="openContentEditor"
-                                >
-                                  Edit Content
-                                </Button>
-                              </div>
-                              <div class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
-                                <span v-if="newModelForm.content">
-                                  Content defined ({{ newModelForm.content.split('\n').length }} lines)
-                                </span>
-                                <span v-else>No content defined</span>
-                              </div>
-                            </div>
-\
-                            <div class="flex flex-col gap-4 border-t pt-4">
-                              <div class="flex items-center justify-between">
-                                <h3 class="text-lg font-medium">Class Methods</h3>
-                                <Button 
-                                  type="button" 
-                                  variant="outline"
-                                  @click="openClassMethodsEditor"
-                                >
-                                  Edit Methods
-                                </Button>
-                              </div>
-                              <div class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
-                                <span v-if="newModelForm.class_methods.length > 0">
-                                  {{ newModelForm.class_methods.length }} method(s) defined
-                                </span>
-                                <span v-else>No methods defined</span>
-                              </div>
-                            </div>-->
-                          </div> 
-                            
-                          <!-- Error Display -->
-                          <div v-if="newModelError" class="text-red-600 text-sm">
-                            {{ newModelError }}
-                          </div>
-
-                          <DialogFooter class="gap-2">
-                            <DialogClose as-child>
-                              <Button variant="secondary" type="button" @click="closeNewModelDialog" :disabled="newModelLoading">
-                                Cancel
-                              </Button>
-                            </DialogClose>
-                            <Button type="submit" variant="default" :disabled="newModelLoading">
-                              <span v-if="newModelLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
-                              <span v-else>{{ isEditMode ? 'Save Changes' : 'Create Model' }}</span>
-                            </Button>
-                          </DialogFooter>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-
-                    <!-- Content Editor Dialog -->
-                    <!-- <Dialog v-model:open="contentEditorDialogOpen">
-                      <DialogContent class="sm:max-w-5xl max-h-[90vh]">
-                        <DialogHeader>
-                          <DialogTitle aria-describedby="edit-model-content">Edit Model Content</DialogTitle>
-                        </DialogHeader>
-                        <div class="py-4 h-[60vh]">
-                          <Editor 
-                            v-model:code="tempContent" 
-                            :language="'python'"
-                            class="h-full border rounded-md"
-                          />
-                        </div>
-                        <DialogFooter class="gap-2">
-                          <Button variant="secondary" @click="cancelContentEditor">
-                            Cancel
-                          </Button>
-                          <Button variant="default" @click="saveContentEditor">
-                            Save Content
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog> -->
-
-                    <!-- Class Methods Editor Dialog -->
-                    <!-- <Dialog v-model:open="classMethodsEditorDialogOpen">
-                      <DialogContent class="sm:max-w-6xl max-h-[90vh] flex flex-col p-0">
-                        <DialogHeader class="px-6 pt-6">
-                          <DialogTitle aria-describedby="edit-class-methods">Edit Class Methods</DialogTitle>
-                        </DialogHeader>
-                        <div class="flex-1 overflow-y-auto px-6 py-4 sapce-y-4 min-h-0">
-                          <div v-if="tempClassMethods.length === 0" class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
-                            No class methods defined.
-                          </div>
-                          
-                          <div v-for="(method, index) in tempClassMethods" :key="index" class="border rounded-lg p-4 space-y-3">
-                            <div class="flex items-center gap-2">
-                              <div class="flex-1 grid grid-cols-2 gap-2">
-                                <div>
-                                  <Label class="text-sm">Method Name</Label>
-                                  <Input 
-                                    v-model="method.name" 
-                                    placeholder="method_name" 
-                                  />
-                                </div>
-                                <div>
-                                  <Label class="text-sm">Parameters</Label>
-                                  <Input 
-                                    v-model="method.params" 
-                                    placeholder="self, param1, param2" 
-                                  /> 
-                                </div>
-                              </div>
-                              <Button 
-                                type="button" 
-                                variant="destructive" 
-                                size="sm"
-                                @click="removeClassMethod(index)"
-                                class="mt-5"
-                              >
-                                <Trash2 class="h-2 w-2" />
-                              </Button>
-                            </div>
-                            <div>
-                              <Label class="text-sm mb-2 block">Method Content</Label>
-                              <div style="height: 200px;">
-                                <Editor 
-                                  v-model:code="method.content" 
-                                  :language="'python'"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            @click="addClassMethod"
-                            class="w-full"
-                          >
+            <template v-else-if="apiData?.version_models">
+              <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
+                    <!-- Models List Sidebar (Left) -->
+                  <aside class="max-w-xs lg:w-48 lg:min-w-48 lg:flex-shrink-0">
+                    <div class="mb-4">
+                      <!-- Model Dialog -->
+                      <Dialog v-model:open="newModelDialogOpen">
+                        <DialogTrigger as-child>
+                          <Button class="ml-4 text-green-600 text-xs" variant="outline" @click="openNewModelDialog">
                             <Plus class="mr-2 h-4 w-4" />
-                            Add Class Method
+                            New Model
                           </Button>
-                        </div>
-                        <DialogFooter class="gap-2">
-                          <Button variant="secondary" @click="cancelClassMethodsEditor">
-                            Cancel
-                          </Button>
-                          <Button variant="default" @click="saveClassMethodsEditor">
-                            Save Methods
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog> -->
-          
-                    <!-- Code Editor Dialog (Functions-like structure) -->
-                    <Dialog v-model:open="codeEditorDialogOpen">
-                      <DialogContent class="sm:max-w-[90vw] max-h-[90vh] flex flex-col p-0">
-                        <DialogHeader class="px-6 pt-6 pb-4">
-                          <DialogTitle aria-describedby="code-editor-dialog">
-                            Edit Model Content: {{ selectedModel?.name }}
-                          </DialogTitle>
-                        </DialogHeader>
-                        
-                        <div class="flex-1 overflow-hidden px-6 pb-6">
-                          <div class="flex space-y-8 md:space-y-0 lg:space-y-0 lg:space-x-8 h-full">
-                            <!-- Sidebar with sections -->
-                            <aside class="max-w-xs lg:w-64 lg:min-w-64 lg:flex-shrink-0">
-                              <!-- New View Button -->
-                              <div class="mb-4">
-                                  <Dialog v-model:open="isNewMethodDialogOpen" @update:open="resetNewMethodDialog">
-                                      <DialogTrigger as-child>
-                                          <Button variant="outline" class="w-full text-xs">
-                                              + Add Class Method
-                                          </Button>
-                                      </DialogTrigger>
-                                      <DialogContent class="sm:max-w-md">
-                                          <DialogHeader>
-                                              <DialogTitle>{{ isEditingMethod ? 'Edit Method Name' : 'Create New Class Method' }}</DialogTitle>
-                                          </DialogHeader>
-                                          <div class="space-y-4">
-                                              <div class="space-y-2">
-                                                  <Label for="method-name">Method Name</Label>
-                                                  <Input
-                                                      id="method-name"
-                                                      v-model="newMethod.name"
-                                                      placeholder="Enter method name"
-                                                      :disabled="isCreatingMethod"
-                                                  />
-                                                  <Label for="method-params">Method Parameters</Label>
-                                                  <Input
-                                                      id="method-params"
-                                                      v-model="newMethod.params"
-                                                      placeholder="Enter parameters comma-separated (e.g. param1, param2)"
-                                                      :disabled="isCreatingMethod"
-                                                  />
-                                              </div>
-                                              
-                                              <div v-if="createMethodError" class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-                                                  {{ createMethodError }}
-                                              </div>
-                                              
-                                              <div class="flex justify-end space-x-2">
-                                                  <Button 
-                                                      variant="outline" 
-                                                      @click="isNewMethodDialogOpen = false"
-                                                      :disabled="isCreatingMethod"
-                                                  >
-                                                      Cancel
-                                                  </Button>
-                                                  <Button 
-                                                      @click="isEditingMethod ? handleUpdateMethodName() :handleCreateNewMethod()"
-                                                      :disabled="!newMethod.name.trim() || isCreatingMethod"
-                                                  >
-                                                      <div v-if="isCreatingMethod" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                                      {{ isCreatingMethod 
-                                                          ? (isEditingMethod ? 'Updating...' : 'Creating...') 
-                                                          : (isEditingMethod ? 'Update' : 'Create') 
-                                                      }}
-                                                  </Button>
-                                              </div>
-                                          </div>
-                                      </DialogContent>
-                                  </Dialog>
+                        </DialogTrigger>
+                        <DialogContent class="sm:max-w-3xl">
+                          <form @submit="submitNewModel" class="space-y-6">
+                            <DialogHeader>
+                              <DialogTitle aria-describedby="dialog-title">{{ isEditMode ? 'Edit Model' : 'Create New Model' }}</DialogTitle>
+                            </DialogHeader>
+                            <div class="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-6">
+                              <!-- Basic Model Info -->
+                              <div class="grid grid-cols-4 items-center gap-4">
+                                <Label for="new-model-name" class="text-right">Name</Label>
+                                <Input id="new-model-name" v-model="newModelForm.name" required placeholder="Model name" class="col-span-3" />
                               </div>
-                               <!-- Content and Methods list Section -->
-                              <nav class="flex flex-col space-y-1">
-                                <Button
-                                  variant="ghost"
-                                  :class="[
-                                    'justify-start px-3 py-2 text-xs',
-                                    selectedSection === 'content' ? 'bg-accent' : ''
-                                  ]"
-                                  @click="selectSection('content')"
-                                >
-                                  Model Content
-                                </Button>
-                                
-                                <!-- Class Methods -->
-                                <div v-if="selectedModel?.class_methods && selectedModel.class_methods.length > 0">
-                                  <div class="px-3 py-2 text-xs font-semibold text-muted-foreground">
-                                    Class Methods
+                              <div class="grid grid-cols-4 items-center gap-4">
+                                <Label for="new-model-inheritance" class="text-right">Inheritance</Label>
+                                <Input id="new-model-inheritance" v-model="newModelForm.inheritance" required placeholder="models.Model" class="col-span-3" />
+                              </div>
+                              
+                              <!-- Meta Properties Section -->
+                              <div class="flex flex-col gap-4 border-t pt-4">
+                                <h3 class="text-lg font-medium">Meta Properties</h3>
+                                <div v-if="newModelForm.class_meta.length > 0" class="space-y-3">
+                                  <div class="grid grid-cols-9 items-center gap-2">
+                                    <Label class="col-span-4 text-sm font-semibold">Name</Label>
+                                    <Label class="col-span-4 text-sm font-semibold">Value</Label>
                                   </div>
-                                  <div
-                                      v-for="(method, index) in selectedModel.class_methods"
-                                      :key="method.name"
-                                      class="flex items-center gap-1 group"
-                                  >
-                                    <Button
-                                      variant="ghost"
-                                      :class="[
-                                        'justify-start px-3 py-1 flex-1 text-xs',
-                                        typeof selectedSection === 'object' && 
-                                        selectedSection?.type === 'method' && 
-                                        selectedSection?.index === index ? 'bg-accent' : ''
-                                      ]"
-                                      @click="selectSection({ type: 'method', index })"
+                                  <div v-for="(meta, index) in newModelForm.class_meta" :key="index" class="grid grid-cols-9 items-center gap-2">
+                                    <Input 
+                                      v-model="meta.name" 
+                                      placeholder="Name" 
+                                      class="col-span-3"
+                                      required
+                                    />
+                                    <Input 
+                                      v-model="meta.value" 
+                                      placeholder="Value" 
+                                      class="col-span-4"
+                                      required
+                                    />
+                                    <Button 
+                                      type="button" 
+                                      variant="destructive" 
+                                      size="sm"
+                                      @click="removeNewModelMetaProperty(index)"
+                                      class="col-span-1"
                                     >
-                                      {{ method.name || `Method ${index + 1}` }} {{ method.params ? `(${method.params.join(',')})` : '()' }}
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        @click.stop="editMethodName(method)"
-                                        class="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
-                                      >
-                                        <Pencil :size="1" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        @click.stop="handleDeleteMethod(method)"
-                                        class="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
-                                      >
-                                        <Trash2 :size="1" />
+                                      ×
                                     </Button>
                                   </div>
-                                  
                                 </div>
-                              </nav>
-                            </aside>
+                                <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
+                                  No meta properties defined.
+                                </div>
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  size="sm"
+                                  @click="addNewModelMetaProperty"
+                                  class="self-start"
+                                >
+                                  + Add Meta Property
+                                </Button>
+                              </div>
 
-                            <!-- Editor Area -->
-                            <div class="flex-1 min-w-0 border rounded-lg">
+                            </div> 
+                              
+                            <!-- Error Display -->
+                            <div v-if="newModelError" class="text-red-600 text-sm">
+                              {{ newModelError }}
+                            </div>
+
+                            <DialogFooter class="gap-2">
+                              <DialogClose as-child>
+                                <Button variant="secondary" type="button" @click="closeNewModelDialog" :disabled="newModelLoading">
+                                  Cancel
+                                </Button>
+                              </DialogClose>
+                              <Button type="submit" variant="default" :disabled="newModelLoading">
+                                <span v-if="newModelLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
+                                <span v-else>{{ isEditMode ? 'Save Changes' : 'Create Model' }}</span>
+                              </Button>
+                            </DialogFooter>
+                          </form>
+                        </DialogContent>
+                      </Dialog>       
+                    </div>
+                      <nav class="flex flex-col space-y-1">
+                        <div
+                            v-for="(item,index) in apiData.version_models"
+                            :key="item.name"
+                            class="flex items-center gap-1 group"
+                        >
+                            <Button
+                                :data-model-name="item.name"
+                                variant="ghost"
+                                :class="[
+                                    'justify-start', 
+                                    'px-3', 
+                                    'py-1', 
+                                    'flex-1',
+                                    'text-xs',
+                                    selectedModel?.name === item.name ? 'bg-accent' : ''
+                                ]" 
+                                @click="
+                                  selectedModel = item;
+                                  selectSection('properties');
+                                "             
+                            >
+                                {{ item.name }}
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                @click.stop="openEditModelDialog(item, index)"
+                                class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                            >
+                                <Pencil :size="1" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                @click.stop="handleDelete(item)"
+                                class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
+                            >
+                                <Trash2 :size="1" />
+                            </Button>
+                            
+                        </div>
+                    </nav>
+                  </aside>
+
+                  <!-- Main Content Area (Center) -->
+                  <div class="flex-1 min-w-0">
+                    <template v-if="selectedModel">
+                      <div class="border rounded-lg h-full flex flex-col">
+                        
+                        <div class="flex-1 overflow-auto p-6">
+                          <!-- Properties View -->
+                          <template v-if="selectedSection === 'properties'">
+                            <div class="space-y-6 max-w-3xl">
+                              <!-- Inheritance Section -->
+                              <div class="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+                                <h3 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Inheritance</h3>
+                                <div class="bg-white dark:bg-gray-900 rounded border p-3">
+                                  <code class="text-sm">{{ selectedModel.inheritance }}</code>
+                                </div>
+                              </div>
+
+                              <!-- Class Meta Section -->
+                              <div class="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+                                <h3 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Class Meta Properties</h3>
+                                <div v-if="selectedModel.class_meta && selectedModel.class_meta.length > 0" class="space-y-2">
+                                  <div v-for="(meta, index) in selectedModel.class_meta" :key="index" 
+                                       class="bg-white dark:bg-gray-900 rounded border p-3 flex items-start gap-4">
+                                    <div class="flex-1">
+                                      <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Name</div>
+                                      <code class="text-sm font-medium">{{ meta.name }}</code>
+                                    </div>
+                                    <div class="flex-1">
+                                      <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Value</div>
+                                      <code class="text-sm">{{ meta.value }}</code>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div v-else class="text-sm text-gray-500 bg-white dark:bg-gray-900 rounded border p-3">
+                                  No meta properties defined
+                                </div>
+                              </div>
+                            </div>
+                          </template>
+
+                          <!-- Editor View -->
+                          <template v-else>
+                            <div class="h-full">
                               <Editor 
                                 v-if="selectedSection"
                                 :code="currentCode" 
@@ -1142,94 +766,174 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
                                 @save="handleCodeSave"
                               />
                             </div>
-                          </div>
+                          </template>
                         </div>
-                      </DialogContent>
-                    </Dialog>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div class="flex items-center justify-center h-full">
+                        <div class="text-center text-gray-500">
+                          <p>Select a model to view its content</p>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger as-child>
-                            <Button variant="outline" class="ml-auto">
-                                Columns <ChevronDown class="ml-2 h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuCheckboxItem
-                                v-for="column in hidableColumns"
-                                :key="column.id"
-                                class="capitalize"
-                                :model-value="column.getIsVisible()"
-                                @update:model-value="(value) => column.toggleVisibility(!!value)"
-                            >
-                                {{ column.id.replace('_', ' ') }}
-                            </DropdownMenuCheckboxItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-
-                <!-- Data Table -->
-                <div class="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow v-for="headerGroup in headerGroups" :key="headerGroup.id">
-                                <TableHead v-for="header in headerGroup.headers" :key="header.id">
-                                    <FlexRender 
-                                        v-if="!header.isPlaceholder" 
-                                        :render="header.column.columnDef.header" 
-                                        :props="header.getContext()" 
+                  <!-- Content & Methods Sidebar (Right) -->
+                  <aside class="max-w-xs lg:w-48 lg:min-w-48 lg:flex-shrink-0" v-if="selectedModel">
+                    <!-- New Method Button -->
+                    <div class="mb-4">
+                      <Dialog v-model:open="isNewMethodDialogOpen" @update:open="resetNewMethodDialog" @escapeKeyDown.prevent>
+                        <DialogTrigger as-child>
+                          <Button variant="outline" class="w-full text-xs">
+                            + Add Class Method
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent class="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>{{ isEditingMethod ? 'Edit Method Name' : 'Create New Class Method' }}</DialogTitle>
+                          </DialogHeader>
+                          <div class="space-y-4">
+                            <div class="space-y-2">
+                              <Label for="method-name">Method Name</Label>
+                              <Input
+                                id="method-name"
+                                v-model="newMethod.name"
+                                placeholder="Enter method name"
+                                :disabled="isCreatingMethod"
+                              />
+                              <Label for="method-params">Method Parameters</Label>
+                              <!-- <Input
+                                id="method-params"
+                                v-model="newMethod.params"
+                                placeholder="Enter parameters comma-separated (e.g. param1, param2)"
+                                :disabled="isCreatingMethod"
+                              /> -->
+                              <div class="flex flex-col gap-4 border-t pt-4">
+                                <h3 class="text-lg font-medium">Method Parameters</h3>
+                                <div v-if="newMethod.params.length > 0" class="space-y-3">
+                                  <div class="grid grid-cols-9 items-center gap-2">
+                                    <Label class="col-span-4 text-sm font-semibold">Param</Label>
+                                  </div>
+                                  <div v-for="(param, index) in newMethod.params" :key="index" class="grid grid-cols-9 items-center gap-2">
+                                    <Input 
+                                      v-model="newMethod.params[index]" 
+                                      placeholder="Param" 
+                                      class="col-span-3"
+                                      required
                                     />
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <template v-if="tableRows.length">
-                                <TableRow 
-                                    v-for="(row, index) in tableRows" 
-                                    :key="row.id" 
-                                    :data-state="row.getIsSelected() && 'selected'"
-                                    class="cursor-pointer hover:bg-muted/50"
-                                    @click="openEditModelDialog(row.original, index)"
+                                    <Button 
+                                      type="button" 
+                                      variant="destructive" 
+                                      size="sm"
+                                      @click="removeMethodParam(index)"
+                                      class="col-span-1"
+                                    >
+                                      ×
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
+                                  No parameters defined.
+                                </div>
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  size="sm"
+                                  @click="addMethodParam"
+                                  class="self-start"
                                 >
-                                    <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
-                                        <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
-                                    </TableCell>
-                                </TableRow>                                                    
-                            </template>
+                                  <Plus>Add</Plus> 
+                                </Button>
+                              </div>
 
-                            <TableRow v-else>
-                                <TableCell :colspan="columns.length" class="h-24 text-center">
-                                    No models found.
-                                </TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </div>
+                              
+                            </div>
+                            
+                            <div v-if="createMethodError" class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+                              {{ createMethodError }}
+                            </div>
+                            
+                            <div class="flex justify-end space-x-2">
+                              <Button 
+                                variant="outline" 
+                                @click="isNewMethodDialogOpen = false"
+                                :disabled="isCreatingMethod"
+                              >
+                                Cancel
+                              </Button>
+                              <Button 
+                                @click="isEditingMethod ? handleUpdateMethodName() : handleCreateNewMethod()"
+                                :disabled="!newMethod.name.trim() || isCreatingMethod"
+                              >
+                                <div v-if="isCreatingMethod" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                {{ isCreatingMethod 
+                                  ? (isEditingMethod ? 'Updating...' : 'Creating...') 
+                                  : (isEditingMethod ? 'Update' : 'Create') 
+                                }}
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
 
-                <!-- Pagination -->
-                <div class="flex items-center justify-end space-x-2 py-4">
-                    <div class="flex-1 text-sm text-muted-foreground">
-                        {{ selectedRowsCount }} of {{ totalRowsCount }} row(s) selected.
-                    </div>
-                    <div class="space-x-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            :disabled="!canPreviousPage"
-                            @click="table?.previousPage()"
+                    <!-- Content and Methods list Section -->
+                    <nav class="flex flex-col space-y-1">
+                      <Button
+                        variant="ghost"
+                        :class="[
+                          'justify-start px-3 py-2 text-xs',
+                          selectedSection === 'content' ? 'bg-accent' : ''
+                        ]"
+                        @click="selectSection('content')"
+                      >
+                        Model Content
+                      </Button>
+                      
+                      <!-- Class Methods -->
+                      <div v-if="selectedModel?.class_methods && selectedModel.class_methods.length > 0">
+                        <div class="px-3 py-2 text-xs font-semibold text-muted-foreground">
+                          Class Methods
+                        </div>
+                        <div
+                          v-for="(method, index) in selectedModel.class_methods"
+                          :key="method.name"
+                          class="flex items-center gap-1 group"
                         >
-                            Previous
-                        </Button>
-                        <Button
-                            variant="outline"
+                          <Button
+                            variant="ghost"
+                            :class="[
+                              'justify-start px-3 py-1 flex-1 text-xs',
+                              typeof selectedSection === 'object' && 
+                              selectedSection?.type === 'method' && 
+                              selectedSection?.index === index ? 'bg-accent' : ''
+                            ]"
+                            @click="selectSection({ type: 'method', index })"
+                          >
+                            {{ method.name || `Method ${index + 1}` }} {{ method.params ? `(${method.params.join(',')})` : '()' }}
+                          </Button>
+                          <Button
+                            variant="ghost"
                             size="sm"
-                            :disabled="!canNextPage"
-                            @click="table?.nextPage()"
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </div>
-              
+                            @click.stop="editMethodName(method)"
+                            class="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                          >
+                            <Pencil :size="1" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            @click.stop="handleDeleteMethod(method)"
+                            class="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
+                          >
+                            <Trash2 :size="1" />
+                          </Button>
+                        </div>
+                      </div>
+                    </nav>
+                  </aside>
+              </div>
             </template>
 
             <!-- No Data State -->

@@ -192,7 +192,7 @@ const handleCreateNewFile = async () => {
         // TO-DO:: PHP function template
         const newFunction: ApiVersionFunction = {
             name,
-            content: `# Define the function ${name} here\n`,
+            content: ``,
         }
 
         const updatedApiData = {
@@ -629,7 +629,7 @@ onUnmounted(() => {
                         <Editor 
                             ref="editorRef"
                             v-if="selectedFile" 
-                            :code="selectedFile.content" 
+                            :code="selectedFile.content ?? ''" 
                             :language="api?.api_type === 'python' || api?.api_type === 'php' ? api?.api_type : undefined"
                             :is-saving="isSaving"
                             :saveError="saveError??''"

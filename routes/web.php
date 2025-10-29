@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\Auth\OidcController;
 
+Route::redirect('/', '/dashboard');
 
 Route::get('/welcome', function () {
     return Inertia::render('Welcome');

@@ -209,11 +209,11 @@ class ApiController extends BaseDjangoController
         $endpoint = "apis/{$api_id}/versions/latest";
         
         $result = $this->makeDjangoRequest('GET', $endpoint);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
+        // Log::info('Django request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -236,11 +236,11 @@ class ApiController extends BaseDjangoController
         try {
             $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
 
-            Log::info('Django request result', [
-                'success' => $result['success'],
-                'status' => $result['status'],
-                'data' => $result['data']
-            ]);
+            // Log::info('Django request result', [
+            //     'success' => $result['success'],
+            //     'status' => $result['status'],
+            //     'data' => $result['data']
+            // ]);
 
             if ($result['success']) {
                 return response()->json($result['data']);
@@ -571,11 +571,11 @@ class ApiController extends BaseDjangoController
         $endpoint = "apis/{$api_id}/versions/latest";
         
         $result = $this->makeDjangoRequest('GET', $endpoint);
-        Log::info('Django request result for export', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
+        // Log::info('Django request result for export', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
 
         if ($result['success']) {
             // Return JSON with proper headers for display in browser

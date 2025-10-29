@@ -34,7 +34,7 @@ class BaseDjangoController extends Controller
         $headers = array_merge($defaultHeaders, $headers);
         $fullUrl = "{$this->djangoBaseUrl}/api/{$endpoint}";
 
-        Log::info('Making Django request', compact('method', 'fullUrl', 'data', 'headers'));
+        // Log::info('Making Django request', compact('method', 'fullUrl', 'data', 'headers'));
 
         try {
             $request = Http::withBasicAuth($this->apiUser, $this->apiPassword)

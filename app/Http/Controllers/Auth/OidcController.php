@@ -84,7 +84,10 @@ class OidcController extends Controller
 
         Auth::login($user, true);
 
-        return redirect('/dashboard');
+        $intendedUrl = session('url.intended', '/dashboard');
+        session()->forget('url.intended');
+
+        return redirect($intendedUrl);
     }
 
 

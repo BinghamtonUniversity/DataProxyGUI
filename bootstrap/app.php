@@ -7,6 +7,8 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
+
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -48,5 +50,21 @@ return Application::configure(basePath: dirname(__DIR__))
 
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            // Check if it's a CSRF token mismatch (419 status or TokenMismatchException)
+            if ($e instanceof TokenMismatchException || 
+                ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException && $e->getStatusCode() === 419)) {
+                
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Your session has expired. Please refresh the page.',
+                        'redirect' => route('oidc.redirect')
+                    ], 419);
+                }
+
+                // For regular requests, redirect to login
+                return redirect()->route('oidc.redirect')
+                    ->with('message', 'Your session has expired. Please log in again.');
+            }
+        });
     })->create();
