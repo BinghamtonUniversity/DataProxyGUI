@@ -1019,18 +1019,18 @@ const allSelected = computed(() => {
 
 function toggleSelectAll(checked) {
   const isChecked = checked === 'true' || checked === true;
-  console.log('Toggle select all:', isChecked, 'filteredRows length:', filteredRows.value.length);
+
   if (isChecked) {
     // Select all indices in filteredRows - create new array for reactivity
     selectedRows.value = Array.from({ length: filteredRows.value.length }, (_, index) => index);
-    console.log('Selected all rows:', selectedRows.value);
+
   } else {
     selectedRows.value = [];
-    console.log('Deselected all rows');
+
   }
 }
 function toggleRowSelect(row, checked, index) {
-  console.log('Toggle row select:', row, checked, 'at index:', index);
+
   const isChecked = checked === 'true' || checked === true;
   // Index is now passed directly from template
   const rowIndex = index;
@@ -1270,12 +1270,12 @@ function emitAction(type, payload, index) {
   emit('rowActionHandler', { type, payload, index: actualIndex });
 }
 function toggleMenu(id) {
-  console.log('Toggle menu for ID:', id, 'Current openMenuId:', openMenuId.value);
+
   openMenuId.value = openMenuId.value === id ? null : id;
-  console.log('New openMenuId:', openMenuId.value);
+
 }
 function closeMenu() {
-  console.log('Closing menu, current openMenuId:', openMenuId.value);
+
   openMenuId.value = null;
 }
 
@@ -1311,7 +1311,7 @@ function getDropdownPosition(rowId) {
 function onCreate() {
   emit('create');
   // Default logic: placeholder (e.g., open modal, log, etc.)
-  // console.log('OnCreate triggered');
+
 }
 function onEdit() {
   if (selectedRows.value.length === 1) {
@@ -1319,8 +1319,7 @@ function onEdit() {
     const index = selectedRows.value[0];
     const row = filteredRows.value[index];
     emit('edit', row);
-    // Default logic: placeholder
-    // console.log('OnEdit triggered', row);
+
   } else if (selectedRows.value.length > 1) {
     onMultipleEdit();
   }
@@ -1329,15 +1328,14 @@ function onMultipleEdit() {
   // Get rows by indices
   const rows = selectedRows.value.map(index => filteredRows.value[index]).filter(Boolean);
   emit('multiple-edit', rows);
-  // Default logic: placeholder
-  // console.log('OnMultipleEdit triggered', rows);
+
+
 }
 function onDelete() {
   // Get rows by indices
   const rows = selectedRows.value.map(index => filteredRows.value[index]).filter(Boolean);
   emit('delete', rows);
-  // Default logic: placeholder
-  // console.log('OnDelete triggered', rows);
+
 }
 
 // Get tooltip text for action button
