@@ -165,7 +165,7 @@ const validateCode = (editorInstance: any, monaco: any) => {
 
       // 🔸 Detect invalid variable assignments (e.g., 3a = 5)
       if (trimmed.includes('=')) {
-        const [left, right] = trimmed.split('=').map((s) => s.trim());
+        const [left, right] = trimmed.split('=').map((s: string) => s.trim());
         if (left.match(/^\d/)) {
           markers.push({
             startLineNumber: i + 1,
@@ -384,7 +384,7 @@ onBeforeUnmount(() => {
           </div>
         </Transition>
         
-        <Transition
+        <!-- <Transition
           enter-active-class="transition-all duration-300 ease-out"
           enter-from-class="opacity-0 scale-95"
           enter-to-class="opacity-100 scale-100"
@@ -398,7 +398,7 @@ onBeforeUnmount(() => {
             </svg>
             Saved!
           </div>
-        </Transition>
+        </Transition> -->
         <!-- <Button
           variant="outline"
           size="sm"
@@ -407,7 +407,7 @@ onBeforeUnmount(() => {
         >
           Format
         </Button> -->
-        <Button
+        <!-- <Button
           size="sm"
           @click="handleSave"
           :disabled="props.isSaving || !hasUnsavedChanges || validationErrors > 0"
@@ -419,7 +419,7 @@ onBeforeUnmount(() => {
           <span v-else>
             Save
           </span>
-        </Button>
+        </Button> -->
       </div>
     </div>
 

@@ -59,6 +59,7 @@ interface Props {
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
     refreshApiData: () => void
+    handleSave?: () => Promise<void>
     highlightQuery?: string
     highlightTarget?: string
 }

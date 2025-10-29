@@ -31,6 +31,7 @@ interface Props {
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
     refreshApiData: () => void
+    handleSave?: () => Promise<void>
 }
 
 const props = defineProps<Props>()
@@ -58,6 +59,11 @@ const handleUpdateCode = (updatedCode: string) => {
         saveError.value = 'No file selected or file data not available'
         return
     }
+    if (!updatedCode || updatedCode.trim() === '') {
+        
+        return
+    }
+
     isSaving.value = true
     saveError.value = null
     saveSuccess.value = false
@@ -192,7 +198,7 @@ const handleCreateNewFile = async () => {
         // TO-DO:: PHP function template
         const newFunction: ApiVersionFunction = {
             name,
-            content: ``,
+            content: `# Define the function ${name} here\n`,
         }
 
         const updatedApiData = {
@@ -629,7 +635,7 @@ onUnmounted(() => {
                         <Editor 
                             ref="editorRef"
                             v-if="selectedFile" 
-                            :code="selectedFile.content ?? ''" 
+                            :code="selectedFile.content" 
                             :language="api?.api_type === 'python' || api?.api_type === 'php' ? api?.api_type : undefined"
                             :is-saving="isSaving"
                             :saveError="saveError??''"

@@ -762,6 +762,7 @@ const componentProps = computed(() => ({
     apiError: apiError.value || "",
     updateApiData,
     refreshApiData,
+    handleSave,
     highlightQuery: highlightQuery.value || "",
     highlightTarget: highlightTarget.value || ""
 }))
