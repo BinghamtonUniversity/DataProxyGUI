@@ -80,9 +80,7 @@ function handleEditorTheme(){
 function handleMount(editorInstance: any, monaco: any) {
   editor.value = editorInstance
   
-  console.log('Editor mounted - Monaco languages available:', Object.keys(monaco.languages))
-  console.log('Editor mounted - Monaco languages.python:', monaco.languages.python)
-  console.log('Editor mounted - Monaco languages.php:', monaco.languages.php)
+
   
   // Add keyboard shortcut for save (Ctrl+S / Cmd+S)
   editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
@@ -92,8 +90,7 @@ function handleMount(editorInstance: any, monaco: any) {
   // Since Python/PHP validation is not available, set up custom validation
   const model = editorInstance.getModel()
   if (model) {
-    console.log('Setting up custom validation for', props.language)
-    
+
     // Listen for content changes and validate
     editorInstance.onDidChangeModelContent(() => {
       validateCode(editorInstance, monaco)
@@ -105,96 +102,234 @@ function handleMount(editorInstance: any, monaco: any) {
 }
 
 const validateCode = (editorInstance: any, monaco: any) => {
-  const model = editorInstance.getModel()
-  if (!model) return
-  
-  const code = model.getValue()
-  const language = props.language || 'python'
-  const markers: any[] = []
-  
-  console.log('Validating code for language:', language)
-  
-  // Basic syntax validation
+  const model = editorInstance.getModel();
+  if (!model) return;
+
+  const code = model.getValue();
+  const language = props.language || 'python';
+  const markers: any[] = [];
+
+  const lines = code.split('\n');
+
+
+  // --------------------------------------------------------------------
+  // 🔹 Python Validation
+  // --------------------------------------------------------------------
   if (language === 'python') {
-    const lines = code.split('\n')
+    const indentStack: number[] = [];
+    const openParens: number[] = [];
+    const openBrackets: number[] = [];
+    const openBraces: number[] = [];
+    const keywordsWithColon = /^(if|elif|else|for|while|try|except|finally|with|def|class)\b/;
+
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      
-      // Skip empty lines and comments
-      if (!line || line.startsWith('#')) continue
-      
-      // Check for invalid variable assignments (like "a = 3a")
-      if (line.includes('=')) {
-        const parts = line.split('=')
-        if (parts.length === 2) {
-          const rightSide = parts[1].trim()
-          // Check if right side contains invalid characters for Python
-          if (rightSide.match(/^\d+[a-zA-Z]/)) {
-            markers.push({
-              startLineNumber: i + 1,
-              startColumn: line.indexOf(rightSide) + 1,
-              endLineNumber: i + 1,
-              endColumn: line.length + 1,
-              message: 'Invalid syntax: number followed by letter',
-              severity: monaco.MarkerSeverity.Error
-            })
-          }
-        }
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      if (!trimmed || trimmed.startsWith('#')) continue;
+
+      // Track parentheses/braces
+      for (const ch of line) {
+        if (ch === '(') openParens.push(i);
+        else if (ch === ')') openParens.pop();
+        if (ch === '[') openBrackets.push(i);
+        else if (ch === ']') openBrackets.pop();
+        if (ch === '{') openBraces.push(i);
+        else if (ch === '}') openBraces.pop();
       }
-      
-      // Check for standalone invalid identifiers (like "ad34asre3")
-      if (line.match(/^[a-zA-Z0-9_]+$/) && !line.match(/^(def|class|if|else|elif|for|while|try|except|finally|with|import|from|return|pass|break|continue|lambda|yield|global|nonlocal|assert|del|raise)$/)) {
-        // This is a standalone identifier that's not a keyword
-        // Check if it looks like invalid syntax
-        if (line.match(/^[a-zA-Z]+\d+[a-zA-Z]+/) || line.match(/^\d+[a-zA-Z]+/)) {
+
+      // 🔸 Missing colon after block headers
+      if (keywordsWithColon.test(trimmed) && !trimmed.endsWith(':')) {
+        markers.push({
+          startLineNumber: i + 1,
+          startColumn: 1,
+          endLineNumber: i + 1,
+          endColumn: line.length + 1,
+          message: `Missing colon (:) after '${trimmed.split(' ')[0]}' statement`,
+          severity: monaco.MarkerSeverity.Error,
+        });
+      }
+
+      // 🔸 Check indentation consistency (multiples of 4 spaces)
+      const leadingSpaces = line.match(/^(\s*)/)?.[1].length ?? 0;
+      if (leadingSpaces % 4 !== 0) {
+        markers.push({
+          startLineNumber: i + 1,
+          startColumn: 1,
+          endLineNumber: i + 1,
+          endColumn: leadingSpaces + 1,
+          message: 'Indentation should be a multiple of 4 spaces',
+          severity: monaco.MarkerSeverity.Warning,
+        });
+      }
+
+      // 🔸 Detect invalid variable assignments (e.g., 3a = 5)
+      if (trimmed.includes('=')) {
+        const [left, right] = trimmed.split('=').map((s) => s.trim());
+        if (left.match(/^\d/)) {
           markers.push({
             startLineNumber: i + 1,
             startColumn: 1,
             endLineNumber: i + 1,
             endColumn: line.length + 1,
-            message: 'Invalid syntax: malformed identifier',
-            severity: monaco.MarkerSeverity.Error
-          })
+            message: `Invalid variable name '${left}' (cannot start with a digit)`,
+            severity: monaco.MarkerSeverity.Error,
+          });
+        }
+        if (right?.match(/^\d+[a-zA-Z]/)) {
+          markers.push({
+            startLineNumber: i + 1,
+            startColumn: line.indexOf(right) + 1,
+            endLineNumber: i + 1,
+            endColumn: line.length + 1,
+            message: 'Invalid expression: number directly followed by letters',
+            severity: monaco.MarkerSeverity.Error,
+          });
         }
       }
+
+      // 🔸 Detect unterminated quotes
+      const quoteMatches = line.match(/['"]/g);
+      if (quoteMatches && quoteMatches.length % 2 !== 0) {
+        markers.push({
+          startLineNumber: i + 1,
+          startColumn: 1,
+          endLineNumber: i + 1,
+          endColumn: line.length + 1,
+          message: 'Unterminated string literal',
+          severity: monaco.MarkerSeverity.Error,
+        });
+      }
     }
-  } else if (language === 'php') {
-    // Basic PHP validation
-    const openBraces = (code.match(/\{/g) || []).length
-    const closeBraces = (code.match(/\}/g) || []).length
+
+    // 🔸 Check unmatched parentheses/brackets/braces
+    if (openParens.length > 0)
+      markers.push({
+        startLineNumber: openParens[0] + 1,
+        startColumn: 1,
+        endLineNumber: openParens[0] + 1,
+        endColumn: 2,
+        message: 'Unmatched parenthesis "("',
+        severity: monaco.MarkerSeverity.Error,
+      });
+
+    if (openBrackets.length > 0)
+      markers.push({
+        startLineNumber: openBrackets[0] + 1,
+        startColumn: 1,
+        endLineNumber: openBrackets[0] + 1,
+        endColumn: 2,
+        message: 'Unmatched square bracket "["',
+        severity: monaco.MarkerSeverity.Error,
+      });
+
+    if (openBraces.length > 0)
+      markers.push({
+        startLineNumber: openBraces[0] + 1,
+        startColumn: 1,
+        endLineNumber: openBraces[0] + 1,
+        endColumn: 2,
+        message: 'Unmatched curly brace "{"',
+        severity: monaco.MarkerSeverity.Error,
+      });
+  }
+
+  // --------------------------------------------------------------------
+  // 🔹 PHP Validation
+  // --------------------------------------------------------------------
+  else if (language === 'php') {
+    const openTags = (code.match(/<\?php/g) || []).length;
+    const closeTags = (code.match(/\?>/g) || []).length;
+    const openBraces = (code.match(/\{/g) || []).length;
+    const closeBraces = (code.match(/\}/g) || []).length;
+    const semicolonLines = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#')) continue;
+
+      // Missing semicolon after statements
+      if (
+        !trimmed.endsWith(';') &&
+        !trimmed.endsWith('{') &&
+        !trimmed.endsWith('}') &&
+        !trimmed.startsWith('<?php') &&
+        !trimmed.startsWith('?>') &&
+        !trimmed.match(/(if|else|while|for|foreach|function|class|switch|case|default)\b/)
+      ) {
+        semicolonLines.push(i + 1);
+      }
+
+      // Unterminated quotes
+      const quoteMatches = trimmed.match(/['"]/g);
+      if (quoteMatches && quoteMatches.length % 2 !== 0) {
+        markers.push({
+          startLineNumber: i + 1,
+          startColumn: 1,
+          endLineNumber: i + 1,
+          endColumn: lines[i].length + 1,
+          message: 'Unterminated string literal',
+          severity: monaco.MarkerSeverity.Error,
+        });
+      }
+    }
+
+    if (openTags !== closeTags) {
+      markers.push({
+        startLineNumber: 1,
+        startColumn: 1,
+        endLineNumber: 1,
+        endColumn: 10,
+        message: 'PHP open/close tags mismatch',
+        severity: monaco.MarkerSeverity.Error,
+      });
+    }
+
     if (openBraces !== closeBraces) {
       markers.push({
         startLineNumber: 1,
         startColumn: 1,
         endLineNumber: model.getLineCount(),
         endColumn: model.getLineMaxColumn(model.getLineCount()),
-        message: 'Unmatched braces: Check that all opening { have corresponding closing }',
-        severity: monaco.MarkerSeverity.Error
-      })
+        message: 'Unmatched braces: ensure all { have matching }',
+        severity: monaco.MarkerSeverity.Error,
+      });
     }
+
+    semicolonLines.forEach((lineNum) => {
+      markers.push({
+        startLineNumber: lineNum,
+        startColumn: 1,
+        endLineNumber: lineNum,
+        endColumn: lines[lineNum - 1].length + 1,
+        message: 'Missing semicolon (;) at end of statement',
+        severity: monaco.MarkerSeverity.Warning,
+      });
+    });
   }
-  
-  console.log('Custom validation found markers:', markers)
-  
-  // Set markers in the editor
-  monaco.editor.setModelMarkers(model, 'custom-validation', markers)
-  
-  // Update validation counters
-  validationErrors.value = markers.filter(m => m.severity >= monaco.MarkerSeverity.Error).length
-  validationWarnings.value = markers.filter(m => m.severity === monaco.MarkerSeverity.Warning).length
-  
-  // Emit validation markers to parent
-  emit('validate', markers)
-}
+
+  // --------------------------------------------------------------------
+  // 🔹 Apply Markers + Emit
+  // --------------------------------------------------------------------
+  monaco.editor.setModelMarkers(model, 'advanced-validation', markers);
+
+  validationErrors.value = markers.filter(
+    (m) => m.severity === monaco.MarkerSeverity.Error
+  ).length;
+  validationWarnings.value = markers.filter(
+    (m) => m.severity === monaco.MarkerSeverity.Warning
+  ).length;
+
+  emit('validate', markers);
+
+
+};
+
 
 const handleValidate = (markers: any[]) => {
-  console.log('Editor.vue - handleValidate called with markers:', markers)
   // Update validation counters
   validationErrors.value = markers.filter(m => m.severity >= 8).length // Monaco.MarkerSeverity.Error = 8
   validationWarnings.value = markers.filter(m => m.severity === 4).length // Monaco.MarkerSeverity.Warning = 4
-  
-  console.log('Editor.vue - validationErrors:', validationErrors.value, 'validationWarnings:', validationWarnings.value)
-  
   // Emit validation markers to parent
   emit('validate', markers)
 }
@@ -295,8 +430,7 @@ onBeforeUnmount(() => {
         :theme="editorTheme"
         :options="editorOptions"
         @mount="handleMount"
-        @validate="handleValidate"
-        @onValidate="handleValidate"
+        @validate="handleValidate"    
         style="height:100%; width:100%;"
       />
     </div>

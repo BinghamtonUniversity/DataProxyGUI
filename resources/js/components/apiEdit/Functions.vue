@@ -74,21 +74,8 @@ const currentFunctionCode = computed(() => {
     return cachedCode !== undefined ? cachedCode : selectedFunction.value.content
 })
 
-// Handle code changes from the Editor (real-time updates)
-const handleCodeChange = (updatedCode: string) => {
-    if (!selectedFunction.value) return
-    
-    const functionName = selectedFunction.value.name
-    const originalContent = selectedFunction.value.content
-    
-    // If the code is different from the original, cache it
-    if (updatedCode !== originalContent) {
-        unsavedEditsCache.value.set(functionName, updatedCode)
-    } else {
-        // If the code matches the original, remove it from cache
-        unsavedEditsCache.value.delete(functionName)
-    }
-}
+
+
 
 // Check if current function has unsaved changes
 const hasUnsavedChanges = computed(() => {
@@ -98,7 +85,6 @@ const hasUnsavedChanges = computed(() => {
 // ============================================
 
 const handleValidation = (markers: any) => {
-    console.log("Functions.vue - handleValidation called with markers:", markers)
     const errors = markers.filter((m: any) => m.severity >= 8) // Monaco.MarkerSeverity.Error = 8
     const warnings = markers.filter((m: any) => m.severity === 4) // Monaco.MarkerSeverity.Warning = 4
     
@@ -129,7 +115,7 @@ const handleUpdateCode = (updatedCode: string) => {
         saveError.value = 'No function selected or API data not available'
         return
     }
-    
+
     // Update the local state immediately
     try {
         const updatedApiData = {
@@ -696,9 +682,10 @@ onUnmounted(() => {
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"
                             :hasUnsavedChanges="hasUnsavedChanges"
+
                             @save="handleSave"
                             @update:code="handleUpdateCode"
-                            @onValidate="handleValidation"
+                            @validate="handleValidation"
                         />
                         
                         <!-- No Function Selected State -->
