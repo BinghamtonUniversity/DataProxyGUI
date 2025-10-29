@@ -6,7 +6,6 @@ import { type BreadcrumbItem, ApiData, ApiInstance, ApiUser, Resource } from '@/
 import Heading from '@/components/Heading.vue'
 import { Button } from '@/components/ui/button'
 
-// Import your components (convert them to pure components)
 import Main from '@/components/apiInstanceDetails/Main.vue'
 import Resources from '@/components/apiInstanceDetails/Resources.vue'
 import Options from '@/components/apiInstanceDetails/Options.vue'
@@ -18,10 +17,12 @@ import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
     instance_id: string
-    activeTab: string
+    activeTab?: string
 }
 
 const props = defineProps<Props>()
+const currentTab = ref(props.activeTab || 'main')
+
 
 // Toaster
 const { success, error: showError, warning, info } = useToaster()
@@ -70,8 +71,8 @@ const tabs = [
 
 // Data fetching logic - runs once when component mounts
 const apiInstanceData = ref<ApiInstance | null>(null)
-const apiUsers = ref<ApiUser | null>(null)
-const resources = ref<Resource | null>(null)
+const apiUsers = ref<ApiUser[] | null>([])
+const resources = ref<Resource[] | null>(null)
 
 
 const loading = ref(true)
@@ -252,32 +253,23 @@ const updateInstanceVersion = async (version: any) => {
 
 // Navigation helper
 const navigateToTab = (tabId: string) => {
-    // hasUnsavedChanges.value = checkForUnsavedChanges()
-    // if (hasUnsavedChanges.value) {
-    //     if (confirm('You have unsaved changes. Do you want to leave?')) {
-    //         // Proceed with tab change
-    //         router.get(`/api_instances/${props.instance_id}/${tabId}`, {}, {
-    //             preserveState: true,
-    //             preserveScroll: true,
-    //             // only: ['activeTab'] // Only update the activeTab prop
-    //         })
-    //     } else {
-    //         // Cancel tab change
-    //         return
-    //     }
-    // }
-    router.get(`/api_instances/${props.instance_id}/${tabId}`, {}, {
-        preserveState: true,
-        preserveScroll: true,
-        // only: ['activeTab'] // Only update the activeTab prop
-    })
+    currentTab.value = tabId
     
+    // This uses History API to update the URL without triggering navigation
+    const newUrl = `/api_instances/${props.instance_id}/${tabId}`
+    window.history.pushState({ tab: tabId }, '', newUrl)
 }
 
 // Get current active component
 const activeComponent = computed(() => {
-    return tabs.find(tab => tab.id === props.activeTab)?.component || tabs[0].component
+    return tabs.find(tab => tab.id === currentTab.value)?.component || tabs[0].component
 })
+
+const isNavigatingWithinSameApiInstance = (url: string): boolean => {
+    // Check if the URL is navigating to a different tab of the same API
+    const urlPattern = new RegExp(`^/api_instances/${props.instance_id}(/[^/]+)?$`)
+    return urlPattern.test(url)
+}
 
 // Component props to pass down
 const componentProps = computed(() => ({
@@ -330,6 +322,18 @@ const handleSave = async() => {
     hasUnsavedChanges.value = false
 }
 
+const handlePopState = (event: PopStateEvent) => {
+    // Extract tab from URL
+    const urlParts = window.location.pathname.split('/')
+    const tabFromUrl = urlParts[urlParts.length - 1]
+    
+    // Check if it's a valid tab
+    const validTab = tabs.find(tab => tab.id === tabFromUrl)
+    if (validTab) {
+        currentTab.value = validTab.id
+    }
+}
+
 // Browser/tab close warning
 const handleBeforeUnload = (event: BeforeUnloadEvent) => {
     if (hasUnsavedChanges.value) {
@@ -349,6 +353,14 @@ let keydownHandler: ((event: KeyboardEvent) => void) | null = null
 // Fetch data on mount
 onMounted(() => {
         fetchAllData()
+
+         // Initialize tab from URL
+        const urlParts = window.location.pathname.split('/')
+        const tabFromUrl = urlParts[urlParts.length - 1]
+        const validTab = tabs.find(tab => tab.id === tabFromUrl)
+        if (validTab) {
+            currentTab.value = validTab.id
+        }
         
         keydownHandler = (event: KeyboardEvent) => {
             if ((event.ctrlKey || event.metaKey) && event.key === 's') {
@@ -360,19 +372,25 @@ onMounted(() => {
         document.addEventListener('keydown', keydownHandler)
         // Add beforeunload listener
         window.addEventListener('beforeunload', handleBeforeUnload)
+        window.addEventListener('popstate', handlePopState)
+
         
         // Add Inertia navigation hook
         removeInertiaHook = router.on('before', (event) => {
+            const targetUrl = event.detail.visit.url.pathname
+        
+            // Check if navigating to a different page (not just a tab change)
+            if (!targetUrl.startsWith(`/api_instances/${props.instance_id}/`)) {
                 if (hasUnsavedChanges.value) {
-                    // Show confirmation dialog
                     const confirmed = confirm('You have unsaved changes. Are you sure you want to leave?')
                     if (!confirmed) {
-                        return false // Cancel navigation
+                        return false
                     }
                 }
-            })
+            }
         }
-)
+        )
+    })
 
 onUnmounted(() => {
     if (keydownHandler) {
@@ -383,6 +401,8 @@ onUnmounted(() => {
     if (removeInertiaHook) {
         removeInertiaHook()
     }
+    window.removeEventListener('popstate', handlePopState)
+
 })
 
 </script>
@@ -415,7 +435,7 @@ onUnmounted(() => {
                         variant="ghost"
                         :class="[
                             'flex-1 px-4 py-2 rounded-t-md text-center transition-colors',
-                            { 'bg-muted font-semibold': props.activeTab === tab.id }
+                            { 'bg-muted font-semibold': currentTab === tab.id }
                         ]"
                         @click="navigateToTab(tab.id)"
                     >
@@ -439,12 +459,12 @@ onUnmounted(() => {
                 </div>
 
                 <div class="flex-1 w-11/12">
-                    <section class="w-full space-y-12">
+                    <section v-if="apiInstanceData && !loading" class="w-full space-y-12">
                         <!-- Dynamic component rendering -->
-                        <component
-                            :is="activeComponent"
-                            v-bind="componentProps"
-                        />
+                        <Main v-if="currentTab === 'main'" v-bind="componentProps" />
+                        <Resources v-if="currentTab === 'resources'" v-bind="componentProps" />
+                        <Permissions v-if="currentTab === 'permissions'" v-bind="componentProps" />
+                        <Options v-if="currentTab === 'options'" v-bind="componentProps" />
                     </section>
                 </div>
             </div>

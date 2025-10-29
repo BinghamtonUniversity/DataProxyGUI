@@ -100,7 +100,17 @@ const props = defineProps({
 
 const emit = defineEmits(['update:value', 'validation-error', 'validation-success', 'blur', 'focus']);
 
-const internalValue = ref(props.value == props.options[1].value ? true : false);
+const internalValue = ref(
+  (() => {
+    if (props.options && props.options.length >= 2) {
+      const result = (props.value == props.options[1].value);
+      return result;
+    } else {
+      const result = (props.value === true || props.value === 'true');
+      return result;
+    }
+  })()
+);
 const localError = ref('');
 const showInfo = ref(false);
 
@@ -117,8 +127,14 @@ const validate = () => {
 
 const handleToggle = () => {
 
-  internalValue.value = !internalValue.value ? true : false;
-  var updatedValue = internalValue.value ? props.options[1].value : props.options[0].value;
+  internalValue.value = !internalValue.value;
+  let updatedValue;
+    if (props.options && props.options.length >= 2) {
+      updatedValue = internalValue.value ? props.options[1].value : props.options[0].value;
+    } else {
+      // Fallback to boolean values if options are not properly defined
+      updatedValue = internalValue.value;
+    }
   emit('update:value', updatedValue);
   validate();
 };
@@ -142,7 +158,11 @@ const getSwitchLabel = () => {
 };
 
 watch(() => props.value, (newValue) => {
-  internalValue.value = Boolean(newValue);
+  if (props.options && props.options.length >= 2) {
+    internalValue.value = (newValue == props.options[1].value);
+  } else {
+    internalValue.value = (newValue === true || newValue === 'true');
+  }
 }, { immediate: true });
 
 watch(() => props.validate, () => {

@@ -2,7 +2,7 @@
 
 <template>
   <div :class="currentTheme.container">
-    <!-- Header with title and actions -->
+    <!-- Header with title, actions, and search -->
     <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
       <!-- Title and Description -->
       <div class="flex flex-col gap-0.5">
@@ -28,6 +28,7 @@
                 :title="getActionTooltip(action)"
                 :class="action.buttonClass"
               >
+                <font-awesome-icon v-if="action.icon" :icon="action.icon" class="mr-2" />
                 {{ action.label }}
               </button>
             </template>
@@ -50,6 +51,7 @@
                   :title="getActionTooltip(action)"
                   :class="action.buttonClass"
                 >
+                  <font-awesome-icon v-if="action.icon" :icon="action.icon" class="mr-2" />
                   {{ action.label }}
                 </button>
               </template>
@@ -76,12 +78,11 @@
             </template>
           </slot>
         </div>
-      </div>      
-    </div>
-    </div>
-    <!-- Built-in search bar below header (conditional) -->
-    <div v-if="search" class="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-      <div class="relative flex-1 max-w-sm">
+      </div>
+
+      <!-- Search bar (conditional) -->
+      <div v-if="search" class="flex items-center justify-between gap-2 mt-3">
+        <div class="relative flex-1 max-w-sm">
           <TextField
           :required="false"
           :value="searchQuery"
@@ -90,7 +91,7 @@
           @change="onSearchInput"
           @keydown="handleSearchKeydown"
           name="searchQuery"
-          label="Search"
+          label=""
           placeholder="Search (e.g. column_name:contains:string)"
           autocomplete="off"
           spellcheck="false"
@@ -111,93 +112,94 @@
           </div>
         </div>
 
-      </div>
-      <div class="flex items-center gap-1">
-        <div v-if="upload || download || columns" class="flex items-center justify-end  mt-4">
-        <div class="flex border border-gray-200 dark:border-gray-700 rounded-md">
-          <input
-            v-if="upload"
-            ref="fileInput"
-            type="file"
-            accept=".csv"
-            @change="handleFileUpload"
-            class="hidden"
-          />
-          <button
-            v-if="download"
-            @click="downloadCSV"
-            class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
-            title="Download CSV"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-          </button>
-          <button
-            v-if="upload"
-            @click="$refs.fileInput.click()"
-            class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
-            title="Upload CSV"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-            </svg>
-          </button>
-          <!-- Column visibility toggle button -->
-          <div v-if="columns" class="relative column-selector-container">
-            <button
-              @click="toggleColumnSelector"
-              class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title="Toggle Column Visibility"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-              </svg>
-            </button>
-            
-            <!-- Column selector dropdown -->
-            <div v-if="showColumnSelector" class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
-              <div class="p-4">
-                <div class="flex items-center justify-between mb-3">
-                  <h3 class="text-sm font-medium text-gray-900 dark:text-white">Show Columns</h3>
-                  <div class="flex gap-2">
-                    <button
-                      @click="selectAllColumns"
-                      class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                    >
-                      Select All
-                    </button>
-                    <button
-                      @click="deselectAllColumns"
-                      class="text-xs text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                    >
-                      Deselect All
-                    </button>
+        </div>
+        <div class="flex items-center gap-1">
+          <div v-if="upload || download || columns" class="flex items-center justify-end  mt-4">
+            <div class="flex border border-gray-200 dark:border-gray-700 rounded-md">
+              <input
+                v-if="upload"
+                ref="fileInput"
+                type="file"
+                accept=".csv"
+                @change="handleFileUpload"
+                class="hidden"
+              />
+              <button
+                v-if="download"
+                @click="downloadCSV"
+                class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
+                title="Download CSV"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+              </button>
+              <button
+                v-if="upload"
+                @click="$refs.fileInput.click()"
+                class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-700"
+                title="Upload CSV"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+              </button>
+              <!-- Column visibility toggle button -->
+              <div v-if="columns" class="relative column-selector-container">
+                <button
+                  @click="toggleColumnSelector"
+                  class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Toggle Column Visibility"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                  </svg>
+                </button>
+                
+                <!-- Column selector dropdown -->
+                <div v-if="showColumnSelector" class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
+                  <div class="p-4">
+                    <div class="flex items-center justify-between mb-3">
+                      <h3 class="text-sm font-medium text-gray-900 dark:text-white">Show Columns</h3>
+                      <div class="flex gap-2">
+                        <button
+                          @click="selectAllColumns"
+                          class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          Select All
+                        </button>
+                        <button
+                          @click="deselectAllColumns"
+                          class="text-xs text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                        >
+                          Deselect All
+                        </button>
+                      </div>
+                    </div>
+                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                      <label
+                        v-for="col in allColumns.filter(c => c.showColumn !== false)"
+                        :key="col.key"
+                        class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-1 rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          :checked="visibleColumns.has(col.key)"
+                          @change="toggleColumnVisibility(col.key)"
+                          class="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
+                        />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ col.label || col.key }}</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
-                <div class="space-y-2 max-h-48 overflow-y-auto">
-                  <label
-                    v-for="col in allColumns.filter(c => c.showColumn !== false)"
-                    :key="col.key"
-                    class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-1 rounded"
-                  >
-                    <input
-                      type="checkbox"
-                      :checked="visibleColumns.has(col.key)"
-                      @change="toggleColumnVisibility(col.key)"
-                      class="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
-                    />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ col.label || col.key }}</span>
-                  </label>
-                </div>
-              </div></div>
+              </div>
             </div>
           </div>
         </div>
-
       </div>
-      
     </div>
+    
     <div class="overflow-x-auto">
       <table :class="currentTheme.table">
         <thead>
@@ -282,7 +284,8 @@
             :class="[
               currentTheme.row,
               idx % 2 === 0 ? currentTheme.rowEven : currentTheme.rowOdd,
-              currentTheme.rowHover
+              currentTheme.rowHover,
+              props.clickableRows ? 'cursor-pointer' : ''
             ]"
           >
             <td :class="[currentTheme.cell, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']" @click.stop>
@@ -301,9 +304,49 @@
               />
             </td>
             <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.cell]">
+              <!-- Render merged array objects if this column is a merge target -->
+              <span v-if="col.mergedFrom && getMergedArrayData(row, col.mergedFrom).length > 0">
+                <div class="flex flex-wrap gap-1">
+                  <div 
+                    v-for="(item, itemIndex) in getMergedArrayData(row, col.mergedFrom)" 
+                    :key="itemIndex"
+                    :class="[
+                      'inline-flex flex-col p-1 rounded-lg border shadow-sm max-w-32',
+                      item.targetColor || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                    ]"
+                  >
+                    <div class="text-xs font-semibold truncate">
+                      {{ item[item.targetObjectAttribute] || item.name || item }}
+                    </div>
+                  </div>
+                </div>
+              </span>
+              
+              <!-- Render array of objects if isArrayObject is true -->
+              <span v-else-if="col.isArrayObject && getArrayData(row[col.key]) && getArrayData(row[col.key]).length > 0">
+                <div class="flex flex-wrap gap-1">
+                  <div 
+                    v-for="(item, itemIndex) in getArrayData(row[col.key])" 
+                    :key="itemIndex"
+                    :class="[
+                      'inline-flex flex-col p-1 rounded-lg border shadow-sm max-w-32',
+                      col.targetColor || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                    ]"
+                  >
+                    <div class="text-xs font-semibold truncate">
+                      {{ item[col.targetObjectAttribute] || item }}
+                    </div>
+                   
+                  </div>
+                </div>
+              </span>
+              
+              <span v-else-if="col.isArrayObject" class="text-xs text-gray-500">
+                
+              </span>
               <!-- Render option badges if column has options -->
-              <span v-if="col.options && row[col.key]">
-                <span v-if="typeof col.options[0] === 'object'">
+              <span v-else-if="col.options && row[col.key] !== undefined && row[col.key] !== null">
+                <span v-if="col.options.length > 0 && typeof col.options[0] === 'object'">
                   <!-- Option objects with label and color -->
                   <span 
                     v-for="option in col.options" 
@@ -328,7 +371,10 @@
                 </span>
               </span>
               <!-- Regular text for non-option columns -->
-              <span v-else>
+              <span v-else :class="col.labelColor ? [
+                'inline-flex items-center px-2 py-1 rounded border text-sm',
+                col.labelColor
+              ] : ''">
                 {{ row[col.key] }}
               </span>
             </td>
@@ -338,33 +384,53 @@
                 <button 
                   v-if="rowActions.length === 1"
                   @click="emitAction(rowActions[0].type, row)" 
-                  :class="[currentTheme.menuButton, rowActions[0].colorClass]"
+                  :class="[currentTheme.menuButton, rowActions[0].colorClass, 'cursor-pointer']"
+                  :title="!props.rowActionLabels ? rowActions[0].label : ''"
                 >
-                  {{ rowActions[0].label }}
+                  <font-awesome-icon v-if="rowActions[0].icon" :icon="rowActions[0].icon" :class="props.rowActionLabels ? 'mr-2' : ''" />
+                  <span v-if="props.rowActionLabels">{{ rowActions[0].label }}</span>
                 </button>
                 
-                <!-- Dropdown menu when multiple actions -->
+                <!-- Multiple actions as individual buttons when rowActionDropdown is false -->
+                <div v-else-if="!props.rowActionDropdown" class="flex gap-1">
+                  <button 
+                    v-for="action in rowActions" 
+                    :key="action.type"
+                    @click="emitAction(action.type, row)" 
+                    :class="[currentTheme.menuButton, action.colorClass, 'text-sm px-3 py-2 cursor-pointer']"
+                    :title="!props.rowActionLabels ? action.label : ''"
+                  >
+                    <font-awesome-icon v-if="action.icon" :icon="action.icon" :class="props.rowActionLabels ? 'mr-1.5' : ''" />
+                    <span v-if="props.rowActionLabels">{{ action.label }}</span>
+                  </button>
+                </div>
+                
+                <!-- Dropdown menu when multiple actions and rowActionDropdown is true -->
                 <div v-else>
-                  <button @click="toggleMenu(row.id || row.name || idx)" :class="currentTheme.menuButton">
+                  <button @click="toggleMenu(row.id || row.name || idx)" :class="[currentTheme.menuButton, 'cursor-pointer']" :data-row-id="row.id || row.name || idx">
                     <svg :class="currentTheme.menuIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <circle cx="12" cy="5" r="1.5"/>
                       <circle cx="12" cy="12" r="1.5"/>
                       <circle cx="12" cy="19" r="1.5"/>
                     </svg>
                   </button>
-                  <div v-if="openMenuId === (row.id || row.name || idx)" :class="currentTheme.dropdown">
-                    <slot name="row-actions" :row="row" :close-menu="closeMenu">
-                      <!-- Configurable row actions -->
-                      <button 
-                        v-for="action in rowActions" 
-                        :key="action.type"
-                        @click="emitAction(action.type, row); closeMenu()" 
-                        :class="[currentTheme.dropdownItem, action.colorClass]"
-                      >
-                        {{ action.label }}
-                      </button>
-                    </slot>
-                  </div>
+                  <Teleport to="body">
+                    <div v-if="openMenuId === (row.id || row.name || idx)" :class="[currentTheme.dropdown, 'fixed z-50']" :style="getDropdownPosition(row.id || row.name || idx)">
+                      <slot name="row-actions" :row="row" :close-menu="closeMenu">
+                        <!-- Configurable row actions -->
+                        <button 
+                          v-for="action in rowActions" 
+                          :key="action.type"
+                          @click="emitAction(action.type, row); closeMenu()" 
+                          :class="[currentTheme.dropdownItem, action.colorClass, 'cursor-pointer']"
+                          :title="!props.rowActionLabels ? action.label : ''"
+                        >
+                          <font-awesome-icon v-if="action.icon" :icon="action.icon" :class="props.rowActionLabels ? 'mr-2' : ''" />
+                          <span v-if="props.rowActionLabels">{{ action.label }}</span>
+                        </button>
+                      </slot>
+                    </div>
+                  </Teleport>
                 </div>
               </div>
             </td>
@@ -404,11 +470,12 @@
         <button @click="lastPage" :disabled="currentPage === totalPages" class="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none disabled:opacity-50" aria-label="Last page">&raquo;</button>
       </div>
     </div>
+  </div>
  
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue';
 import { getThemeClasses, getDynamicColor } from '../Theme.js';
 import TextField from '../fields/TextField.vue';
 import CheckboxField from '../fields/CheckboxField.vue';
@@ -499,6 +566,21 @@ const props = defineProps({
   formData: {
     type: Array,
     default: () => []
+  },
+  // Control cursor behavior
+  clickableRows: {
+    type: Boolean,
+    default: false
+  },
+  // Control row action display
+  rowActionDropdown: {
+    type: Boolean,
+    default: true
+  },
+  // Control row action labels
+  rowActionLabels: {
+    type: Boolean,
+    default: true
   }
 });
 const emit = defineEmits(['rowClick', 'rowActionHandler', 'create', 'edit', 'multiple-edit', 'delete', 'upload', 'actionHandler', 'action']);
@@ -609,15 +691,38 @@ const allColumns = computed(() => {
   const config = props.schema || props.formConfig;
   
   if (config?.fields && config.fields.length > 0) {
-    return config.fields.map(field => ({
+    const columns = config.fields.map(field => ({
       key: field.name,
       label: field.label || field.name,
       type: field.type,
       required: field.required || false,
       options: field.options || null,
       width: field.width || field.columns || 12,
-      showColumn: field.showColumn !== false // Default to true if not specified
+      showColumn: field.showColumn !== false, // Default to true if not specified
+      isArrayObject: field.isArrayObject || false,
+      targetObjectAttribute: field.targetObjectAttribute || null,
+      targetColor: field.targetColor || null,
+      labelColor: field.labelColor || null,
+      mergedTo: field.mergedTo || null,
+      mergedFrom: null // Will be set below
     }));
+    
+    // Process mergedTo relationships
+    columns.forEach(col => {
+      if (col.mergedTo) {
+        const targetCol = columns.find(c => c.key === col.mergedTo);
+        if (targetCol) {
+          targetCol.mergedFrom = targetCol.mergedFrom || [];
+          targetCol.mergedFrom.push({
+            sourceKey: col.key,
+            targetColor: col.targetColor,
+            targetObjectAttribute: col.targetObjectAttribute
+          });
+        }
+      }
+    });
+    
+    return columns;
   }
   
   // Fall back to provided columns prop
@@ -626,6 +731,7 @@ const allColumns = computed(() => {
 
 // Filter columns based on visibility selection and showColumn property
 const computedColumns = computed(() => {
+ 
   // First filter by showColumn property
   let filteredColumns = allColumns.value.filter(col => col.showColumn !== false);
   
@@ -633,7 +739,6 @@ const computedColumns = computed(() => {
   if (props.columns && visibleColumns.value.size > 0) {
     filteredColumns = filteredColumns.filter(col => visibleColumns.value.has(col.key));
   }
-  
   return filteredColumns;
 });
 
@@ -658,6 +763,53 @@ function initFilters() {
 }
 watch(() => computedColumns.value, initFilters, { immediate: true });
 watch(() => props.filter, initFilters, { immediate: true });
+
+// Helper function to handle both array and JSON string data
+function getArrayData(data) {
+  
+  
+  if (Array.isArray(data)) {
+    
+    return data;
+  }
+  
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data);
+      
+      return Array.isArray(parsed) ? parsed : null;
+    } catch (e) {
+      
+      return null;
+    }
+  }
+
+  return null;
+}
+
+// Helper function to get merged array data from multiple source columns
+function getMergedArrayData(row, mergedFrom) {
+  if (!mergedFrom || !Array.isArray(mergedFrom)) {
+    return [];
+  }
+  
+  const mergedData = [];
+  
+  mergedFrom.forEach(source => {
+    const sourceData = getArrayData(row[source.sourceKey]);
+    if (sourceData && sourceData.length > 0) {
+      sourceData.forEach(item => {
+        mergedData.push({
+          ...item,
+          targetColor: source.targetColor,
+          targetObjectAttribute: source.targetObjectAttribute
+        });
+      });
+    }
+  });
+  
+  return mergedData;
+}
 
 function onSearchInput() {
   const value = searchQuery.value;
@@ -782,17 +934,28 @@ const filteredRows = computed(() => {
   // Per-column filters (only if filter is enabled)
   if (props.filter) {
     Object.entries(filters.value).forEach(([key, val]) => {
+
       if (val) {
         // Find the column configuration to check if it has options
         const column = computedColumns.value.find(col => col.key === key);
-        
+
         if (column && column.options) {
           // For select fields with options, do exact match on the value
-          result = result.filter(row => String(row[key] ?? '') === String(val));
+          // Special handling for boolean values
+          if (val === 'true' || val === 'false' || val === true || val === false) {
+            const boolVal = val === 'true' || val === true;
+            result = result.filter(row => Boolean(row[key]) === boolVal);
+          } else {
+            result = result.filter(row => String(row[key] ?? '') === String(val));
+          }
         } else {
+
           // For regular text fields, use substring match
           result = result.filter(row => String(row[key] ?? '').toLowerCase().includes(String(val).toLowerCase()));
         }
+      }
+      else if (val === 'false' || val === false) {
+        result = result.filter(row => Boolean(row[key]) === false);
       }
     });
   }
@@ -821,19 +984,8 @@ const filteredRows = computed(() => {
 const totalResults = computed(() => filteredRows.value.length);
 const totalPages = computed(() => Math.max(1, Math.ceil(totalResults.value / pageSize.value)));
 const paginatedRows = computed(() => {
-  // Separate selected and unselected rows
-  const selectedRowsData = filteredRows.value.filter(row => 
-    selectedRows.value.includes(row.id || row.name)
-  );
-  const unselectedRowsData = filteredRows.value.filter(row => 
-    !selectedRows.value.includes(row.id || row.name)
-  );
-  
-  // Combine: selected rows first, then unselected rows
-  const sortedRows = [...selectedRowsData, ...unselectedRowsData];
-  
   const start = (currentPage.value - 1) * pageSize.value;
-  return sortedRows.slice(start, start + pageSize.value);
+  return filteredRows.value.slice(start, start + pageSize.value);
 });
 
 watch([filteredRows, pageSize], () => {
@@ -1091,6 +1243,11 @@ onMounted(() => {
     if (showColumnSelector.value && !event.target.closest('.column-selector-container')) {
       showColumnSelector.value = false;
     }
+    
+    // Close dropdown menu when clicking outside
+    if (openMenuId.value && !event.target.closest('[data-row-id]') && !event.target.closest('.fixed.z-50')) {
+      openMenuId.value = null;
+    }
   });
 });
 function emitRowClick(row) {
@@ -1107,6 +1264,35 @@ function toggleMenu(id) {
 function closeMenu() {
   console.log('Closing menu, current openMenuId:', openMenuId.value);
   openMenuId.value = null;
+}
+
+// Calculate dropdown position
+function getDropdownPosition(rowId) {
+  const button = document.querySelector(`[data-row-id="${rowId}"]`);
+  if (!button) return {};
+  
+  const rect = button.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  // Calculate position
+  let left = rect.right;
+  let top = rect.top;
+  
+  // Adjust if dropdown would go off-screen
+  if (left + 200 > viewportWidth) {
+    left = rect.left - 200; // Show to the left instead
+  }
+  
+  if (top + 150 > viewportHeight) {
+    top = rect.bottom - 150; // Show above instead
+  }
+  
+  return {
+    left: `${left}px`,
+    top: `${top}px`,
+    minWidth: '200px'
+  };
 }
 
 function onCreate() {

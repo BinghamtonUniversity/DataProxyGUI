@@ -112,4 +112,20 @@ class ApiUsersController extends BaseDjangoController{
             'status' => $result['status']
         ], $result['status']);
     }
+
+    public function apiUsersDecryptedSecret($id): JsonResponse
+    {
+        $result = $this->makeDjangoRequest('GET', "api_users/{$id}/decrypted_secret");
+        return response()->json($result['data']);
+
+        $errorMessage = $result['data']['error']
+            ?? $result['data']['detail']
+            ?? $result['data']['message']
+            ?? 'Unknown error occurred on Django side.';
+
+        return response()->json([
+            'error' => $errorMessage,
+            'status' => $result['status']
+        ], $result['status']);
+    }
 }

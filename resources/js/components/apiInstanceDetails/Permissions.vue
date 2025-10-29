@@ -153,7 +153,7 @@ const submitNewPermission = async (e: Event) => {
             environment_id: updatedApiInstanceData.environment.id
         }
 
-        props.updateApiInstanceData(updatedApiInstanceData)
+        props.updateApiInstanceData(requestData)
          if(isEditMode.value) {
             success('Updated successfully', 'Permission Updated');
         } else {
@@ -204,23 +204,7 @@ const handleDelete = async (permission: ApiInstanceRouteUserMap) => {
             environment_id: updatedApiInstanceData.environment.id
         }
 
-        const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(requestData)
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
-
-        const responseData = await response.json()
-        props.updateApiInstanceData(responseData || updatedApiInstanceData)
+        props.updateApiInstanceData(requestData)
         success('Deleted successfully', 'Permission Deleted');
 
     } catch (err: any) {

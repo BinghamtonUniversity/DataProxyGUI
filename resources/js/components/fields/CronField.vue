@@ -37,7 +37,7 @@
               : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
           ]"
         >
-          <i class="fa-solid fa-keyboard mr-2"></i>
+          <FontAwesomeIcon :icon="faKeyboard" class="mr-2" />
           Manual Input
         </button>
         <button
@@ -50,7 +50,7 @@
               : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
           ]"
         >
-          <i class="fa-solid fa-cogs mr-2"></i>
+          <FontAwesomeIcon :icon="faCogs" class="mr-2" />
           Visual Builder
         </button>
       </div>
@@ -64,7 +64,7 @@
         <span 
           class="inline-flex items-center justify-center px-3 border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm font-normal rounded-l-md min-w-[44px]"
         >
-          <i class="fa-solid fa-clock text-base"></i>
+          <FontAwesomeIcon :icon="faClock" class="text-base" />
         </span>
         
         <!-- Main Input -->
@@ -89,7 +89,7 @@
       <!-- Cron Expression Preview -->
       <div v-if="cronDescription" class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
         <div class="flex items-start">
-          <i class="fa-solid fa-info-circle text-blue-500 mt-0.5 mr-2"></i>
+          <FontAwesomeIcon :icon="faInfoCircle" class="text-blue-500 mt-0.5 mr-2" />
           <div>
             <p class="text-sm font-medium text-blue-900 dark:text-blue-100">Schedule Description:</p>
             <p class="text-sm text-blue-700 dark:text-blue-200">{{ cronDescription }}</p>
@@ -251,6 +251,8 @@ import {
   getSafeFieldValue 
 } from './functions.js';
 import { validateField } from './validation.js';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faKeyboard, faCogs, faClock, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 
 // Props
 const props = defineProps({
@@ -531,6 +533,14 @@ onMounted(() => {
   // Parse initial value
   parseCronExpression(props.value);
 });
+</script>
+
+<script>
+export default {
+  components: {
+    FontAwesomeIcon
+  }
+}
 </script>
 
 <style scoped>

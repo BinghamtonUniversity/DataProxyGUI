@@ -30,7 +30,7 @@
       <span 
         class="inline-flex items-center justify-center px-3 border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm font-normal rounded-l-md min-w-[44px]"
       >
-        <i class="fa-solid fa-link text-base"></i>
+        <FontAwesomeIcon :icon="faLink" class="text-base" />
       </span>
       
       <!-- Main Input -->
@@ -87,6 +87,8 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { validateField } from './validation.js';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faLink } from '@fortawesome/free-solid-svg-icons';
 
 // Props
 const props = defineProps({
@@ -237,6 +239,14 @@ onMounted(() => {
     }
   }
 });
+</script>
+
+<script>
+export default {
+  components: {
+    FontAwesomeIcon
+  }
+}
 </script>
 
 <style scoped>

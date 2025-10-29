@@ -80,7 +80,7 @@
         class="inline-flex items-center justify-center px-3 border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm font-normal rounded-r-md min-w-[44px] hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
         :title="'Pick color'"
       >
-        <i class="fa-solid fa-palette text-base"></i>
+        <FontAwesomeIcon :icon="faPalette" class="text-base" />
       </button>
     </div>
 
@@ -90,7 +90,7 @@
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white">Pick a Color</h3>
           <button @click="closeColorPicker" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-            <i class="fa-solid fa-times text-lg"></i>
+            <FontAwesomeIcon :icon="faTimes" class="text-lg" />
           </button>
         </div>
         
@@ -171,6 +171,8 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { validateField } from './validation.js';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faPalette, faTimes } from '@fortawesome/free-solid-svg-icons';
 
 // Props
 const props = defineProps({
@@ -415,6 +417,14 @@ onMounted(() => {
     validate();
   }
 });
+</script>
+
+<script>
+export default {
+  components: {
+    FontAwesomeIcon
+  }
+}
 </script>
 
 <style scoped>

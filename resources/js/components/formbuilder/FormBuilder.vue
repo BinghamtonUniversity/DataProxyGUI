@@ -48,23 +48,23 @@
                 
               />
             </div>
-            <div class="text-xs text-on-surface-variant">
+            <!-- <div class="text-xs text-on-surface-variant">
               <span class="font-medium">Files:</span> false (fixed value)
-            </div>
+            </div> -->
           </div>
         </div>
       </div>
       <!-- Center: Main Area (Draggable Types + Canvas) -->
-      <div class="flex-1 flex flex-col gap-4">
+      <div class="flex-1 flex flex-col gap-1">
         <!-- Draggable field types (horizontal) -->
-        <div class="flex flex-row gap-4 mb-4 pt-2">
+        <div class="flex flex-row gap-8 mb-4 pt-2">
           <!-- Text Fields -->
           <div class="flex flex-col gap-2">
-            <h3 class="text-sm font-medium text-on-surface-variant mb-2">Text</h3>
+            
             <div class="flex flex-row gap-1"><div v-for="type in getFieldTypesByCategory('input')" :key="type.type"
                 draggable="true"
                 @dragstart="onDragStart($event, type)"
-                class="flex flex-col items-center justify-center p-2 bg-white dark:bg-surface-container border-2 border-outline rounded-lg cursor-move hover:border-primary hover:shadow-elevation-2 transition-all duration-200 group min-w-[80px]">
+                class="flex flex-col items-center justify-center p-2 bg-white dark:bg-gray-700 border-2 border-outline rounded-lg cursor-move hover:border-primary hover:shadow-elevation-2 transition-all duration-200 group min-w-[80px]">
                 <!-- Icon -->
                 <div class="mb-1">
                   <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,12 +79,12 @@
           
           <!-- Options Fields -->
           <div class="flex flex-col gap-2">
-            <h3 class="text-sm font-medium text-on-surface-variant mb-2">Options</h3>
+            
             <div class="flex flex-row gap-1">
               <div v-for="type in getFieldTypesByCategory('options')" :key="type.type"
                 draggable="true"
                 @dragstart="onDragStart($event, type)"
-                class="flex flex-col items-center justify-center px-2 py-2 bg-white dark:bg-surface-container border-2 border-outline rounded-lg cursor-move hover:border-primary hover:shadow-elevation-2 transition-all duration-200 group min-w-[80px]">
+                class="flex flex-col items-center justify-center px-2 py-2 bg-white dark:bg-gray-700 border-2 border-outline rounded-lg cursor-move hover:border-primary hover:shadow-elevation-2 transition-all duration-200 group min-w-[80px]">
                 <!-- Icon -->
                 <div class="mb-1">
                   <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,12 +99,12 @@
           
           <!-- Boolean Fields -->
           <div class="flex flex-col gap-2">
-            <h3 class="text-sm font-medium text-on-surface-variant mb-2">Boolean</h3>
+            
             <div class="flex flex-row gap-1">
               <div v-for="type in getFieldTypesByCategory('boolean')" :key="type.type"
                 draggable="true"
                 @dragstart="onDragStart($event, type)"
-                class="flex flex-col items-center justify-center px-2 py-2 bg-white dark:bg-surface-container border-2 border-outline rounded-lg cursor-move hover:border-primary hover:shadow-elevation-2 transition-all duration-200 group min-w-[80px]">
+                class="flex flex-col items-center justify-center px-2 py-2 bg-white dark:bg-gray-700 border-2 border-outline rounded-lg cursor-move hover:border-primary hover:shadow-elevation-2 transition-all duration-200 group min-w-[80px]">
                 <!-- Icon -->
                 <div class="mb-1">
                   <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,12 +119,12 @@
           
           <!-- Section Fields -->
           <div class="flex flex-col gap-2">
-            <h3 class="text-sm font-medium text-on-surface-variant mb-2">Section</h3>
+            
             <div class="flex flex-row gap-1">
               <div v-for="type in getFieldTypesByCategory('section')" :key="type.type"
                 draggable="true"
                 @dragstart="onDragStart($event, type)"
-                class="flex flex-col items-center justify-center px-2 py-2 bg-white dark:bg-surface-container border-2 border-outline rounded-lg cursor-move hover:border-primary hover:shadow-elevation-2 transition-all duration-200 group min-w-[80px]">
+                class="flex flex-col items-center justify-center px-2 py-2 bg-white dark:bg-gray-700 border-2 border-outline rounded-lg cursor-move hover:border-primary hover:shadow-elevation-2 transition-all duration-200 group min-w-[80px]">
                 <!-- Icon -->
                 <div class="mb-1">
                   <svg class="w-6 h-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,7 +257,7 @@
                 <span :class="formbuilderTheme.sectionTitle">{{ selectedField.label }}</span>
                 <button
                   @click="removeField(selectedFieldIndex)"
-                  class="inline-flex items-center gap-2 px-3 py-1.5 text-error hover:text-error hover:bg-error-8 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2 text-sm font-medium mb-4">
+                  class="inline-flex items-center bg-red-500 dark:bg-red-700 hover:bg-red-600 dark:hover:bg-red-800 text-white gap-2 px-3 py-1.5 text-error hover:text-error hover:bg-error-8 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2 text-sm font-medium mb-4">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                   </svg>
@@ -269,7 +269,7 @@
               <div v-if="selectedField.type === 'fieldset'" class="mb-4">
                 <button
                   @click="manageSection(selectedFieldIndex)"
-                  class="w-full flex items-center justify-center gap-2 px-4 py-3  text-on-primary rounded-xl hover:bg-primary-high transition-all ring-2 ring-secondary bg-blue duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm font-medium">
+                  class="w-full flex items-center dark:bg-gray-700 justify-center gap-2 px-4 py-3  text-on-primary rounded-xl hover:ring-primary transition-all ring-2 ring-secondary bg-blue duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm font-medium  hover:cursor-pointer">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                   </svg>
@@ -283,7 +283,7 @@
                 <div class="mb-4">
                   <button
                     @click="toggleConfigSection('basic')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
+                    class="flex items-center justify-between w-full dark:bg-gray-700 text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -328,8 +328,16 @@
                            label="Name"
                            name="fieldName"
                            placeholder="Name"
-                           class="w-full"
+                           :class="[
+                             'w-full',
+                             !isFieldNameValid ? 'border-red-500 focus:border-red-500' : ''
+                           ]"
+                         
                          />
+                         <div v-if="!isFieldNameValid" class="mt-1 text-xs text-red-600">
+                           <i class="fas fa-exclamation-triangle mr-1"></i>
+                           Invalid characters will be automatically removed
+                         </div>
                        </div>
                      </div>
                     
@@ -394,10 +402,10 @@
                 </div>
                 
                 <!-- Display Configuration -->
-                <div class="mb-4">
+                <div class="mb-4 ">
                   <button
                     @click="toggleConfigSection('display')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
+                    class="flex items-center justify-between w-full dark:bg-gray-700 text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6z"></path>
@@ -408,7 +416,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                   </button>
-                  <div class="config-section-content space-y-3 pl-2 border-l-2 border-outline-variant" :class="configSections.display ? 'expanded' : 'collapsed'">
+                  <div class="config-section-content  space-y-3 pl-2 border-l-2  border-outline-variant" :class="configSections.display ? 'expanded' : 'collapsed'">
                     <!-- Width Configuration -->
 
                     <SelectField
@@ -515,7 +523,7 @@
                 <div v-if="selectedField.type === 'select' || selectedField.type === 'combobox' || selectedField.type === 'radio' || selectedField.type === 'checkbox' || selectedField.type === 'switch'" class="mb-4">
                   <button
                     @click="toggleConfigSection('options')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
+                    class="flex items-center justify-between w-full text-left dark:bg-gray-700 font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
@@ -560,14 +568,17 @@
                           </div>
                         </template>
                         <template v-else>
+                        
                           <div v-for="(option, index) in selectedField.options || []" :key="index" class="flex gap-2">
                             <TextField
+                              :label="index === 0 ? 'Label' : ''"
                               v-model:value="option.label"
                               :name="`optionLabel_${index}`"
                               placeholder="Label"
                               class="flex-1"
                             />
                             <TextField
+                            :label="index === 0 ? 'Value' : ''"
                               v-model:value="option.value"
                               :name="`optionValue_${index}`"
                               placeholder="Value"
@@ -576,9 +587,9 @@
                             <button
                               @click="removeOption(index)"
                               type="button"
-                              class="px-3 py-2 text-error hover:text-error hover:bg-error-8 rounded-xl transition-all duration-200"
+                              class="px-3 py-2 text-error hover:text-error cursor-pointer hover:bg-error-8 rounded-xl transition-all duration-200"
                               :disabled="(selectedField.options || []).length <= 1">
-                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg class="w-4 h-4" fill="none" stroke="red" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                               </svg>
                             </button>
@@ -602,7 +613,7 @@
                 <div v-if="selectedField.type === 'range'" class="mb-4">
                   <button
                     @click="toggleConfigSection('range')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
+                    class="flex items-center justify-between w-full dark:bg-gray-700 text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path>
@@ -646,7 +657,7 @@
                 <div class="mb-4">
                   <button
                     @click="toggleConfigSection('conditions')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
+                    class="flex items-center justify-between w-full dark:bg-gray-700 text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -750,7 +761,7 @@
                 <div v-if="selectedField.type != 'fieldset'" class="mb-4">
                   <button
                     @click="toggleConfigSection('validation')"
-                    class="flex items-center justify-between w-full text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
+                    class="flex items-center justify-between w-full dark:bg-gray-700 text-left font-medium text-on-surface mb-3 p-3 rounded-xl hover:ring-primary ring-2 ring-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:cursor-pointer">
                     <span class="flex items-center gap-2">
                       <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -777,145 +788,166 @@
                       />
                     </div>
                     <!-- Validation Configuration (only show if validation is enabled) -->
-                    <div v-if="selectedField.enableValidate" class=" space-y-3 pl-4 border-l-2 border-primary-20">
-                      <!-- Validation Type -->
-                      <SelectField
-                        v-model:value="selectedField.validationType"
-                        name="fieldValidationType"
-                        :options="[
-                          { label: 'None', value: 'none' },
-                          { label: 'Matches', value: 'matches' },
-                          { label: 'Matches - Field/Value (NEW)', value: 'matchesfieldvalue' },
-                          { label: 'Date', value: 'date' },
-                          { label: 'Valid URL', value: 'valid_url' },
-                          { label: 'Valid Email', value: 'valid_email' },
-                          { label: 'Length', value: 'length' },
-                          { label: 'Numeric', value: 'numeric' },
-                          { label: 'Pattern', value: 'pattern' }
-                        ]"
-                        placeholder="Select validation type"
-                        class="w-full">
-                      </SelectField>
-
-                      
-                      <!-- Pattern Configuration (only for pattern type) -->
-                      <div v-if="selectedField.validationType === 'pattern'" class="space-y-3">
-                        <TextField
-                          v-model:value="selectedField.validationPattern"
-                          name="fieldValidationPattern"
-                          label="Regex Pattern"
-                          placeholder="Enter regex pattern"
-                          class="w-full">
-                        </TextField>
-
-                        <TextField
-                          v-model:value="selectedField.validationFlags"
-                          name="fieldValidationFlags"
-                          label="Regex Flags"
-                          placeholder="Enter flags (e.g., gi)"
-                          help="Common flags: g (global), i (case insensitive), m (multiline)"
-                          class="w-full">
-                        </TextField>                          
-                        
-                      </div>
-                      
-                      <!-- Length & Numeric Configuration (only for length & numberic type) -->
-                      <div v-if="selectedField.validationType === 'length' ||selectedField.validationType === 'numeric' "  class="space-y-3">
-                        <div class="grid grid-cols-2 gap-4">
-                          <NumberField
-                            v-model:value="selectedField.validationMinLength"
-                            name="fieldValidationMinLength"
-                            label="Minimum Length"
-                            placeholder="0"
-                            class="w-full">
-                          </NumberField>
-
-                          <NumberField
-                            v-model:value="selectedField.validationMaxLength"
-                            name="fieldValidationMaxLength"
-                            label="Maximum Length"
-                            placeholder="0"
-                            class="w-full">
-                          </NumberField>
-
-                        </div>
-                      </div>
-                      
-                      
-                      <!-- Matches Configuration (only for matches type) -->
-                      <div v-if="selectedField.validationType === 'matches' || selectedField.validationType === 'matchesfieldvalue'" class="space-y-3">
-                        <TextField
-                          :v-model:value="selectedField.validationFieldName"
-                          name="fieldValidationFieldName"
-                          placeholder="Enter field name to match"
-                          label="Field Name">
-                        </TextField>
-                      </div>
-                      <div v-if="selectedField.validationType === 'matchesfieldvalue'" class="space-y-3">      
-
-                        <div>
-                          
-                          <div class="space-y-2">
-                            <div v-for="(value, index) in selectedField.validationValues || ['']" :key="index" class="flex gap-2">
-                             
-                              <TextField
-                                :v-model:value="selectedField.validationValues[index]"
-                                name="fieldValidationFieldName"
-                                :placeholder="`Value ${index + 1}`"
-                                label="Expected Values">
-                              </TextField>
-                              <button
-                                @click="removeValidationValue(index)"
-                                type="button"
-                                class="px-3 py-3 text-error hover:text-error hover:bg-error-8 rounded-xl transition-all duration-200"
-                                :disabled="(selectedField.validationValues || []).length <= 1">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
-                              </button>
-                            </div>
+                    <div v-if="selectedField.enableValidate" class="space-y-3 pl-4 border-l-2 border-primary-20">
+                      <!-- Validation Rules -->
+                      <div class="space-y-4">
+                        <div v-for="(rule, ruleIndex) in selectedField.validate || []" :key="ruleIndex" class="p-3 bg-surface-container-low rounded-lg border border-outline-variant">
+                          <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-on-surface">Validation Rule {{ ruleIndex + 1 }}</span>
                             <button
-                              @click="addValidationValue"
+                              @click="removeValidationRule(ruleIndex)"
                               type="button"
-                              class="w-full px-4 py-2 text-primary hover:text-primary hover:bg-primary-8 rounded-xl transition-all duration-200 border border-primary text-sm">
-                              <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                              class="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-all duration-200"
+                              :disabled="(selectedField.validate || []).length <= 1">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                               </svg>
-                              Add Value
                             </button>
                           </div>
+                      
+                          <!-- Validation Type -->
+                          <div class="grid grid-cols-2 gap-4 mb-3">
+                            <div>
+                              <label class="block text-xs text-on-surface-variant mb-1 font-medium">Type</label>
+                              <SelectField
+                                v-model:value="rule.type"
+                                :name="`validationType_${ruleIndex}`"
+                                :options="[
+                                  { label: 'None', value: 'none' },
+                                  { label: 'Matches', value: 'matches' },
+                                  { label: 'Matches - Field/Value (NEW)', value: 'matchesfieldvalue' },
+                                  { label: 'Date', value: 'date' },
+                                  { label: 'Valid URL', value: 'valid_url' },
+                                  { label: 'Valid Email', value: 'valid_email' },
+                                  { label: 'Length', value: 'length' },
+                                  { label: 'Numeric', value: 'numeric' },
+                                  { label: 'Pattern', value: 'pattern' }
+                                ]"
+                                placeholder="Select validation type"
+                                class="w-full">
+                              </SelectField>
+                            </div>
+                            <div>
+                              <label class="block text-xs text-on-surface-variant mb-1 font-medium">Apply</label>
+                              <SelectField
+                                v-model:value="rule.conditions"
+                                :name="`validationConditions_${ruleIndex}`"
+                                :options="[
+                                  { label: 'Always', value: true },
+                                  { label: 'Conditionally', value: false }
+                                ]"
+                                placeholder="Select apply condition"
+                                class="w-full">
+                              </SelectField>
+                            </div>
+                          </div>
+
+                          <!-- Pattern Configuration (only for pattern type) -->
+                          <div v-if="rule.type === 'pattern'" class="space-y-3">
+                            <TextField
+                              v-model:value="rule.pattern"
+                              :name="`validationPattern_${ruleIndex}`"
+                              label="Regex Pattern"
+                              placeholder="Enter regex pattern"
+                              class="w-full">
+                            </TextField>
+
+                            <TextField
+                              v-model:value="rule.flags"
+                              :name="`validationFlags_${ruleIndex}`"
+                              label="Regex Flags"
+                              placeholder="Enter flags (e.g., gi)"
+                              help="Common flags: g (global), i (case insensitive), m (multiline)"
+                              class="w-full">
+                            </TextField>                          
+                          </div>
+                          
+                          <!-- Length & Numeric Configuration (only for length & numeric type) -->
+                          <div v-if="rule.type === 'length' || rule.type === 'numeric'" class="space-y-3">
+                            <div class="grid grid-cols-2 gap-4">
+                              <NumberField
+                                v-model:value="rule.min"
+                                :name="`validationMin_${ruleIndex}`"
+                                label="Minimum"
+                                placeholder="0"
+                                class="w-full">
+                              </NumberField>
+
+                              <NumberField
+                                v-model:value="rule.max"
+                                :name="`validationMax_${ruleIndex}`"
+                                label="Maximum"
+                                placeholder="0"
+                                class="w-full">
+                              </NumberField>
+                            </div>
+                          </div>
+                      
+                          <!-- Matches Configuration (only for matches type) -->
+                          <div v-if="rule.type === 'matches' || rule.type === 'matchesfieldvalue'" class="space-y-3">
+                            <TextField
+                              v-model:value="rule.name"
+                              :name="`validationName_${ruleIndex}`"
+                              placeholder="Enter field name to match"
+                              label="Field Name">
+                            </TextField>
+                          </div>
+                          <div v-if="rule.type === 'matchesfieldvalue'" class="space-y-3">      
+                            <div>
+                              <div class="space-y-2">
+                                <div v-for="(value, valueIndex) in rule.values || ['']" :key="valueIndex" class="flex gap-2">
+                                  <TextField
+                                    v-model:value="rule.values[valueIndex]"
+                                    :name="`validationValue_${ruleIndex}_${valueIndex}`"
+                                    :placeholder="`Value ${valueIndex + 1}`"
+                                    label="Expected Values">
+                                  </TextField>
+                                  <button
+                                    @click="removeValidationValue(ruleIndex, valueIndex)"
+                                    type="button"
+                                    class="px-3 py-3 text-error hover:text-error hover:bg-error-8 rounded-xl transition-all duration-200"
+                                    :disabled="(rule.values || []).length <= 1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                  </button>
+                                </div>
+                                <button
+                                  @click="addValidationValue(ruleIndex)"
+                                  type="button"
+                                  class="w-full px-4 py-2 text-primary hover:text-primary hover:bg-primary-8 rounded-xl transition-all duration-200 border border-primary text-sm">
+                                  <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                  </svg>
+                                  Add Value
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <!-- Error Message -->
+                          <TextField
+                            v-model:value="rule.message"
+                            :name="`validationMessage_${ruleIndex}`"
+                            :placeholder="getDefaultValidationMessage(rule.type)"
+                            label="Error Message">
+                          </TextField>
                         </div>
                       </div>
                       
-                      <!-- Error Message -->
-                      <TextField
-                          v-model:value="selectedField.validationMessage"
-                          name="fieldValidationMessage"
-                          :placeholder="getDefaultValidationMessage(selectedField.validationType)"
-                          :value="getDefaultValidationMessage(selectedField.validationType)"
-                          label="Error Message">
-                        </TextField>
+                      <!-- Add Validation Rule Button -->
+                      <button
+                        @click="addValidationRule"
+                        type="button"
+                        class="w-full px-4 py-2 text-primary hover:text-primary hover:bg-primary-8 rounded-xl transition-all duration-200 border border-primary text-sm"
+                        :disabled="!selectedField || !selectedField.enableValidate">
+                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Add Validation Rule
+                      </button>
                       
                       
-                      <!-- When to Apply Validation -->
-                      <SelectField
-                        v-model:value="selectedField.validationWhen"
-                        name="validationCondition"
-                        :options="[
-                          { label: 'Always', value: true },
-                          { label: 'Conditionally', value: 'conditional' },
-                        ]"  
-                        label="When to Apply"
-                        class="w-full"
-                      />
-                      
-                      <!-- Conditional Validation Logic -->
-                      <div v-if="selectedField.validationWhen === 'conditional'">
-                        <label class="block text-xs text-on-surface-variant mb-2 font-medium">Validation Conditions</label>
-                        <ConditionalLogic
-                          v-model="selectedField.validationGroups"
-                          condition-type="validation" />
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -939,19 +971,15 @@
       </div>
       <template #footer>
         <button
-          @click="copyToClipboard"
-          class="md3-button-filled-primary">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-          </svg>
-          Copy to Clipboard
+          @click="handleCopyToClipboard"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium">
+          <i class="fas fa-copy w-3 h-3"></i>
+          Copy JSON
         </button>
         <button
           @click="closeJsonModal"
-          class="md3-button-outlined-secondary">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 text-sm font-medium">
+          <i class="fas fa-times w-3 h-3"></i>
           Close
         </button>
       </template>
@@ -980,8 +1008,12 @@
           ref="formViewerRef"
           :key="previewKey"
           :form-config="formConfigForPreview"
-          v-model="previewFormData" />
-      
+          v-model="previewFormData"
+          :actions="[{ type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+          { type: 'cancel', action: 'cancel', label: 'Reset', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+          {type:'close', action: 'close', label: 'Close', modifiers: 'px-4 py-2 text-sm font-medium text-white dark:text-gray-300 bg-red-500 dark:bg-red border border-red-300 dark:border-gray-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' }]" 
+          :actionHandler="handlePreviewAction"
+          />
       </div>
 
     </AlertModal>
@@ -1098,6 +1130,8 @@ function getFieldTypesByCategory(category) {
 
 const fields = ref(props.formData.fields || []);
 
+// Flag to prevent recursive updates
+const isUpdatingFromProps = ref(false);
 
 const selectedFieldIndex = ref(null);
 const isJsonModalOpen = ref(false);
@@ -1148,6 +1182,24 @@ const currentFieldsWithPreviews = computed(() => {
   }
   return result;
 });
+
+function handlePreviewAction(action) {
+
+  switch (action.type) {
+    case 'save':
+      handlePreviewSubmit();
+      break;
+    case 'cancel':
+      handlePreviewReset();
+      break;
+    case 'close':
+      closePreviewModal();
+      break;
+    default:
+      alert('Unknown action type:', action.type);
+      console.log('Unknown action type:', action.type);
+  }
+}
 
 // Helper function to get the original index from fieldsWithPreviews
 function getOriginalIndex(previewIndex) {
@@ -1480,11 +1532,11 @@ function createAndAddField(event, position) {
       const newField = {
         allowDuplication:false,
         enableValidate: false,
-        validationType: 'none',
+        validate: [],
         validationWhen: true, // Todo
         type: defaultType,
         label: defaultLabel,
-        name: `${defaultType}_${Date.now()}`,
+        name: `${defaultType}_${Date.now()}`.replace(/[^a-zA-Z0-9_-]/g, ''),
         placeholder: '',
         value: (type.category === 'boolean') ? 'false' : '',
         help: '',
@@ -1534,6 +1586,7 @@ function createAndAddField(event, position) {
 function selectField(index) {
   // Simple selection - just set the selectedFieldIndex
   selectedFieldIndex.value = index;
+  
 }
 
 function removeField(index) {
@@ -1570,30 +1623,42 @@ function closePreviewModal() {
   previewFormData.value = {};
 }
 
-function copyToClipboard() {
-  navigator.clipboard.writeText(generatedJson.value).then(() => {
-    console.log('JSON copied to clipboard');
-  }).catch(err => {
-    console.error('Failed to copy: ', err);
+async function copyToClipboard(textToCopy) {
+  // Navigator clipboard api needs a secure context (https)
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(textToCopy);
+  } 
+}
+
+function handleCopyToClipboard() {
+  const text = generatedJson.value;
+  
+  copyToClipboard(text).then(() => {
+    success('JSON copied to clipboard', 'success');
+  }).catch(error => {
+    console.error('Failed to copy: ', error);
+    alert('Failed to copy JSON');
   });
 }
 
 function handlePreviewSubmit() {
-  // Use the ref to access the FormViewer component and validate
+
   if (formViewerRef.value && formViewerRef.value.submitForm) {
-    const isValid = formViewerRef.value.submitForm();
+    const isValid = formViewerRef.value.validateForm();
     if (isValid) {
-      console.log('Preview form submitted:', previewFormData.value);
-      alert('Form submitted successfully! Check console for form data.');
+
+      alert('Form submitted successfully!');
       closePreviewModal();
-    } else {
-      console.log('Form validation failed');
-    }
+    } 
   } else {
-    console.log('Preview form submitted:', previewFormData.value);
-    alert('Form submitted successfully! Check console for form data.');
+
+    alert('Form submitted successfully!');
     closePreviewModal();
   }
+}
+function handlePreviewReset() {
+  previewFormData.value = {};
+  previewKey.value++;
 }
 
 function toggleConfigSection(section) {
@@ -1632,20 +1697,41 @@ function getDefaultValidationMessage(validationType) {
   return messages[validationType] || 'Please enter a valid value';
 }
 
-function addValidationValue() {
-  const field = selectedField.value;
-  if (field) {
-    if (!field.validationValues) {
-      field.validationValues = [''];
+function addValidationRule() {
+  if (selectedField.value) {
+    if (!selectedField.value.validate) {
+      selectedField.value.validate = [];
     }
-    field.validationValues.push('');
+    selectedField.value.validate.push({
+      type: 'matches',
+      name: '',
+      conditions: true
+    });
   }
 }
 
-function removeValidationValue(index) {
-  const field = selectedField.value;
-  if (field && field.validationValues && field.validationValues.length > 1) {
-    field.validationValues.splice(index, 1);
+function removeValidationRule(ruleIndex) {
+  if (selectedField.value && selectedField.value.validate && selectedField.value.validate.length > 1) {
+    selectedField.value.validate.splice(ruleIndex, 1);
+  }
+}
+
+function addValidationValue(ruleIndex) {
+  if (selectedField.value && selectedField.value.validate && selectedField.value.validate[ruleIndex]) {
+    const rule = selectedField.value.validate[ruleIndex];
+    if (!rule.values) {
+      rule.values = [''];
+    }
+    rule.values.push('');
+  }
+}
+
+function removeValidationValue(ruleIndex, valueIndex) {
+  if (selectedField.value && selectedField.value.validate && selectedField.value.validate[ruleIndex]) {
+    const rule = selectedField.value.validate[ruleIndex];
+    if (rule.values && rule.values.length > 1) {
+      rule.values.splice(valueIndex, 1);
+    }
   }
 }
 
@@ -1712,12 +1798,34 @@ function getCurrentFields() {
 const selectedField = computed(() => {
   if (selectedFieldIndex.value === null) return null;
   const currentFields = getCurrentFields();
-  return currentFields[selectedFieldIndex.value];
+  const field = currentFields[selectedFieldIndex.value];
+
+  // Initialize default values if they don't exist
+  if (field.show === undefined) {
+    field.show = 'true';
+  }
+  if (field.edit === undefined) {
+    field.edit = 'true';
+  }
+  if (field.parse === undefined) {
+    field.parse = 'true';
+  }
+  if (field.required === undefined) {
+    field.required = "false";
+  }
+  
+  return field;
+});
+
+// Computed property to check if field name is valid
+const isFieldNameValid = computed(() => {
+  if (!selectedField.value?.name) return true;
+  return /^[a-zA-Z0-9_-]+$/.test(selectedField.value.name);
 });
 
 function getFieldJson(field) {
   if (!field) return {};
-
+  
   // Only include the properties we want in the export
   const base = {
     name: field.name,
@@ -1752,6 +1860,32 @@ function getFieldJson(field) {
   if (field.allowDuplication) {
     base.allowDuplication = field.allowDuplication;
   }
+  if (field.arrayMin !== undefined) {
+    base.arrayMin = field.arrayMin;
+  }
+  if (field.arrayMax !== undefined) {
+    base.arrayMax = field.arrayMax;
+  }
+  if (field.duplicateEnable !== undefined) {
+    base.duplicateEnable = field.duplicateEnable;
+  }
+  if (field.removeEnable !== undefined) {
+    base.removeEnable = field.removeEnable;
+  }
+  if (field.duplicateClone !== undefined) {
+    base.duplicateClone = field.duplicateClone;
+  }
+  if (field.enableValidate !== undefined) {
+    base.enableValidate = field.enableValidate;
+  }
+  if (field.validationType !== undefined) {
+    base.validationType = field.validationType;
+  }
+
+
+
+
+
 
   // Add type-specific properties
   switch (field.type) {
@@ -1810,7 +1944,7 @@ function getFieldJson(field) {
   }
 
   // Add array properties for any field that has allowDuplication enabled
-  if (field.allowDuplication && (field.arrayMin !== undefined || field.arrayMax !== undefined)) {
+  if ((field.arrayMin !== undefined || field.arrayMax !== undefined)) {
     if (!base.array) {
       base.array = {};
     }
@@ -1875,65 +2009,69 @@ function getFieldJson(field) {
   }
 
   // Add validation properties
-  if (field.enableValidate) {
-    const validationRule = {
-      type: field.validationType || 'none'
-    };
+  if (field.enableValidate && field.validate && field.validate.length > 0) {
+    const validationRules = field.validate.map(rule => {
+      const validationRule = {
+        type: rule.type || 'none'
+      };
+      
+      // Add validation type-specific properties
+      switch (rule.type) {
+        case 'pattern':
+          if (rule.pattern) {
+            validationRule.pattern = rule.pattern;
+          }
+          if (rule.flags) {
+            validationRule.flags = rule.flags;
+          }
+          break;
+        case 'length':
+          if (rule.min !== undefined) {
+            validationRule.min = rule.min;
+          }
+          if (rule.max !== undefined) {
+            validationRule.max = rule.max;
+          }
+          break;
+        case 'numeric':
+          if (rule.min !== undefined) {
+            validationRule.min = rule.min;
+          }
+          if (rule.max !== undefined) {
+            validationRule.max = rule.max;
+          }
+          break;
+        case 'matches':
+          if (rule.name) {
+            validationRule.name = rule.name;
+          }
+          break;
+        case 'matchesfieldvalue':
+          if (rule.name) {
+            validationRule.name = rule.name;
+          }
+          if (rule.values && rule.values.length > 0) {
+            validationRule.values = rule.values.filter(v => v !== '');
+          }
+          break;
+      }
 
-    // Add validation type-specific properties
-    switch (field.validationType) {
-      case 'pattern':
-        if (field.validationPattern) {
-          validationRule.pattern = field.validationPattern;
-        }
-        if (field.validationFlags) {
-          validationRule.flags = field.validationFlags;
-        }
-        break;
-      case 'length':
-        if (field.validationMinLength !== undefined) {
-          validationRule.minLength = field.validationMinLength;
-        }
-        if (field.validationMaxLength !== undefined) {
-          validationRule.maxLength = field.validationMaxLength;
-        }
-        break;
-      case 'numeric':
-        if (field.validationMinValue !== undefined) {
-          validationRule.minValue = field.validationMinValue;
-        }
-        if (field.validationMaxValue !== undefined) {
-          validationRule.maxValue = field.validationMaxValue;
-        }
-        break;
-      case 'matches':
-        if (field.validationFieldName) {
-          validationRule.fieldName = field.validationFieldName;
-        }
-        break;
-      // NEW validation type for matching specific values
-      case 'matchesfieldvalue':
-        if (field.validationFieldName) {
-          validationRule.fieldName = field.validationFieldName;
-        }
-        if (field.validationValues && field.validationValues.length > 0) {
-          validationRule.values = field.validationValues.filter(v => v !== '');
-        }
-        break;
+      // Add conditions
+      if (rule.conditions !== undefined) {
+        validationRule.conditions = rule.conditions;
+      }
+
+      // Add error message
+      if (rule.message) {
+        validationRule.message = rule.message;
+      }
+
+      return validationRule;
+    }).filter(rule => rule.type !== 'none');
+    
+    if (validationRules.length > 0) {
+      base.validate = validationRules;
     }
-
-    // Add error message
-    if (field.validationMessage) {
-      validationRule.message = field.validationMessage;
-    }
-
-    // Add conditional validation logic
-    if (field.validationWhen === 'conditional' && field.validationGroups) {
-      validationRule.conditions = field.validationGroups;
-    }
-
-    // Set validation as an array with the rule
-    base.enableValidate = [validationRule];
   }
 
   // Legacy validation properties (for backward compatibility)
@@ -1946,9 +2084,10 @@ function getFieldJson(field) {
   if (field.pattern) {
     base.pattern = field.pattern;
   }
-  if (field.validation) {
-    base.validation = field.validation;
-  }
+  //TODO
+  // if (field.validation) {
+  //   base.validation = field.validation;
+  // }
 
   return base;
 }
@@ -2036,7 +2175,8 @@ watch(
         field.duplicateEnable = field.duplicateEnable || 'auto';
         field.removeEnable = field.removeEnable || 'auto';
         field.duplicateClone = field.duplicateClone || false;
-      } else {
+      } 
+      else {
         delete field.arrayMin;
         delete field.arrayMax;
         delete field.duplicateEnable;
@@ -2099,16 +2239,16 @@ watch(
 // Watch for validation type changes to initialize validation properties
 watch(
   () => selectedField.value?.validationType,
-  (newValue) => {
-    if (newValue && selectedField.value) {
+  (newValue, oldValue) => {
+    if (newValue && selectedField.value && newValue !== oldValue) {
       const field = selectedField.value;
       
       // Initialize validation values for matches type
       if (newValue === 'matches' ) {
-        field.validationFieldName = selectedField.value.validationFieldName || '';
+        field.validationFieldName = field.validationFieldName || '';
       }
-      else if (newValue == 'matchesfieldvalue' && !field.validationValues) {
-          field.validationFieldName = selectedField.value.validationFieldName || '';
+      else if (newValue === 'matchesfieldvalue' && !field.validationValues) {
+          field.validationFieldName = field.validationFieldName || '';
           field.validationValues = [''];
       }
       
@@ -2118,6 +2258,45 @@ watch(
       }
     }
   }
+);
+
+// Watch for rule type changes to initialize rule-specific properties
+watch(
+  () => selectedField.value?.validate,
+  (rules) => {
+    if (rules) {
+      rules.forEach((rule, ruleIndex) => {
+        // Initialize rule-specific properties when type changes
+        if (rule.type === 'matches' || rule.type === 'matchesfieldvalue') {
+          if (!rule.name) {
+            rule.name = '';
+          }
+        }
+        if (rule.type === 'matchesfieldvalue') {
+          if (!rule.values) {
+            rule.values = [''];
+          }
+        }
+        if (rule.type === 'pattern') {
+          if (!rule.pattern) {
+            rule.pattern = '';
+          }
+          if (!rule.flags) {
+            rule.flags = '';
+          }
+        }
+        if (rule.type === 'length' || rule.type === 'numeric') {
+          if (rule.min === undefined) {
+            rule.min = null;
+          }
+          if (rule.max === undefined) {
+            rule.max = null;
+          }
+        }
+      });
+    }
+  },
+  { deep: true }
 );
 
 // Watch for validation when changes to initialize conditional validation
@@ -2133,8 +2312,83 @@ watch(
   }
 );
 
+// Watch for selectedField changes to initialize validation rules
+watch(
+  () => selectedField.value,
+  (field) => {
+    if (field && field.enableValidate) {
+      if (!field.validate || field.validate.length === 0) {
+        field.validate = [{
+          type: 'matches',
+          name: '',
+          conditions: true
+        }];
+      }
+    }
+  },
+  { immediate: true }
+);
+
+// Watch for enableValidate changes to initialize validation rules
+watch(
+  () => selectedField.value?.enableValidate,
+  (newValue) => {
+    if (newValue && selectedField.value) {
+      const field = selectedField.value;
+      if (!field.validate || field.validate.length === 0) {
+        field.validate = [{
+          type: 'none',
+          conditions: true
+        }];
+      }
+    }
+  }
+);
+
+// Watch for name field changes to sanitize input
+watch(
+  () => selectedField.value?.name,
+  (newValue) => {
+    if (newValue && selectedField.value) {
+      // Remove invalid characters: only allow letters, numbers, underscores, and hyphens
+      const sanitized = newValue.replace(/[^a-zA-Z0-9_-]/g, '');
+      
+      selectedField.value.name = sanitized;
+      
+    }
+  },
+  { immediate: true }
+);
+
+// Watch for changes in formData prop to update internal state
+watch(() => props.formData, (newFormData) => {
+  if (isUpdatingFromProps.value) return;
+  isUpdatingFromProps.value = true;
+  
+  if (newFormData) {
+    if (newFormData.fields && Array.isArray(newFormData.fields)) {
+      // Clean the fields by removing internal properties like updateKey
+      fields.value = newFormData.fields.map(field => {
+        const cleanField = { ...field };
+        delete cleanField.updateKey;
+        return cleanField;
+      });
+    }
+    if (newFormData.name) {
+      formName.value = newFormData.name;
+    }
+  }
+  
+  // Reset flag after a short delay
+  setTimeout(() => {
+    isUpdatingFromProps.value = false;
+  }, 100);
+}, { deep: true, immediate: true });
+
 // Watch for changes in formName and fields to emit updates
 watch([formName, fields], () => {
+  if (isUpdatingFromProps.value) return;
+  
   emit('update:formData', {
     name: formName.value,
     files: false,
@@ -2153,7 +2407,12 @@ onMounted(() => {
   
   // Initialize with props data
   if (props.formData.fields && props.formData.fields.length > 0) {
-    fields.value = [...props.formData.fields];
+    // Clean the fields by removing internal properties like updateKey
+    fields.value = props.formData.fields.map(field => {
+      const cleanField = { ...field };
+      delete cleanField.updateKey;
+      return cleanField;
+    });
   }
   if (props.formData.name) {
     formName.value = props.formData.name;

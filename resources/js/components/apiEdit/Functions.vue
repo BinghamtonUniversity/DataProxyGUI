@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed} from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
 import { Api, type ApiData, type ApiVersionFunction } from '@/types'
@@ -29,6 +29,8 @@ interface Props {
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
     refreshApiData: () => void
+    highlightQuery?: string
+    highlightTarget?: string
 }
 
 const props = defineProps<Props>()
@@ -38,6 +40,8 @@ const isSaving = ref(false)
 const saveError = ref<string | null>(null)
 const saveSuccess = ref(false)
 const editorRef = ref<any>(null)
+const validationErrors = ref<number>(0)
+const validationWarnings = ref<number>(0)
 
 // Toaster
 const { success, error, warning, info } = useToaster();
@@ -48,10 +52,107 @@ const newViewName = ref('')
 const isCreatingView = ref(false)
 const createViewError = ref<string | null>(null)
 
-//Edit function name state
+// Edit function name state
 const viewBeingEdited = ref<ApiVersionFunction | null>(null)
 const isEditingView = ref(false)
 
+// ============================================
+// UNSAVED CHANGES CACHE
+// ============================================
+// Store unsaved edits for each function: { functionName: unsavedCode }
+const unsavedEditsCache = ref<Map<string, string>>(new Map())
+
+// Computed property to get the code for the currently selected function
+// This checks the cache first, then falls back to the original content
+const currentFunctionCode = computed(() => {
+    if (!selectedFunction.value) return ''
+    
+    const functionName = selectedFunction.value.name
+    const cachedCode = unsavedEditsCache.value.get(functionName)
+    
+    // Return cached code if it exists, otherwise return original content
+    return cachedCode !== undefined ? cachedCode : selectedFunction.value.content
+})
+
+// Handle code changes from the Editor (real-time updates)
+const handleCodeChange = (updatedCode: string) => {
+    if (!selectedFunction.value) return
+    
+    const functionName = selectedFunction.value.name
+    const originalContent = selectedFunction.value.content
+    
+    // If the code is different from the original, cache it
+    if (updatedCode !== originalContent) {
+        unsavedEditsCache.value.set(functionName, updatedCode)
+    } else {
+        // If the code matches the original, remove it from cache
+        unsavedEditsCache.value.delete(functionName)
+    }
+}
+
+// Check if current function has unsaved changes
+const hasUnsavedChanges = computed(() => {
+    if (!selectedFunction.value) return false
+    return unsavedEditsCache.value.has(selectedFunction.value.name)
+})
+// ============================================
+
+const handleValidation = (markers: any) => {
+    console.log("Functions.vue - handleValidation called with markers:", markers)
+    const errors = markers.filter((m: any) => m.severity >= 8) // Monaco.MarkerSeverity.Error = 8
+    const warnings = markers.filter((m: any) => m.severity === 4) // Monaco.MarkerSeverity.Warning = 4
+    
+    validationErrors.value = errors.length
+    validationWarnings.value = warnings.length
+    
+    console.log("Functions.vue - validationErrors:", validationErrors.value, "validationWarnings:", validationWarnings.value)
+    
+    // Provide immediate feedback to user about validation status
+    if (errors.length > 0) {
+        // Show first error message for immediate feedback
+        const firstError = errors[0]
+        saveError.value = `Validation Error: ${firstError.message}${errors.length > 1 ? ` (and ${errors.length - 1} more)` : ''}`
+    } else if (warnings.length > 0) {
+        // Show warning message
+        const firstWarning = warnings[0]
+        saveError.value = `Warning: ${firstWarning.message}${warnings.length > 1 ? ` (and ${warnings.length - 1} more)` : ''}`
+    } else {
+        // Clear any previous validation messages
+        if (saveError.value && (saveError.value.includes('Validation Error') || saveError.value.includes('Warning'))) {
+            saveError.value = null
+        }
+    }
+}
+
+const handleUpdateCode = (updatedCode: string) => {
+    if (!selectedFunction.value || !props.apiData) {
+        saveError.value = 'No function selected or API data not available'
+        return
+    }
+    
+    // Update the local state immediately
+    try {
+        const updatedApiData = {
+            ...props.apiData,
+            version_views: props.apiData.version_views.map(func => 
+                func.name === selectedFunction.value?.name 
+                    ? { ...func, content: updatedCode }
+                    : func
+            )
+        }
+        
+        // Update the local state through parent
+        props.updateApiData(updatedApiData)
+        
+        if (selectedFunction.value) {
+            selectedFunction.value.content = updatedCode
+        }
+        
+    } catch (error) {
+        console.error('Update error:', error)
+        saveError.value = error instanceof Error ? error.message : 'Failed to update code'
+    }
+}
 
 const handleSave = async (updatedCode: string) => {
     if (!selectedFunction.value || !props.apiData) {
@@ -59,8 +160,9 @@ const handleSave = async (updatedCode: string) => {
         return
     }
 
-    if (!updatedCode || updatedCode.trim() === '') {
-        saveError.value = 'Function content cannot be empty'
+    // Don't save if there are validation errors
+    if (validationErrors.value > 0) {
+        saveError.value = 'Please fix validation errors before saving'
         return
     }
 
@@ -68,11 +170,13 @@ const handleSave = async (updatedCode: string) => {
     saveError.value = null
     saveSuccess.value = false
 
+    const functionName = selectedFunction.value.name
+
     try {
         const updatedApiData = {
             ...props.apiData,
             version_views: props.apiData.version_views.map(func => 
-                func.name === selectedFunction.value?.name 
+                func.name === functionName
                     ? { ...func, content: updatedCode }
                     : func
             )
@@ -98,9 +202,13 @@ const handleSave = async (updatedCode: string) => {
         // Update the local state through parent
         props.updateApiData(result || updatedApiData)
         
+        // Update the selected function content
         if (selectedFunction.value) {
             selectedFunction.value.content = updatedCode
         }
+        
+        // Clear the cache for this function after successful save
+        unsavedEditsCache.value.delete(functionName)
         
         saveSuccess.value = true
         setTimeout(() => {
@@ -116,13 +224,22 @@ const handleSave = async (updatedCode: string) => {
 }
 
 const handleCreateNewView = async () => {
-    if (!newViewName.value.trim() || !props.apiData) {
+    const name = newViewName.value.trim();
+
+    if (!name || !props.apiData) {
         createViewError.value = 'Please enter a valid function name'
         return
     }
 
+    // Validate function name syntax
+    const validNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+    if (!validNamePattern.test(name)) {
+        createViewError.value = 'Invalid function name. Use letters, numbers, and underscores only, and do not start with a number.'
+        return;
+    }
+
     // Check if function name already exists
-    const existingFunction = props.apiData.version_views.find(func => func.name === newViewName.value.trim())
+    const existingFunction = props.apiData.version_views.find(func => func.name === name)
     if (existingFunction) {
         createViewError.value = 'A function with this name already exists'
         return
@@ -134,7 +251,7 @@ const handleCreateNewView = async () => {
     try {
         // TO-DO:: PHP function template
         const newFunction: ApiVersionFunction = {
-            name: newViewName.value.trim(),
+            name,
             content: ``,
         }
 
@@ -142,24 +259,6 @@ const handleCreateNewView = async () => {
             ...props.apiData,
             version_views: [...props.apiData.version_views, newFunction]
         }
-
-        // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-        //     method: 'PUT',
-        //     headers: {
-        //         'Content-Type': 'application/json',
-        //         'Accept': 'application/json',
-        //         'X-CSRF-TOKEN': getCsrfToken() || '',
-        //     },
-        //     body: JSON.stringify(updatedApiData)
-        // })
-
-        // if (!response.ok) {
-        //     const errorData = await response.json().catch(() => ({}))
-        //     // error('Failed to create function', 'Error');
-        //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        // }
-
-        // const result = await response.json()
         
         // Update the local state through parent
         props.updateApiData(updatedApiData)
@@ -195,25 +294,12 @@ const handleDeleteFunction = async (view: ApiVersionFunction ) =>{
             ...props.apiData,
             version_views: props.apiData.version_views?.filter(existingView => !(existingView.name === view.name)) || []
         }
-        // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
-
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
-
-        const responseData = await response.json()
-        props.updateApiData(responseData || updatedApiData)
+       
+        props.updateApiData(updatedApiData)
+        
+        // Clear cache for deleted function
+        unsavedEditsCache.value.delete(view.name)
+        
         selectedFunction.value = null
         success(`Function "${view.name}" deleted successfully`, 'Function Deleted');
 
@@ -252,6 +338,14 @@ const handleUpdateFunctionName = async () => {
     return
   }
 
+  // Validate function name syntax
+  const validNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+  if (!validNamePattern.test(trimmedName)) {
+    createViewError.value =
+      'Invalid function name. Use letters, numbers, and underscores only, and do not start with a number.';
+    return;
+  }
+
   // Prevent duplicates
   const nameExists = props.apiData.version_views.some(
     func => func.name === trimmedName && func !== viewBeingEdited.value
@@ -265,10 +359,12 @@ const handleUpdateFunctionName = async () => {
   createViewError.value = null
 
   try {
+    const oldName = viewBeingEdited.value.name
+    
     const updatedApiData = {
       ...props.apiData,
       version_views: props.apiData.version_views.map(func =>
-        func.name === viewBeingEdited.value?.name
+        func.name === oldName
           ? { ...func, name: trimmedName }
           : func
       )
@@ -276,8 +372,17 @@ const handleUpdateFunctionName = async () => {
 
     props.updateApiData(updatedApiData)
 
+    // Transfer cached edits to new function name
+    if (unsavedEditsCache.value.has(oldName)) {
+      const cachedCode = unsavedEditsCache.value.get(oldName)
+      unsavedEditsCache.value.delete(oldName)
+      if (cachedCode !== undefined) {
+        unsavedEditsCache.value.set(trimmedName, cachedCode)
+      }
+    }
+
     // If editing currently selected function, update reference
-    if (selectedFunction.value?.name === viewBeingEdited.value.name) {
+    if (selectedFunction.value?.name === oldName) {
       selectedFunction.value.name = trimmedName
     }
 
@@ -475,7 +580,7 @@ onUnmounted(() => {
             <template v-else-if="apiData?.version_views">
                 <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
                     <!-- Function List Sidebar -->
-                   <aside class="max-w-xs lg:w-40 lg:min-w-40 lg:flex-shrink-0">
+                   <aside class="max-w-xs lg:w-50 lg:min-w-50 lg:flex-shrink-0">
                         <!-- New View Button -->
                         <div class="mb-4">
                             <Dialog v-model:open="isNewViewDialogOpen" @update:open="resetNewViewDialog">
@@ -513,7 +618,7 @@ onUnmounted(() => {
                                                 Cancel
                                             </Button>
                                             <Button 
-                                                @click="isEditingView ? handleUpdateFunctionName() : handleCreateNewView()"
+                                                @click=" isEditingView? handleUpdateFunctionName() : handleCreateNewView()"
                                                 :disabled="!newViewName.trim() || isCreatingView"
                                             >
                                                 <div v-if="isCreatingView" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -544,11 +649,18 @@ onUnmounted(() => {
                                         'py-1', 
                                         'flex-1',
                                         'text-xs',
+                                        'relative',
                                         selectedFunction?.name === item.name ? 'bg-accent' : ''
                                     ]" 
                                     @click="selectedFunction = item"             
                                 >
                                     {{ item.name }}
+                                    <!-- Unsaved changes indicator -->
+                                    <span 
+                                        v-if="unsavedEditsCache.has(item.name)" 
+                                        class="ml-2 h-2 w-2 rounded-full bg-orange-500"
+                                        title="Unsaved changes"
+                                    ></span>
                                 </Button>
                                 <Button
                                     variant="ghost"
@@ -573,24 +685,20 @@ onUnmounted(() => {
 
                     <!-- Editor Area -->
                     <div class="flex-1 min-w-0">
-                        <!-- Save status messages
-                        <div v-if="saveError" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-                            {{ saveError }}
-                        </div>
-                        <div v-if="saveSuccess" class="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm">
-                            Changes saved successfully!
-                        </div> -->
-                        
                         <!-- Code Editor -->
                         <Editor 
                             ref="editorRef"
-                            v-if="selectedFunction" 
-                            :code="selectedFunction.content" 
+                            v-if="selectedFunction"
+                            :key="selectedFunction.name"
+                            :code="currentFunctionCode" 
                             :language="api?.api_type as 'python' | 'php' | undefined"
                             :is-saving="isSaving"
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"
+                            :hasUnsavedChanges="hasUnsavedChanges"
                             @save="handleSave"
+                            @update:code="handleUpdateCode"
+                            @onValidate="handleValidation"
                         />
                         
                         <!-- No Function Selected State -->

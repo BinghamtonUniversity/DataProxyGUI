@@ -344,15 +344,15 @@ const getLanguageLabel = (value) => {
 // Editor options
 const editorOptions = computed(() => ({
   automaticLayout: true,
-  formatOnType: true,
-  formatOnPaste: true,
+  formatOnType: false, // Disable for better performance
+  formatOnPaste: false, // Disable for better performance
   fontSize: fontSize.value,
   wordWrap: wordWrap.value ? 'on' : 'off',
-  minimap: { enabled: showMinimap.value },
+  minimap: { enabled: false }, // Disable minimap for better performance
   readOnly: !props.edit || props.readOnly,
   scrollBeyondLastLine: false,
-  renderWhitespace: 'selection',
-  renderControlCharacters: true,
+  renderWhitespace: 'none', // Reduce rendering load
+  renderControlCharacters: false, // Reduce rendering load
   lineNumbers: 'on',
   folding: true,
   selectOnLineNumbers: true,
@@ -360,18 +360,30 @@ const editorOptions = computed(() => ({
   cursorStyle: 'line',
   cursorBlinking: 'blink',
   cursorWidth: 0,
-  mouseWheelZoom: true,
+  mouseWheelZoom: false, // Disable for better scrolling
   contextmenu: true,
-  suggestOnTriggerCharacters: true,
-  acceptSuggestionOnEnter: 'on',
-  tabCompletion: 'on',
-  wordBasedSuggestions: 'on',
-  parameterHints: { enabled: true },
-  hover: { enabled: true },
-  links: true,
-  colorDecorators: true,
-  codeLens: true,
+  suggestOnTriggerCharacters: false, // Disable for better performance
+  acceptSuggestionOnEnter: 'off',
+  tabCompletion: 'off',
+  wordBasedSuggestions: 'off', // Disable for better performance
+  parameterHints: { enabled: false }, // Disable for better performance
+  hover: { enabled: false }, // Disable for better performance
+  links: false, // Disable for better performance
+  colorDecorators: false, // Disable for better performance
+  codeLens: false, // Disable for better performance
   foldingStrategy: 'indentation',
+  // Add performance optimizations
+  smoothScrolling: true,
+  scrollbar: {
+    vertical: 'auto',
+    horizontal: 'auto',
+    useShadows: false,
+    verticalHasArrows: false,
+    horizontalHasArrows: false,
+    verticalScrollbarSize: 10,
+    horizontalScrollbarSize: 10,
+    arrowSize: 11
+  },
   showFoldingControls: 'always',
   matchBrackets: 'always',
   renderLineHighlight: 'all',

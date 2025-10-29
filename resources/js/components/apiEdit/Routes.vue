@@ -14,7 +14,7 @@ import {
   useVueTable,
 } from '@tanstack/vue-table'
 
-import { h, ref, computed, onMounted, onUnmounted } from 'vue'
+import { h, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 import { ArrowUpDown, ChevronDown, Plus, Trash2, Settings } from 'lucide-vue-next'
 import { type ApiData, RouteData, Api } from '@/types'
@@ -48,6 +48,7 @@ import {
 import { Label } from '@/components/ui/label'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
+import DataGrid from '@/components/datagrid/DataGrid.vue';
 
 interface Props {
     api_id: string
@@ -96,6 +97,111 @@ const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
 const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
+
+// DataGrid form configuration for routes
+const routeFormConfig = {
+    label: 'Route',
+    description: 'API Route Configuration',
+    name: "route-form",
+    files: false,
+    fields: [
+        {
+            name: "view_name",
+            label: "View Name",
+            type: "text",
+            placeholder: "Enter view name",
+            value: "",
+            help: "Name of the view function",
+            info: "Name of the view function",
+            width: "12",
+            offset: "0",
+            required: true
+        },
+        {
+            name: "path",
+            label: "Path",
+            type: "text",
+            placeholder: "/api/endpoint",
+            value: "",
+            help: "API endpoint path",
+            info: "API endpoint path",
+            width: "12",
+            offset: "0",
+            required: true,
+            labelColor: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+        },
+        {
+            name: "verb",
+            label: "HTTP Method",
+            type: "select",
+            placeholder: "Select HTTP method",
+            value: "GET",
+            help: "HTTP method for the route",
+            info: "HTTP method for the route",
+            width: "12",
+            offset: "0",
+            options: [
+                { label: "GET", value: "GET" ,color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'},
+                { label: "POST", value: "POST" , color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'},
+                { label: "PUT", value: "PUT" , color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'},
+                { label: "DELETE", value: "DELETE" , color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'},
+                { label: "PATCH", value: "PATCH" , color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'}
+            ],
+            multiple: false,
+            show: true,
+            edit: true,
+            parse: true,
+            required: true
+        },
+        {
+            name: "required",
+            label: "Required Parameters",
+            type: "text",
+            placeholder: "Enter required parameters",
+            value: "",
+            help: "Required parameters of the route",
+            info: "Required parameters of the route",
+            width: "12",
+            offset: "0",
+            required: false,
+            isArrayObject: true,
+            targetObjectAttribute: "name",
+            targetColor: "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200",
+            mergedTo: "parameters",
+            showColumn: false
+        },
+        {
+            name: "optional",
+            label: "Optional Parameters",
+            type: "text",
+            placeholder: "Enter optional parameters",
+            value: "",
+            help: "Optional parameters of the route",
+            info: "Optional parameters of the route",
+            width: "12",
+            offset: "0",
+            required: false,
+            isArrayObject: true,
+            targetObjectAttribute: "name",
+            targetColor: "bg-gray-50 border-gray-200 text-gray-800 dark:bg-gray-900/20 dark:border-gray-800 dark:text-gray-200",
+            mergedTo: "parameters",
+            showColumn: false
+        },
+
+        {
+            name: "parameters",
+            label: "Parameters",
+            type: "text",
+            placeholder: "Enter parameters",
+            value: "",
+            help: "Parameters of the route",
+            info: "Parameters of the route",
+            width: "12",
+            offset: "0",
+            required: false,
+        }
+    ]
+}
 
 // console.log('Routes component mounted')
 
@@ -154,7 +260,10 @@ const submitParams = async () => {
   }
 
   const updatedApiData = { ...props.apiData, version_urls: updatedRoutes }
+  
   props.updateApiData(updatedApiData)
+  console.log('Updated API Data:', updatedApiData.version_urls)
+  console.log('Original API Data:', props.apiData.version_urls)
   success('Parameters updated successfully', 'Updated')
   closeParamsDialog()
 }
@@ -266,26 +375,8 @@ const handleDelete = async (route: RouteData) => {
                   existingRoute.verb === route.verb)
             ) || []
         }
-        // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
-
-
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
-
-        const responseData = await response.json()
-        props.updateApiData(responseData || updatedApiData)
+        // // console.log('Sending updatedApiData:', JSON.stringify(updatedApiData, null, 2))
+        props.updateApiData(updatedApiData)
         success(`Path "${route.path}-${route.verb}" deleted successfully`, 'Route Deleted');
 
     } catch (err: any) {
@@ -505,6 +596,25 @@ const highlightText = (text: string, query: string) => {
     const regex = new RegExp(`(${query})`, 'gi')
     return text.replace(regex, '<mark class="search-highlight">$1</mark>')
 }
+
+// DataGrid action handlers
+const handleDataGridAction = (actionData: { type: string; payload: any }) => {
+    console.log('DataGrid action:', actionData);
+    
+    switch (actionData.type) {
+        case 'single-edit':
+            openEditRouteDialog(actionData.payload, actionData.payload.index);
+            break;
+        case 'single-delete':
+            handleDelete(actionData.payload);
+            break;
+        case 'parameters':
+            openParamsDialog(actionData.payload, actionData.payload.index);
+            break;
+        default:
+            console.log('Unknown action type:', actionData.type);
+    }
+};
 </script>
 
 <style>
@@ -524,7 +634,7 @@ const highlightText = (text: string, query: string) => {
 
 <template>
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
-        <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
+        <div class="relative min-h-[100vh] flex-1 p-4 bg-white dark:bg-gray-900">
             
             <!-- Loading State -->
             <template v-if="loadingApiData">
@@ -547,6 +657,44 @@ const highlightText = (text: string, query: string) => {
 
             <!-- Data Table -->
             <template v-else-if="apiData?.version_urls && table">
+               
+                       <!-- DataGrid Section -->
+                <div class="mt-8">
+                    <DataGrid 
+                        :schema="routeFormConfig"
+                        :data="apiData?.version_urls || []"
+                        theme="default"
+                        :showNew="true"
+                        :showEdit="true"
+                        :showDelete="true"
+                        :clickableRows="true"
+                        :rowActionDropdown="false"
+                        :rowActionLabels="false"
+                        :rowActions="[
+                        
+                            { type: 'parameters', label: 'Parameters', icon: 'cog', colorClass: 'text-green-600 hover:bg-green-50' },
+                            { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50' }
+                        ]"
+                    
+                        @rowClick="openEditRouteDialog($event, $event.index)"
+                        @create="openNewRouteDialog"    
+                        @edit="openEditRouteDialog"
+                        @delete="handleDelete"
+                        @action="handleDataGridAction"
+                        @rowActionHandler="handleDataGridAction"
+                    />
+                </div>
+            </template>
+
+            <!-- No Data State -->
+            <template v-else>
+                <div class="flex items-center justify-center h-32">
+                    <div class="text-center">
+                        <p>No routes available for this API version.</p>
+                    </div>
+                </div>
+
+                <!-- OLD TABLE IMPLEMENTATION -->
                 <div class="w-full">        
                     <!-- Table Controls -->
                     <div class="flex items-center py-4">
@@ -640,7 +788,7 @@ const highlightText = (text: string, query: string) => {
                                         <DialogClose as-child>
                                             <Button variant="secondary" type="button" @click="closeNewRouteDialog">Cancel</Button>
                                         </DialogClose>
-                                        <Button type="submit" variant="default" :disabled="newRouteLoading">
+                                        <Button type="submit" variant="default" :disabled="newRouteLoading || !newRouteForm.view_name">
                                             <span v-if="newRouteLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
                                             <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
                                         </Button>
@@ -734,15 +882,10 @@ const highlightText = (text: string, query: string) => {
                 </div>
             </template>
 
-            <!-- No Data State -->
-            <template v-else>
-                <div class="flex items-center justify-center h-32">
-                    <div class="text-center">
-                        <p>No routes available for this API version.</p>
-                    </div>
-                </div>
-            </template>
+      
         </div>
+
+       
     </div>
     <Dialog v-model:open="paramsDialogOpen">
         <DialogContent class="sm:max-w-lg">

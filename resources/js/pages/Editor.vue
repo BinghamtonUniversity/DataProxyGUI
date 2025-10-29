@@ -14,20 +14,22 @@ const props = defineProps<{
   isSaving?: boolean
   saveError?: string,
   saveSuccess?: Boolean,
+  hasUnsavedChanges?: Boolean
 }>()
 
 const emit = defineEmits<{
   save: [code: string]
-  'update:code': [code: string] 
+  'update:code': [code: string]
+  validate: [markers: any[]]
 }>()
 
 const language = ref(props.language ?? 'python')
 const code = ref(props.code)
-const hasUnsavedChanges = ref(false)
+// const hasUnsavedChanges = ref(false)
 
 watch(() => props.code, (val) => { 
   code.value = val
-  hasUnsavedChanges.value = false
+  // props.hasUnsavedChanges.value = false
 })
 watch(() => props.language, (val) => { 
   if (val) language.value = val 
@@ -35,7 +37,7 @@ watch(() => props.language, (val) => {
 
 // Track changes to show unsaved status
 watch(code, (newCode) => {
-  hasUnsavedChanges.value = newCode !== props.code
+  // hasUnsavedChanges.value = newCode !== props.code
   emit('update:code', newCode)
 })
 
@@ -48,11 +50,20 @@ declare global {
 const editor = shallowRef<any>(null);
 const editorTheme = ref<"vs" | "vs-dark">("vs-dark")
 let mediaQueryList: MediaQueryList | null = null
+const validationErrors = ref<number>(0)
+const validationWarnings = ref<number>(0)
 
 const editorOptions = {
   automaticLayout: true,
   formatOnType: true,
   formatOnPaste: true,
+  validate: true,
+  ...(props.language === 'python' ? {
+    tabSize: 4,
+    insertSpaces: true,
+    autoIndent: 'full' as const,
+    detectIndentation: false,
+  } : {})
 }
 
 
@@ -69,10 +80,123 @@ function handleEditorTheme(){
 function handleMount(editorInstance: any, monaco: any) {
   editor.value = editorInstance
   
-  // ??Add keyboard shortcut for save (Ctrl+S / Cmd+S)
+  console.log('Editor mounted - Monaco languages available:', Object.keys(monaco.languages))
+  console.log('Editor mounted - Monaco languages.python:', monaco.languages.python)
+  console.log('Editor mounted - Monaco languages.php:', monaco.languages.php)
+  
+  // Add keyboard shortcut for save (Ctrl+S / Cmd+S)
   editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
     handleSave()
   })
+  
+  // Since Python/PHP validation is not available, set up custom validation
+  const model = editorInstance.getModel()
+  if (model) {
+    console.log('Setting up custom validation for', props.language)
+    
+    // Listen for content changes and validate
+    editorInstance.onDidChangeModelContent(() => {
+      validateCode(editorInstance, monaco)
+    })
+    
+    // Initial validation
+    setTimeout(() => validateCode(editorInstance, monaco), 100)
+  }
+}
+
+const validateCode = (editorInstance: any, monaco: any) => {
+  const model = editorInstance.getModel()
+  if (!model) return
+  
+  const code = model.getValue()
+  const language = props.language || 'python'
+  const markers: any[] = []
+  
+  console.log('Validating code for language:', language)
+  
+  // Basic syntax validation
+  if (language === 'python') {
+    const lines = code.split('\n')
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim()
+      
+      // Skip empty lines and comments
+      if (!line || line.startsWith('#')) continue
+      
+      // Check for invalid variable assignments (like "a = 3a")
+      if (line.includes('=')) {
+        const parts = line.split('=')
+        if (parts.length === 2) {
+          const rightSide = parts[1].trim()
+          // Check if right side contains invalid characters for Python
+          if (rightSide.match(/^\d+[a-zA-Z]/)) {
+            markers.push({
+              startLineNumber: i + 1,
+              startColumn: line.indexOf(rightSide) + 1,
+              endLineNumber: i + 1,
+              endColumn: line.length + 1,
+              message: 'Invalid syntax: number followed by letter',
+              severity: monaco.MarkerSeverity.Error
+            })
+          }
+        }
+      }
+      
+      // Check for standalone invalid identifiers (like "ad34asre3")
+      if (line.match(/^[a-zA-Z0-9_]+$/) && !line.match(/^(def|class|if|else|elif|for|while|try|except|finally|with|import|from|return|pass|break|continue|lambda|yield|global|nonlocal|assert|del|raise)$/)) {
+        // This is a standalone identifier that's not a keyword
+        // Check if it looks like invalid syntax
+        if (line.match(/^[a-zA-Z]+\d+[a-zA-Z]+/) || line.match(/^\d+[a-zA-Z]+/)) {
+          markers.push({
+            startLineNumber: i + 1,
+            startColumn: 1,
+            endLineNumber: i + 1,
+            endColumn: line.length + 1,
+            message: 'Invalid syntax: malformed identifier',
+            severity: monaco.MarkerSeverity.Error
+          })
+        }
+      }
+    }
+  } else if (language === 'php') {
+    // Basic PHP validation
+    const openBraces = (code.match(/\{/g) || []).length
+    const closeBraces = (code.match(/\}/g) || []).length
+    if (openBraces !== closeBraces) {
+      markers.push({
+        startLineNumber: 1,
+        startColumn: 1,
+        endLineNumber: model.getLineCount(),
+        endColumn: model.getLineMaxColumn(model.getLineCount()),
+        message: 'Unmatched braces: Check that all opening { have corresponding closing }',
+        severity: monaco.MarkerSeverity.Error
+      })
+    }
+  }
+  
+  console.log('Custom validation found markers:', markers)
+  
+  // Set markers in the editor
+  monaco.editor.setModelMarkers(model, 'custom-validation', markers)
+  
+  // Update validation counters
+  validationErrors.value = markers.filter(m => m.severity >= monaco.MarkerSeverity.Error).length
+  validationWarnings.value = markers.filter(m => m.severity === monaco.MarkerSeverity.Warning).length
+  
+  // Emit validation markers to parent
+  emit('validate', markers)
+}
+
+const handleValidate = (markers: any[]) => {
+  console.log('Editor.vue - handleValidate called with markers:', markers)
+  // Update validation counters
+  validationErrors.value = markers.filter(m => m.severity >= 8).length // Monaco.MarkerSeverity.Error = 8
+  validationWarnings.value = markers.filter(m => m.severity === 4).length // Monaco.MarkerSeverity.Warning = 4
+  
+  console.log('Editor.vue - validationErrors:', validationErrors.value, 'validationWarnings:', validationWarnings.value)
+  
+  // Emit validation markers to parent
+  emit('validate', markers)
 }
 
 const handleSave = () => {
@@ -151,7 +275,7 @@ onBeforeUnmount(() => {
         <Button
           size="sm"
           @click="handleSave"
-          :disabled="props.isSaving || !hasUnsavedChanges"
+          :disabled="props.isSaving || !hasUnsavedChanges || validationErrors > 0"
         >
           <span v-if="props.isSaving" class="flex items-center gap-2">
             <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
@@ -171,6 +295,8 @@ onBeforeUnmount(() => {
         :theme="editorTheme"
         :options="editorOptions"
         @mount="handleMount"
+        @validate="handleValidate"
+        @onValidate="handleValidate"
         style="height:100%; width:100%;"
       />
     </div>

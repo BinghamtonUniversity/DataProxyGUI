@@ -30,6 +30,7 @@ export interface User {
     id: number;
     name: string;
     email: string;
+    unique_id: string;
     avatar?: string;
     email_verified_at: string | null;
     created_at: string;
@@ -44,7 +45,7 @@ export interface ModelData {
   }>
   class_methods: Array<{
     name: string
-    params: string
+    params: string[]
     content: string
   }>
   inheritance: string

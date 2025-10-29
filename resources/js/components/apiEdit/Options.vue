@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
@@ -21,6 +21,9 @@ interface Props {
     apiError: string
     updateApiData: (updatedApiData: ApiData) => void
     refreshApiData: () => void
+    highlightQuery?: string
+    highlightTarget?: string
+    isVersionSwitch?: boolean
 }
 
 const props = defineProps<Props>()
@@ -59,6 +62,8 @@ const importJsonData = ref('');
 
 // Handle form builder changes - update local state only
 const handleFormChange = (newFormData: any) => {
+    if (isUpdatingFromApiData.value) return;
+    
     formData.value = newFormData;
     
     if (props.apiData) {
@@ -69,8 +74,6 @@ const handleFormChange = (newFormData: any) => {
 
         // Update the local state using the updateApiData function
         props.updateApiData(updatedApiData);
-        
-        console.log('Form data updated locally:', formData.value);
     }
 };
 
@@ -93,8 +96,37 @@ const loadExistingOptions = (apiData: ApiData | null) => {
 const initializeFormData = (apiData: ApiData | null) => {
     if (apiData && !formData.value.fields.length) {
         loadExistingOptions(apiData);
+        // hasUnsavedChanges.value = false;
     }
 };
+
+// Flag to prevent recursive updates
+const isUpdatingFromApiData = ref(false);
+
+// Watch for changes in apiData to update form data
+watch(() => props.apiData, (newApiData: ApiData | null) => {
+    if (isUpdatingFromApiData.value) return;
+    
+
+    isUpdatingFromApiData.value = true;
+    
+    if (newApiData && newApiData.options) {
+   
+        formData.value = newApiData.options;
+    }
+    else{
+       
+        formData.value = {
+            name: 'options',
+            fields: []
+        };
+    }
+    
+    // Reset flag after a short delay
+    setTimeout(() => {
+        isUpdatingFromApiData.value = false;
+    }, 100);
+}, { deep: true });
 
 // Event listeners for dropdown actions
 const handleImportEvent = () => {
@@ -156,7 +188,7 @@ const handleImportSubmit = (formValues: any) => {
         }
         
         closeImportModal();
-        console.log('Options imported successfully:', formData.value);
+        
     } catch (error) {
         console.error('Import error:', error);
         alert('Invalid JSON format. Please check your JSON and try again.');

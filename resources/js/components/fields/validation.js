@@ -459,6 +459,7 @@ function runCustomValidations(value, config, matchValues = {}) {
 // Main validation function
 export function validateField(value, config, matchValues = {}) {
 
+
   const errors = [];
   // Built-in rules
   for (const ruleName in rules) {
@@ -467,5 +468,6 @@ export function validateField(value, config, matchValues = {}) {
   }
   // Custom rules
   errors.push(...runCustomValidations(value, config, matchValues));
+
   return errors;
 } 
