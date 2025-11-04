@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
 import { type ApiData } from '@/types'
-import { ApiInstance, ApiUser, Resource, type ApiInstanceRouteUserMap } from '@/types'
+import { ApiInstance, ApiUser, Resource, type ApiInstanceRouteUserMap, type ApiInstanceOptions } from '@/types'
 import FormViewer from '@/components/formviewer/FormViewer.vue'
 import Toaster from '@/components/toaster/Toaster.vue'
 import { getCsrfToken } from '@/lib/utils'
@@ -82,9 +82,31 @@ const initialData = computed(() => {
 // }
 
 
-const handleFormDataUpdate = (data: any) => {
+const handleFormDataUpdate = (data: ApiInstanceOptions) => {
+    // Deep equality check for objects
+    const areOptionsEqual = (a: ApiInstanceOptions | null | undefined, b: ApiInstanceOptions | null | undefined): boolean => {
+        if (a === b) return true
+        if (!a || !b) return false
+        if (typeof a !== 'object' || typeof b !== 'object') return a === b
+        
+        const keysA = Object.keys(a)
+        const keysB = Object.keys(b)
+        
+        if (keysA.length !== keysB.length) return false
+        
+        for (const key of keysA) {
+            if (!keysB.includes(key)) return false
+            if (typeof a[key] === 'object' && typeof b[key] === 'object' && a[key] !== null && b[key] !== null) {
+                if (!areOptionsEqual(a[key] as ApiInstanceOptions, b[key] as ApiInstanceOptions)) return false
+            } else if (a[key] !== b[key]) {
+                return false
+            }
+        }
+        
+        return true
+    }
 
-    if (props.apiInstanceData?.options == data) return;
+    if (areOptionsEqual(props.apiInstanceData?.options, data)) return;
     if (!props.apiInstanceData) return
     if (isChanged.value) return;
     isChanged.value = true;

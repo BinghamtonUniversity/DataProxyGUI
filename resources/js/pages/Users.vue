@@ -523,12 +523,11 @@ onMounted(async () => {
                 ]"
                 :rowActions="[
                     { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
-                    { type: 'view', label: 'View', icon: 'eye', colorClass: 'text-green-600 hover:bg-green-50' },
                     { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50' }
                 ]"
                 @actionHandler="handleCustomAction"
                 @rowActionHandler="handleAction"
-                @rowClick="handleClick"
+                
             >
             </DataGrid>
 
