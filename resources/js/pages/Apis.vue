@@ -67,18 +67,21 @@ const dataGridConfig = {
             required: true,
             show: true,
             edit: true,
-            parse: true
+            parse: true,
         },
         {
             name: "api_type",
             label: "Type",
-            type: "text",
+            type: "select",
             placeholder: "API type",
             value: "",
             help: "Type of the API",
             info: "API type (e.g., python, php, javascript)",
             width: "12",
             offset: "0",
+            options:[{ label: "Python", value: "python" ,color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'},
+                    { label: "Php", value: "php" , color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'}
+                ],
             required: false,
             show: true,
             edit: false,

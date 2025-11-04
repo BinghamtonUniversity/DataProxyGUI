@@ -132,7 +132,7 @@ export interface ApiInstance {
   route: string
   route_user_map: ApiInstanceRouteUserMap[],
   resources: ApiInstanceResource[],
-  options?: any // TODO: JSON
+  options: any,
   public: number
   created_at: string
   updated_at: string

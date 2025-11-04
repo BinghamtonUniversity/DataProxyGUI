@@ -10,22 +10,34 @@ import { install as VueMonacoEditorPlugin, loader } from '@guolao/vue-monaco-edi
 import { FontAwesomeIcon } from './lib/fontawesome';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const isDev = import.meta.env.DEV;
 
+// Wrap Monaco initialization in async function
 async function initializeMonaco() {
-    const monaco = await import('monaco-editor');
-    const editorWorker = await import('monaco-editor/esm/vs/editor/editor.worker?worker');
-    const jsonWorker = await import('monaco-editor/esm/vs/language/json/json.worker?worker');
-
-    self.MonacoEnvironment = {
-        getWorker(_, label) {
-            if (label === "json") {
-                return new jsonWorker.default();
+    if (isDev) {
+        // Development: Use CDN to avoid CORS/rebuild issues
+        loader.config({
+            paths: {
+                vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs'
             }
-            return new editorWorker.default();
-        }
-    };
+        });
+    } else {
+        // Production: Use npm package with local workers
+        const monaco = await import('monaco-editor');
+        const editorWorker = await import('monaco-editor/esm/vs/editor/editor.worker?worker');
+        const jsonWorker = await import('monaco-editor/esm/vs/language/json/json.worker?worker');
 
-    loader.config({ monaco: monaco.default });
+        self.MonacoEnvironment = {
+            getWorker(_, label) {
+                if (label === "json") {
+                    return new jsonWorker.default();
+                }
+                return new editorWorker.default();
+            }
+        };
+
+        loader.config({ monaco: monaco.default });
+    }
 }
 
 // Initialize Monaco and then create the app
