@@ -730,8 +730,9 @@ const handleSave = async () => {
         showError(errorData.message || `HTTP error! status: ${response.status}`)
         return
     }
-    success('API data saved successfully!')
+    success('API data saved successfully!', 'API Data Saved')
     const responseData = await response.json()
+    
     updateApiData(responseData)
 
     originalApiData.value = JSON.parse(JSON.stringify(responseData))
@@ -842,6 +843,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    
     if (keydownHandler) {
         document.removeEventListener('keydown', keydownHandler)
     }
@@ -866,6 +868,7 @@ onUnmounted(() => {
 
 <template>
     <Head :title="' API Edit'" />
+    <Toaster />
     
     <AppLayout :breadcrumbs="breadcrumbItems">
         <div class="px-4 py-6">
@@ -1444,5 +1447,4 @@ onUnmounted(() => {
             />
         </AlertModal>
     </AppLayout>
-    <Toaster />
 </template>
