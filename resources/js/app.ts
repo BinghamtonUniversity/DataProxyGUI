@@ -8,7 +8,7 @@ import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
 import { install as VueMonacoEditorPlugin, loader } from '@guolao/vue-monaco-editor';
 import { FontAwesomeIcon } from './lib/fontawesome';
-
+import Toaster from './components/toaster/Toaster.vue';
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const isDev = import.meta.env.DEV;
 
@@ -51,6 +51,7 @@ initializeMonaco().then(() => {
                 .use(ZiggyVue)
                 .use(VueMonacoEditorPlugin)
                 .component('font-awesome-icon', FontAwesomeIcon)
+                .component('Toaster', Toaster)
                 .mount(el);
         },
         progress: {
