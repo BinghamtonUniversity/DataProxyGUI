@@ -123,6 +123,10 @@ interface ApiInstanceResource {
   resource: string
 }
 
+export interface ApiInstanceOptions {
+  [key: string]: string | number | boolean | null | undefined | ApiInstanceOptions | Array<string | number | boolean | ApiInstanceOptions>
+}
+
 export interface ApiInstance {
   id: number
   api_id: number
@@ -132,7 +136,7 @@ export interface ApiInstance {
   route: string
   route_user_map: ApiInstanceRouteUserMap[],
   resources: ApiInstanceResource[],
-  options?: any // TODO: JSON
+  options: ApiInstanceOptions,
   public: number
   created_at: string
   updated_at: string

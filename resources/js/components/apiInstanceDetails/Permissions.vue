@@ -590,5 +590,4 @@ const canNextPage = computed(() => table.value?.getCanNextPage() || false)
             </template>
         </div>
     </div>
-    <Toaster />
 </template>

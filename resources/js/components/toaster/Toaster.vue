@@ -1,5 +1,5 @@
 <template>
-  <div class="toaster-container fixed top-4 right-4 z-50 space-y-2">
+  <div class="toaster-container fixed top-4 right-4 z-100 space-y-2">
     <TransitionGroup
       name="toast"
       tag="div"

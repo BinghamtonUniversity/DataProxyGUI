@@ -411,6 +411,25 @@ const handleDelete = async (selectedRowIds?: number[]) => {
     }
 };
 
+const handleDataGridActionHandler = (actionData: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
+    switch (actionData.action) {
+        case 'create':
+            openNewModal();
+            break;
+        case 'delete':
+            console.log('Delete action data:', actionData.selectedData[0].id);
+            handleDelete([actionData.selectedData[0].id]);
+            break;
+    }
+};
+
+const handleDataGridRowActionHandler = (actionData: { type: string; payload: any }) => {
+    switch (actionData.type) {
+        case 'single-delete':
+            handleDelete([actionData.payload.id || actionData.payload.name]);
+            break;
+    }
+};
 // Handle CSV upload
 const handleCSVUpload = (uploadedData: any[]) => {
     // Here you can implement logic to process the uploaded CSV data
@@ -466,12 +485,17 @@ onMounted(() => {
                 :showNew="true"
                 :showEdit="false"
                 :showDelete="true"
+                :rowActionDropdown="false"
+                :rowActionLabels="false"
                 :rowActions="[
-                    { type: 'single-delete', label: 'Remove', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
+                    { type: 'single-delete', label: 'Remove', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50' }
                 ]"
-                @create="openNewModal"
-                @delete="handleDelete"
-                @action="handleAction"
+                :actions="[
+                    { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
+                    { name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right' }
+                ]"
+                @actionHandler="handleDataGridActionHandler"                    
+                @rowActionHandler="handleDataGridRowActionHandler"
                 @upload="handleCSVUpload"
             >
             </DataGrid>
@@ -497,7 +521,7 @@ onMounted(() => {
             </AlertModal>
             
             <!-- Global Toaster -->
-            <Toaster />
+            <!-- <Toaster /> -->
         </div>
     </div>
 </template>

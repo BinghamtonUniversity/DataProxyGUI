@@ -200,5 +200,5 @@ const saveChanges = async () => {
             No API instance data available
         </div>
     </div>
-    <Toaster />
+
 </template>

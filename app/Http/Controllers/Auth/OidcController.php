@@ -14,12 +14,12 @@ class OidcController extends Controller
     // 1️⃣ Redirect to the IdP (SSO)
     public function redirect()
     {
-        $user =User::first();
-        Auth::login($user, true);
-        $intendedUrl = session('url.intended', '/dashboard');
-//        session()->forget('url.intended');
+//         $user =User::first();
+//         Auth::login($user, true);
+//         $intendedUrl = session('url.intended', '/dashboard');
+// //        session()->forget('url.intended');
 
-        return redirect($intendedUrl);
+//         return redirect($intendedUrl);
 
         $query = http_build_query([
             'client_id' => config('services.oidc.client_id'),

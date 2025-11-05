@@ -730,8 +730,9 @@ const handleSave = async () => {
         showError(errorData.message || `HTTP error! status: ${response.status}`)
         return
     }
-    success('API data saved successfully!')
+    success('API data saved successfully!', 'API Data Saved')
     const responseData = await response.json()
+    
     updateApiData(responseData)
 
     originalApiData.value = JSON.parse(JSON.stringify(responseData))
@@ -842,6 +843,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    
     if (keydownHandler) {
         document.removeEventListener('keydown', keydownHandler)
     }
@@ -866,6 +868,7 @@ onUnmounted(() => {
 
 <template>
     <Head :title="' API Edit'" />
+    <Toaster />
     
     <AppLayout :breadcrumbs="breadcrumbItems">
         <div class="px-4 py-6">
@@ -1010,14 +1013,8 @@ onUnmounted(() => {
 
                 <div class="flex-1">
                     <section v-if="apiData && originalApiData && !loadingApiData" class="w-full space-y-12">
-                        <Routes v-if="currentTab === 'routes'" v-bind="componentProps" />
-                        <Resources v-if="currentTab === 'resources'" v-bind="componentProps" />
-                        <Functions v-if="currentTab === 'functions'" v-bind="componentProps" />
-                        <Models v-if="currentTab === 'models'" v-bind="componentProps" />
-                        <Files v-if="currentTab === 'files'" v-bind="componentProps" />
-                        <Options v-if="currentTab === 'options'" v-bind="componentProps" />
-                        <!-- Render all components but only show the active one -->
-                        <!-- <div v-show="currentTab === 'routes'">
+                        
+                        <div v-show="currentTab === 'routes'">
                             <Routes v-bind="componentProps" />
                         </div>
                         <div v-show="currentTab === 'resources'">
@@ -1034,7 +1031,7 @@ onUnmounted(() => {
                         </div>
                         <div v-show="currentTab === 'options'">
                             <Options v-bind="componentProps" />
-                        </div> -->
+                        </div>
                         <!-- Dynamic component rendering -->
                         <!-- <component
                             :is="activeComponent"
@@ -1450,5 +1447,4 @@ onUnmounted(() => {
             />
         </AlertModal>
     </AppLayout>
-    <Toaster />
 </template>

@@ -553,5 +553,5 @@ const highlightText = (text: string, query: string) => {
             </template>
         </div>        
     </div>
-    <Toaster />
+  
 </template>

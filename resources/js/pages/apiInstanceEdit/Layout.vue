@@ -14,6 +14,7 @@ import AlertModal from '@/components/AlertModal.vue'
 import FormViewer from '@/components/formviewer/FormViewer.vue'
 import { useToaster } from '@/composables/useToaster'
 import { getCsrfToken } from '@/lib/utils'
+import Toaster from '@/components/toaster/Toaster.vue'
 
 interface Props {
     instance_id: string
@@ -155,6 +156,11 @@ watch(apiInstanceData, (newVal) => {
     if (originalApiInstanceData.value && newVal) {
         // Compare to detect changes
         hasUnsavedChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalApiInstanceData.value)
+        // if(hasUnsavedChanges.value){
+        //     console.log('Unsaved changes detected')
+        //     console.log('Original:', originalApiInstanceData.value)
+        //     console.log('Current:', newVal)
+        // }
     }
 }, { deep: true })
 
@@ -460,11 +466,22 @@ onUnmounted(() => {
 
                 <div class="flex-1 w-11/12">
                     <section v-if="apiInstanceData && !loading" class="w-full space-y-12">
-                        <!-- Dynamic component rendering -->
-                        <Main v-if="currentTab === 'main'" v-bind="componentProps" />
+                         <div v-show="currentTab === 'main'">
+                            <Main v-bind="componentProps" />
+                        </div>
+                         <div v-show="currentTab === 'resources'">
+                            <Resources v-bind="componentProps" />
+                        </div>
+                        <div v-show="currentTab === 'permissions'">
+                            <Permissions v-bind="componentProps" />
+                        </div>
+                        <div v-show="currentTab === 'options'">
+                            <Options v-bind="componentProps" />
+                        </div>
+                        <!-- <Main v-if="currentTab === 'main'" v-bind="componentProps" />
                         <Resources v-if="currentTab === 'resources'" v-bind="componentProps" />
                         <Permissions v-if="currentTab === 'permissions'" v-bind="componentProps" />
-                        <Options v-if="currentTab === 'options'" v-bind="componentProps" />
+                        <Options v-if="currentTab === 'options'" v-bind="componentProps" /> -->
                     </section>
                 </div>
             </div>
@@ -551,4 +568,5 @@ onUnmounted(() => {
             </div>
         </AlertModal>
     </AppLayout>
+    <Toaster/>
 </template>

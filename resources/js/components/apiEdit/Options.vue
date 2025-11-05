@@ -11,7 +11,7 @@ import APILayout from '@/layouts/api/Layout.vue';
 import FormBuilder from '@/components/formbuilder/FormBuilder.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
-import { type BreadcrumbItem, type ApiData, Api } from '@/types';
+import {type ApiData, Api } from '@/types';
 interface Props {
     api_id: string
     api_type: string
@@ -28,23 +28,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-
-
-const breadcrumbItems: BreadcrumbItem[] = [
-    {
-        title: 'API Edit',
-        href: `/apis/${props.api_id}/options`,
-    },
-];
-
-const page = usePage();
-const apiBaseUrl = '/api';
-
-// Get CSRF token from meta tag
-const getCsrfToken = () => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    return token;
-};
 
 // Form state
 const formData = ref<{
@@ -80,6 +63,7 @@ const handleFormChange = (newFormData: any) => {
 
 // Load existing options from apiData
 const loadExistingOptions = (apiData: ApiData | null) => {
+
     if (apiData && apiData.options ) {
         // If options exist in apiData, check if it's an array of fields or objects with form_config
         formData.value = apiData.options;
@@ -95,7 +79,7 @@ const loadExistingOptions = (apiData: ApiData | null) => {
 
 // Initialize form data when component loads
 const initializeFormData = (apiData: ApiData | null) => {
-    if (apiData && !formData.value.fields.length) {
+    if (apiData && (!formData.value.fields || formData.value.fields.length === 0)) {
         loadExistingOptions(apiData);
         // hasUnsavedChanges.value = false;
     }
@@ -112,22 +96,24 @@ watch(() => props.apiData, (newApiData: ApiData | null) => {
     isUpdatingFromApiData.value = true;
     
     if (newApiData && newApiData.options) {
-   
         formData.value = newApiData.options;
-    }
-    else{
-       
+    } else {
+        // Initialize with default structure if no options exist
         formData.value = {
             name: 'options',
             fields: []
         };
+        // If apiData is available but options don't exist, try to initialize
+        if (newApiData && (!formData.value.fields || formData.value.fields.length === 0)) {
+            initializeFormData(newApiData);
+        }
     }
     
     // Reset flag after a short delay
     setTimeout(() => {
         isUpdatingFromApiData.value = false;
     }, 100);
-}, { deep: true });
+}, { deep: true, immediate: true });
 
 // Event listeners for dropdown actions
 const handleImportEvent = () => {
@@ -142,6 +128,10 @@ const handleExportEvent = () => {
 onMounted(() => {
     window.addEventListener('openOptionsImport', handleImportEvent);
     window.addEventListener('exportOptions', handleExportEvent);
+    // Initialize form data when component mounts
+    if (props.apiData && (!formData.value.fields || formData.value.fields.length === 0)) {
+        initializeFormData(props.apiData);
+    }
 });
 
 onUnmounted(() => {
@@ -271,10 +261,6 @@ const importFormConfig = {
 
             <!-- Form Builder -->
             <template v-else>
-                <!-- Initialize form data when apiData is available -->
-                <div v-if="apiData && !formData.fields" style="display: none;">
-                    {{ initializeFormData(apiData) }}
-                </div>
                 <FormBuilder 
                     :form-data="formData"
                     :allowFormNameEdit="false"

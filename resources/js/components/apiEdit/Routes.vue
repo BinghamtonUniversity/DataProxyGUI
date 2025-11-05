@@ -960,6 +960,5 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
             </DialogFooter>
         </DialogContent>
         </Dialog>
-    <Toaster />
 </template>
 
