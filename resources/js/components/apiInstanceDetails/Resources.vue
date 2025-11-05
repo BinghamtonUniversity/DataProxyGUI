@@ -178,5 +178,4 @@ const updateResource = (index: number, resource_name: string, value: string) => 
       </div>
     </div>
   </div>
-  <Toaster />
 </template>

@@ -151,6 +151,4 @@ const handleFormDataUpdate = (data: ApiInstanceOptions) => {
         :showActions="false"
     />
     </div>
-    <!-- Global Toaster -->
-    <Toaster />
 </template>

@@ -14,6 +14,7 @@ import AlertModal from '@/components/AlertModal.vue'
 import FormViewer from '@/components/formviewer/FormViewer.vue'
 import { useToaster } from '@/composables/useToaster'
 import { getCsrfToken } from '@/lib/utils'
+import Toaster from '@/components/toaster/Toaster.vue'
 
 interface Props {
     instance_id: string
@@ -567,4 +568,5 @@ onUnmounted(() => {
             </div>
         </AlertModal>
     </AppLayout>
+    <Toaster/>
 </template>
