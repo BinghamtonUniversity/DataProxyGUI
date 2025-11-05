@@ -51,7 +51,7 @@ initializeMonaco().then(() => {
                 .use(ZiggyVue)
                 .use(VueMonacoEditorPlugin)
                 .component('font-awesome-icon', FontAwesomeIcon)
-                .component('Toaster', Toaster)
+                // .component('Toaster', Toaster)
                 .mount(el);
         },
         progress: {

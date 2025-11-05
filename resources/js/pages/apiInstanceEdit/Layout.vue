@@ -156,11 +156,11 @@ watch(apiInstanceData, (newVal) => {
     if (originalApiInstanceData.value && newVal) {
         // Compare to detect changes
         hasUnsavedChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalApiInstanceData.value)
-        if(hasUnsavedChanges.value){
-            console.log('Unsaved changes detected')
-            console.log('Original:', originalApiInstanceData.value)
-            console.log('Current:', newVal)
-        }
+        // if(hasUnsavedChanges.value){
+        //     console.log('Unsaved changes detected')
+        //     console.log('Original:', originalApiInstanceData.value)
+        //     console.log('Current:', newVal)
+        // }
     }
 }, { deep: true })
 
