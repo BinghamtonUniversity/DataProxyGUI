@@ -67,6 +67,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/schedules', function () {
         return Inertia::render('Schedules');
     })->name('schedules');
+    Route::get('/activity_logs', function () {
+        return Inertia::render('ActivityLogs');
+    })->name('activity_logs');
 
     Route::get('/users', function () {
         return Inertia::render('Users');
@@ -105,6 +108,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/schedulers', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersStore']);
         Route::put('/schedulers/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersUpdate']);
         Route::delete('/schedulers/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersDestroy']);
+
+        //Activity Logs
+        Route::get('/activity_logs', [App\Http\Controllers\Api\ActivityLogsController::class, 'activityLogsIndex']);
 
         //API Users
         Route::get('/api_users', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersIndex']);
