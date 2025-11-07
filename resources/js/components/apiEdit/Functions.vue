@@ -57,32 +57,18 @@ const createViewError = ref<string | null>(null)
 const viewBeingEdited = ref<ApiVersionFunction | null>(null)
 const isEditingView = ref(false)
 
-// ============================================
-// UNSAVED CHANGES CACHE
-// ============================================
-// Store unsaved edits for each function: { functionName: unsavedCode }
-const unsavedEditsCache = ref<Map<string, string>>(new Map())
-
 // Computed property to get the code for the currently selected function
 // This checks the cache first, then falls back to the original content
 const currentFunctionCode = computed(() => {
-    if (!selectedFunction.value) return ''
-    
-    const functionName = selectedFunction.value.name
-    const cachedCode = unsavedEditsCache.value.get(functionName)
-    
-    // Return cached code if it exists, otherwise return original content
-    return cachedCode !== undefined ? cachedCode : selectedFunction.value.content
+    return selectedFunction.value?.content ?? ''
 })
-
-
 
 
 // Check if current function has unsaved changes
-const hasUnsavedChanges = computed(() => {
-    if (!selectedFunction.value) return false
-    return unsavedEditsCache.value.has(selectedFunction.value.name)
-})
+// const hasUnsavedChanges = computed(() => {
+//     if (!selectedFunction.value) return false
+//     return unsavedEditsCache.value.has(selectedFunction.value.name)
+// })
 // ============================================
 
 const handleValidation = (markers: any) => {
@@ -220,8 +206,8 @@ const handleDeleteFunction = async (view: ApiVersionFunction ) =>{
        
         props.updateApiData(updatedApiData)
         
-        // Clear cache for deleted function
-        unsavedEditsCache.value.delete(view.name)
+        // // Clear cache for deleted function
+        // unsavedEditsCache.value.delete(view.name)
         
         selectedFunction.value = null
         success(`Function "${view.name}" deleted successfully`, 'Function Deleted');
@@ -296,13 +282,13 @@ const handleUpdateFunctionName = async () => {
     props.updateApiData(updatedApiData)
 
     // Transfer cached edits to new function name
-    if (unsavedEditsCache.value.has(oldName)) {
-      const cachedCode = unsavedEditsCache.value.get(oldName)
-      unsavedEditsCache.value.delete(oldName)
-      if (cachedCode !== undefined) {
-        unsavedEditsCache.value.set(trimmedName, cachedCode)
-      }
-    }
+    // if (unsavedEditsCache.value.has(oldName)) {
+    //   const cachedCode = unsavedEditsCache.value.get(oldName)
+    //   unsavedEditsCache.value.delete(oldName)
+    //   if (cachedCode !== undefined) {
+    //     unsavedEditsCache.value.set(trimmedName, cachedCode)
+    //   }
+    // }
 
     // If editing currently selected function, update reference
     if (selectedFunction.value?.name === oldName) {
@@ -579,11 +565,11 @@ onUnmounted(() => {
                                 >
                                     {{ item.name }}
                                     <!-- Unsaved changes indicator -->
-                                    <span 
+                                    <!-- <span 
                                         v-if="unsavedEditsCache.has(item.name)" 
                                         class="ml-2 h-2 w-2 rounded-full bg-orange-500"
                                         title="Unsaved changes"
-                                    ></span>
+                                    ></span> -->
                                 </Button>
                                 <Button
                                     variant="ghost"
@@ -614,11 +600,10 @@ onUnmounted(() => {
                             v-if="selectedFunction"
                             :key="selectedFunction.name"
                             :code="currentFunctionCode" 
-                            :language="api?.api_type as 'python' | 'php' | undefined"
+                            :language="api?.api_type === 'python' || api?.api_type === 'php' ? api?.api_type : undefined"
                             :is-saving="isSaving"
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"
-                            :hasUnsavedChanges="hasUnsavedChanges"
 
                             @save="handleSave"
                             @update:code="handleUpdateCode"

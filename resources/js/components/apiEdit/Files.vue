@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
 import { type ApiData, type ApiVersionFunction, Api} from '@/types'
@@ -51,22 +51,20 @@ const createViewError = ref<string | null>(null)
 const viewBeingEdited = ref<ApiVersionFunction | null>(null)
 const isEditingView = ref(false)
 
+const validationErrors = ref<number>(0)
+const validationWarnings = ref<number>(0)
+
 // Toaster
 const { success, error, warning, info } = useToaster();
 
+
 const handleUpdateCode = (updatedCode: string) => {
     if (!selectedFile.value || !props.apiData) {
-        saveError.value = 'No file selected or file data not available'
-        return
-    }
-    if (!updatedCode || updatedCode.trim() === '') {
-        
+        saveError.value = 'No file selected or API data not available'
         return
     }
 
-    isSaving.value = true
-    saveError.value = null
-    saveSuccess.value = false
+    // Update the local state immediately
     try {
         const updatedApiData = {
             ...props.apiData,
@@ -76,82 +74,116 @@ const handleUpdateCode = (updatedCode: string) => {
                     : func
             )
         }
+        
         // Update the local state through parent
-        props.updateApiData( updatedApiData)
+        props.updateApiData(updatedApiData)
         
         if (selectedFile.value) {
             selectedFile.value.content = updatedCode
         }
         
-        saveSuccess.value = true
-        setTimeout(() => {
-            saveSuccess.value = false
-        }, 3000)
-
     } catch (error) {
-        console.error('Save error:', error)
-        saveError.value = error instanceof Error ? error.message : 'Failed to save changes'
-    } finally {
-        isSaving.value = false
+        console.error('Update error:', error)
+        saveError.value = error instanceof Error ? error.message : 'Failed to update code'
     }
 }
+
 
 const handleSave = async (updatedCode: string) => {
-    if (!selectedFile.value || !props.apiData) {
-        saveError.value = 'No file selected or file data not available'
-        return
-    }
-
-    isSaving.value = true
-    saveError.value = null
-    saveSuccess.value = false
-
-    try {
-        const updatedApiData = {
-            ...props.apiData,
-            version_files: props.apiData.version_files.map(func => 
-                func.name === selectedFile.value?.name 
-                    ? { ...func, content: updatedCode }
-                    : func
-            )
-        }
-
-        const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            body: JSON.stringify(updatedApiData)
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-        }
-
-        const result = await response.json()
-        
-        // Update the local state through parent
-        props.updateApiData(result || updatedApiData)
-        
-        if (selectedFile.value) {
-            selectedFile.value.content = updatedCode
-        }
-        
-        saveSuccess.value = true
-        setTimeout(() => {
-            saveSuccess.value = false
-        }, 3000)
-
-    } catch (error) {
-        console.error('Save error:', error)
-        saveError.value = error instanceof Error ? error.message : 'Failed to save changes'
-    } finally {
-        isSaving.value = false
+    if (props.handleSave) {
+        await props.handleSave()
     }
 }
+
+const handleValidation = (markers: any) => {
+    const errors = markers.filter((m: any) => m.severity >= 8) // Monaco.MarkerSeverity.Error = 8
+    const warnings = markers.filter((m: any) => m.severity === 4) // Monaco.MarkerSeverity.Warning = 4
+    
+    validationErrors.value = errors.length
+    validationWarnings.value = warnings.length
+    
+    
+    // Provide immediate feedback to user about validation status
+    if (errors.length > 0) {
+        // Show first error message for immediate feedback
+        const firstError = errors[0]
+        saveError.value = `Validation Error: ${firstError.message}${errors.length > 1 ? ` (and ${errors.length - 1} more)` : ''}`
+    } else if (warnings.length > 0) {
+        // Show warning message
+        const firstWarning = warnings[0]
+        saveError.value = `Warning: ${firstWarning.message}${warnings.length > 1 ? ` (and ${warnings.length - 1} more)` : ''}`
+    } else {
+        // Clear any previous validation messages
+        if (saveError.value && (saveError.value.includes('Validation Error') || saveError.value.includes('Warning'))) {
+            saveError.value = null
+        }
+    }
+}
+
+const editorKey = computed(() => 
+  `${selectedFile.value?.name}-${selectedFile.value?.content?.substring(0, 50)}`
+)
+
+const currentFunctionCode = computed(() => {
+    return selectedFile.value?.content ?? ''
+})
+
+// const handleSave = async (updatedCode: string) => {
+//     if (!selectedFile.value || !props.apiData) {
+//         saveError.value = 'No file selected or file data not available'
+//         return
+//     }
+
+//     isSaving.value = true
+//     saveError.value = null
+//     saveSuccess.value = false
+
+//     try {
+//         const updatedApiData = {
+//             ...props.apiData,
+//             version_files: props.apiData.version_files.map(func => 
+//                 func.name === selectedFile.value?.name 
+//                     ? { ...func, content: updatedCode }
+//                     : func
+//             )
+//         }
+
+//         const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+//             method: 'PUT',
+//             headers: {
+//                 'Content-Type': 'application/json',
+//                 'Accept': 'application/json',
+//                 'X-CSRF-TOKEN': getCsrfToken() || '',
+//             },
+//             body: JSON.stringify(updatedApiData)
+//         })
+
+//         if (!response.ok) {
+//             const errorData = await response.json().catch(() => ({}))
+//             throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+//         }
+
+//         const result = await response.json()
+        
+//         // Update the local state through parent
+//         props.updateApiData(result || updatedApiData)
+        
+//         if (selectedFile.value) {
+//             selectedFile.value.content = updatedCode
+//         }
+        
+//         saveSuccess.value = true
+//         setTimeout(() => {
+//             saveSuccess.value = false
+//         }, 3000)
+
+//     } catch (error) {
+//         console.error('Save error:', error)
+//         saveError.value = error instanceof Error ? error.message : 'Failed to save changes'
+//     } finally {
+//         isSaving.value = false
+//     }
+// }
 
 const editFileName = (view: ApiVersionFunction) => {
   isEditingView.value = true
@@ -198,7 +230,7 @@ const handleCreateNewFile = async () => {
         // TO-DO:: PHP function template
         const newFunction: ApiVersionFunction = {
             name,
-            content: `# Define the function ${name} here\n`,
+            content: ``,
         }
 
         const updatedApiData = {
@@ -267,7 +299,7 @@ const handleUpdateFileName = async () => {
   try {
     const updatedApiData = {
       ...props.apiData,
-      version_views: props.apiData.version_files.map(file =>
+      version_files: props.apiData.version_files.map(file =>
         file.name === viewBeingEdited.value?.name
           ? { ...file, name: trimmedName }
           : file
@@ -619,13 +651,15 @@ onUnmounted(() => {
                         <Editor 
                             ref="editorRef"
                             v-if="selectedFile" 
-                            :code="selectedFile.content" 
+                            :key="selectedFile.name"
+                            :code="currentFunctionCode" 
                             :language="api?.api_type === 'python' || api?.api_type === 'php' ? api?.api_type : undefined"
                             :is-saving="isSaving"
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"
                             @save="handleSave"
-                            @updateCode="handleUpdateCode"
+                            @update:code="handleUpdateCode"
+                            @validate="handleValidation"
                         />
                         
                         <!-- No File Selected State -->

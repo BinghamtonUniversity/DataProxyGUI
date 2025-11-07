@@ -82,6 +82,8 @@ const newMethod = ref<{
   content: ''
 })
 
+const validationErrors = ref<number>(0)
+const validationWarnings = ref<number>(0)
 // const paramsInput = computed({
 //   get: () => newMethod.value.params.join(', '),
 //   set: (val: string) => {
@@ -266,6 +268,37 @@ const handleUpdateCode = (updatedCode: string) => {
     console.error('Update error:', error)
     saveCodeError.value = error instanceof Error ? error.message : 'Failed to update code'
   }
+}
+
+const handleSave = async (updatedCode: string) => {
+    if (props.handleSave) {
+      await props.handleSave()
+    }
+}
+
+const handleValidation = (markers: any) => {
+    const errors = markers.filter((m: any) => m.severity >= 8) // Monaco.MarkerSeverity.Error = 8
+    const warnings = markers.filter((m: any) => m.severity === 4) // Monaco.MarkerSeverity.Warning = 4
+    
+    validationErrors.value = errors.length
+    validationWarnings.value = warnings.length
+    
+    
+    // Provide immediate feedback to user about validation status
+    if (errors.length > 0) {
+        // Show first error message for immediate feedback
+        const firstError = errors[0]
+        saveCodeError.value = `Validation Error: ${firstError.message}${errors.length > 1 ? ` (and ${errors.length - 1} more)` : ''}`
+    } else if (warnings.length > 0) {
+        // Show warning message
+        const firstWarning = warnings[0]
+        saveCodeError.value = `Warning: ${firstWarning.message}${warnings.length > 1 ? ` (and ${warnings.length - 1} more)` : ''}`
+    } else {
+        // Clear any previous validation messages
+        if (saveCodeError.value && (saveCodeError.value.includes('Validation Error') || saveCodeError.value.includes('Warning'))) {
+            saveCodeError.value = null
+        }
+    }
 }
 
 // Meta properties handlers
@@ -808,8 +841,9 @@ onUnmounted(() => {
                                 :is-saving="isSavingCode"
                                 :saveError="saveCodeError || ''"
                                 :saveSuccess="saveCodeSuccess"
-                                @save="handleCodeSave"
+                                @save="handleSave"
                                 @update:code="handleUpdateCode"
+                                @validate="handleValidation"
                               />
                             </div>
                           </template>
