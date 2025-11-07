@@ -3,7 +3,7 @@ import { ChevronDown, Plus, Check } from 'lucide-vue-next'
 import { ref, onMounted, onUnmounted, reactive } from 'vue'
 
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem, ApiInstance, Environment, Api, ApiInstanceRouteUserMap, ApiInstanceResource, ApiData} from '@/types'
+import { type BreadcrumbItem, ApiInstance, Environment, Api, ApiInstanceRouteUserMap, ApiInstanceResource, ApiData, ApiInstanceOptions} from '@/types'
 import { Head } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import {
@@ -265,7 +265,7 @@ const openNewApiInstanceDialog = () => {
     public: 0,
     route_user_map: [],
     resources: [],
-    options: []
+    options: {} as ApiInstanceOptions
   }
   newApiInstanceError.value = ''
   newApiInstanceDialogOpen.value = true
@@ -322,6 +322,7 @@ const submitNewApiInstance = async ( formData: any) => {
     newApiInstanceLoading.value = false
     return // prevent API call
   }
+
 
   try {
     let url = `/api/api_instances`
@@ -610,6 +611,9 @@ const handleDataGridCustomAction = (actionData: { action: string; selectedRows: 
     case 'create':
       openNewApiInstanceDialog();
       break;
+    case 'delete':
+      handleDeleteInstance(actionData.selectedData[0]);
+      break;
     default:
       info(`Please implement the ${actionData.action} function`, 'Action Not Implemented');
   }
@@ -633,7 +637,7 @@ const handleDataGridRowClick = (row: any) => {
           <div class="flex items-center justify-center h-32">
             <div class="text-center">
               <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-              <p class="mt-2">Loading APIs...</p>
+              <p class="mt-2">Loading API Instances...</p>
             </div>
           </div>
         </div>
@@ -646,6 +650,7 @@ const handleDataGridRowClick = (row: any) => {
             theme="default"
             :actions="[
               {name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus'},
+              {name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right'}
             ]"
             :rowActions="[
               { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },

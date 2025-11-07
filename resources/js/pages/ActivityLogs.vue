@@ -247,6 +247,7 @@ onMounted(async () => {
                 v-else
                 :schema="activityLogsSchema"
                 :data="activityLogs"
+                :upload="false"
                 theme="default"
                 :showNew="false"
                 :showEdit="false"
