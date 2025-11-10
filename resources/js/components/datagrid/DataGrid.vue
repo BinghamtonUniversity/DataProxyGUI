@@ -344,6 +344,21 @@
               <span v-else-if="col.isArrayObject" class="text-xs text-gray-500">
                 
               </span>
+              
+              <!-- Render single object if isObject is true -->
+              <span v-else-if="col.isObject && getObjectData(row[col.key])">
+                <div 
+                  :class="[
+                    'inline-flex flex-col p-1 rounded-lg border shadow-sm max-w-32',
+                    col.targetColor || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                  ]"
+                >
+                  <div class="text-xs font-semibold truncate">
+                    {{ getObjectData(row[col.key])[col.targetObjectAttribute] || JSON.stringify(getObjectData(row[col.key])) }}
+                  </div>
+                </div>
+              </span>
+              
               <!-- Render option badges if column has options -->
               <span v-else-if="col.options && row[col.key] !== undefined && row[col.key] !== null">
                 <span v-if="col.options.length > 0 && typeof col.options[0] === 'object'">
@@ -700,6 +715,7 @@ const allColumns = computed(() => {
       width: field.width || field.columns || 12,
       showColumn: field.showColumn !== false, // Default to true if not specified
       isArrayObject: field.isArrayObject || false,
+      isObject: field.isObject || false,
       targetObjectAttribute: field.targetObjectAttribute || null,
       targetColor: field.targetColor || null,
       labelColor: field.labelColor || null,
@@ -780,6 +796,27 @@ function getArrayData(data) {
       return Array.isArray(parsed) ? parsed : null;
     } catch (e) {
       
+      return null;
+    }
+  }
+
+  return null;
+}
+
+// Helper function to handle both object and JSON string data
+function getObjectData(data) {
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    return data;
+  }
+  
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed;
+      }
+      return null;
+    } catch (e) {
       return null;
     }
   }
