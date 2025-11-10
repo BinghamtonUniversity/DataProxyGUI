@@ -11,7 +11,7 @@ class ActivityLogsController extends BaseDjangoController
     /**
      * Display a listing of activity logs.
      */
-    public function index(): JsonResponse
+    public function activityLogsIndex(): JsonResponse
     {
         try {
             // For now, return mock data. Replace this with actual database query

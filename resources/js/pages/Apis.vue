@@ -414,6 +414,20 @@ const handleFormSubmit = async (formValues: any) => {
     }
 };
 
+const handleDataGridActionHandler = (actionData: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
+    console.log('DataGrid action data:', actionData);
+    switch (actionData.action) {
+        case 'create':
+            openNewModal();
+            break;  
+        case 'edit':
+            openEditModal(actionData.selectedData[0]);
+            break;
+        case 'delete':
+            handleDelete([actionData.selectedData[0].id]);
+            break;
+    }
+};
 // Handle DataGrid action events
 const handleAction = (actionData: any) => {
 
@@ -558,9 +572,13 @@ onMounted(() => {
                         { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-green-600 hover:bg-green-50' },
                         { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50' }
                     ]"
-                    @create="openNewModal"
-                    @edit="openEditModal"
-                    @delete="handleDelete"
+                    :actions="[
+                        { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
+                        { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
+                        { name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right' }
+                    ]"
+                    @actionHandler="handleDataGridActionHandler"
+                  
                     @rowActionHandler="handleAction"
                     @upload="handleCSVUpload"
                     @row-click="handleRowClick"
