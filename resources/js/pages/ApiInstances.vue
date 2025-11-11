@@ -544,6 +544,7 @@ const fetchAllData = async () => {
         value: api.id,
     }));
 
+
     apiInstancesSchema.fields[4].options = apisData.map((api: any) => ({
         label: api.name  || `API ${api.id}`,
         value: api.id,
@@ -552,10 +553,12 @@ const fetchAllData = async () => {
 
     apiInstancesSchema.fields[5].options = apiVersionsData.map((apiVersion: any) => ({
         
-        label: apiVersion.summary  || `API Version ${apiVersion.id}`,
-        value: apiVersion.id,
-        color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+        label: apiVersion.stable == true ? apiVersion.summary : 'Latest/Working',
+        value: apiVersion.id ,
+        color: apiVersion.stable == true ?'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200':'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
     }));
+
+
 
     api_instances.value.forEach((instance: any) => {
         if(instance.api_version_id === null) {
