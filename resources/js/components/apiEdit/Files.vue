@@ -120,9 +120,6 @@ const handleValidation = (markers: any) => {
     }
 }
 
-const editorKey = computed(() => 
-  `${selectedFile.value?.name}-${selectedFile.value?.content?.substring(0, 50)}`
-)
 
 const currentFunctionCode = computed(() => {
     return selectedFile.value?.content ?? ''
