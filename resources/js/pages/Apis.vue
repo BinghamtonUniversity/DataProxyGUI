@@ -294,6 +294,7 @@ const fetchApis = async () => {
         }
         
         const data = await response.json();
+        console.log('Fetched APIs:', data);
         // Format dates for display
         apis.value = data.map((api: Api) => ({
             ...api,
@@ -360,12 +361,12 @@ const handleFormSubmit = async (formValues: any) => {
 
             const newApi = await response.json();
       
-            
+
             // Format and add to local state
             apis.value.push({
                 ...newApi,
-                created_at: newApi.created_at ? new Date(newApi.created_at).toLocaleDateString() : '',
-                created_by_id: newApi.created_by_id ? `User ${newApi.created_by_id}` : ''
+                created_at: newApi.created_at ? new Date(newApi.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
+                created_by_id: newApi.created_by ? apiUsers.value.find((user: ApiUser) => user.id === newApi.created_by)?.app_name : 'Unknown'
             });
             
             success('API created successfully!', 'API Created');
@@ -391,16 +392,15 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const updatedApi = await response.json();
-          
             
             // Update local state
             const index = apis.value.findIndex(api => api.id === editingRow.value.id);
             if (index !== -1) {
                 apis.value[index] = {
                     ...updatedApi,
-                    created_at: updatedApi.created_at ? new Date(updatedApi.created_at).toLocaleDateString() : '',
-                    created_by_id: updatedApi.created_by_id ? `User ${updatedApi.created_by_id}` : ''
-                };
+                    created_at: updatedApi.created_at ? new Date(updatedApi.created_at).toLocaleDateString() : apis.value[index].created_at,
+                    created_by_id: updatedApi.created_by ? apiUsers.value.find((user: ApiUser) => user.id === updatedApi.created_by)?.app_name : 'Unknown'
+                };           
             }
             
             success('API updated successfully!', 'API Updated');
