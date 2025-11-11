@@ -294,7 +294,7 @@ const fetchApis = async () => {
         }
         
         const data = await response.json();
-        console.log('Fetched APIs:', data);
+        // console.log('Fetched APIs:', data);
         // Format dates for display
         apis.value = data.map((api: Api) => ({
             ...api,
