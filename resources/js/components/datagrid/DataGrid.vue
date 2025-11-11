@@ -1305,6 +1305,10 @@ function emitAction(type, payload, index) {
   // Calculate the actual index in filteredRows if not provided
   const actualIndex = index !== undefined ? index : filteredRows.value.findIndex(r => r === payload);
   emit('rowActionHandler', { type, payload, index: actualIndex });
+  // Clear selection after actions that modify data (edit, delete, etc.)
+  if (type === 'single-edit' || type === 'single-delete' || type.includes('delete') || type.includes('edit')) {
+    selectedRows.value = [];
+  }
 }
 function toggleMenu(id) {
 
@@ -1356,7 +1360,8 @@ function onEdit() {
     const index = selectedRows.value[0];
     const row = filteredRows.value[index];
     emit('edit', row);
-
+    // Clear selection after action
+    selectedRows.value = [];
   } else if (selectedRows.value.length > 1) {
     onMultipleEdit();
   }
@@ -1365,14 +1370,15 @@ function onMultipleEdit() {
   // Get rows by indices
   const rows = selectedRows.value.map(index => filteredRows.value[index]).filter(Boolean);
   emit('multiple-edit', rows);
-
-
+  // Clear selection after action
+  selectedRows.value = [];
 }
 function onDelete() {
   // Get rows by indices
   const rows = selectedRows.value.map(index => filteredRows.value[index]).filter(Boolean);
   emit('delete', rows);
-
+  // Clear selection after action
+  selectedRows.value = [];
 }
 
 // Get tooltip text for action button
@@ -1408,6 +1414,8 @@ function handleCustomAction(action) {
     selectedData: selectedData,
     selectedIndex: selectedIndex
   });
+  // Clear selection after action
+  selectedRows.value = [];
 }
 
 const visiblePages = computed(() => {
