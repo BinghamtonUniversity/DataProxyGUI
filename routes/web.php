@@ -71,13 +71,13 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('ActivityLogs');
     })->name('activity_logs');
 
+    Route::get('/api_accounts', function () {
+        return Inertia::render('ApiAccounts');
+    })->name('api_accounts');
+
     Route::get('/users', function () {
         return Inertia::render('Users');
     })->name('users');
-
-    Route::get('/cas_users', function () {
-        return Inertia::render('CasUsers');
-    })->name('cas_users');
 
     // API Routes - Generic resource controller
     Route::prefix('api')->group(function () {
