@@ -526,7 +526,7 @@ const submitNewResource = async (formData: any) => {
       config
     }
 
-    console.log('Submitting Resource:', requestData)
+    // console.log('Submitting Resource:', requestData)
 
     const response = await fetch(url, {
       method: request_method,
