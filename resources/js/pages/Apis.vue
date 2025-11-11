@@ -68,6 +68,7 @@ const dataGridConfig = {
             show: true,
             edit: true,
             parse: true,
+
         },
         {
             name: "api_type",
@@ -80,8 +81,7 @@ const dataGridConfig = {
             width: "12",
             offset: "0",
             options:[{ label: "Python", value: "python" ,color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'},
-                    { label: "Php", value: "php" , color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'}
-                ],
+                    { label: "Php", value: "php" , color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'}                ],
             required: false,
             show: true,
             edit: false,
@@ -298,6 +298,7 @@ const fetchApis = async () => {
         // Format dates for display
         apis.value = data.map((api: Api) => ({
             ...api,
+            api_type: api.api_type || 'php',
             created_at: api.created_at ? new Date(api.created_at).toLocaleDateString() : '',
             created_by_id: api.created_by_id ? apiUsers.value.find((user: ApiUser) => user.id === api.created_by_id)?.app_name : ''
         }));
@@ -451,7 +452,10 @@ const handleAction = (actionData: any) => {
 };
 
 const handleRowClick = (row: any) => {
-    router.visit(`/apis/${row.id}/routes`);
+    console.log('Row clicked:', row);
+    const apiType = row.api_type;
+    
+    router.visit(`/apis/${row.id}/routes?backend=${apiType}`);
 };
 
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
