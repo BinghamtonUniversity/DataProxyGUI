@@ -294,7 +294,7 @@ const fetchApis = async () => {
         }
         
         const data = await response.json();
-        console.log('Fetched APIs:', data);
+
         // Format dates for display
         apis.value = data.map((api: Api) => ({
             ...api,
@@ -360,7 +360,8 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const newApi = await response.json();
-      
+            
+
 
             // Format and add to local state
             apis.value.push({
@@ -390,6 +391,7 @@ const handleFormSubmit = async (formValues: any) => {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
             }
+
 
             const updatedApi = await response.json();
             
