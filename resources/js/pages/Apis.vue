@@ -295,13 +295,40 @@ const fetchApis = async () => {
         
         const data = await response.json();
 
+<<<<<<< Updated upstream
+=======
+        
+        console.log('Fetched APIs:', data);
+        
+        // Handle different response formats: array, object with numeric keys, or mixed
+        let apiArray: Api[] = [];
+        
+        if (Array.isArray(data)) {
+            // Normal array response
+            apiArray = data;
+        } else if (data && typeof data === 'object') {
+            // Object with numeric keys (e.g., {0: {...}, 1: {...}, error: "..."})
+            apiArray = Object.keys(data)
+                .filter(key => key !== 'error' && !isNaN(Number(key)))
+                .map(key => data[Number(key)])
+                .filter(item => item && typeof item === 'object');
+            
+            // Log error if present but don't fail completely
+            if (data.error) {
+                console.warn('API response contains error:', data.error);
+                warning(`Some APIs may not have loaded correctly: ${data.error}`, 'Partial Data Load');
+            }
+        }
+        
+>>>>>>> Stashed changes
         // Format dates for display
-        apis.value = data.map((api: Api) => ({
+        apis.value = apiArray.map((api: Api) => ({
             ...api,
             api_type: api.api_type || 'php',
             created_at: api.created_at ? new Date(api.created_at).toLocaleDateString() : '',
-            created_by_id: api.created_by_id ? apiUsers.value.find((user: ApiUser) => user.id === api.created_by_id)?.app_name : ''
-        }));
+            // Store original created_by_id for reference, but display app_name
+            created_by_id: (api.created_by_id ? apiUsers.value.find((user: ApiUser) => user.id === api.created_by_id)?.app_name : '') as any
+        })) as Api[];
         
     } catch (err: any) {
         error.value = err.message || 'Failed to fetch APIs';
