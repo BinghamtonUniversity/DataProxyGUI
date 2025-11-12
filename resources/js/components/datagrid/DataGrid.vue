@@ -559,7 +559,8 @@ const props = defineProps({
       });
     }
   },
-  rowActions: { 
+  rowActions: {
+    type : [Array | null],  
     default: () => null,
     validator: (value) => value === null || Array.isArray(value),
     // Each action should have: { type: string, label: string, icon?: string, colorClass?: string }
