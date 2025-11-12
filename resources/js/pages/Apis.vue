@@ -294,9 +294,6 @@ const fetchApis = async () => {
         }
         
         const data = await response.json();
-
-<<<<<<< Updated upstream
-=======
         
         console.log('Fetched APIs:', data);
         
@@ -320,7 +317,6 @@ const fetchApis = async () => {
             }
         }
         
->>>>>>> Stashed changes
         // Format dates for display
         apis.value = apiArray.map((api: Api) => ({
             ...api,
