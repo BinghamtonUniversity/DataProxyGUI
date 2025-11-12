@@ -273,8 +273,8 @@ const handleFormSubmit = async (formValues: any) => {
             const formattedNewEnv = {
                 ...newEnv,
                 // Use server-provided timestamps, not user input
-                created_at: formatTimestamp(newEnv.created_at),
-                updated_at: formatTimestamp(newEnv.updated_at)
+                created_at: newEnv.created_at ? new Date(newEnv.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
+                updated_at: newEnv.updated_at ? new Date(newEnv.updated_at).toLocaleDateString() : new Date().toLocaleDateString()
             };
         
             environments.value.push(formattedNewEnv);
@@ -308,8 +308,8 @@ const handleFormSubmit = async (formValues: any) => {
                 const formattedEnv = {
                     ...updatedEnv,
                     // Use server-provided timestamps, not user input
-                    created_at: formatTimestamp(updatedEnv.created_at),
-                    updated_at: formatTimestamp(updatedEnv.updated_at)
+                    created_at: updatedEnv.created_at ? new Date(updatedEnv.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
+                    updated_at: updatedEnv.updated_at ? new Date(updatedEnv.updated_at).toLocaleDateString() : new Date().toLocaleDateString()
                 };
             
                 environments.value[index] = formattedEnv;
@@ -326,29 +326,23 @@ const handleFormSubmit = async (formValues: any) => {
     }
 };
 
-// Handle DataGrid action events
-const handleAction = (actionData: { type: string; payload: any }) => {
-
-    
-    switch (actionData.type) {
-        case 'single-edit':
-            openEditModal(actionData.payload);
+const handleDataGridActionHandler = (actionData: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
+    console.log('DataGrid action data:', actionData);
+    switch (actionData.action) {
+        case 'create':
+            openNewModal();
             break;
-        case 'single-delete':
-            handleDelete([actionData.payload.id || actionData.payload.name]);
+        case 'edit':
+            openEditModal(actionData.selectedData[0]);
             break;
-        case 'view':
-            // Handle view action if needed
-      
-            break;
-        case 'duplicate':
-            // Handle duplicate action if needed
-       
+        case 'delete':
+            handleDelete([actionData.selectedData[0].id]);
             break;
         default:
-            console.log('Unknown action type:', actionData.type);
+            console.log('Unknown action type:', actionData.action);
     }
 };
+
 
 // Handle FormViewer action events
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
@@ -364,9 +358,10 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
 };
 
 const handleDelete = async (selectedRowIds?: number[]) => {
+ 
     if (selectedRowIds && selectedRowIds.length > 0) {
         const envsToDelete = environments.value.filter(env => selectedRowIds.includes(env.id));
-        
+    
         try {
             // Delete environments via API
             for (const env of envsToDelete) {
@@ -376,7 +371,6 @@ const handleDelete = async (selectedRowIds?: number[]) => {
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': getCsrfToken() || '',
                     },
-                    credentials: 'same-origin'
                 });
 
                 if (!response.ok) {
@@ -434,18 +428,12 @@ onMounted(() => {
                 v-else
                 :schema="formConfig"
                 :data="environments"
-                theme="default"
-                :showNew="true"
-                :showEdit="true"
-                :showDelete="true"
-                :rowActions="[
-
-                    { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
+                :actions="[
+                    { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
+                    { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
+                    { name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right' }
                 ]"
-                @create="openNewModal"
-                @edit="openEditModal"
-                @delete="handleDelete"
-                @action="handleAction"
+                @actionHandler="handleDataGridActionHandler"
                          >
              </DataGrid>
 
