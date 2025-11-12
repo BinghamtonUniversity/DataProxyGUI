@@ -239,7 +239,7 @@
                 </span>
               </div>
             </th>
-            <th :class="[currentTheme.headerCell, 'text-right']"></th>
+            <th v-if="rowActions" :class="[currentTheme.headerCell, 'text-right']"></th>
           </tr>
         </thead>
         <tbody>
@@ -265,7 +265,7 @@
                   </option>
                 </select>
               </span>
-              <span v-else>     
+              <span v-else>      
                 <TextField
                   :required="false"
                   :value="filters[col.key]"
@@ -275,7 +275,7 @@
                 />
               </span>
             </td>
-            <td :class="currentTheme.filterCell"></td>
+            <td v-if="rowActions" :class="currentTheme.filterCell"></td>  
           </tr>
           <tr
             v-for="(row, idx) in paginatedRows"
@@ -394,7 +394,7 @@
               </span>
             </td>
             <td :class="[currentTheme.cell, 'text-right']">
-              <div class="relative" @click.stop>
+              <div v-if="rowActions" class="relative" @click.stop>
                 <!-- Single action button when only one action -->
                 <button 
                   v-if="rowActions.length === 1"
@@ -560,11 +560,8 @@ const props = defineProps({
     }
   },
   rowActions: { 
-    type: Array, 
-    default: () => [
-      { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
-      { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
-    ]
+    type: Array | null, 
+    default: () => null,
     // Each action should have: { type: string, label: string, icon?: string, colorClass?: string }
   },
   
