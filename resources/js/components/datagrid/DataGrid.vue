@@ -239,7 +239,7 @@
                 </span>
               </div>
             </th>
-            <th v-if="rowActions" :class="[currentTheme.headerCell, 'text-right']"></th>
+            <th v-if="rowActions.length > 0" :class="[currentTheme.headerCell, 'text-right']"></th>
           </tr>
         </thead>
         <tbody>
@@ -275,7 +275,7 @@
                 />
               </span>
             </td>
-            <td v-if="rowActions" :class="currentTheme.filterCell"></td>  
+            <td v-if="rowActions.length > 0" :class="currentTheme.filterCell"></td>  
           </tr>
           <tr
             v-for="(row, idx) in paginatedRows"
@@ -394,7 +394,7 @@
               </span>
             </td>
             <td :class="[currentTheme.cell, 'text-right']">
-              <div v-if="rowActions" class="relative" @click.stop>
+              <div v-if="rowActions.length > 0" class="relative" @click.stop>
                 <!-- Single action button when only one action -->
                 <button 
                   v-if="rowActions.length === 1"
@@ -559,11 +559,9 @@ const props = defineProps({
       });
     }
   },
-  rowActions: {
-    type : [Array | null],  
-    default: () => null,
-    validator: (value) => value === null || Array.isArray(value),
-    // Each action should have: { type: string, label: string, icon?: string, colorClass?: string }
+  rowActions: { 
+    type: Array,
+    default: () => [],
   },
   
   // Backward compatibility - deprecated but still supported
