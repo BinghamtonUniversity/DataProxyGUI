@@ -20,6 +20,7 @@ import Toaster from '@/components/toaster/Toaster.vue'
 import { getCsrfToken } from '@/lib/utils'
 
 interface Props {
+    api_type: string
     api_id: string
     activeTab?: string 
 }
@@ -168,7 +169,7 @@ const apiDataImportFormConfig = ref({
 })
 
 const fetchApi = async () => {
-    const response = await fetch(`/ajax/apis/${props.api_id}`)
+    const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}`)
     if (!response.ok) throw new Error('Failed to fetch API')
     api.value = await response.json()
 }
@@ -183,7 +184,7 @@ const fetchApiData = async () => {
     loadingApiData.value = true
     apiError.value = ''
     try {
-        const response = await fetch(`/ajax/apis/${props.api_id}/versions/latest`)
+        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`)
         if (!response.ok) throw new Error('Failed to fetch API data')
         const data = await response.json()
         apiData.value = data
@@ -690,9 +691,9 @@ const handleApiDataImport = (formData: any) => {
 
 const handleSave = async () => {
     if (
-        !apiData.value ||
-        !apiData.value.version_views ||
-        !Array.isArray(apiData.value.version_views)
+        !apiData.value
+        // !apiData.value.version_views ||
+        // !Array.isArray(apiData.value.version_views)
     ) {
         showError('No version views found to save.')
         return
@@ -705,17 +706,17 @@ const handleSave = async () => {
         }
     }
 
-    const emptyViews = apiData.value.version_views.filter(
-        (view: any) => !view.content || view.content.trim() === ''
-    )
+    // const emptyViews = apiData.value.version_views.filter(
+    //     (view: any) => !view.content || view.content.trim() === ''
+    // )
 
-    if (emptyViews.length > 0) {
-        const emptyNames = emptyViews.map((v: any) => v.name || '(Unnamed View)').join(', ')
-        showError(`The following functions have empty content: ${emptyNames}`)
-        return
-    }
+    // if (emptyViews.length > 0) {
+    //     const emptyNames = emptyViews.map((v: any) => v.name || '(Unnamed View)').join(', ')
+    //     showError(`The following functions have empty content: ${emptyNames}`)
+    //     return
+    // }
 
-    const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
+    const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/code`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -744,7 +745,7 @@ const navigateToTab = (tabId: string) => {
     currentTab.value = tabId
     // props.activeTab? = tabId 
     // This uses History API to update the URL without triggering navigation
-    const newUrl = `/apis/${props.api_id}/${tabId}`
+    const newUrl = `/apis/${props.api_type}/${props.api_id}/${tabId}`
     window.history.pushState({ tab: tabId }, '', newUrl)
 }
 
@@ -756,7 +757,7 @@ const activeComponent = computed(() => {
 // Component props to pass down
 const componentProps = computed(() => ({
     api_id: props.api_id,
-    api_type: 'php',
+    api_type: props.api_type,
     api: api.value,
     apiData: apiData.value || null,
     loadingApiData: loadingApiData.value,

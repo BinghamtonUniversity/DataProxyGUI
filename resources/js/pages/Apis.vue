@@ -367,7 +367,7 @@ const handleFormSubmit = async (formValues: any) => {
             const cleanedData = cleanFormData(formValues);
    
             
-            const response = await fetch('/api/apis', {
+            const response = await fetch(`/api/apis/${cleanedData.api_type}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -400,7 +400,7 @@ const handleFormSubmit = async (formValues: any) => {
             const cleanedData = cleanFormData(formValues);
       
             
-            const response = await fetch(`/api/apis/${editingRow.value.id}`, {
+            const response = await fetch(`/api/apis/${editingRow.value.api_type}/${editingRow.value.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -478,7 +478,7 @@ const handleRowClick = (row: any) => {
     console.log('Row clicked:', row);
     const apiType = row.api_type;
     
-    router.visit(`/apis/${row.id}/routes?backend=${apiType}`);
+    router.visit(`/apis/${apiType}/${row.id}/routes`);
 };
 
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
@@ -506,7 +506,7 @@ const handleDelete = async (selectedRowIds?: number[]) => {
         try {
             // Delete APIs via API
             for (const api of apisToDelete) {
-                const response = await fetch(`/api/apis/${api.id}`, {
+                const response = await fetch(`/api/apis/${api.api_type}/${api.id}`, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',

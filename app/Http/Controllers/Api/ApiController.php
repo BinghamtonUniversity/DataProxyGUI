@@ -100,16 +100,13 @@ class ApiController extends BaseDjangoController
     {
         // $backend = request()->query('backend', 'php');
 
-        $phpResult = $this->makeBackendRequest('php', 'GET', 'apis');
-        $djangoResult = $this->makeBackendRequest('django', 'GET', 'apis');
+        $phpResult = $this->makeBackendRequest('GET', 'apis', [], [], 'php');
+        $djangoResult = $this->makeBackendRequest('GET', 'apis', [], [], 'django');
 
         if ($phpResult['success'] || $djangoResult['success']) {
-            $djangoData = $djangoResult['data'] ?? [];
-            $phpData = $phpResult['data'] ?? [];
-
             $merged = array_merge(
-                is_array($djangoData) ? $djangoData : [],
-                is_array($phpData) ? $phpData : []
+                is_array($djangoResult['data'] ?? []) ? $djangoResult['data'] : [],
+                is_array($phpResult['data'] ?? []) ? $phpResult['data'] : []
             );
 
             return response()->json($merged);
@@ -122,9 +119,9 @@ class ApiController extends BaseDjangoController
         ], 500);
     }
 
-    public function apisShow($id): JsonResponse
+    public function apisShow($api_type, $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', "apis/{$id}");
+        $result = $this->makeBackendRequest('GET', "apis/{$id}", [], [], $api_type);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -136,12 +133,12 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function apisStore(Request $request): JsonResponse
+    public function apisStore(Request $request, string $api_type): JsonResponse
     {
         Log::info('Store method called', [
             'request_data' => $request->all()
         ]);
-        $result = $this->makeDjangoRequest('POST', 'apis', $request->all());
+        $result = $this->makeBackendRequest('POST', 'apis', $request->all(), [], $api_type);
 
         if ($result['success']) {
             return response()->json($result['data'], 201);
@@ -154,9 +151,9 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function apisUpdate(Request $request, $id): JsonResponse
+    public function apisUpdate(Request $request, string $api_type, string $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('PUT', "apis/{$id}", $request->all());
+        $result = $this->makeBackendRequest('PUT', "apis/{$id}", $request->all(), [], $api_type);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -169,12 +166,12 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function apisDestroy($id): JsonResponse
+    public function apisDestroy(string $api_type, string $id): JsonResponse
     {
         // Handle special case for environments DELETE endpoint
         $endpoint = "apis/{$id}";
         
-        $result = $this->makeDjangoRequest('DELETE', $endpoint);
+        $result = $this->makeBackendRequest('DELETE', $endpoint, [], [], $api_type);
 
         if ($result['success']) {
             return response()->json([
@@ -215,7 +212,7 @@ class ApiController extends BaseDjangoController
     /**
      * APIEdit Index - Fetch API details with optional tab filtering
      */
-    public function ApiEditIndex(Request $request, string $api_id): JsonResponse
+    public function ApiEditIndex(Request $request, string $api_type, string $api_id): JsonResponse
     {
         Log::info('ApiEditIndex called', ['api_id' => $api_id]);
 
@@ -224,8 +221,8 @@ class ApiController extends BaseDjangoController
         // $backend = $request->query('backend');
 
         //$result = $this->makeBackendRequest($backend, 'GET', $endpoint);
-        $result = $this->makeDjangoRequest('GET', $endpoint);
-        Log::info('Django request result', [
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
+        Log::info('Backend request result', [
             'success' => $result['success'],
             'status' => $result['status'],
             'data' => $result['data']
@@ -242,7 +239,7 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function ApiEditUpdate(Request $request, string $api_id): JsonResponse
+    public function ApiEditUpdate(Request $request, string $api_type, string $api_id): JsonResponse
     {
         Log::info('ApiEditUpdate called', ['api_id' => $api_id]);
 
@@ -250,7 +247,7 @@ class ApiController extends BaseDjangoController
         $requestData = $request->all();
 
         try {
-            $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+            $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $api_type);
 
             // Log::info('Django request result', [
             //     'success' => $result['success'],

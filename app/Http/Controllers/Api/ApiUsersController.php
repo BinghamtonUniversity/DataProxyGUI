@@ -12,21 +12,23 @@ class ApiUsersController extends BaseDjangoController{
     // ===========================================
     public function apiUsersIndex(): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', 'api_users');
+        $phpResult = $this->makeBackendRequest('GET', 'api_users', [], [], 'php');
+        $djangoResult = $this->makeBackendRequest('GET', 'api_users', [], [], 'django');
 
-        if ($result['success']) {
-            return response()->json($result['data']);
+        if ($phpResult['success'] || $djangoResult['success']) {
+            $merged = array_merge(
+                is_array($djangoResult['data'] ?? []) ? $djangoResult['data'] : [],
+                is_array($phpResult['data'] ?? []) ? $phpResult['data'] : []
+            );
+
+            return response()->json($merged);
         }
 
-        $errorMessage = $result['data']['error']
-            ?? $result['data']['detail']
-            ?? $result['data']['message']
-            ?? 'Unknown error occurred on Django side.';
-
         return response()->json([
-            'error' => $errorMessage,
-            'status' => $result['status']
-        ], $result['status']);
+            'error' => 'Failed to fetch API Users from both backends',
+            'django_status' => $djangoResult['status'],
+            'php_status' => $phpResult['status'],
+        ], 500);
     }
 
     public function apiUsersStore(Request $request): JsonResponse

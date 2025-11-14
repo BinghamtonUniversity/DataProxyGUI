@@ -82,11 +82,11 @@ class BaseDjangoController extends Controller
     // }
 
     protected function makeBackendRequest(
-        string $backend = 'django', // or 'php'
         string $method,
         string $endpoint,
         array $data = [],
-        array $headers = []
+        array $headers = [],
+        string $backend = 'django', // or 'php'
     ): array {
         $config = match ($backend) {
             'php' => [
@@ -152,6 +152,6 @@ class BaseDjangoController extends Controller
 
     protected function makeDjangoRequest(string $method, string $endpoint, array $data = [], array $headers = []): array
     {
-        return $this->makeBackendRequest('django', $method, $endpoint, $data, $headers);
+        return $this->makeBackendRequest($method, $endpoint, $data, $headers, 'django');
     }
 }

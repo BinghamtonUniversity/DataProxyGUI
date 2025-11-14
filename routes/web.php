@@ -93,9 +93,9 @@ Route::middleware(['auth'])->group(function () {
 
         //APIs
         Route::get('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisIndex']);
-        Route::post('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisStore']);
-        Route::put('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisUpdate']);
-        Route::delete('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisDestroy']);
+        Route::post('/apis/{api_type}', [App\Http\Controllers\Api\ApiController::class, 'apisStore']);
+        Route::put('/apis/{api_type}/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisUpdate']);
+        Route::delete('/apis/{api_type}/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisDestroy']);
 
         //API Instances
         Route::get('/api_instances', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesIndex']);
@@ -146,7 +146,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // NEW API Edit Routes (Inertia pages for editing APIs)
-    Route::prefix('/apis/{api_id}')->group(function () {
+    Route::prefix('/apis/{api_type}/{api_id}')->group(function () {
 
         // Developers page - separate from tab layout
         Route::get('/developers', function ($api_type, $api_id) {
@@ -156,7 +156,7 @@ Route::middleware(['auth'])->group(function () {
         })->name('apiEdit.developers');
 
         // Main page route - renders the Inertia component
-        Route::get('/{tab?}', function ( $api_id, $tab = 'routes') {
+        Route::get('/{tab?}', function ($api_type, $api_id, $tab = 'routes') {
             // Validate tab parameter
             $validTabs = ['routes', 'resources', 'functions', 'files', 'models', 'options'];
 
@@ -165,6 +165,7 @@ Route::middleware(['auth'])->group(function () {
             }
 
             return Inertia::render('apiEdit/Layout', [
+                'api_type' => $api_type,
                 'api_id' => $api_id,
                 'activeTab' => $tab,
             ]);
@@ -175,12 +176,13 @@ Route::middleware(['auth'])->group(function () {
     // API Latest Version - (JSON responses - AJAX calls)
     // ============================================
     Route::prefix('/ajax/apis')->group(function () {
-        Route::get('/{api_id}', [App\Http\Controllers\Api\ApiController::class, 'apisShow'])
+        Route::get('/{api_type}/{api_id}', [App\Http\Controllers\Api\ApiController::class, 'apisShow'])
             ->name('api.show');
-        Route::get('/{api_id}/versions/latest', [App\Http\Controllers\Api\ApiController::class, 'ApiEditIndex'])
+        Route::get('/{api_type}/{api_id}/versions/latest', [App\Http\Controllers\Api\ApiController::class, 'ApiEditIndex'])
             ->name('api.edit.index');
-        Route::put('/{api_id}/code', [App\Http\Controllers\Api\ApiController::class, 'ApiEditUpdate'])
+        Route::put('/{api_type}/{api_id}/code', [App\Http\Controllers\Api\ApiController::class, 'ApiEditUpdate'])
             ->name('api.edit.update');
+        // TO-DO add api_type parameter to the following routes
         Route::get('/{api_id}/versions', [App\Http\Controllers\Api\ApiController::class, 'getApiVersions']);
         Route::get('/{api_id}/versions/{version_id}', [App\Http\Controllers\Api\ApiController::class, 'getApiVersionDetails']);
         Route::put('/{api_id}/publish', [App\Http\Controllers\Api\ApiController::class, 'publishApiVersion']);
