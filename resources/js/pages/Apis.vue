@@ -295,10 +295,8 @@ const fetchApis = async () => {
         
         const data = await response.json();
 
-<<<<<<< Updated upstream
-=======
         
-        console.log('Fetched APIs:', data);
+
         
         // Handle different response formats: array, object with numeric keys, or mixed
         let apiArray: Api[] = [];
@@ -320,7 +318,6 @@ const fetchApis = async () => {
             }
         }
         
->>>>>>> Stashed changes
         // Format dates for display
         apis.value = apiArray.map((api: Api) => ({
             ...api,
@@ -445,7 +442,7 @@ const handleFormSubmit = async (formValues: any) => {
 };
 
 const handleDataGridActionHandler = (actionData: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
-    console.log('DataGrid action data:', actionData);
+
     switch (actionData.action) {
         case 'create':
             openNewModal();
@@ -479,7 +476,7 @@ const handleAction = (actionData: any) => {
 };
 
 const handleRowClick = (row: any) => {
-    console.log('Row clicked:', row);
+
     const apiType = row.api_type;
     
     router.visit(`/apis/${row.id}/routes?backend=${apiType}`);
