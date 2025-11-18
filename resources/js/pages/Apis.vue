@@ -68,6 +68,7 @@ const dataGridConfig = {
             show: true,
             edit: true,
             parse: true,
+
         },
         {
             name: "api_type",
@@ -80,8 +81,7 @@ const dataGridConfig = {
             width: "12",
             offset: "0",
             options:[{ label: "Python", value: "python" ,color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'},
-                    { label: "Php", value: "php" , color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'}
-                ],
+                    { label: "Php", value: "php" , color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'}                ],
             required: false,
             show: true,
             edit: false,
@@ -294,13 +294,38 @@ const fetchApis = async () => {
         }
         
         const data = await response.json();
-        console.log('Fetched APIs:', data);
+
+        
+
+        
+        // Handle different response formats: array, object with numeric keys, or mixed
+        let apiArray: Api[] = [];
+        
+        if (Array.isArray(data)) {
+            // Normal array response
+            apiArray = data;
+        } else if (data && typeof data === 'object') {
+            // Object with numeric keys (e.g., {0: {...}, 1: {...}, error: "..."})
+            apiArray = Object.keys(data)
+                .filter(key => key !== 'error' && !isNaN(Number(key)))
+                .map(key => data[Number(key)])
+                .filter(item => item && typeof item === 'object');
+            
+            // Log error if present but don't fail completely
+            if (data.error) {
+                console.warn('API response contains error:', data.error);
+                warning(`Some APIs may not have loaded correctly: ${data.error}`, 'Partial Data Load');
+            }
+        }
+        
         // Format dates for display
-        apis.value = data.map((api: Api) => ({
+        apis.value = apiArray.map((api: Api) => ({
             ...api,
+            api_type: api.api_type || 'php',
             created_at: api.created_at ? new Date(api.created_at).toLocaleDateString() : '',
-            created_by_id: api.created_by_id ? apiUsers.value.find((user: ApiUser) => user.id === api.created_by_id)?.app_name : ''
-        }));
+            // Store original created_by_id for reference, but display app_name
+            created_by_id: (api.created_by_id ? apiUsers.value.find((user: ApiUser) => user.id === api.created_by_id)?.app_name : '') as any
+        })) as Api[];
         
     } catch (err: any) {
         error.value = err.message || 'Failed to fetch APIs';
@@ -360,7 +385,8 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const newApi = await response.json();
-      
+            
+
 
             // Format and add to local state
             apis.value.push({
@@ -391,6 +417,7 @@ const handleFormSubmit = async (formValues: any) => {
                 throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
             }
 
+
             const updatedApi = await response.json();
             
             // Update local state
@@ -415,7 +442,7 @@ const handleFormSubmit = async (formValues: any) => {
 };
 
 const handleDataGridActionHandler = (actionData: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
-    console.log('DataGrid action data:', actionData);
+
     switch (actionData.action) {
         case 'create':
             openNewModal();
@@ -449,6 +476,9 @@ const handleAction = (actionData: any) => {
 };
 
 const handleRowClick = (row: any) => {
+    // console.log('Row clicked:', row);
+    // const apiType = row.api_type;
+    
     router.visit(`/apis/${row.id}/routes`);
 };
 

@@ -224,22 +224,22 @@
                 currentTheme.headerCell, 
                 'cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'
               ]"
-              @click="handleSort(col.key)"
+              @click="handleSort(colIdx)"
             >
               <div class="flex items-center justify-between">
                 <span>{{ col.label }}</span>
                 <span 
                   :class="[
                     'ml-2 text-sm transition-colors',
-                    getSortClass(col.key)
+                    getSortClass(colIdx)
                   ]"
-                  :title="`Sort by ${col.label} ${sortColumn === col.key ? (sortDirection === 'asc' ? '(ascending)' : '(descending)') : ''}`"
+                  :title="`Sort by ${col.label} ${sortColumn === colIdx ? (sortDirection === 'asc' ? '(ascending)' : '(descending)') : ''}`"
                 >
-                  {{ getSortIcon(col.key) }}
+                  {{ getSortIcon(colIdx) }}
                 </span>
               </div>
             </th>
-            <th :class="[currentTheme.headerCell, 'text-right']"></th>
+            <th v-if="rowActions.length > 0" :class="[currentTheme.headerCell, 'text-right']"></th>
           </tr>
         </thead>
         <tbody>
@@ -265,7 +265,7 @@
                   </option>
                 </select>
               </span>
-              <span v-else>     
+              <span v-else>      
                 <TextField
                   :required="false"
                   :value="filters[col.key]"
@@ -275,11 +275,11 @@
                 />
               </span>
             </td>
-            <td :class="currentTheme.filterCell"></td>
+            <td v-if="rowActions.length > 0" :class="currentTheme.filterCell"></td>  
           </tr>
           <tr
             v-for="(row, idx) in paginatedRows"
-            :key="row.id || row.name"
+            :key="`row-${(currentPage - 1) * pageSize + idx}-${row.id || row.name || idx}`"
             @click="emitRowClick(row)"
             :class="[
               currentTheme.row,
@@ -394,7 +394,7 @@
               </span>
             </td>
             <td :class="[currentTheme.cell, 'text-right']">
-              <div class="relative" @click.stop>
+              <div v-if="rowActions.length > 0" class="relative" @click.stop>
                 <!-- Single action button when only one action -->
                 <button 
                   v-if="rowActions.length === 1"
@@ -560,12 +560,8 @@ const props = defineProps({
     }
   },
   rowActions: { 
-    type: Array, 
-    default: () => [
-      { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
-      { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
-    ]
-    // Each action should have: { type: string, label: string, icon?: string, colorClass?: string }
+    type: Array,
+    default: () => [],
   },
   
   // Backward compatibility - deprecated but still supported
@@ -998,21 +994,43 @@ const filteredRows = computed(() => {
   }
   
   // Apply sorting
-  if (sortColumn.value) {
-    result = [...result].sort((a, b) => {
-      const aVal = a[sortColumn.value];
-      const bVal = b[sortColumn.value];
+  if (sortColumn.value !== null && sortColumn.value !== undefined) {
+    // Get the column by index to ensure we're sorting by the correct column
+    const column = computedColumns.value[sortColumn.value];
+    if (!column) {
+      return result; // Invalid column index, return unsorted
+    }
+    
+    const columnKey = column.key;
+    
+    // Create array with indices to maintain stable sort
+    const indexedResult = result.map((row, index) => ({ row, index }));
+    
+    indexedResult.sort((a, b) => {
+      const aVal = a.row[columnKey];
+      const bVal = b.row[columnKey];
       
       // Handle null/undefined values
-      if (aVal == null && bVal == null) return 0;
+      if (aVal == null && bVal == null) {
+        // When values are equal, use index as tiebreaker for stable sort
+        return a.index - b.index;
+      }
       if (aVal == null) return sortDirection.value === 'asc' ? -1 : 1;
       if (bVal == null) return sortDirection.value === 'asc' ? 1 : -1;
       
       // Smart type detection and comparison
       const comparison = smartCompare(aVal, bVal);
       
+      // If values are equal, use index as tiebreaker for stable sort
+      if (comparison === 0) {
+        return a.index - b.index;
+      }
+      
       return sortDirection.value === 'asc' ? comparison : -comparison;
     });
+    
+    // Extract rows back from indexed array
+    result = indexedResult.map(item => item.row);
   }
   
   return result;
@@ -1127,8 +1145,8 @@ function smartCompare(a, b) {
 }
 
 // Sorting functions
-function handleSort(columnKey) {
-  if (sortColumn.value === columnKey) {
+function handleSort(columnIndex) {
+  if (sortColumn.value === columnIndex) {
     // Same column - cycle through: asc → desc → none (reset)
     if (sortDirection.value === 'asc') {
       sortDirection.value = 'desc';
@@ -1139,20 +1157,20 @@ function handleSort(columnKey) {
     }
   } else {
     // New column, start with ascending
-    sortColumn.value = columnKey;
+    sortColumn.value = columnIndex;
     sortDirection.value = 'asc';
   }
 }
 
-function getSortIcon(columnKey) {
-  if (sortColumn.value !== columnKey) {
+function getSortIcon(columnIndex) {
+  if (sortColumn.value !== columnIndex) {
     return '⇅'; // Neutral sort icon (up and down arrows together)
   }
   return sortDirection.value === 'asc' ? '↑' : '↓';
 }
 
-function getSortClass(columnKey) {
-  if (sortColumn.value !== columnKey) {
+function getSortClass(columnIndex) {
+  if (sortColumn.value !== columnIndex) {
     return 'text-gray-400 hover:text-gray-600';
   }
   return 'text-blue-600 font-semibold';

@@ -75,7 +75,7 @@ class ApiController extends BaseDjangoController
     public function destroy(string $resource, $id): JsonResponse
     {
         // Handle special case for environments DELETE endpoint
-        $endpoint = $resource === 'environments' ? "{$resource}?id={$id}" : "{$resource}/{$id}";
+        $endpoint = "{$resource}/{$id}";
         
         $result = $this->makeDjangoRequest('DELETE', $endpoint);
 

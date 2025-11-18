@@ -82,6 +82,9 @@ const hermesBaseUrl = import.meta.env.VITE_HERMES_BASEURL
 const highlightQuery = ref<string>('')
 const highlightTarget = ref<string>('')
 
+// Ref to access Functions component for validation checking
+const functionsComponentRef = ref<InstanceType<typeof Functions> | null>(null)
+
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: `API Edit`,
@@ -697,6 +700,18 @@ const handleSave = async () => {
         showError('No version views found to save.')
         return
     }
+    
+    // Check for validation errors in Functions component (regardless of current tab)
+    if (functionsComponentRef.value) {
+        const hasErrors = functionsComponentRef.value.hasValidationErrors
+        const errorCount = functionsComponentRef.value.validationErrors
+        
+        if (hasErrors) {
+            showError(`Cannot save: There ${errorCount === 1 ? 'is' : 'are'} ${errorCount} validation error${errorCount === 1 ? '' : 's'} in the Functions tab. Please fix the errors before saving.`, 'Validation Errors')
+            return
+        }
+    }
+    
     if (isVersionSwitch.value) {
         const confirmed = confirm('You have switched to a different version. Are you sure you want to save?')
         if (!confirmed) {
@@ -1021,9 +1036,9 @@ onUnmounted(() => {
                             <Resources v-bind="componentProps" />
                         </div>
                         <div v-show="currentTab === 'functions'">
-                            <Functions v-bind="componentProps" />
+                            <Functions ref="functionsComponentRef" v-bind="componentProps" />
                         </div>
-                        <div v-show="currentTab === 'models'">
+                        <div v-show="currentTab === 'models' && api?.api_type !== 'php'">
                             <Models v-bind="componentProps" />
                         </div>
                         <div v-show="currentTab === 'files'">

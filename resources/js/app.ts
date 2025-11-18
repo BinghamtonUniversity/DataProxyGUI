@@ -11,8 +11,8 @@ import { FontAwesomeIcon } from './lib/fontawesome';
 import Toaster from './components/toaster/Toaster.vue';
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const isDev = import.meta.env.DEV;
-console.log('Running in development mode:', isDev);
-console.log('Running in production mode:', import.meta.env.MODE === "production");
+// console.log('Running in development mode:', isDev);
+// console.log('Running in production mode:', import.meta.env.MODE === "production");
 
 
 // Wrap Monaco initialization in async function
