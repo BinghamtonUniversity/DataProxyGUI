@@ -280,7 +280,7 @@
           <tr
             v-for="(row, idx) in paginatedRows"
             :key="`row-${(currentPage - 1) * pageSize + idx}-${row.id || row.name || idx}`"
-            @click="emitRowClick(row)"
+            @click="emitRowClick(row, (currentPage - 1) * pageSize + idx)"
             :class="[
               currentTheme.row,
               idx % 2 === 0 ? currentTheme.rowEven : currentTheme.rowOdd,
@@ -1316,8 +1316,8 @@ onMounted(() => {
     }
   });
 });
-function emitRowClick(row) {
-  emit('rowClick', row);
+function emitRowClick(row, index) {
+  emit('rowClick', row, index);
 }
 function emitAction(type, payload, index) {
   // Calculate the actual index in filteredRows if not provided

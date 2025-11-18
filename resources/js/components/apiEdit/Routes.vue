@@ -389,21 +389,20 @@ const handleDelete = async (route: RouteData) => {
     }
 }
 
-const openEditRouteDialog = (route: RouteData, index: number) => {
-  
+const openEditRouteDialog = ( payload: any, index: number) => {
   isEditMode.value = true
   editingRouteIndex.value = index
   newRouteForm.value = {
-    description: route.description || '',
-    path: route.path,
-    verb: route.verb,
-    view_name: route.view_name,
-    required: route.required?.map(p => ({
+    description: payload.description || '',
+    path: payload.path,
+    verb: payload.verb,
+    view_name: payload.view_name,
+    required: payload.required?.map((p: any) => ({
       name: p.name,
       description: p.description || '',
       example: p.example || ''
     })) || [],
-    optional: route.required?.map(p => ({
+    optional: payload.optional?.map((p: any) => ({
       name: p.name,
       description: p.description || '',
       example: p.example || ''
@@ -702,7 +701,7 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                             { name: 'delete', type: 'danger', min: 1, max: 25, label: 'Delete', icon: 'trash', loc: 'right' }
                         ]"
                         @actionHandler="handleDataGridActionHandler"                    
-                        @rowClick="openEditRouteDialog($event, $event.index)"
+                        @rowClick="openEditRouteDialog"
                         @rowActionHandler="handleDataGridRowActionHandler"
                     />
                 </div>
