@@ -76,9 +76,8 @@ class ApiController extends BaseDjangoController
     {
         // Handle special case for environments DELETE endpoint
         $endpoint = "{$resource}/{$id}";
-
+        
         $result = $this->makeDjangoRequest('DELETE', $endpoint);
-
 
         if ($result['success']) {
             return response()->json([
@@ -98,28 +97,16 @@ class ApiController extends BaseDjangoController
     // ===========================================
     public function apisIndex(): JsonResponse
     {
-        // $backend = request()->query('backend', 'php');
+        $result = $this->makeDjangoRequest('GET', 'apis');
 
-        $phpResult = $this->makeBackendRequest('php', 'GET', 'apis');
-        $djangoResult = $this->makeBackendRequest('django', 'GET', 'apis');
-
-        if ($phpResult['success'] || $djangoResult['success']) {
-            $djangoData = $djangoResult['data'] ?? [];
-            $phpData = $phpResult['data'] ?? [];
-
-            $merged = array_merge(
-                is_array($djangoData) ? $djangoData : [],
-                is_array($phpData) ? $phpData : []
-            );
-
-            return response()->json($merged);
+        if ($result['success']) {
+            return response()->json($result['data']);
         }
 
         return response()->json([
-            'error' => 'Failed to fetch APIs from both backends',
-            'django_status' => $djangoResult['status'],
-            'php_status' => $phpResult['status'],
-        ], 500);
+            'error' => "Failed to fetch apis}",
+            'status' => $result['status']
+        ], $result['status']);
     }
 
     public function apisShow($id): JsonResponse
@@ -220,16 +207,13 @@ class ApiController extends BaseDjangoController
         Log::info('ApiEditIndex called', ['api_id' => $api_id]);
 
         $endpoint = "apis/{$api_id}/versions/latest";
-
-        // $backend = $request->query('backend');
-
-        //$result = $this->makeBackendRequest($backend, 'GET', $endpoint);
+        
         $result = $this->makeDjangoRequest('GET', $endpoint);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
+        // Log::info('Django request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
 
         if ($result['success']) {
             return response()->json($result['data']);

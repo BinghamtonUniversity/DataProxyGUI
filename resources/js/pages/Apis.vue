@@ -476,10 +476,10 @@ const handleAction = (actionData: any) => {
 };
 
 const handleRowClick = (row: any) => {
-
-    const apiType = row.api_type;
+    // console.log('Row clicked:', row);
+    // const apiType = row.api_type;
     
-    router.visit(`/apis/${row.id}/routes?backend=${apiType}`);
+    router.visit(`/apis/${row.id}/routes`);
 };
 
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {

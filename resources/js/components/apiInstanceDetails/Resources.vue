@@ -131,6 +131,7 @@ const updateResource = (index: number, resource_name: string, value: string) => 
                 v-model="resourceItem.name"
                 class="mt-1"
                 placeholder="Resource name"
+                disabled
               />
             </div>
             
