@@ -123,7 +123,7 @@ const submitNewResource = async (e: Event) => {
 
     // duplicate model_name check
     const duplicateModel = props.apiData.resources?.some((res, index) =>
-      res.model_name === newResource.model_name && index !== editingResourceIndex.value
+      res.model_name === newResource.model_name && index !== editingResourceIndex.value && newResource.model_name !== "" && newResource.model_name!== null
     )
 
     if (duplicateName) {
