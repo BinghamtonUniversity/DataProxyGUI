@@ -163,12 +163,12 @@ const handleCreateNewView = async () => {
             name,
             content: ``,
         }
-
+        console.log("before creating function", props.apiData)
         const updatedApiData = {
             ...props.apiData,
             version_views: [...props.apiData.version_views, newFunction]
         }
-        
+        console.log("after creating function", updatedApiData)
         // Update the local state through parent
         props.updateApiData(updatedApiData)
         
@@ -600,7 +600,7 @@ onUnmounted(() => {
                             v-if="selectedFunction"
                             :key="selectedFunction.name"
                             :code="currentFunctionCode" 
-                            :language="api?.api_type === 'python' || api?.api_type === 'php' ? api?.api_type : undefined"
+                            :language="props?.api_type === 'python' || props?.api_type === 'php' ? props?.api_type : undefined"
                             :is-saving="isSaving"
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"

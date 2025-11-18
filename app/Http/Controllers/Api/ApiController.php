@@ -249,11 +249,11 @@ class ApiController extends BaseDjangoController
         try {
             $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $api_type);
 
-            // Log::info('Django request result', [
-            //     'success' => $result['success'],
-            //     'status' => $result['status'],
-            //     'data' => $result['data']
-            // ]);
+            Log::info('Request result', [
+                'success' => $result['success'],
+                'status' => $result['status'],
+                'data' => $result['data']
+            ]);
 
             if ($result['success']) {
                 return response()->json($result['data']);

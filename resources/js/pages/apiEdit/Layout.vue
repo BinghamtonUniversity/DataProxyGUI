@@ -17,7 +17,7 @@ import AlertModal from '@/components/AlertModal.vue'
 import FormViewer from '@/components/formviewer/FormViewer.vue'
 import { useToaster } from '@/composables/useToaster'
 import Toaster from '@/components/toaster/Toaster.vue'
-import { getCsrfToken } from '@/lib/utils'
+import { getCsrfToken, mapDjangoToApiData, mapPhpToApiData, denormalizeToPhp } from '@/lib/utils'
 
 interface Props {
     api_type: string
@@ -187,7 +187,8 @@ const fetchApiData = async () => {
         const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`)
         if (!response.ok) throw new Error('Failed to fetch API data')
         const data = await response.json()
-        apiData.value = data
+        apiData.value = normalizeApiData(data, props.api_type as 'python' | 'php')
+        // console.log('Fetched API data:', apiData.value)
         originalApiData.value = JSON.parse(JSON.stringify(data))
         hasUnsavedChanges.value = false
     } catch (e: any) {
@@ -215,6 +216,8 @@ watch(apiData, (newVal, oldVal) => {
 
 
 const updateApiData = (updatedApiData: ApiData) => {
+    // apiData.value = normalizeApiData(updatedApiData, props.api_type as 'python' | 'php')
+    // console.log("Updating data", updatedApiData)
     apiData.value = updatedApiData
 }
 
@@ -689,13 +692,19 @@ const handleApiDataImport = (formData: any) => {
     }
 }
 
+function normalizeApiData(payload: any, backend: 'python' | 'php'): ApiData {
+  return backend === 'python'
+    ? mapDjangoToApiData(payload)
+    : mapPhpToApiData(payload);
+}
+
 const handleSave = async () => {
     if (
         !apiData.value
         // !apiData.value.version_views ||
         // !Array.isArray(apiData.value.version_views)
     ) {
-        showError('No version views found to save.')
+        showError('No apiData found to save in Layout.')
         return
     }
     if (isVersionSwitch.value) {
@@ -715,7 +724,8 @@ const handleSave = async () => {
     //     showError(`The following functions have empty content: ${emptyNames}`)
     //     return
     // }
-
+    const requestData = props.api_type === 'php' ? denormalizeToPhp(apiData.value): apiData.value
+    // console.log('Saving API data:', requestData)
     const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/code`, {
         method: 'PUT',
         headers: {
@@ -723,7 +733,7 @@ const handleSave = async () => {
             'Accept': 'application/json',
             'X-CSRF-TOKEN': getCsrfToken() || '',
         },
-        body: JSON.stringify(apiData.value)
+        body: JSON.stringify(requestData)
     })
 
     if (!response.ok) {
@@ -733,8 +743,8 @@ const handleSave = async () => {
     }
     success('API data saved successfully!', 'API Data Saved')
     const responseData = await response.json()
-    
-    updateApiData(responseData)
+    const normalizedData = normalizeApiData(responseData, props.api_type as 'python' | 'php')
+    updateApiData(normalizedData)
 
     originalApiData.value = JSON.parse(JSON.stringify(responseData))
     hasUnsavedChanges.value = false
@@ -878,7 +888,7 @@ onUnmounted(() => {
                     <div class="flex items-center gap-3">
                         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">API - {{ api?.name }}</h1>
                         <div class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs font-medium rounded-md border border-blue-200 dark:border-blue-800">
-                            {{ api?.api_type }}
+                            {{ props.api_type }}
                         </div>
                     </div>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Manage your API settings</p>
