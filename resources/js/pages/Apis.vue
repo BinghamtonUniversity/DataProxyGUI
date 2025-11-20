@@ -295,7 +295,7 @@ const fetchApis = async () => {
         
         const data = await response.json();
         
-        console.log('Fetched APIs:', data);
+        // console.log('Fetched APIs:', data);
         
         // Handle different response formats: array, object with numeric keys, or mixed
         let apiArray: Api[] = [];
@@ -365,7 +365,11 @@ const handleFormSubmit = async (formValues: any) => {
         if (modalMode.value === 'new') {
             // Create new API
             const cleanedData = cleanFormData(formValues);
-   
+
+            if(cleanedData.api_type === 'php'){
+                cleanedData.created_by_id = 1
+                cleanedData.user_id = 1
+            }
             
             const response = await fetch(`/api/apis/${cleanedData.api_type}`, {
                 method: 'POST',
@@ -390,6 +394,7 @@ const handleFormSubmit = async (formValues: any) => {
             // Format and add to local state
             apis.value.push({
                 ...newApi,
+                api_type: newApi.api_type || 'php',
                 created_at: newApi.created_at ? new Date(newApi.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
                 created_by_id: newApi.created_by ? apiUsers.value.find((user: ApiUser) => user.id === newApi.created_by)?.app_name : 'Unknown'
             });
@@ -441,7 +446,7 @@ const handleFormSubmit = async (formValues: any) => {
 };
 
 const handleDataGridActionHandler = (actionData: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
-    console.log('DataGrid action data:', actionData);
+    // console.log('DataGrid action data:', actionData);
     switch (actionData.action) {
         case 'create':
             openNewModal();
@@ -475,7 +480,7 @@ const handleAction = (actionData: any) => {
 };
 
 const handleRowClick = (row: any) => {
-    console.log('Row clicked:', row);
+    // console.log('Row clicked:', row);
     const apiType = row.api_type;
     
     router.visit(`/apis/${apiType}/${row.id}/routes`);

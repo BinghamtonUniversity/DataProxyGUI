@@ -124,6 +124,13 @@ const tabs = [
     }
 ]
 
+const filteredTabs = computed(() => {
+  if (props.api_type === 'php') {
+    return tabs.filter(tab => tab.id !== 'models');
+  }
+  return tabs;
+});
+
 const publishFormConfig = ref({
     label: 'Publish New Version',
     description: 'Enter details for the new version',
@@ -187,9 +194,17 @@ const fetchApiData = async () => {
         const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`)
         if (!response.ok) throw new Error('Failed to fetch API data')
         const data = await response.json()
-        apiData.value = normalizeApiData(data, props.api_type as 'python' | 'php')
         // console.log('Fetched API data:', apiData.value)
-        originalApiData.value = JSON.parse(JSON.stringify(data))
+        apiData.value = normalizeApiData(data, props.api_type as 'python' | 'php')
+        originalApiData.value = JSON.parse(JSON.stringify(apiData.value))
+
+
+        if(props.api_type === 'php' && apiData.value.version_views.length === 0){
+            apiData.value.version_views.push({
+                name: 'Constructor',
+                content: '',
+            })
+        }
         hasUnsavedChanges.value = false
     } catch (e: any) {
         apiError.value = e.message || 'Error fetching API data'
@@ -724,6 +739,7 @@ const handleSave = async () => {
     //     showError(`The following functions have empty content: ${emptyNames}`)
     //     return
     // }
+    
     const requestData = props.api_type === 'php' ? denormalizeToPhp(apiData.value): apiData.value
     // console.log('Saving API data:', requestData)
     const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/code`, {
@@ -745,8 +761,9 @@ const handleSave = async () => {
     const responseData = await response.json()
     const normalizedData = normalizeApiData(responseData, props.api_type as 'python' | 'php')
     updateApiData(normalizedData)
-
-    originalApiData.value = JSON.parse(JSON.stringify(responseData))
+    console.log("Orgiinal", originalApiData.value)
+    originalApiData.value = JSON.parse(JSON.stringify(normalizedData))
+    console.log("Original after save", originalApiData.value)
     hasUnsavedChanges.value = false
 }
 
@@ -1009,7 +1026,7 @@ onUnmounted(() => {
                 <!-- Tab navigation -->
                 <nav class="flex w-full mb-8">
                     <Button
-                        v-for="tab in tabs"
+                        v-for="tab in filteredTabs"
                         :key="tab.id"
                         variant="ghost"
                         :class="[
@@ -1034,7 +1051,7 @@ onUnmounted(() => {
                         <div v-show="currentTab === 'functions'">
                             <Functions v-bind="componentProps" />
                         </div>
-                        <div v-show="currentTab === 'models'">
+                        <div v-show="currentTab === 'models' && api_type === 'python'">
                             <Models v-bind="componentProps" />
                         </div>
                         <div v-show="currentTab === 'files'">

@@ -98,9 +98,8 @@ class ApiController extends BaseDjangoController
     // ===========================================
     public function apisIndex(): JsonResponse
     {
-        // $backend = request()->query('backend', 'php');
 
-        $phpResult = $this->makeBackendRequest('GET', 'apis', [], [], 'php');
+        $phpResult = $this->makeBackendRequest('GET', 'apis', [], [], 'php'); //TO:DO - remove this when php talks to same database as django
         $djangoResult = $this->makeBackendRequest('GET', 'apis', [], [], 'django');
 
         if ($phpResult['success'] || $djangoResult['success']) {
@@ -138,6 +137,7 @@ class ApiController extends BaseDjangoController
         Log::info('Store method called', [
             'request_data' => $request->all()
         ]);
+     
         $result = $this->makeBackendRequest('POST', 'apis', $request->all(), [], $api_type);
 
         if ($result['success']) {

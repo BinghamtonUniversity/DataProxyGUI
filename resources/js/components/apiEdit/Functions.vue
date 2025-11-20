@@ -571,22 +571,26 @@ onUnmounted(() => {
                                         title="Unsaved changes"
                                     ></span> -->
                                 </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    @click.stop="editFunctionName(item)"
-                                    class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
-                                >
-                                    <Pencil :size="1" />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    @click.stop="handleDeleteFunction(item)"
-                                    class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
-                                >
-                                    <Trash2 :size="1" />
-                                </Button>
+                                <template v-if ="item.name !== 'Constructor'">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        @click.stop="editFunctionName(item)"
+                                        class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                                    >
+                                        <Pencil :size="1" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        @click.stop="handleDeleteFunction(item)"
+                                        class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
+                                    >
+                                        <Trash2 :size="1" />
+                                    </Button>
+                                   
+                                </template>
+                                
                                 
                             </div>
                         </nav>
