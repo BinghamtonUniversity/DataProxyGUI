@@ -121,12 +121,43 @@ const validateCode = (editorInstance: any, monaco: any) => {
     const openBrackets: number[] = [];
     const openBraces: number[] = [];
     const keywordsWithColon = /^(if|elif|else|for|while|try|except|finally|with|def|class)\b/;
+    
+    // Track multi-line string/comment state
+    let inTripleQuote = false;
+    let tripleQuoteChar = '';
+    let tripleQuoteStartLine = -1;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
 
+      // Check for triple quotes (''' or """)
+      const tripleQuoteMatches = line.match(/'''|"""/g);
+      if (tripleQuoteMatches) {
+        for (const match of tripleQuoteMatches) {
+          if (!inTripleQuote) {
+            // Starting a multi-line string/comment
+            inTripleQuote = true;
+            tripleQuoteChar = match;
+            tripleQuoteStartLine = i;
+          } else if (match === tripleQuoteChar) {
+            // Closing the multi-line string/comment
+            inTripleQuote = false;
+            tripleQuoteChar = '';
+            tripleQuoteStartLine = -1;
+          }
+        }
+      }
+
+      // Skip validation for lines inside multi-line strings/comments
+      if (inTripleQuote && i !== tripleQuoteStartLine) {
+        continue;
+      }
+
       if (!trimmed || trimmed.startsWith('#')) continue;
+
+      // Skip if line starts with triple quote (docstring/comment start)
+      if (trimmed.startsWith('"""') || trimmed.startsWith("'''")) continue;
 
       // Track parentheses/braces
       for (const ch of line) {
@@ -138,8 +169,10 @@ const validateCode = (editorInstance: any, monaco: any) => {
         else if (ch === '}') openBraces.pop();
       }
 
-      // 🔸 Missing colon after block headers
-      if (keywordsWithColon.test(trimmed) && !trimmed.endsWith(':')) {
+      // Missing colon after block headers
+      // Remove comments before checking for colon
+      const lineWithoutComment = trimmed.split('#')[0].trim();
+      if (keywordsWithColon.test(trimmed) && !lineWithoutComment.endsWith(':')) {
         markers.push({
           startLineNumber: i + 1,
           startColumn: 1,
@@ -188,8 +221,10 @@ const validateCode = (editorInstance: any, monaco: any) => {
         }
       }
 
-      // 🔸 Detect unterminated quotes
-      const quoteMatches = line.match(/['"]/g);
+     
+      // Detect unterminated single/double quotes (excluding triple quotes)
+      const lineWithoutTripleQuotes = line.replace(/'''|"""/g, '');
+      const quoteMatches = lineWithoutTripleQuotes.match(/['"]/g);
       if (quoteMatches && quoteMatches.length % 2 !== 0) {
         markers.push({
           startLineNumber: i + 1,
@@ -201,8 +236,21 @@ const validateCode = (editorInstance: any, monaco: any) => {
         });
       }
     }
+    
+    // Check for unterminated multi-line string/comment
+    if (inTripleQuote) {
+      markers.push({
+        startLineNumber: tripleQuoteStartLine + 1,
+        startColumn: 1,
+        endLineNumber: tripleQuoteStartLine + 1,
+        endColumn: 2,
+        message: `Unterminated multi-line string (${tripleQuoteChar})`,
+        severity: monaco.MarkerSeverity.Error,
+      });
+    }
 
-    // 🔸 Check unmatched parentheses/brackets/braces
+
+    // Check unmatched parentheses/brackets/braces
     if (openParens.length > 0)
       markers.push({
         startLineNumber: openParens[0] + 1,
