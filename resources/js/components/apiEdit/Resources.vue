@@ -14,7 +14,7 @@ import {
   useVueTable,
 } from '@tanstack/vue-table'
 import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
-import { h, ref, computed, onMounted, onUnmounted } from 'vue'
+import { h, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
 import { type ApiData, type ResourceData, Api } from '@/types'
@@ -98,6 +98,16 @@ const closeNewResourceDialog = () => {
   editingResourceIndex.value = null
 }
 
+watch(
+  () => [newResourceForm.value.name, newResourceForm.value.type, newResourceForm.value.model_name],
+  () => {
+    // Clear error when any form field changes
+    if (newResourceError.value) {
+      newResourceError.value = ''
+    }
+  }
+)
+
 const submitNewResource = async (e: Event) => {
   e.preventDefault()
   newResourceLoading.value = true
@@ -110,10 +120,15 @@ const submitNewResource = async (e: Event) => {
   }
   
   try {
-    const newResource = {
+    const newResource : { name: string; type: string; model_name?: string }= {
       name: newResourceForm.value.name,
       type: newResourceForm.value.type,
-      model_name: newResourceForm.value.model_name
+      
+    }
+
+    // Only include model_name if type is "Model"
+    if (newResourceForm.value.type === 'Model') {
+      newResource.model_name = newResourceForm.value.model_name
     }
 
     // duplicate name check
@@ -122,9 +137,14 @@ const submitNewResource = async (e: Event) => {
     )
 
     // duplicate model_name check
-    const duplicateModel = props.apiData.resources?.some((res, index) =>
-      res.model_name === newResource.model_name && index !== editingResourceIndex.value && newResource.model_name !== "" && newResource.model_name!== null
-    )
+    const duplicateModel = newResourceForm.value.type === 'Model' && 
+      props.apiData.resources?.some((res, index) =>
+        res.type === 'Model' &&
+        res.model_name === newResource.model_name && 
+        index !== editingResourceIndex.value && 
+        newResource.model_name !== "" && 
+        newResource.model_name !== null
+      )
 
     if (duplicateName) {
       newResourceError.value = `A resource with the name "${newResource.name}" already exists.`
