@@ -113,7 +113,7 @@ const validateCode = (editorInstance: any, monaco: any) => {
 
 
   // --------------------------------------------------------------------
-  // 🔹 Python Validation
+  // Python Validation
   // --------------------------------------------------------------------
   if (language === 'python') {
     const indentStack: number[] = [];
@@ -127,6 +127,21 @@ const validateCode = (editorInstance: any, monaco: any) => {
     let tripleQuoteChar = '';
     let tripleQuoteStartLine = -1;
 
+    // Helper function to validate Python identifiers
+    const isValidIdentifier = (name: string): boolean => {
+      // Must start with letter or underscore, then letters, digits, or underscores
+      return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
+    };
+
+    const getInvalidIdentifierReason = (name: string): string => {
+      if (/^\d/.test(name)) return 'cannot start with a number';
+      if (/-/.test(name)) return 'cannot contain hyphens';
+      if (/\s/.test(name)) return 'cannot contain spaces';
+      if (/^\$/.test(name)) return 'cannot start with $';
+      if (/[^\w]/.test(name)) return 'contains invalid characters';
+      return 'invalid identifier';
+    };
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
@@ -136,12 +151,10 @@ const validateCode = (editorInstance: any, monaco: any) => {
       if (tripleQuoteMatches) {
         for (const match of tripleQuoteMatches) {
           if (!inTripleQuote) {
-            // Starting a multi-line string/comment
             inTripleQuote = true;
             tripleQuoteChar = match;
             tripleQuoteStartLine = i;
           } else if (match === tripleQuoteChar) {
-            // Closing the multi-line string/comment
             inTripleQuote = false;
             tripleQuoteChar = '';
             tripleQuoteStartLine = -1;
@@ -156,8 +169,11 @@ const validateCode = (editorInstance: any, monaco: any) => {
 
       if (!trimmed || trimmed.startsWith('#')) continue;
 
-      // Skip if line starts with triple quote (docstring/comment start)
+      // Skip if line starts with triple quote
       if (trimmed.startsWith('"""') || trimmed.startsWith("'''")) continue;
+
+      // Remove inline comments for analysis
+      const lineWithoutComment = trimmed.split('#')[0].trim();
 
       // Track parentheses/braces
       for (const ch of line) {
@@ -170,8 +186,6 @@ const validateCode = (editorInstance: any, monaco: any) => {
       }
 
       // Missing colon after block headers
-      // Remove comments before checking for colon
-      const lineWithoutComment = trimmed.split('#')[0].trim();
       if (keywordsWithColon.test(trimmed) && !lineWithoutComment.endsWith(':')) {
         markers.push({
           startLineNumber: i + 1,
@@ -183,7 +197,7 @@ const validateCode = (editorInstance: any, monaco: any) => {
         });
       }
 
-      // 🔸 Check indentation consistency (multiples of 4 spaces)
+      // Check indentation consistency (multiples of 4 spaces)
       const leadingSpaces = line.match(/^(\s*)/)?.[1].length ?? 0;
       if (leadingSpaces % 4 !== 0) {
         markers.push({
@@ -196,19 +210,101 @@ const validateCode = (editorInstance: any, monaco: any) => {
         });
       }
 
-      // 🔸 Detect invalid variable assignments (e.g., 3a = 5)
-      if (trimmed.includes('=')) {
-        const [left, right] = trimmed.split('=').map((s: string) => s.trim());
-        if (left.match(/^\d/)) {
+      // Validate function definitions
+      const funcMatch = lineWithoutComment.match(/^def\s+([a-zA-Z0-9_$-]+)\s*\(/);
+      if (funcMatch) {
+        const funcName = funcMatch[1];
+        if (!isValidIdentifier(funcName)) {
           markers.push({
             startLineNumber: i + 1,
-            startColumn: 1,
+            startColumn: line.indexOf(funcName) + 1,
             endLineNumber: i + 1,
-            endColumn: line.length + 1,
-            message: `Invalid variable name '${left}' (cannot start with a digit)`,
+            endColumn: line.indexOf(funcName) + funcName.length + 1,
+            message: `Invalid function name '${funcName}' (${getInvalidIdentifierReason(funcName)})`,
             severity: monaco.MarkerSeverity.Error,
           });
         }
+      }
+
+      // Validate class definitions
+      const classMatch = lineWithoutComment.match(/^class\s+([a-zA-Z0-9_$-]+)\s*[\(:]?/);
+      if (classMatch) {
+        const className = classMatch[1];
+        if (!isValidIdentifier(className)) {
+          markers.push({
+            startLineNumber: i + 1,
+            startColumn: line.indexOf(className) + 1,
+            endLineNumber: i + 1,
+            endColumn: line.indexOf(className) + className.length + 1,
+            message: `Invalid class name '${className}' (${getInvalidIdentifierReason(className)})`,
+            severity: monaco.MarkerSeverity.Error,
+          });
+        }
+      }
+
+      // 🔸 Validate import statements
+      const importMatch = lineWithoutComment.match(/^import\s+([a-zA-Z0-9_$-]+)/);
+      if (importMatch) {
+        const moduleName = importMatch[1];
+        if (!isValidIdentifier(moduleName)) {
+          markers.push({
+            startLineNumber: i + 1,
+            startColumn: line.indexOf(moduleName) + 1,
+            endLineNumber: i + 1,
+            endColumn: line.indexOf(moduleName) + moduleName.length + 1,
+            message: `Invalid module name '${moduleName}' (${getInvalidIdentifierReason(moduleName)})`,
+            severity: monaco.MarkerSeverity.Error,
+          });
+        }
+      }
+
+      // Validate 'from ... import' statements
+      const fromImportMatch = lineWithoutComment.match(/^from\s+([a-zA-Z0-9_$-]+)\s+import/);
+      if (fromImportMatch) {
+        const moduleName = fromImportMatch[1];
+        if (!isValidIdentifier(moduleName)) {
+          markers.push({
+            startLineNumber: i + 1,
+            startColumn: line.indexOf(moduleName) + 1,
+            endLineNumber: i + 1,
+            endColumn: line.indexOf(moduleName) + moduleName.length + 1,
+            message: `Invalid module name '${moduleName}' (${getInvalidIdentifierReason(moduleName)})`,
+            severity: monaco.MarkerSeverity.Error,
+          });
+        }
+      }
+
+      // Validate variable assignments
+      if (trimmed.includes('=') && !trimmed.startsWith('def') && !trimmed.startsWith('class')) {
+        const assignMatch = lineWithoutComment.match(/^([a-zA-Z0-9_$\s-]+)\s*=\s*[^=]/);
+        if (assignMatch) {
+          const varName = assignMatch[1].trim();
+          
+          // Check for spaces in variable name
+          if (varName.includes(' ')) {
+            const parts = varName.split(' ');
+            markers.push({
+              startLineNumber: i + 1,
+              startColumn: 1,
+              endLineNumber: i + 1,
+              endColumn: line.indexOf('=') + 1,
+              message: `Invalid variable name '${varName}' (cannot contain spaces)`,
+              severity: monaco.MarkerSeverity.Error,
+            });
+          } else if (!isValidIdentifier(varName)) {
+            markers.push({
+              startLineNumber: i + 1,
+              startColumn: 1,
+              endLineNumber: i + 1,
+              endColumn: line.indexOf('=') + 1,
+              message: `Invalid variable name '${varName}' (${getInvalidIdentifierReason(varName)})`,
+              severity: monaco.MarkerSeverity.Error,
+            });
+          }
+        }
+
+        // Check right side for invalid expressions
+        const [left, right] = trimmed.split('=').map((s: string) => s.trim());
         if (right?.match(/^\d+[a-zA-Z]/)) {
           markers.push({
             startLineNumber: i + 1,
@@ -221,11 +317,18 @@ const validateCode = (editorInstance: any, monaco: any) => {
         }
       }
 
-     
       // Detect unterminated single/double quotes (excluding triple quotes)
       const lineWithoutTripleQuotes = line.replace(/'''|"""/g, '');
-      const quoteMatches = lineWithoutTripleQuotes.match(/['"]/g);
-      if (quoteMatches && quoteMatches.length % 2 !== 0) {
+      // Remove properly closed strings first to avoid counting quotes inside them
+      const lineWithoutStrings = lineWithoutTripleQuotes
+        .replace(/"(?:[^"\\]|\\.)*"/g, '') // Remove double-quoted strings
+        .replace(/'(?:[^'\\]|\\.)*'/g, ''); // Remove single-quoted strings
+
+      // Now count remaining unmatched quotes
+      const singleQuotes = (lineWithoutStrings.match(/'/g) || []).length;
+      const doubleQuotes = (lineWithoutStrings.match(/"/g) || []).length;
+
+      if (singleQuotes % 2 !== 0 || doubleQuotes % 2 !== 0) {
         markers.push({
           startLineNumber: i + 1,
           startColumn: 1,
@@ -248,7 +351,6 @@ const validateCode = (editorInstance: any, monaco: any) => {
         severity: monaco.MarkerSeverity.Error,
       });
     }
-
 
     // Check unmatched parentheses/brackets/braces
     if (openParens.length > 0)
@@ -283,81 +385,81 @@ const validateCode = (editorInstance: any, monaco: any) => {
   }
 
   // --------------------------------------------------------------------
-  // 🔹 PHP Validation
+  // PHP Validation
   // --------------------------------------------------------------------
-  else if (language === 'php') {
-    const openTags = (code.match(/<\?php/g) || []).length;
-    const closeTags = (code.match(/\?>/g) || []).length;
-    const openBraces = (code.match(/\{/g) || []).length;
-    const closeBraces = (code.match(/\}/g) || []).length;
-    const semicolonLines = [];
+  // else if (language === 'php') {
+  //   const openTags = (code.match(/<\?php/g) || []).length;
+  //   const closeTags = (code.match(/\?>/g) || []).length;
+  //   const openBraces = (code.match(/\{/g) || []).length;
+  //   const closeBraces = (code.match(/\}/g) || []).length;
+  //   const semicolonLines = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      const trimmed = lines[i].trim();
-      if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#')) continue;
+  //   for (let i = 0; i < lines.length; i++) {
+  //     const trimmed = lines[i].trim();
+  //     if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#')) continue;
 
-      // Missing semicolon after statements
-      if (
-        !trimmed.endsWith(';') &&
-        !trimmed.endsWith('{') &&
-        !trimmed.endsWith('}') &&
-        !trimmed.startsWith('<?php') &&
-        !trimmed.startsWith('?>') &&
-        !trimmed.match(/(if|else|while|for|foreach|function|class|switch|case|default)\b/)
-      ) {
-        semicolonLines.push(i + 1);
-      }
+  //     // Missing semicolon after statements
+  //     if (
+  //       !trimmed.endsWith(';') &&
+  //       !trimmed.endsWith('{') &&
+  //       !trimmed.endsWith('}') &&
+  //       !trimmed.startsWith('<?php') &&
+  //       !trimmed.startsWith('?>') &&
+  //       !trimmed.match(/(if|else|while|for|foreach|function|class|switch|case|default)\b/)
+  //     ) {
+  //       semicolonLines.push(i + 1);
+  //     }
 
-      // Unterminated quotes
-      const quoteMatches = trimmed.match(/['"]/g);
-      if (quoteMatches && quoteMatches.length % 2 !== 0) {
-        markers.push({
-          startLineNumber: i + 1,
-          startColumn: 1,
-          endLineNumber: i + 1,
-          endColumn: lines[i].length + 1,
-          message: 'Unterminated string literal',
-          severity: monaco.MarkerSeverity.Error,
-        });
-      }
-    }
+  //     // Unterminated quotes
+  //     const quoteMatches = trimmed.match(/['"]/g);
+  //     if (quoteMatches && quoteMatches.length % 2 !== 0) {
+  //       markers.push({
+  //         startLineNumber: i + 1,
+  //         startColumn: 1,
+  //         endLineNumber: i + 1,
+  //         endColumn: lines[i].length + 1,
+  //         message: 'Unterminated string literal',
+  //         severity: monaco.MarkerSeverity.Error,
+  //       });
+  //     }
+  //   }
 
-    if (openTags !== closeTags) {
-      markers.push({
-        startLineNumber: 1,
-        startColumn: 1,
-        endLineNumber: 1,
-        endColumn: 10,
-        message: 'PHP open/close tags mismatch',
-        severity: monaco.MarkerSeverity.Error,
-      });
-    }
+  //   if (openTags !== closeTags) {
+  //     markers.push({
+  //       startLineNumber: 1,
+  //       startColumn: 1,
+  //       endLineNumber: 1,
+  //       endColumn: 10,
+  //       message: 'PHP open/close tags mismatch',
+  //       severity: monaco.MarkerSeverity.Error,
+  //     });
+  //   }
 
-    if (openBraces !== closeBraces) {
-      markers.push({
-        startLineNumber: 1,
-        startColumn: 1,
-        endLineNumber: model.getLineCount(),
-        endColumn: model.getLineMaxColumn(model.getLineCount()),
-        message: 'Unmatched braces: ensure all { have matching }',
-        severity: monaco.MarkerSeverity.Error,
-      });
-    }
+  //   if (openBraces !== closeBraces) {
+  //     markers.push({
+  //       startLineNumber: 1,
+  //       startColumn: 1,
+  //       endLineNumber: model.getLineCount(),
+  //       endColumn: model.getLineMaxColumn(model.getLineCount()),
+  //       message: 'Unmatched braces: ensure all { have matching }',
+  //       severity: monaco.MarkerSeverity.Error,
+  //     });
+  //   }
 
-    semicolonLines.forEach((lineNum) => {
-      markers.push({
-        startLineNumber: lineNum,
-        startColumn: 1,
-        endLineNumber: lineNum,
-        endColumn: lines[lineNum - 1].length + 1,
-        message: 'Missing semicolon (;) at end of statement',
-        severity: monaco.MarkerSeverity.Warning,
-      });
-    });
-  }
+  //   semicolonLines.forEach((lineNum) => {
+  //     markers.push({
+  //       startLineNumber: lineNum,
+  //       startColumn: 1,
+  //       endLineNumber: lineNum,
+  //       endColumn: lines[lineNum - 1].length + 1,
+  //       message: 'Missing semicolon (;) at end of statement',
+  //       severity: monaco.MarkerSeverity.Warning,
+  //     });
+  //   });
+  // }
 
   // --------------------------------------------------------------------
-  // 🔹 Apply Markers + Emit
+  // Apply Markers + Emit
   // --------------------------------------------------------------------
   monaco.editor.setModelMarkers(model, 'advanced-validation', markers);
 
