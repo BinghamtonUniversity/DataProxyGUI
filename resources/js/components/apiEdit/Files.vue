@@ -197,18 +197,26 @@ const handleCreateNewFile = async () => {
         return
     }
 
-    if (!name.endsWith('.py')) {
+    let baseName = name
+  if (props.api_type === 'python' ){
+    if( !name.endsWith('.py')) {
         createViewError.value = 'Function name must end with ".py" (e.g., "process_data.py").';
-        return;
+        return
+    }else{
+        baseName = name.slice(0, -3)
     }
+  }
 
-    // Remove the ".py" temporarily for validation
-    const baseName = name.slice(0, -3);
+  if (props.api_type === 'php' ){
+    if(name.endsWith('.php')) {
+        baseName = name.slice(0, -4)
+    }
+  }
 
     const validNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
     if (!validNamePattern.test(baseName)) {
         createViewError.value =
-        'Invalid function name. Use letters, numbers, and underscores only, and do not start with a number (e.g., "process_data.py").';
+        'Invalid function name. Use letters, numbers, and underscores only, and do not start with a number';
         return;
     }
 
@@ -266,18 +274,27 @@ const handleUpdateFileName = async () => {
     return
   }
 
-  if (!trimmedName.endsWith('.py')) {
-    createViewError.value = 'Function name must end with ".py" (e.g., "process_data.py").';
-    return
+  let baseName = trimmedName
+  if (props.api_type === 'python' ){
+    if( !trimmedName.endsWith('.py')) {
+        createViewError.value = 'Function name must end with ".py" (e.g., "process_data.py").';
+        return
+    }else{
+        baseName = trimmedName.slice(0, -3)
+    }
   }
 
-    // Remove the ".py" temporarily for validation
-    const baseName = trimmedName.slice(0, -3);
+  if (props.api_type === 'php' ){
+    if(trimmedName.endsWith('.php')) {
+        baseName = trimmedName.slice(0, -4)
+    }
+  }
+
 
     const validNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
     if (!validNamePattern.test(baseName)) {
         createViewError.value =
-        'Invalid function name. Use letters, numbers, and underscores only, and do not start with a number (e.g., "process_data.py").';
+        'Invalid function name. Use letters, numbers, and underscores only, and do not start with a number.';
         return;
     }
 
@@ -650,7 +667,7 @@ onUnmounted(() => {
                             v-if="selectedFile" 
                             :key="selectedFile.name"
                             :code="currentFunctionCode" 
-                            :language="api?.api_type === 'python' || api?.api_type === 'php' ? api?.api_type : undefined"
+                            :language="props.api_type === 'python' ? 'python' : 'php'"
                             :is-saving="isSaving"
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"

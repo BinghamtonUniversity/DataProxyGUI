@@ -99,9 +99,9 @@ Route::middleware(['auth'])->group(function () {
 
         //API Instances
         Route::get('/api_instances', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesIndex']);
-        Route::post('/api_instances', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesStore']);
-        Route::put('/api_instances/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesUpdate']);
-        Route::delete('/api_instances/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesDestroy']);
+        Route::post('/api_instances/{api_type}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesStore']);
+        Route::put('/api_instances/{api_type}/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesUpdate']);
+        Route::delete('/api_instances/{api_type}/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesDestroy']);
 
         //Schedulers
         Route::get('/schedulers', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersIndex']);
@@ -139,7 +139,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('ajax/resources')->group(function () {
         Route::get('/', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesIndex']);
         Route::get('/{id}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesShow']);
-        Route::get('/type/{type}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesByTypeIndex']);
+        Route::get('/type/{api_type}/{type}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesByTypeIndex']);
         Route::post('/', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesStore']);
         Route::put('/{id}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesUpdate']);
         Route::delete('/{id}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesDestroy']);
@@ -203,9 +203,9 @@ Route::middleware(['auth'])->group(function () {
     })->name('api.compare');
 
     // API Instance Edit Routes (Inertia pages for editing API Instances)
-    Route::prefix('/api_instances/{instance_id}')->group(function () {
+    Route::prefix('/api_instances/{api_type}/{instance_id}')->group(function () {
         // Main page route - renders the Inertia component
-        Route::get('/{tab?}', function ($instance_id, $tab = 'main') {
+        Route::get('/{tab?}', function ($api_type, $instance_id, $tab = 'main') {
             // Validate tab parameter
             $validTabs = ['main', 'resources', 'permissions', 'options'];
 
@@ -214,6 +214,7 @@ Route::middleware(['auth'])->group(function () {
             }
 
             return Inertia::render('apiInstanceEdit/Layout', [
+                'api_type' => $api_type,
                 'instance_id' => $instance_id,
                 'activeTab' => $tab,
             ]);
@@ -225,7 +226,7 @@ Route::middleware(['auth'])->group(function () {
     // ============================================
 
     Route::prefix('/ajax/api_instances')->group(function () {
-        Route::get('/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditIndex'])
+        Route::get('/{api_type}/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditIndex'])
             ->name('api_instances.edit.index');
         Route::put('/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditUpdate'])
             ->name('api_instances.edit.update');

@@ -10,11 +10,12 @@ class ResourcesController extends BaseDjangoController{
     // ===========================================
     // Resources 
     // ===========================================
-    public function resourcesByTypeIndex($type): JsonResponse
+    public function resourcesByTypeIndex($api_type, $type): JsonResponse
     {
         $endpoint = "resources/type/{$type}";
 
-        $result = $this->makeDjangoRequest('GET', $endpoint);
+        // $result = $this->makeDjangoRequest('GET', $endpoint);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -23,7 +24,7 @@ class ResourcesController extends BaseDjangoController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred on Django side.';
+            ?? `Unknown error occurred on {$api_type} side.`;
 
         return response()->json([
             'error' => $errorMessage,

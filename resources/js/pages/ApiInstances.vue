@@ -72,6 +72,18 @@ const formConfig = {
       required: true,
     },
     {
+      name: 'api_type',
+      label: 'API Type',
+      type: 'select',
+      placeholder: 'API Type',
+      value: '',
+      options: [ { label: 'PHP', value: 'php' },
+                  { label: 'Python', value: 'python' }
+                ],
+      required: true,
+  
+    },
+    {
       name: "api_id",
       label: "API",
       type: "select",
@@ -79,7 +91,8 @@ const formConfig = {
       value: "",
       options: [],
       required: true,
-    }
+    },
+   
   ]
 }
 // DataGrid schema for API instances
@@ -100,7 +113,7 @@ const apiInstancesSchema = {
             width: "12",
             offset: "0",
             required: true,
-            showColumn: false
+            showColumn: true
         },
         {
             name: "name",
@@ -228,6 +241,7 @@ interface NewApiInstanceForm {
   route_user_map: ApiInstanceRouteUserMap[]
   resources: ApiInstanceResource[]
   options: [] | any
+  api_type: string
 }
 
 //TO-DO: Should send route_user_map and resources as empty JSON 
@@ -240,7 +254,8 @@ const newApiInstanceForm = ref<NewApiInstanceForm>({
   public: 0,
   route_user_map: [],
   resources: [],
-  options: []
+  options: [],
+  api_type: ''
 })
 const newApiInstanceLoading = ref(false)
 const newApiInstanceError = ref('')
@@ -265,7 +280,8 @@ const openNewApiInstanceDialog = () => {
     public: 0,
     route_user_map: [],
     resources: [],
-    options: {} as ApiInstanceOptions
+    options: {} as ApiInstanceOptions,
+    api_type: ''
   }
   newApiInstanceError.value = ''
   newApiInstanceDialogOpen.value = true
@@ -283,7 +299,8 @@ const closeNewApiInstanceDialog = () => {
     public: 0,
     route_user_map: [],
     resources: [],
-    options: []
+    options: [],
+    api_type: ''
   }
   isEditMode.value = false
   editingApiInstanceId.value = null
@@ -306,15 +323,26 @@ const submitNewApiInstance = async ( formData: any) => {
   newApiInstanceError.value = ''
 
   // Trim and normalize route just in case
-  const routeToCheck = newApiInstanceForm.value.route.trim().toLowerCase()
-  const envToCheck = newApiInstanceForm.value.environment_id
-
+  const routeToCheck = formData.route.trim().toLowerCase()
+  const envToCheck = formData.environment_id
+  debugger;
   // Composite duplicate check (route + environment)
-  const duplicate = api_instances.value.some(inst =>
-    inst.route.trim().toLowerCase() === routeToCheck &&
-    inst.environment_id === Number(envToCheck) &&
-    (!isEditMode.value || inst.id !== editingApiInstanceId.value) // ignore self when editing
-  )
+  const duplicate = api_instances.value.some(inst => {
+    const type = inst.api_type;
+    const normalizedCheck = routeToCheck.trim().toLowerCase();
+
+    // Use route for python, slug for php
+    const instPath = type === 'php'
+        ? inst.slug?.trim().toLowerCase()
+        : inst.route?.trim().toLowerCase();
+
+    return (
+        instPath === normalizedCheck &&
+        inst.environment_id === Number(envToCheck) &&
+        type === formData.api_type &&
+        (!isEditMode.value || inst.id !== editingApiInstanceId.value)
+    );
+});
 
   if (duplicate) {
     newApiInstanceError.value = 'An API instance with this route already exists in the selected environment.'
@@ -323,12 +351,16 @@ const submitNewApiInstance = async ( formData: any) => {
     return // prevent API call
   }
 
+  // For PHP APIs, set slug
+  if(formData.api_type === 'php' && !formData.slug) {
+    formData.slug = formData.route;
+  }
 
   try {
-    let url = `/api/api_instances`
+    let url = `/api/api_instances/${formData.api_type}`
     let request_method = 'POST'
     if (isEditMode.value && editingApiInstanceId.value) {
-      url = `/api/api_instances/${editingApiInstanceId.value}`
+      url = `/api/api_instances/${formData.api_type}/${editingApiInstanceId.value}`
       request_method = 'PUT'
     }
 
@@ -369,7 +401,7 @@ const handleDeleteInstance = async (instance: ApiInstance) => {
     return
   }
   try{
-    const response = await fetch(`/api/api_instances/${instance.id}`, {
+    const response = await fetch(`/api/api_instances/${instance.api_type}/${instance.id}`, {
       method: 'DELETE',
       headers: {
         'X-CSRF-TOKEN': getCsrfToken() || '',
@@ -396,7 +428,7 @@ const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
     api_id: apiInstance.api_id?.toString() || '',
     api_version_id: apiInstance.api_version_id?.toString() || '',
     name: apiInstance.name || '',
-    route: apiInstance.route || '',
+    route: apiInstance.route || apiInstance.slug || '',
     public: apiInstance.public || 0,
     route_user_map: apiInstance.route_user_map?.map(item => ({
       api_user: item.api_user?.toString() || '',
@@ -412,7 +444,8 @@ const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
         resource: ''
       }
     ],
-    options: apiInstance.options || []
+    options: apiInstance.options || [],
+    api_type: apiInstance.api_type || ''
   }
   newApiInstanceDialogOpen.value = true
 }
@@ -425,7 +458,7 @@ const handleRowClick = (instance: ApiInstance, event: MouseEvent) => {
   }
   
 
-  router.visit(`/api_instances/${instance.id}/main`)
+  router.visit(`/api_instances/${instance.api_type}/${instance.id}/main`)
 }
 
 
@@ -539,7 +572,8 @@ const fetchAllData = async () => {
         label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
         value: env.id,
     }));
-    formConfig.fields[3].options = apisData.map((api: any) => ({
+    
+    formConfig.fields[4].options = apisData.map((api: any) => ({
         label: api.name  || `API ${api.id}`,
         value: api.id,
     }));
@@ -591,7 +625,7 @@ onUnmounted(() => {
 // DataGrid action handlers
 const handleDataGridAction = (actionData: { type: string; payload: any }) => {
  
-  
+  // console.log('DataGrid action data:', actionData); 
   switch (actionData.type) {
     case 'single-edit':
       openEditApiInstanceDialog(actionData.payload);
@@ -600,7 +634,7 @@ const handleDataGridAction = (actionData: { type: string; payload: any }) => {
       handleDeleteInstance(actionData.payload);
       break;
     case 'view':
-      router.visit(`/api_instances/${actionData.payload.id}/main`);
+      router.visit(`/api_instances/${actionData.payload.api_type}/${actionData.payload.id}/main`);
       break;
     default:
       console.log('Unknown action type:', actionData.type);
@@ -623,8 +657,8 @@ const handleDataGridCustomAction = (actionData: { action: string; selectedRows: 
 };
 
 const handleDataGridRowClick = (row: any) => {
-
-  router.visit(`/api_instances/${row.id}/main`);
+  // console.log('API Type:', api_type); 
+  router.visit(`/api_instances/${row.api_type}/${row.id}/main`);
 };
 </script>
 

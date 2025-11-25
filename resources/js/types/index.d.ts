@@ -134,6 +134,7 @@ export interface ApiInstance {
   environment_id: number
   name: string
   route: string
+  slug?: string
   route_user_map: ApiInstanceRouteUserMap[],
   resources: ApiInstanceResource[],
   options: ApiInstanceOptions,
@@ -143,6 +144,7 @@ export interface ApiInstance {
   api: Api
   api_version: ApiData
   environment: Environment
+  api_type?: string
 }
 
 export interface Environment {

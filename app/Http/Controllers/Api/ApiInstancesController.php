@@ -10,30 +10,59 @@ class ApiInstancesController extends BaseDjangoController{
 
     public function apiInstancesIndex(): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', 'api_instances');
+        $phpResult = $this->makeBackendRequest('GET', 'api_instances', [], [], 'php'); //TO:DO - remove this when php talks to same database as django
+        $djangoResult = $this->makeBackendRequest('GET', 'api_instances', [], [], 'django');
 
-        if ($result['success']) {
-            return response()->json($result['data']);
+        if ($phpResult['success'] || $djangoResult['success']) {
+            $merged = [];
+
+            // Add api_type to each Django result
+            if (is_array($djangoResult['data'] ?? [])) {
+                foreach ($djangoResult['data'] as $item) {
+                    if (is_array($item)) {
+                        $item['api_type'] = 'python';
+                        $merged[] = $item;
+                    }
+                }
+            }
+
+            // Add api_type to each PHP result
+            if (is_array($phpResult['data'] ?? [])) {
+                foreach ($phpResult['data'] as $item) {
+                    if (is_array($item)) {
+                        $item['api_type'] = 'php';
+                        $merged[] = $item;
+                    }
+                }
+            }
+
+            return response()->json($merged);
         }
-        
-        $errorMessage = $result['data']['error']
-            ?? $result['data']['detail']
-            ?? $result['data']['message']
+
+        $phpErrorMessage = $phpResult['data']['error']
+            ?? $phpResult['data']['detail']
+            ?? $phpResult['data']['message']
+            ?? 'Unknown error occurred on PHP side.';
+
+        $djangoErrorMessage = $djangoResult['data']['error']
+            ?? $djangoResult['data']['detail']
+            ?? $djangoResult['data']['message']
             ?? 'Unknown error occurred on Django side.';
 
         return response()->json([
-            'error' => $errorMessage,
-            'status' => $result['status']
-        ], $result['status']);
+            'error' => $phpErrorMessage . ' | ' . $djangoErrorMessage,
+            'django_status' => $djangoResult['status'],
+            'php_status' => $phpResult['status'],
+        ], 500);
     }
 
-    public function apiInstancesStore(Request $request): JsonResponse
+    public function apiInstancesStore(Request $request, string $api_type): JsonResponse
     {
         Log::info('ApiInstancesStore called');
 
         $requestData = $request->all();
         
-        $result = $this->makeDjangoRequest('POST', "api_instances", $requestData);
+        $result = $this->makeBackendRequest('POST', 'api_instances', $requestData, [], $api_type);
         // Log::info('Django request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
@@ -47,7 +76,7 @@ class ApiInstancesController extends BaseDjangoController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred on Django side.';
+            ?? `Unknown error occurred on {$api_type} side.`;
 
         return response()->json([
             'error' => $errorMessage,
@@ -56,7 +85,7 @@ class ApiInstancesController extends BaseDjangoController{
         ], $result['status']);
     }
 
-   public function apiInstancesUpdate(Request $request, string $api_instance_id): JsonResponse
+   public function apiInstancesUpdate(Request $request, string $api_type, string $api_instance_id): JsonResponse
     {
         Log::info('ApiInstancesUpdate called', ['api_instance_id' => $api_instance_id]);
 
@@ -64,9 +93,9 @@ class ApiInstancesController extends BaseDjangoController{
         $requestData = $request->all();
 
         try {
-            $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+            $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $api_type);
 
-            Log::info('Django request result', [
+            Log::info('Backend request result', [
                 'success' => $result['success'],
                 'status' => $result['status'],
                 'data' => $result['data']
@@ -80,7 +109,7 @@ class ApiInstancesController extends BaseDjangoController{
             $errorMessage = $result['data']['error']
                 ?? $result['data']['detail']
                 ?? $result['data']['message']
-                ?? 'Unknown error occurred on Django side.';
+                ?? `Unknown error occurred on {$api_type} side.`;
 
             return response()->json([
                 'error' => 'Failed to update API Instance.',
@@ -103,11 +132,11 @@ class ApiInstancesController extends BaseDjangoController{
     }
 
 
-    public function apiInstancesDestroy($id): JsonResponse
+    public function apiInstancesDestroy(string $api_type, string $id): JsonResponse
     {
         $endpoint = "api_instances/{$id}";
         
-        $result = $this->makeDjangoRequest('DELETE', $endpoint);
+        $result = $this->makeBackendRequest('DELETE', $endpoint, [], [], $api_type);
 
         if ($result['success']) {
             return response()->json([
@@ -118,7 +147,7 @@ class ApiInstancesController extends BaseDjangoController{
         $errorMessage = $result['data']['error']
                 ?? $result['data']['detail']
                 ?? $result['data']['message']
-                ?? 'Unknown error occurred on Django side.';
+                ?? `Unknown error occurred on {$api_type} side.`;
 
         return response()->json([
             'error' => $errorMessage,
@@ -130,18 +159,18 @@ class ApiInstancesController extends BaseDjangoController{
     // ===========================================
     // API Instance by ID - AJAX call for fetching single instance
     // ===========================================
-    public function ApiInstancesEditIndex(string $instance_id): JsonResponse
+    public function ApiInstancesEditIndex(string $api_type, string $instance_id): JsonResponse
     {
         Log::info('ApiInstancesEditIndex called', ['instance_id' => $instance_id]);
 
         $endpoint = "api_instances/{$instance_id}";
         
-        $result = $this->makeDjangoRequest('GET', $endpoint);
-        // Log::info('Django request result', [
-        //     'success' => $result['success'],
-        //     'status' => $result['status'],
-        //     'data' => $result['data']
-        // ]);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
+        Log::info('APIInstanceEditIndex Backend request result', [
+            'success' => $result['success'],
+            'status' => $result['status'],
+            'data' => $result['data']
+        ]);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -150,7 +179,7 @@ class ApiInstancesController extends BaseDjangoController{
         $errorMessage = $result['data']['error']
                 ?? $result['data']['detail']
                 ?? $result['data']['message']
-                ?? 'Unknown error occurred on Django side.';
+                ?? `Unknown error occurred on {$api_type} side.`;
 
         return response()->json([
             'error' => $errorMessage,

@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { Ref, WritableComputedRef } from 'vue'
-import type { ApiData } from '../types';
+import type { ApiData, ApiInstance } from '../types';
 
 
 export function cn(...inputs: ClassValue[]) {
@@ -92,4 +92,51 @@ export function denormalizeToPhp(api: ApiData): any {
   };
 }
 
-
+export function mapPhpToApiInstance(php: any): ApiInstance {
+  return {
+    id: php.id,
+    api_id: php.api_id,
+    api_version_id: php.api_version_id,
+    environment_id: php.environment_id,
+    name: php.name,
+    route: php.slug,                    // alias: slug -> route
+    route_user_map: php.route_user_map?.map((item: any) => ({
+      route: item.route,
+      verb: item.verb,
+      api_user: item.api_user,
+    })) ?? [],
+    resources: php.resources ?? [],
+    options: php.options ?? {},
+    public: php.public ? 1 : 0,         // convert boolean to number
+    created_at: php.created_at,
+    updated_at: php.updated_at,
+    
+    api: {
+      id: php.api.id,
+      api_type: 'php',
+      name: php.api.name,
+      description: php.api.description,
+      tags: php.api.tags,
+      user_id: php.api.user_id,
+      created_by_id: php.api.user_id,
+      updated_by_id: php.api.user_id,
+      created_at: php.api.created_at,
+      updated_at: php.api.updated_at,
+      deleted_at: php.api.deleted_at,
+    },
+    
+    api_version: mapPhpToApiData(php.api_version),
+    
+    environment: {
+      id: php.environment.id,
+      domain: php.environment.domain,
+      name: php.environment.name,
+      type: php.environment.type,
+      created_at: php.environment.created_at,
+      updated_at: php.environment.updated_at,
+      deleted_at: php.environment.deleted_at,
+    },
+    
+    api_type: 'php',                    
+  };
+}

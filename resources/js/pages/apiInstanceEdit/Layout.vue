@@ -13,10 +13,11 @@ import Permissions from '@/components/apiInstanceDetails/Permissions.vue'
 import AlertModal from '@/components/AlertModal.vue'
 import FormViewer from '@/components/formviewer/FormViewer.vue'
 import { useToaster } from '@/composables/useToaster'
-import { getCsrfToken } from '@/lib/utils'
+import { getCsrfToken, mapPhpToApiInstance } from '@/lib/utils'
 import Toaster from '@/components/toaster/Toaster.vue'
 
 interface Props {
+    api_type: string
     instance_id: string
     activeTab?: string
 }
@@ -90,10 +91,16 @@ const fetchApiInstanceData = async () => {
     loading.value = true
     apiInstanceError.value = ''
     try {
-        const response = await fetch(`/ajax/api_instances/${props.instance_id}`)
+        const response = await fetch(`/ajax/api_instances/${props.api_type}/${props.instance_id}`)
  
         if (!response.ok) throw new Error('Failed to fetch API Instance data')
         const data = await response.json()
+        if (props.api_type === 'php') {
+            apiInstanceData.value = mapPhpToApiInstance(data)
+        } else {
+            apiInstanceData.value = data
+        }
+
         apiInstanceData.value = data
 
         originalApiInstanceData.value = JSON.parse(JSON.stringify(data)) // Deep clone
@@ -111,11 +118,15 @@ const fetchAllData = async () => {
   loading.value = true
   try {
     // Fetch the API instance to get the environment type
-    const apiInstancesResponse = await fetch(`/ajax/api_instances/${props.instance_id}`)
+    const apiInstancesResponse = await fetch(`/ajax/api_instances/${props.api_type}/${props.instance_id}`)
     if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
     
     const apiInstancesData = await apiInstancesResponse.json()
-    apiInstanceData.value = apiInstancesData
+    if (props.api_type === 'php') {
+        apiInstanceData.value = mapPhpToApiInstance(apiInstancesData)
+    } else {
+        apiInstanceData.value = apiInstancesData
+    }
 
     originalApiInstanceData.value = JSON.parse(JSON.stringify(apiInstancesData)) // Deep clone
     hasUnsavedChanges.value = false
@@ -127,7 +138,7 @@ const fetchAllData = async () => {
       resourcesResponse,
     ] = await Promise.all([
       fetch(`/api/api_users`),
-      fetch(`/ajax/resources/type/${environmentType}`), // Now dynamic!
+      fetch(`/ajax/resources/type/${props.api_type}/${environmentType}`), 
     ])
 
     if (!apiUsersResponse.ok) throw new Error('Failed to fetch API users')
@@ -262,7 +273,7 @@ const navigateToTab = (tabId: string) => {
     currentTab.value = tabId
     
     // This uses History API to update the URL without triggering navigation
-    const newUrl = `/api_instances/${props.instance_id}/${tabId}`
+    const newUrl = `/api_instances/${props.api_type}/${props.instance_id}/${tabId}`
     window.history.pushState({ tab: tabId }, '', newUrl)
 }
 

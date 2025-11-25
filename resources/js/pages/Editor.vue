@@ -23,7 +23,7 @@ const emit = defineEmits<{
   validate: [markers: any[]]
 }>()
 
-const language = ref(props.language ?? 'python')
+const language = ref(props.language)
 const code = ref(props.code)
 // const hasUnsavedChanges = ref(false)
 
@@ -237,76 +237,76 @@ const validateCode = (editorInstance: any, monaco: any) => {
   // --------------------------------------------------------------------
   // 🔹 PHP Validation
   // --------------------------------------------------------------------
-  else if (language === 'php') {
-    const openTags = (code.match(/<\?php/g) || []).length;
-    const closeTags = (code.match(/\?>/g) || []).length;
-    const openBraces = (code.match(/\{/g) || []).length;
-    const closeBraces = (code.match(/\}/g) || []).length;
-    const semicolonLines = [];
+  // else if (language === 'php') {
+  //   const openTags = (code.match(/<\?php/g) || []).length;
+  //   const closeTags = (code.match(/\?>/g) || []).length;
+  //   const openBraces = (code.match(/\{/g) || []).length;
+  //   const closeBraces = (code.match(/\}/g) || []).length;
+  //   const semicolonLines = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      const trimmed = lines[i].trim();
-      if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#')) continue;
+  //   for (let i = 0; i < lines.length; i++) {
+  //     const trimmed = lines[i].trim();
+  //     if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#')) continue;
 
-      // Missing semicolon after statements
-      if (
-        !trimmed.endsWith(';') &&
-        !trimmed.endsWith('{') &&
-        !trimmed.endsWith('}') &&
-        !trimmed.startsWith('<?php') &&
-        !trimmed.startsWith('?>') &&
-        !trimmed.match(/(if|else|while|for|foreach|function|class|switch|case|default)\b/)
-      ) {
-        semicolonLines.push(i + 1);
-      }
+  //     // Missing semicolon after statements
+  //     if (
+  //       !trimmed.endsWith(';') &&
+  //       !trimmed.endsWith('{') &&
+  //       !trimmed.endsWith('}') &&
+  //       !trimmed.startsWith('<?php') &&
+  //       !trimmed.startsWith('?>') &&
+  //       !trimmed.match(/(if|else|while|for|foreach|function|class|switch|case|default)\b/)
+  //     ) {
+  //       semicolonLines.push(i + 1);
+  //     }
 
-      // Unterminated quotes
-      const quoteMatches = trimmed.match(/['"]/g);
-      if (quoteMatches && quoteMatches.length % 2 !== 0) {
-        markers.push({
-          startLineNumber: i + 1,
-          startColumn: 1,
-          endLineNumber: i + 1,
-          endColumn: lines[i].length + 1,
-          message: 'Unterminated string literal',
-          severity: monaco.MarkerSeverity.Error,
-        });
-      }
-    }
+  //     // Unterminated quotes
+  //     const quoteMatches = trimmed.match(/['"]/g);
+  //     if (quoteMatches && quoteMatches.length % 2 !== 0) {
+  //       markers.push({
+  //         startLineNumber: i + 1,
+  //         startColumn: 1,
+  //         endLineNumber: i + 1,
+  //         endColumn: lines[i].length + 1,
+  //         message: 'Unterminated string literal',
+  //         severity: monaco.MarkerSeverity.Error,
+  //       });
+  //     }
+  //   }
 
-    if (openTags !== closeTags) {
-      markers.push({
-        startLineNumber: 1,
-        startColumn: 1,
-        endLineNumber: 1,
-        endColumn: 10,
-        message: 'PHP open/close tags mismatch',
-        severity: monaco.MarkerSeverity.Error,
-      });
-    }
+  //   if (openTags !== closeTags) {
+  //     markers.push({
+  //       startLineNumber: 1,
+  //       startColumn: 1,
+  //       endLineNumber: 1,
+  //       endColumn: 10,
+  //       message: 'PHP open/close tags mismatch',
+  //       severity: monaco.MarkerSeverity.Error,
+  //     });
+  //   }
 
-    if (openBraces !== closeBraces) {
-      markers.push({
-        startLineNumber: 1,
-        startColumn: 1,
-        endLineNumber: model.getLineCount(),
-        endColumn: model.getLineMaxColumn(model.getLineCount()),
-        message: 'Unmatched braces: ensure all { have matching }',
-        severity: monaco.MarkerSeverity.Error,
-      });
-    }
+  //   if (openBraces !== closeBraces) {
+  //     markers.push({
+  //       startLineNumber: 1,
+  //       startColumn: 1,
+  //       endLineNumber: model.getLineCount(),
+  //       endColumn: model.getLineMaxColumn(model.getLineCount()),
+  //       message: 'Unmatched braces: ensure all { have matching }',
+  //       severity: monaco.MarkerSeverity.Error,
+  //     });
+  //   }
 
-    semicolonLines.forEach((lineNum) => {
-      markers.push({
-        startLineNumber: lineNum,
-        startColumn: 1,
-        endLineNumber: lineNum,
-        endColumn: lines[lineNum - 1].length + 1,
-        message: 'Missing semicolon (;) at end of statement',
-        severity: monaco.MarkerSeverity.Warning,
-      });
-    });
-  }
+  //   semicolonLines.forEach((lineNum) => {
+  //     markers.push({
+  //       startLineNumber: lineNum,
+  //       startColumn: 1,
+  //       endLineNumber: lineNum,
+  //       endColumn: lines[lineNum - 1].length + 1,
+  //       message: 'Missing semicolon (;) at end of statement',
+  //       severity: monaco.MarkerSeverity.Warning,
+  //     });
+  //   });
+  // }
 
   // --------------------------------------------------------------------
   // 🔹 Apply Markers + Emit
@@ -363,7 +363,7 @@ onBeforeUnmount(() => {
     <div class="flex items-center justify-between gap-2 pb-2 border-b">
       <div class="flex items-center gap-2">
         <span class="text-sm font-medium">
-          {{ language.toUpperCase() }}
+          {{ language?.toUpperCase() }}
         </span>
         <span v-if="hasUnsavedChanges" class="text-xs text-amber-600 dark:text-amber-400">
           • Unsaved changes

@@ -14,7 +14,7 @@ import {
   useVueTable,
 } from '@tanstack/vue-table'
 import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
-import { h, ref, computed, onMounted, onUnmounted } from 'vue'
+import { h, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
 import { type ApiData, type ResourceData, Api } from '@/types'
@@ -67,8 +67,8 @@ const props = defineProps<Props>()
 const newResourceDialogOpen = ref(false)
 const newResourceForm = ref({
   name: '',
-  type: '',
-  model_name: ''
+  type: '' as string | null,
+  model_name: '' as string | null
 })
 const newResourceLoading = ref(false)
 const newResourceError = ref('')
@@ -82,8 +82,8 @@ const { success, error, warning, info } = useToaster();
 const openNewResourceDialog = () => {
   newResourceForm.value = {
     name: '',
-    type: '',
-    model_name: ''
+    type: props.api_type === 'python' ? '' : null,
+    model_name: props.api_type === 'python' ? '' : null
   }
   newResourceError.value = ''
   isEditMode.value = false
@@ -110,10 +110,16 @@ const submitNewResource = async (e: Event) => {
   }
   
   try {
-    const newResource = {
-      name: newResourceForm.value.name,
-      type: newResourceForm.value.type,
-      model_name: newResourceForm.value.model_name
+    const newResource: any = {
+      name: newResourceForm.value.name
+    }
+
+    if (props.api_type === 'python') {
+      newResource.type = newResourceForm.value.type
+      if(newResourceForm.value.type === 'Model'){
+        newResource.model_name = newResourceForm.value.model_name
+      }
+      
     }
 
     // duplicate name check
@@ -122,9 +128,13 @@ const submitNewResource = async (e: Event) => {
     )
 
     // duplicate model_name check
-    const duplicateModel = props.apiData.resources?.some((res, index) =>
-      res.model_name === newResource.model_name && index !== editingResourceIndex.value
-    )
+    let duplicateModel = false
+    if (props.api_type === 'python') {
+      duplicateModel = props.apiData.resources?.some((res, index) =>
+        res.model_name === newResourceForm.value.model_name &&
+        index !== editingResourceIndex.value
+      )
+    }
 
     if (duplicateName) {
       newResourceError.value = `A resource with the name "${newResource.name}" already exists.`
@@ -206,8 +216,8 @@ const openEditResourceDialog = (resource: any, index: number) => {
   editingResourceIndex.value = index
   newResourceForm.value = {
     name: resource.name || '',
-    type: resource.type || 'Model',
-    model_name: resource.model_name || ''
+    type:  props.api_type === 'python' ? resource.type || 'Other' : null,
+    model_name:  props.api_type === 'python' ? resource.model_name || '': null
   }
   newResourceDialogOpen.value = true
 }
@@ -216,7 +226,18 @@ const openEditResourceDialog = (resource: any, index: number) => {
 // Table state
 const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
-const columnVisibility = ref<VisibilityState>({})
+const columnVisibility = ref<VisibilityState>({
+  type: props.api_type === 'python',
+  model_name: props.api_type === 'python',
+})
+
+watch(() => props.api_type, (newApiType: string) => {
+  columnVisibility.value = {
+    ...columnVisibility.value,
+    type: newApiType === 'python',
+    model_name: newApiType === 'python',
+  }
+})
 const rowSelection = ref({})
 
 // Define table columns
@@ -411,30 +432,30 @@ const highlightText = (text: string, query: string) => {
                                     <Label for="resource-name" class="mb-1">Name</Label>
                                     <Input id="resource-name" v-model="newResourceForm.name" required placeholder="Resource name" />
                                     </div>
-                                    <div>
-                                    <Label for="resource-type" class="mb-1">Type</Label>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger as-child>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            class="w-full justify-between"
-                                        >
-                                            {{ newResourceForm.type || 'Select type' }}
-                                            <ChevronDown class="ml-1 h-4 w-4" />
-                                        </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="start" class="w-full">
-                                        <DropdownMenuItem
-                                            v-for="type in ['Model', 'Password', 'Other']"
-                                            :key="type"
-                                            @click="newResourceForm.type = type"
-                                            :class="['w-full', {'font-semibold text-blue-600': newResourceForm.type === type }]"
-                                        >
-                                            {{ type }}
-                                        </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    <div v-if="props.api_type === 'python'">
+                                      <Label for="resource-type" class="mb-1">Type</Label>
+                                      <DropdownMenu>
+                                          <DropdownMenuTrigger as-child>
+                                          <Button
+                                              type="button"
+                                              variant="outline"
+                                              class="w-full justify-between"
+                                          >
+                                              {{ newResourceForm.type || 'Select type' }}
+                                              <ChevronDown class="ml-1 h-4 w-4" />
+                                          </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="start" class="w-full">
+                                          <DropdownMenuItem
+                                              v-for="type in ['Model', 'Password', 'Other']"
+                                              :key="type"
+                                              @click="newResourceForm.type = type"
+                                              :class="['w-full', {'font-semibold text-blue-600': newResourceForm.type === type }]"
+                                          >
+                                              {{ type }}
+                                          </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                      </DropdownMenu>
                                     </div>
                                     <div v-if="newResourceForm.type === 'Model'">
                                         <Label for="model-name" class="mb-1">Model Name</Label>
@@ -468,7 +489,7 @@ const highlightText = (text: string, query: string) => {
                                     <DialogClose as-child>
                                     <Button variant="secondary" type="button" @click="closeNewResourceDialog">Cancel</Button>
                                     </DialogClose>
-                                    <Button type="submit" variant="default" :disabled="newResourceLoading || !newResourceForm.type">
+                                    <Button type="submit" variant="default" :disabled="newResourceLoading || (props.api_type === 'python' && !newResourceForm.type)">
                                     <span v-if="newResourceLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
                                     <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
                                     </Button>
