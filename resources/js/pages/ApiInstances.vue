@@ -306,8 +306,8 @@ const submitNewApiInstance = async ( formData: any) => {
   newApiInstanceError.value = ''
 
   // Trim and normalize route just in case
-  const routeToCheck = newApiInstanceForm.value.route.trim().toLowerCase()
-  const envToCheck = newApiInstanceForm.value.environment_id
+  const routeToCheck = formData.route.trim().toLowerCase()
+  const envToCheck = formData.environment_id
 
   // Composite duplicate check (route + environment)
   const duplicate = api_instances.value.some(inst =>
@@ -315,7 +315,7 @@ const submitNewApiInstance = async ( formData: any) => {
     inst.environment_id === Number(envToCheck) &&
     (!isEditMode.value || inst.id !== editingApiInstanceId.value) // ignore self when editing
   )
-
+  debugger;
   if (duplicate) {
     newApiInstanceError.value = 'An API instance with this route already exists in the selected environment.'
     error(newApiInstanceError.value, 'Duplicate Entry')
