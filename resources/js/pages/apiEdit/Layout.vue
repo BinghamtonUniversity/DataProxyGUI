@@ -771,7 +771,7 @@ const activeComponent = computed(() => {
 // Component props to pass down
 const componentProps = computed(() => ({
     api_id: props.api_id,
-    api_type: 'php',
+    api_type: 'python',
     api: api.value,
     apiData: apiData.value || null,
     loadingApiData: loadingApiData.value,

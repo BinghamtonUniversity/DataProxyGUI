@@ -147,6 +147,12 @@ const handleCreateNewView = async () => {
         return;
     }
 
+    // Extra rule for Python: disallow double underscores "__"
+    if (props.api?.api_type === 'python' && name.includes('__')) {
+        createViewError.value = 'Python view names cannot contain double underscores "__".';
+        return;
+    }
+
     // Check if function name already exists
     const existingFunction = props.apiData.version_views.find(func => func.name === name)
     if (existingFunction) {
@@ -254,6 +260,12 @@ const handleUpdateFunctionName = async () => {
       'Invalid function name. Use letters, numbers, and underscores only, and do not start with a number.';
     return;
   }
+
+  // Extra rule for Python: disallow double underscores "__"
+    if (props.api_type === 'python' && trimmedName.includes('__')) {
+        createViewError.value = 'Python view names cannot contain double underscores "__".';
+        return;
+    }
 
   // Prevent duplicates
   const nameExists = props.apiData.version_views.some(

@@ -306,8 +306,8 @@ const submitNewApiInstance = async ( formData: any) => {
   newApiInstanceError.value = ''
 
   // Trim and normalize route just in case
-  const routeToCheck = newApiInstanceForm.value.route.trim().toLowerCase()
-  const envToCheck = newApiInstanceForm.value.environment_id
+  const routeToCheck = formData.route.trim().toLowerCase()
+  const envToCheck = formData.environment_id
 
   // Composite duplicate check (route + environment)
   const duplicate = api_instances.value.some(inst =>
@@ -332,9 +332,15 @@ const submitNewApiInstance = async ( formData: any) => {
       request_method = 'PUT'
     }
 
+    const normalizedFormData = {
+      ...formData,
+      api_version_id:
+        formData.api_version_id === -1 ? "" : formData.api_version_id,
+    }
+
     const body = isEditMode.value && editingApiInstanceId.value
-      ? { ...formData, id: editingApiInstanceId.value }
-      : { ...formData }
+      ? { ...normalizedFormData, id: editingApiInstanceId.value }
+      : { ...normalizedFormData }
 
     const response = await fetch(url, {
       method: request_method,
@@ -394,7 +400,9 @@ const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
   newApiInstanceForm.value = {
     environment_id: apiInstance.environment_id?.toString() || '',
     api_id: apiInstance.api_id?.toString() || '',
-    api_version_id: apiInstance.api_version_id?.toString() || '',
+    api_version_id: apiInstance.api_version_id === -1
+      ? ""
+      : apiInstance.api_version_id?.toString() || '',
     name: apiInstance.name || '',
     route: apiInstance.route || '',
     public: apiInstance.public || 0,
