@@ -289,10 +289,9 @@ const submitNewRoute = async (e: Event) => {
             path: newRouteForm.value.path,
             verb: newRouteForm.value.verb,
             view_name: newRouteForm.value.view_name,
-            required: newRouteForm.value.required.filter(param => param.name.trim() && param.description.trim() && param.example.trim()),
-            optional: newRouteForm.value.optional.filter(param => param.name.trim() && param.description.trim() && param.example.trim()),
-        }
-
+            required: newRouteForm.value.required,
+            optional: newRouteForm.value.optional,
+        }     
         // Duplicate verb + path check
         const existingRoutes = props.apiData.version_urls || []
         const duplicate = existingRoutes.some((route, index) => {
@@ -309,7 +308,7 @@ const submitNewRoute = async (e: Event) => {
         }
         
         let updatedApiData
-    
+        
         if (isEditMode.value && editingRouteIndex.value !== null) {
             updatedApiData = {
                 ...props.apiData,
@@ -325,7 +324,7 @@ const submitNewRoute = async (e: Event) => {
                 version_urls: [...(props.apiData.version_urls || []), newRoute]
             }
         }
-
+      
         // const response = await fetch(`/ajax/apis/${props.api_id}/code`, {
         //     method: 'PUT',
         //     headers: {
@@ -408,6 +407,7 @@ const openEditRouteDialog = ( payload: any, index: number) => {
       example: p.example || ''
     })) || []
   }
+  
   newRouteDialogOpen.value = true
 }
 
