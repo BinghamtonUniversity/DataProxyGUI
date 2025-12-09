@@ -325,7 +325,6 @@ const submitNewApiInstance = async ( formData: any) => {
   // Trim and normalize route just in case
   const routeToCheck = formData.route.trim().toLowerCase()
   const envToCheck = formData.environment_id
-  debugger;
   // Composite duplicate check (route + environment)
   const duplicate = api_instances.value.some(inst => {
     const type = inst.api_type;
@@ -351,11 +350,6 @@ const submitNewApiInstance = async ( formData: any) => {
     return // prevent API call
   }
 
-  // For PHP APIs, set slug
-  if(formData.api_type === 'php' && !formData.slug) {
-    formData.slug = formData.route;
-  }
-
   try {
     let url = `/api/api_instances/${formData.api_type}`
     let request_method = 'POST'
@@ -364,9 +358,23 @@ const submitNewApiInstance = async ( formData: any) => {
       request_method = 'PUT'
     }
 
-    const body = isEditMode.value && editingApiInstanceId.value
-      ? { ...formData, id: editingApiInstanceId.value }
-      : { ...formData }
+    // For PHP APIs, set slug
+    if(formData.api_type === 'php' && !formData.slug) {
+      formData.slug = formData.route;
+    }
+    const { api_type, ...formDataWithoutApiType } = formData;
+    const normalizedFormData = {
+      ...formDataWithoutApiType,
+      api_version_id:
+        formDataWithoutApiType.api_version_id === -1
+          ? ""
+          : formDataWithoutApiType.api_version_id,
+    };
+
+    const body =
+      isEditMode.value && editingApiInstanceId.value
+        ? { ...normalizedFormData, id: editingApiInstanceId.value }
+        : { ...normalizedFormData };
 
     const response = await fetch(url, {
       method: request_method,
@@ -426,7 +434,9 @@ const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
   newApiInstanceForm.value = {
     environment_id: apiInstance.environment_id?.toString() || '',
     api_id: apiInstance.api_id?.toString() || '',
-    api_version_id: apiInstance.api_version_id?.toString() || '',
+    api_version_id: apiInstance.api_version_id === -1
+      ? ""
+      : apiInstance.api_version_id?.toString() || '',
     name: apiInstance.name || '',
     route: apiInstance.route || apiInstance.slug || '',
     public: apiInstance.public || 0,
