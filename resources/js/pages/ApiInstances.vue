@@ -305,6 +305,24 @@ const closeNewApiInstanceDialog = () => {
   isEditMode.value = false
   editingApiInstanceId.value = null
 }
+
+const handleFormDataUpdate = (data: any) => {
+  if (data.api_type == 'python') {
+
+    formConfig.fields[4].options = apis.value.filter((api: any) => api.api_type === 'python').map((api: any) => ({
+        label: api.name  || `API ${api.id}`,
+        value: api.id,
+    }));
+  }
+  else{
+    formConfig.fields[4].options = apis.value.filter((api: any) => api.api_type != 'python').map((api: any) => ({
+        label: api.name  || `API ${api.id}`,
+        value: api.id,
+    }));
+  }
+
+}
+
 // Handle FormViewer action events
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
  
@@ -715,10 +733,12 @@ const handleDataGridRowClick = (row: any) => {
             :title="isEditMode ? 'Edit API Instance' : 'Create New API Instance'"
             @close="closeNewApiInstanceDialog"
         >
+   
         <FormViewer 
             :formConfig="formConfig" 
             :initialData="newApiInstanceForm"
             :cancelAction="'close'"
+            @update:modelValue="handleFormDataUpdate"
             @submit="submitNewApiInstance"
             @action="handleFormAction"
             :actions="[
