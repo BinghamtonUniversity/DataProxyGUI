@@ -429,6 +429,7 @@ const handleFormSubmit = async (formValues: any) => {
             if (index !== -1) {
                 apis.value[index] = {
                     ...updatedApi,
+                    api_type: updatedApi.api_type || 'php',
                     created_at: updatedApi.created_at ? new Date(updatedApi.created_at).toLocaleDateString() : apis.value[index].created_at,
                     created_by_id: updatedApi.created_by ? apiUsers.value.find((user: ApiUser) => user.id === updatedApi.created_by)?.app_name : 'Unknown'
                 };           

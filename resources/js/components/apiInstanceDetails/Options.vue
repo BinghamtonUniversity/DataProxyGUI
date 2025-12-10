@@ -12,7 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 const { success, error: showError, warning, info } = useToaster();
 
 interface Props {
-    instance_id: string
+    instance_id: string,
+    api_type: string,
     apiInstanceData: ApiInstance | null,
     apiUsers: ApiUser[] | null,
     resources: Resource[] | null,

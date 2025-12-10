@@ -16,7 +16,8 @@ import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 
 interface Props {
-    instance_id: string
+    instance_id: string,
+    api_type: string,
     apiInstanceData: ApiInstance | null,
     // api: Api | null,
     apiUsers: ApiUser[] | null,

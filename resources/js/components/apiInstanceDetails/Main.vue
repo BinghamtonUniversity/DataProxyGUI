@@ -9,7 +9,8 @@ import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 
 interface Props {
-    instance_id: string
+    instance_id: string,
+    api_type: string,
     apiInstanceData: ApiInstance | null,
     apiUsers: ApiUser[] | null,
     resources: Resource[] | null,
@@ -34,7 +35,7 @@ watch(
   (newVal) => {
     if (newVal) {
       editableData.value.name = newVal.name
-      editableData.value.route = newVal.route
+      editableData.value.route = props.api_type === 'php' && newVal.slug ? newVal.slug : newVal.route
     }
   },
   { immediate: true } // run once right away as well
@@ -74,7 +75,7 @@ watch([
 const updateLocalData = () => {
     if (props.apiInstanceData) {
         editableData.value.name = props.apiInstanceData.name
-        editableData.value.route = props.apiInstanceData.route
+        editableData.value.route = props.api_type === 'php' && props.apiInstanceData.slug ? props.apiInstanceData.slug : props.apiInstanceData.route
     }
 }
 

@@ -182,6 +182,7 @@ const updateApiInstanceData = (updatedApiInstanceData: Partial<ApiInstance>) => 
         ...apiInstanceData.value, 
         ...updatedApiInstanceData,
     } as ApiInstance
+    // debugger;
 }
 
 const refreshApiInstanceData = () => {
@@ -291,6 +292,7 @@ const isNavigatingWithinSameApiInstance = (url: string): boolean => {
 // Component props to pass down
 const componentProps = computed(() => ({
     instance_id: props.instance_id,
+    api_type: props.api_type,  
     apiInstanceData: apiInstanceData.value,
     apiUsers: apiUsers.value,
     resources: resources.value,
@@ -301,6 +303,12 @@ const componentProps = computed(() => ({
 }))
 
 const handleSave = async() => {
+    // Store the nested objects before the API call
+    const preservedNestedData = {
+        api: apiInstanceData.value?.api,
+        api_version: apiInstanceData.value?.api_version,
+        environment: apiInstanceData.value?.environment
+    }
 
     const requestData = {
             id: apiInstanceData.value?.id,
@@ -334,10 +342,19 @@ const handleSave = async() => {
     success('API Instance data saved successfully!')
     const responseData = await response.json()
     console.log('Saved API Instance data:', responseData)
-    apiInstanceData.value = responseData
+    
+    // Merge response with preserved nested objects
+    apiInstanceData.value = {
+        ...responseData,
+        slug: props.api_type === 'php'? responseData.slug : undefined,
+        // Restore nested objects if they're missing in the response -- PHP doesn't return them on update PUT
+        api: responseData.api || preservedNestedData.api,
+        api_version: responseData.api_version || preservedNestedData.api_version,
+        environment: responseData.environment || preservedNestedData.environment
+    }
 
     // Reset dirty state after successful save
-    originalApiInstanceData.value = JSON.parse(JSON.stringify(responseData))
+    originalApiInstanceData.value = JSON.parse(JSON.stringify(apiInstanceData.value))
     hasUnsavedChanges.value = false
 }
 
