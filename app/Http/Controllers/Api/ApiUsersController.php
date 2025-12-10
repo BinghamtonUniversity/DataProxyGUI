@@ -16,16 +16,33 @@ class ApiUsersController extends BaseDjangoController{
         $djangoResult = $this->makeBackendRequest('GET', 'api_users', [], [], 'django');
 
         if ($phpResult['success'] || $djangoResult['success']) {
-            $merged = array_merge(
-                is_array($djangoResult['data'] ?? []) ? $djangoResult['data'] : [],
-                is_array($phpResult['data'] ?? []) ? $phpResult['data'] : []
-            );
+            $merged = [];
+
+            // Add api_type to each Django result
+            if (is_array($djangoResult['data'] ?? [])) {
+                foreach ($djangoResult['data'] as $item) {
+                    if (is_array($item)) {
+                        $item['api_type'] = 'python';
+                        $merged[] = $item;
+                    }
+                }
+            }
+
+            // Add api_type to each PHP result
+            if (is_array($phpResult['data'] ?? [])) {
+                foreach ($phpResult['data'] as $item) {
+                    if (is_array($item)) {
+                        $item['api_type'] = 'php';
+                        $merged[] = $item;
+                    }
+                }
+            }
 
             return response()->json($merged);
         }
 
         return response()->json([
-            'error' => 'Failed to fetch API Users from both backends',
+            'error' => 'Failed to fetch API Users from the backend',
             'django_status' => $djangoResult['status'],
             'php_status' => $phpResult['status'],
         ], 500);

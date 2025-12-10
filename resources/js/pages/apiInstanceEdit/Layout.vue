@@ -152,7 +152,7 @@ const fetchAllData = async () => {
       resourcesResponse.json(),
     ])
 
-    apiUsers.value = apiUsersData
+    apiUsers.value = apiUsersData.filter((user: ApiUser) => user.api_type === props.api_type)
     resources.value = resourcesData
 
   } catch (error) {
@@ -305,7 +305,8 @@ const handleSave = async() => {
     const requestData = {
             id: apiInstanceData.value?.id,
             name: apiInstanceData.value?.name,
-            route: apiInstanceData.value?.route, 
+            route: props.api_type === 'php'? undefined : apiInstanceData.value?.route, 
+            slug: props.api_type === 'php'?  apiInstanceData.value?.route: undefined, 
             route_user_map: apiInstanceData.value?.route_user_map,
             resources: apiInstanceData.value?.resources, 
             options: apiInstanceData.value?.options,
@@ -314,8 +315,8 @@ const handleSave = async() => {
             api_version_id: apiInstanceData.value?.api_version_id,
             environment_id: apiInstanceData.value?.environment_id
         }
-  
-    const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
+    
+    const response = await fetch(`/ajax/api_instances/${props.api_type}/${props.instance_id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -332,6 +333,7 @@ const handleSave = async() => {
     }
     success('API Instance data saved successfully!')
     const responseData = await response.json()
+    console.log('Saved API Instance data:', responseData)
     apiInstanceData.value = responseData
 
     // Reset dirty state after successful save

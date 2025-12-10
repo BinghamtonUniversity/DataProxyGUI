@@ -164,7 +164,8 @@ export interface ApiUser {
   environment_id: number,
   app_name: string,
   app_secret: string,
-  api_key: string
+  api_key: string,
+  api_type?: string,
 }
 
 interface ResourceConfig {

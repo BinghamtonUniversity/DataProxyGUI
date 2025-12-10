@@ -84,6 +84,21 @@ const formConfig = ref({
             options: [] // Will be populated with available environments
         },
         {
+            name: "api_type",
+            label: "API Type",
+            type: "select",
+            placeholder: "Select api type",
+            value: "",
+            info: "Select the API type for this API user",
+            width: "12",
+            offset: "0",
+            required: true,
+            options: [
+                {label: 'Python', value: 'python', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
+                {label: 'PHP', value: 'php', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' }
+            ]
+        },
+        {
             name: "is_active",
             label: "Active",
             type: "checkbox",
@@ -117,6 +132,7 @@ const cleanFormData = (formData: any) => {
     delete cleaned.created_at; // Remove timestamp fields
     delete cleaned.updated_at;
     delete cleaned.encrypted_app_secret; // Don't send encrypted secret
+    delete cleaned.api_type;
     
     // Convert checkbox fields to proper booleans
     const booleanFields = ['is_active'];

@@ -114,6 +114,7 @@ Route::middleware(['auth'])->group(function () {
 
         //API Users
         Route::get('/api_users', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersIndex']);
+        //TO:DO need to add api_type parameter to the following routes??
         Route::post('/api_users', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersStore']);
         Route::put('/api_users/{id}', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersUpdate']);
         Route::delete('/api_users/{id}', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersDestroy']);
@@ -228,7 +229,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('/ajax/api_instances')->group(function () {
         Route::get('/{api_type}/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditIndex'])
             ->name('api_instances.edit.index');
-        Route::put('/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditUpdate'])
+        Route::put('/{api_type}/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditUpdate'])
             ->name('api_instances.edit.update');
 
     });
