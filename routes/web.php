@@ -184,21 +184,22 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/{api_type}/{api_id}/code', [App\Http\Controllers\Api\ApiController::class, 'ApiEditUpdate'])
             ->name('api.edit.update');
         // TO-DO add api_type parameter to the following routes
-        Route::get('/{api_id}/versions', [App\Http\Controllers\Api\ApiController::class, 'getApiVersions']);
-        Route::get('/{api_id}/versions/{version_id}', [App\Http\Controllers\Api\ApiController::class, 'getApiVersionDetails']);
-        Route::put('/{api_id}/publish', [App\Http\Controllers\Api\ApiController::class, 'publishApiVersion']);
+        Route::get('/{api_type}/{api_id}/versions', [App\Http\Controllers\Api\ApiController::class, 'getApiVersions']);
+        Route::get('/{api_type}/{api_id}/versions/{version_id}', [App\Http\Controllers\Api\ApiController::class, 'getApiVersionDetails']);
+        Route::put('/{api_type}/{api_id}/publish', [App\Http\Controllers\Api\ApiController::class, 'publishApiVersion']);
     });
 
-    Route::get('/apis/{api_id}/version/latest', [App\Http\Controllers\Api\ApiController::class, 'exportApiVersion'])
+    Route::get('/apis/{api_type}/{api_id}/version/latest', [App\Http\Controllers\Api\ApiController::class, 'exportApiVersion'])
         ->name('api.export.version');
 
     // ============================================
     // API Version Comparison
     // ============================================
 
-    Route::get('/apis/{api_id}/compare/{version_id}', function ( $api_id, $version_id) {
+    Route::get('/apis/{api_type}/{api_id}/compare/{version_id}', function ( $api_type, $api_id, $version_id) {
         return inertia('apiEdit/Compare', [
             'api_id' => $api_id,
+            'api_type' => $api_type,
             'version_id' => $version_id
         ]);
     })->name('api.compare');

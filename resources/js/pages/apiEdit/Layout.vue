@@ -246,7 +246,7 @@ const fetchVersions = async () => {
     loadingVersions.value = true
     versionsError.value = ''
     try {
-        const response = await fetch(`/ajax/apis/${props.api_id}/versions`, {
+        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -298,10 +298,11 @@ const fetchInstances = async () => {
 }
 
 const viewInstance = (instance: any) => {
-    const instanceUrl = `${window.location.origin}/api_instances/${instance.id}/main`
+    const instanceUrl = `${window.location.origin}/api_instances/${props.api_type}/${instance.id}/main`
     window.open(instanceUrl, '_blank')
 }
 
+// TODO: determine if https or http is needed
 const directToInstanceRoute = (instance: any) => {
     let instanceUrl;
     if (api.value?.api_type === 'php') {
@@ -472,7 +473,7 @@ const fetchVersionDetails = async (versionId: number) => {
     loadingVersionDetails.value = true
     versionDetailsError.value = ''
     try {
-        const response = await fetch(`/ajax/apis/${props.api_id}/versions/${versionId}`, {
+        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/${versionId}`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -500,7 +501,7 @@ const fetchVersionDetails = async (versionId: number) => {
 
 const switchToVersion = async (version: any) => {
     try {
-        const response = await fetch(`/ajax/apis/${props.api_id}/versions/${version.id}`, {
+        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/${version.id}`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -514,7 +515,9 @@ const switchToVersion = async (version: any) => {
             throw new Error(`HTTP error! status: ${response.status}`)
         }
         isVersionSwitch.value = true
-        const versionData = await response.json()
+        const data = await response.json()
+        
+        const versionData =normalizeApiData(data, props.api_type as 'python' | 'php')
         updateApiData(versionData)
         originalApiData.value = JSON.parse(JSON.stringify(versionData))
         hasUnsavedChanges.value = true
@@ -528,7 +531,7 @@ const switchToVersion = async (version: any) => {
 
 const switchToLatestVersion = async () => {
     try {
-        const response = await fetch(`/ajax/apis/${props.api_id}/versions/latest`, {
+        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -542,7 +545,8 @@ const switchToLatestVersion = async () => {
             throw new Error(`HTTP error! status: ${response.status}`)
         }
         isVersionSwitch.value = false
-        const versionData = await response.json()
+        const data = await response.json()
+        const versionData =normalizeApiData(data, props.api_type as 'python' | 'php')
         updateApiData(versionData)
         originalApiData.value = JSON.parse(JSON.stringify(versionData))
         hasUnsavedChanges.value = true
@@ -568,7 +572,7 @@ const openDiffModal = async (version: any) => {
         return
     }
     
-    window.location.href = `/apis/${props.api_id}/compare/${version.id}`
+    window.location.href = `/apis/${props.api_type}/${props.api_id}/compare/${version.id}`
 }
 
 const isLatestVersionStable = computed(() => {
@@ -603,7 +607,7 @@ const publishApiVersion = async (formData: any) => {
         }
     }
     try {
-        const response = await fetch(`/ajax/apis/${props.api_id}/publish`, {
+        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/publish`, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/json',
@@ -649,7 +653,7 @@ const handleDevelopersAction = (action: string) => {
     
     switch (action) {
         case 'export':
-            const exportUrl = `http://127.0.0.1:8001/apis/${props.api_id}/version/latest`
+            const exportUrl = `/apis/${props.api_type}/${props.api_id}/version/latest`
             window.open(exportUrl, '_blank')
             break
         case 'import':

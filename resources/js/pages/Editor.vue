@@ -24,21 +24,75 @@ const emit = defineEmits<{
 }>()
 
 const language = ref(props.language)
-const code = ref(props.code)
+
+// Helper function to add <?php prefix for PHP files (for display only)
+const addPhpPrefix = (content: string): string => {
+  if (props.language === 'php' && !content.trim().startsWith('<?php')) {
+    return '<?php\n' + content
+  }
+  return content
+}
+
+// Initialize code with PHP prefix if needed
+const code = ref(addPhpPrefix(props.code))
 // const hasUnsavedChanges = ref(false)
 
+// Helper function to strip <?php prefix (for saving/emitting)
+const stripPhpPrefix = (content: string): string => {
+  if (props.language === 'php') {
+    const trimmed = content.trimStart()
+    if (trimmed.startsWith('<?php')) {
+      // Remove <?php and any following whitespace/newlines
+      return trimmed.replace(/^<\?php\s*\n?/, '').trimStart()
+    }
+  }
+  return content
+}
+
 watch(() => props.code, (val) => { 
-  code.value = val
+  // For PHP, ensure <?php prefix is added for display
+  code.value = addPhpPrefix(val)
   // props.hasUnsavedChanges.value = false
 })
 watch(() => props.language, (val) => { 
-  if (val) language.value = val 
+  if (val) {
+    const wasPhp = language.value === 'php'
+    language.value = val
+    // When language changes to PHP, ensure prefix is added
+    if (val === 'php') {
+      code.value = addPhpPrefix(code.value)
+    } else if (wasPhp) {
+      // When switching away from PHP, strip the prefix
+      code.value = stripPhpPrefix(code.value)
+    }
+  }
 })
 
 // Track changes to show unsaved status
 watch(code, (newCode) => {
   // hasUnsavedChanges.value = newCode !== props.code
-  emit('update:code', newCode)
+  // For PHP, ensure prefix is maintained in editor
+  if (props.language === 'php' && !newCode.trim().startsWith('<?php')) {
+    // Re-add prefix if it was removed
+    const prefixedCode = '<?php\n' + newCode
+    code.value = prefixedCode
+    // Update editor if mounted
+    if (editor.value) {
+      const position = editor.value.getPosition()
+      editor.value.setValue(prefixedCode)
+      if (position) {
+        editor.value.setPosition({
+          lineNumber: position.lineNumber + 1,
+          column: position.column
+        })
+      }
+    }
+    // Emit without prefix
+    emit('update:code', stripPhpPrefix(prefixedCode))
+    return
+  }
+  // Strip <?php prefix before emitting
+  emit('update:code', stripPhpPrefix(newCode))
 })
 
 declare global {
@@ -80,7 +134,14 @@ function handleEditorTheme(){
 function handleMount(editorInstance: any, monaco: any) {
   editor.value = editorInstance
   
-
+  // Ensure PHP files have <?php prefix in the editor
+  if (props.language === 'php') {
+    const currentValue = editorInstance.getValue()
+    if (!currentValue.trim().startsWith('<?php')) {
+      editorInstance.setValue('<?php\n' + currentValue)
+      code.value = editorInstance.getValue()
+    }
+  }
   
   // Add keyboard shortcut for save (Ctrl+S / Cmd+S)
   editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
@@ -336,7 +397,8 @@ const handleValidate = (markers: any[]) => {
 
 const handleSave = () => {
   if (props.isSaving) return
-  emit('save', code.value)
+  // Strip <?php prefix before saving
+  emit('save', stripPhpPrefix(code.value))
 }
 
 // const formatCode = () => {
