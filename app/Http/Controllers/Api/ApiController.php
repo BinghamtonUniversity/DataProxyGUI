@@ -99,13 +99,13 @@ class ApiController extends BaseDjangoController
     public function apisIndex(): JsonResponse
     {
 
-        $phpResult = $this->makeBackendRequest('GET', 'apis', [], [], 'php'); //TO:DO - remove this when php talks to same database as django
+        // $phpResult = $this->makeBackendRequest('GET', 'apis', [], [], 'php'); //TO:DO - remove this when php talks to same database as django
         $djangoResult = $this->makeBackendRequest('GET', 'apis', [], [], 'django');
 
-        if ($phpResult['success'] || $djangoResult['success']) {
+        if ($djangoResult['success']) { // $phpResult['success'] || 
             $merged = array_merge(
                 is_array($djangoResult['data'] ?? []) ? $djangoResult['data'] : [],
-                is_array($phpResult['data'] ?? []) ? $phpResult['data'] : []
+                // is_array($phpResult['data'] ?? []) ? $phpResult['data'] : []
             );
 
             return response()->json($merged);
@@ -114,7 +114,7 @@ class ApiController extends BaseDjangoController
         return response()->json([
             'error' => 'Failed to fetch APIs from both backends',
             'django_status' => $djangoResult['status'],
-            'php_status' => $phpResult['status'],
+            // 'php_status' => $phpResult['status'],
         ], 500);
     }
 

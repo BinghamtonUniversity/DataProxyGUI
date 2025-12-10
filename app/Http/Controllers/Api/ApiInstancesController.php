@@ -10,31 +10,34 @@ class ApiInstancesController extends BaseDjangoController{
 
     public function apiInstancesIndex(): JsonResponse
     {
-        $phpResult = $this->makeBackendRequest('GET', 'api_instances', [], [], 'php'); //TO:DO - remove this when php talks to same database as django
+        // $phpResult = $this->makeBackendRequest('GET', 'api_instances', [], [], 'php'); //TO:DO - remove this when php talks to same database as django
         $djangoResult = $this->makeBackendRequest('GET', 'api_instances', [], [], 'django');
 
-        if ($phpResult['success'] || $djangoResult['success']) {
+        if ( $djangoResult['success']) { // $phpResult['success'] ||
             $merged = [];
-
+            $merged = array_merge(
+                is_array($djangoResult['data'] ?? []) ? $djangoResult['data'] : [],
+                // is_array($phpResult['data'] ?? []) ? $phpResult['data'] : []
+            );
             // Add api_type to each Django result
-            if (is_array($djangoResult['data'] ?? [])) {
-                foreach ($djangoResult['data'] as $item) {
-                    if (is_array($item)) {
-                        $item['api_type'] = 'python';
-                        $merged[] = $item;
-                    }
-                }
-            }
+            // if (is_array($djangoResult['data'] ?? [])) {
+            //     foreach ($djangoResult['data'] as $item) {
+            //         if (is_array($item)) {
+            //             $item['api_type'] = 'python';
+            //             $merged[] = $item;
+            //         }
+            //     }
+            // }
 
             // Add api_type to each PHP result
-            if (is_array($phpResult['data'] ?? [])) {
-                foreach ($phpResult['data'] as $item) {
-                    if (is_array($item)) {
-                        $item['api_type'] = 'php';
-                        $merged[] = $item;
-                    }
-                }
-            }
+            // if (is_array($phpResult['data'] ?? [])) {
+            //     foreach ($phpResult['data'] as $item) {
+            //         if (is_array($item)) {
+            //             $item['api_type'] = 'php';
+            //             $merged[] = $item;
+            //         }
+            //     }
+            // }
 
             return response()->json($merged);
         }
@@ -52,7 +55,7 @@ class ApiInstancesController extends BaseDjangoController{
         return response()->json([
             'error' => $phpErrorMessage . ' | ' . $djangoErrorMessage,
             'django_status' => $djangoResult['status'],
-            'php_status' => $phpResult['status'],
+            // 'php_status' => $phpResult['status'],
         ], 500);
     }
 
@@ -87,7 +90,7 @@ class ApiInstancesController extends BaseDjangoController{
 
    public function apiInstancesUpdate(Request $request, string $api_type, string $api_instance_id): JsonResponse
     {
-        Log::info('ApiInstancesUpdate called', ['api_instance_id' => $api_instance_id]);
+        Log::info('ApiInstancesUpdate called', ['api_instance_id' => $api_instance_id, 'api_type' => $api_type]);
 
         $endpoint = "api_instances/{$api_instance_id}";
         $requestData = $request->all();
@@ -161,7 +164,7 @@ class ApiInstancesController extends BaseDjangoController{
     // ===========================================
     public function ApiInstancesEditIndex(string $api_type, string $instance_id): JsonResponse
     {
-        Log::info('ApiInstancesEditIndex called', ['instance_id' => $instance_id]);
+        Log::info('ApiInstancesEditIndex called', ['instance_id' => $instance_id, 'api_type' => $api_type]);
 
         $endpoint = "api_instances/{$instance_id}";
         
@@ -188,17 +191,17 @@ class ApiInstancesController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function ApiInstancesEditUpdate(Request $request, string $instance_id): JsonResponse
+    public function ApiInstancesEditUpdate(Request $request, string $api_type, string $instance_id, ): JsonResponse
     {
-        Log::info('ApiInstancesEditUpdate called', ['instance_id' => $instance_id]);
+        Log::info('ApiInstancesEditUpdate called', ['instance_id' => $instance_id, 'api_type' => $api_type]);
 
         $endpoint = "api_instances/{$instance_id}";
         $requestData = $request->all();
 
         try {
-            $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+            $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $api_type);
 
-            Log::info('Django request result', [
+            Log::info('Backend request result', [
                 'success' => $result['success'],
                 'status' => $result['status'],
                 'data' => $result['data']
@@ -212,7 +215,7 @@ class ApiInstancesController extends BaseDjangoController{
             $errorMessage = $result['data']['error']
                 ?? $result['data']['detail']
                 ?? $result['data']['message']
-                ?? 'Unknown error occurred on Django side.';
+                ?? `Unknown error occurred on {$api_type} side.`;
 
             return response()->json([
                 'error' => 'Failed to update API Instance.',
