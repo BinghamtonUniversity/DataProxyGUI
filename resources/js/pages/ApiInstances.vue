@@ -170,6 +170,15 @@ const apiInstancesSchema = {
             showColumn: true
         },
         {
+            name: "api_type",
+            label: "API Type",
+            type: "text",
+            placeholder: "API Type",
+            value: "",
+            help: "Type of the API",
+            info: "Type of the API",
+        },
+        {
             name: "api_version_id",
             label: "API Version",
             type: "text",
@@ -412,6 +421,7 @@ const submitNewApiInstance = async ( formData: any) => {
     }
     closeNewApiInstanceDialog()
     await fetchApiInstances()
+    // await fetchAllData()
   } catch (err: any) {
     newApiInstanceError.value = err.message || 'Error saving API Instance'
     error(newApiInstanceError.value, 'Error');
@@ -539,12 +549,17 @@ const fetchApiInstances = async () => {
     const response = await fetch(`/api/api_instances`)
     api_instances.value = await response.json()
 
+   
     // Set api_version_id to -1 if it is null
     api_instances.value.forEach((instance: any) => {
         if(instance.api_version_id === null) {
             instance.api_version_id = -1
         }
+        let api_type = apis.value.find((api: any) => api.id === instance.api_id)?.api_type;
+       
+        instance.api_type = api_type || 'php';
     });
+
   } catch (e) {
     api_instances.value = []
     console.error('Error fetching API Instances:', e)
@@ -553,9 +568,12 @@ const fetchApiInstances = async () => {
   }
 }
 
-const fetchAllData = async () => {
+const fetchAllData = async (mode: string = 'default') => {
   loading.value = true
   try {
+    if(mode == 'default') {
+      
+    }
     const [
       apiInstancesResponse,
       environmentsResponse,
@@ -589,7 +607,7 @@ const fetchAllData = async () => {
     environments.value = environmentsData
     apis.value = apisData
     api_versions.value = apiVersionsData
-    
+   
     apiInstancesSchema.fields[3].options = environmentsData.map((env: any) => ({
         label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
         value: env.id,
@@ -613,7 +631,12 @@ const fetchAllData = async () => {
         color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     }));
 
-    apiInstancesSchema.fields[5].options = apiVersionsData.map((apiVersion: any) => ({
+
+    
+
+   
+
+    apiInstancesSchema.fields[6].options = apiVersionsData.map((apiVersion: any) => ({
         
         label: apiVersion.stable == true ? apiVersion.summary : 'Latest/Working',
         value: apiVersion.id ,
@@ -626,8 +649,18 @@ const fetchAllData = async () => {
         if(instance.api_version_id === null) {
             instance.api_version_id = -1
         }
+        let api_type = apis.value.find((api: any) => api.id === instance.api_id)?.api_type;
+       
+        instance.api_type = api_type || 'php';
+
     });
-     apiInstancesSchema.fields[5]!.options!.unshift!({
+    apiInstancesSchema.fields[5].options = ['python', 'php'].map((api_type: any) => ({
+        label: api_type  || `API ${api_type}`,
+        value: api_type,
+        color: api_type === 'python' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+    })); 
+
+     apiInstancesSchema.fields[6]!.options!.unshift!({
          label: 'Latest/Working',
          value: -1,
          color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
@@ -687,7 +720,8 @@ const handleDataGridCustomAction = (actionData: { action: string; selectedRows: 
 const handleDataGridRowClick = (row: any) => {
   // console.log('API Type:', api_type); 
   // $api_type = row.api.api_type;
-  router.visit(`/api_instances/${row.api.api_type}/${row.id}/main`);
+  debugger;
+  router.visit(`/api_instances/${row.api_type}/${row.id}/main`);
 };
 </script>
 
