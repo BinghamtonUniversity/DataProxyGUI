@@ -718,9 +718,7 @@ const handleDataGridCustomAction = (actionData: { action: string; selectedRows: 
 };
 
 const handleDataGridRowClick = (row: any) => {
-  // console.log('API Type:', api_type); 
-  // $api_type = row.api.api_type;
-  debugger;
+
   router.visit(`/api_instances/${row.api_type}/${row.id}/main`);
 };
 </script>

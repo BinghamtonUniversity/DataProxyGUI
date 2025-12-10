@@ -14,6 +14,7 @@ import Functions from '@/components/apiEdit/Functions.vue'
 import Models from '@/components/apiEdit/Models.vue'
 import Options from '@/components/apiEdit/Options.vue'
 import Files from '@/components/apiEdit/Files.vue'
+import { mapDjangoToApiData, mapPhpToApiData } from '@/lib/utils'
 
 interface Props {
     api: Api
@@ -64,12 +65,18 @@ const getCsrfToken = () => {
     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     return token;
 }
-
+function normalizeApiData(payload: any, backend: 'python' | 'php'): ApiData {
+  return backend === 'python'
+    ? mapDjangoToApiData(payload)
+    : mapPhpToApiData(payload);
+}
 const fetchCurrentVersion = async () => {
     try {
-        const response = await fetch(`/ajax/apis/${props.api_id}/versions/latest`)
+        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`)
         if (!response.ok) throw new Error('Failed to fetch current version')
-        currentApiData.value = await response.json()
+        const data = await response.json()
+        const versionData =normalizeApiData(data, props.api_type as 'python' | 'php')
+        currentApiData.value = versionData
     } catch (e: any) {
         error.value = e.message || 'Error fetching current version'
     }
@@ -77,9 +84,11 @@ const fetchCurrentVersion = async () => {
 
 const fetchSelectedVersion = async () => {
     try {
-        const response = await fetch(`/ajax/apis/${props.api_id}/versions/${props.version_id}`)
+        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/${props.version_id}`)
         if (!response.ok) throw new Error('Failed to fetch selected version')
-        selectedApiData.value = await response.json()
+        const data = await response.json()
+        const versionData =normalizeApiData(data, props.api_type as 'python' | 'php')
+        selectedApiData.value = versionData
     } catch (e: any) {
         error.value = e.message || 'Error fetching selected version'
     }
@@ -101,8 +110,29 @@ const fetchAllData = async () => {
 }
 
 // Tab configuration
-const tabs = [
+const tabs = props.api_type === 'php' ? [
     { 
+        id: 'routes', 
+        title: 'Routes'
+    },
+    { 
+        id: 'resources', 
+        title: 'Resources'
+    },
+    { 
+        id: 'functions', 
+        title: 'Functions'
+    },
+    { 
+        id: 'files', 
+        title: 'Files'
+    },
+    { 
+        id: 'options', 
+        title: 'Options'
+    }
+]: [
+{ 
         id: 'routes', 
         title: 'Routes'
     },
@@ -117,7 +147,7 @@ const tabs = [
     { 
         id: 'models', 
         title: 'Models'
-    },
+    }, 
     { 
         id: 'files', 
         title: 'Files'
@@ -350,7 +380,7 @@ const backToFileList = () => {
 
 // Go back to API edit
 const goBack = () => {
-    router.get(`/apis/${props.api_id}/${activeTab.value}`)
+    router.get(`/apis/${props.api_type}/${props.api_id}/${activeTab.value}`)
 }
 
 // Resizing functions
