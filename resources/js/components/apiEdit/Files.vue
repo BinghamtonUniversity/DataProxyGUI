@@ -667,7 +667,7 @@ onUnmounted(() => {
                             v-if="selectedFile" 
                             :key="selectedFile.name"
                             :code="currentFunctionCode" 
-                            :language="props.api_type === 'python' ? 'python' : 'php'"
+                            :language="props.api_type === 'python' || props.api_type === 'php' ? props.api_type : 'php'"
                             :is-saving="isSaving"
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"

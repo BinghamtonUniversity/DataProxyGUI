@@ -604,7 +604,7 @@ onUnmounted(() => {
                             v-if="selectedFunction"
                             :key="selectedFunction.name"
                             :code="currentFunctionCode" 
-                            :language="props?.api_type === 'python' || props?.api_type === 'php' ? props?.api_type : undefined"
+                            :language="props?.api_type === 'python' || props?.api_type === 'php' ? props?.api_type : 'php'"
                             :is-saving="isSaving"
                             :saveError="saveError??''"
                             :saveSuccess="saveSuccess"
