@@ -10,43 +10,11 @@ class ApiInstancesController extends BaseDjangoController{
 
     public function apiInstancesIndex(): JsonResponse
     {
-        $phpResult = $this->makeBackendRequest('GET', 'api_instances', [], [], 'php'); //TO:DO - remove this when php talks to same database as django
         $djangoResult = $this->makeBackendRequest('GET', 'api_instances', [], [], 'django');
 
         if ( $djangoResult['success']) { // $phpResult['success'] ||
-            $merged = [];
-            // $merged = array_merge(
-            //     is_array($djangoResult['data'] ?? []) ? $djangoResult['data'] : [],
-            //     // is_array($phpResult['data'] ?? []) ? $phpResult['data'] : []
-            // );
-            // Add api_type to each Django result
-            if (is_array($djangoResult['data'] ?? [])) {
-                foreach ($djangoResult['data'] as $item) {
-                    if (is_array($item)) {
-                        $item['api_type'] = 'python';
-                        $merged[] = $item;
-                    }
-                }
-            }
-
-            // Add api_type to each PHP result
-            if (is_array($phpResult['data'] ?? [])) {
-                foreach ($phpResult['data'] as $item) {
-                    if (is_array($item)) {
-                        $item['api_type'] = 'php';
-                        $item['route'] = $item['slug'];
-                        $merged[] = $item;
-                    }
-                }
-            }
-
-            return response()->json($merged);
+            return response()->json($djangoResult['data']);
         }
-
-        $phpErrorMessage = $phpResult['data']['error']
-            ?? $phpResult['data']['detail']
-            ?? $phpResult['data']['message']
-            ?? 'Unknown error occurred on PHP side.';
 
         $djangoErrorMessage = $djangoResult['data']['error']
             ?? $djangoResult['data']['detail']
@@ -54,9 +22,8 @@ class ApiInstancesController extends BaseDjangoController{
             ?? 'Unknown error occurred on Django side.';
 
         return response()->json([
-            'error' => $phpErrorMessage . ' | ' . $djangoErrorMessage,
+            'error' => $djangoErrorMessage,
             'django_status' => $djangoResult['status'],
-            // 'php_status' => $phpResult['status'],
         ], 500);
     }
 
