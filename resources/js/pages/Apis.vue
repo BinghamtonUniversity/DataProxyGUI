@@ -462,14 +462,13 @@ const handleDataGridActionHandler = (actionData: { action: string; selectedRows:
 // Handle DataGrid action events
 const handleAction = (actionData: any) => {
 
-    
     switch (actionData.type) {
         case 'single-delete':
             handleDelete([actionData.payload.id]);
             break;
         case 'view':
             // Navigate to API routes page
-            router.visit(`/apis/${actionData.payload.id}/routes`);
+            router.visit(`/apis/${actionData.payload.api_type}/${actionData.payload.id}/routes`);
             break;
         case 'single-edit':
             openEditModal(actionData.payload);
