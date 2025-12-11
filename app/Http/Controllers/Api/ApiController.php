@@ -106,10 +106,9 @@ class ApiController extends BaseDjangoController
         }
 
         return response()->json([
-            'error' => 'Failed to fetch APIs from both backends',
+            'error' => 'Failed to fetch APIs',
             'django_status' => $djangoResult['status'],
-            // 'php_status' => $phpResult['status'],
-        ], 500);
+           ], 500);
     }
 
     public function apisShow($api_type, $id): JsonResponse
@@ -336,37 +335,37 @@ class ApiController extends BaseDjangoController
     /**
      * Get the latest version of a specific API
      */
-    public function getLatestApiVersion($id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions/latest");
+    // public function getLatestApiVersion($id): JsonResponse
+    // {
+    //     $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions/latest");
 
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
+    //     if ($result['success']) {
+    //         return response()->json($result['data']);
+    //     }
 
-        return response()->json([
-            'error' => "Failed to fetch latest version for API {$id}",
-            'status' => $result['status']
-        ], $result['status']);
-    }
+    //     return response()->json([
+    //         'error' => "Failed to fetch latest version for API {$id}",
+    //         'status' => $result['status']
+    //     ], $result['status']);
+    // }
 
-    /**
-     * Update API code/configuration
-     */
-    public function updateApiCode(Request $request, $id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('PUT', "apis/{$id}/code", $request->all());
+    // /**
+    //  * Update API code/configuration
+    //  */
+    // public function updateApiCode(Request $request, $id): JsonResponse
+    // {
+    //     $result = $this->makeDjangoRequest('PUT', "apis/{$id}/code", $request->all());
 
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
+    //     if ($result['success']) {
+    //         return response()->json($result['data']);
+    //     }
 
-        return response()->json([
-            'error' => "Failed to update API code for API {$id}",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
+    //     return response()->json([
+    //         'error' => "Failed to update API code for API {$id}",
+    //         'details' => $result['data'],
+    //         'status' => $result['status']
+    //     ], $result['status']);
+    // }
 
     /**
      * Get API developers for a specific API
@@ -440,22 +439,22 @@ class ApiController extends BaseDjangoController
             'status' => $result['status']
         ], $result['status']);
     }
-    // ===========================================
-    // API's Instances
-    // ===========================================
-    public function apisInstancesIndex($id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('GET', "apis/{$id}/instances");
+    // // ===========================================
+    // // API's Instances
+    // // ===========================================
+    // public function apisInstancesIndex($id): JsonResponse
+    // {
+    //     $result = $this->makeDjangoRequest('GET', "apis/{$id}/instances");
     
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
+    //     if ($result['success']) {
+    //         return response()->json($result['data']);
+    //     }
 
-        return response()->json([
-            'error' => "Failed to fetch API's instances for API {$id}",
-            'status' => $result['status']
-        ], $result['status']);
-    }
+    //     return response()->json([
+    //         'error' => "Failed to fetch API's instances for API {$id}",
+    //         'status' => $result['status']
+    //     ], $result['status']);
+    // }
 
     /**
      * Magic method to handle dynamic resource calls
