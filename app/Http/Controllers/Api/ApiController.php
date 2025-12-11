@@ -99,13 +99,14 @@ class ApiController extends BaseDjangoController
     public function apisIndex(): JsonResponse
     {
 
-        // $phpResult = $this->makeBackendRequest('GET', 'apis', [], [], 'php'); //TO:DO - remove this when php talks to same database as django
+        $phpResult = $this->makeBackendRequest('GET', 'apis', [], [], 'php'); //TO:DO - remove this when php talks to same database as django
         $djangoResult = $this->makeBackendRequest('GET', 'apis', [], [], 'django');
 
-        if ($djangoResult['success']) { // $phpResult['success'] || 
+        if ($djangoResult['success'] || $phpResult['success']) { 
+          
             $merged = array_merge(
                 is_array($djangoResult['data'] ?? []) ? $djangoResult['data'] : [],
-                // is_array($phpResult['data'] ?? []) ? $phpResult['data'] : []
+                is_array($phpResult['data'] ?? []) ? $phpResult['data'] : []
             );
 
             return response()->json($merged);
@@ -114,7 +115,7 @@ class ApiController extends BaseDjangoController
         return response()->json([
             'error' => 'Failed to fetch APIs from both backends',
             'django_status' => $djangoResult['status'],
-            // 'php_status' => $phpResult['status'],
+            'php_status' => $phpResult['status'],
         ], 500);
     }
 
@@ -513,9 +514,10 @@ class ApiController extends BaseDjangoController
     /**
      * Get all versions of a specific API
      */
-    public function getApiVersions($id): JsonResponse
+    public function getApiVersions($api_type, $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions");
+        // $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions");
+        $result = $this->makeBackendRequest('GET', "apis/{$id}/versions", [], [], 'php');
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -529,11 +531,12 @@ class ApiController extends BaseDjangoController
     /**
      * Publish a new version of a specific API
      */
-    public function publishApiVersion(Request $request, $id): JsonResponse
+    public function publishApiVersion(Request $request, $api_type, $id): JsonResponse
     {
         $data = $request->all();
         
-        $result = $this->makeDjangoRequest('PUT', "apis/{$id}/publish", $data);
+        // $result = $this->makeDjangoRequest('PUT', "apis/{$id}/publish", $data);
+        $result = $this->makeBackendRequest('PUT', "apis/{$id}/publish", $data, [], $api_type);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -547,9 +550,15 @@ class ApiController extends BaseDjangoController
     /**
      * Get details of a specific API version
      */
-    public function getApiVersionDetails( $api_id, $version_id): JsonResponse
+    public function getApiVersionDetails( $api_type, $api_id, $version_id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', "apis/{$api_id}/versions/{$version_id}");
+        // $result = $this->makeDjangoRequest('GET', "apis/{$api_id}/versions/{$version_id}");
+        if ($api_type === 'php') {
+            $result = $this->makeBackendRequest('GET', "api_versions/{$version_id}", [], [], $api_type);
+        } else {
+            $result = $this->makeDjangoRequest('GET', "apis/{$api_id}/versions/{$version_id}");
+        }
+        // $result = $this->makeBackendRequest('GET', "apis/{$api_id}/versions/{$version_id}", [], [], $api_type);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -577,13 +586,14 @@ class ApiController extends BaseDjangoController
     /**
      * Export API Version - Display JSON in new tab
      */
-    public function exportApiVersion(Request $request, string $api_id)
+    public function exportApiVersion(Request $request, string $api_type, string $api_id)
     {
         Log::info('Export API Version called', ['api_id' => $api_id]);
 
         $endpoint = "apis/{$api_id}/versions/latest";
         
-        $result = $this->makeDjangoRequest('GET', $endpoint);
+        // $result = $this->makeDjangoRequest('GET', $endpoint);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
         // Log::info('Django request result for export', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
