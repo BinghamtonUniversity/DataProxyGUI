@@ -241,6 +241,7 @@ class ApiController extends BaseDjangoController
 
         try {
             $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $api_type);
+            //$result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
 
             Log::info('Request result', [
                 'success' => $result['success'],
@@ -508,8 +509,8 @@ class ApiController extends BaseDjangoController
      */
     public function getApiVersions($api_type, $id): JsonResponse
     {
-        // $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions");
-        $result = $this->makeBackendRequest('GET', "apis/{$id}/versions", [], [], 'php');
+        $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions");
+        //$result = $this->makeBackendRequest('GET', "apis/{$id}/versions", [], [], $api_type);
 
         if ($result['success']) {
             return response()->json($result['data']);

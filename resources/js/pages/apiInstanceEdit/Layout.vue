@@ -199,7 +199,7 @@ const fetchVersions = async () => {
     loadingVersions.value = true
     versionsError.value = ''
     try {
-        const response = await fetch(`/ajax/apis/${apiInstanceData.value.api.id}/versions`, {
+        const response = await fetch(`/ajax/apis/${props.api_type}/${apiInstanceData.value.api.id}/versions`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -231,7 +231,7 @@ const openVersionModal = () => {
 // Update API version for the instance
 const updateInstanceVersion = async (version: any) => {
     try {
-        const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
+        const response = await fetch(`/ajax/api_instances/${props.api_type}/${props.instance_id}`, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/json',
