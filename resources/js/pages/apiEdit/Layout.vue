@@ -733,6 +733,13 @@ const handleSave = async () => {
             return
         }
     }
+    // Skip save when there are no changes
+    const hasChanges = JSON.stringify(originalApiData.value) !== JSON.stringify(apiData.value)
+    if (!hasChanges) {
+        info('No changes detected to save.', 'Nothing to Save')
+        return
+    }
+
 
     // const emptyViews = apiData.value.version_views.filter(
     //     (view: any) => !view.content || view.content.trim() === ''
