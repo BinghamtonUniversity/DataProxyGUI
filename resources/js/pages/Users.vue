@@ -14,8 +14,8 @@ const apiBaseUrl = '/api';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'CAS Users',
-        href: '/cas_users',
+        title: 'Users',
+        href: '/users',
     },
 ];
 
