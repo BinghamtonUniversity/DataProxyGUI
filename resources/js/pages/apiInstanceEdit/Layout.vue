@@ -321,8 +321,29 @@ const handleSave = async() => {
             public: apiInstanceData.value?.public,
             api_id: apiInstanceData.value?.api.id,
             api_version_id: apiInstanceData.value?.api_version_id,
-            environment_id: apiInstanceData.value?.environment_id
+            environment_id: apiInstanceData.value?.environment.id
         }
+    
+    // Create comparable object from original data with same structure as requestData
+    const originalRequestData = {
+        id: originalApiInstanceData.value?.id,
+        name: originalApiInstanceData.value?.name,
+        route: props.api_type === 'php'? undefined : originalApiInstanceData.value?.route,
+        slug: props.api_type === 'php'? originalApiInstanceData.value?.route : undefined,
+        route_user_map: originalApiInstanceData.value?.route_user_map,
+        resources: originalApiInstanceData.value?.resources,
+        options: originalApiInstanceData.value?.options,
+        public: originalApiInstanceData.value?.public,
+        api_id: originalApiInstanceData.value?.api?.id,
+        api_version_id: originalApiInstanceData.value?.api_version_id,
+        environment_id: originalApiInstanceData.value?.environment?.id
+    }
+   
+    const hasChanges = JSON.stringify(originalRequestData) !== JSON.stringify(requestData)
+    if (!hasChanges) {
+        info('No changes detected to save.', 'Nothing to Save')
+        return
+    }   
     
     const response = await fetch(`/ajax/api_instances/${props.api_type}/${props.instance_id}`, {
         method: 'PUT',

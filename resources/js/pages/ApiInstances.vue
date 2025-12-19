@@ -632,10 +632,6 @@ const fetchAllData = async (mode: string = 'default') => {
     }));
 
 
-    
-
-   
-
     apiInstancesSchema.fields[6].options = apiVersionsData.map((apiVersion: any) => ({
         
         label: apiVersion.stable == true ? apiVersion.summary : 'Latest/Working',
