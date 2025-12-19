@@ -305,14 +305,13 @@ const viewInstance = (instance: any) => {
 // TODO: determine if https or http is needed
 const directToInstanceRoute = (instance: any) => {
     let instanceUrl;
-    if (api.value?.api_type === 'php') {
-         instanceUrl = `${hermesBaseUrl}/api_instances/${instance.id}/main`
-    } else {
-        let domain = environment.value.find((env: Environment) => env.id === instance.environment_id)?.domain
-        const baseDomain = domain?.split('/').slice(0, 3).join('/')
-        // TODO https or http?
-        instanceUrl = `http://${baseDomain}/${instance.route}`
-    }
+    // if (api.value?.api_type === 'php') {
+    //      instanceUrl = `${hermesBaseUrl}/api_instances/${instance.id}/main`
+    // } else {      
+    let domain = environment.value.find((env: Environment) => env.id === instance.environment_id)?.domain
+    const baseDomain = domain?.split('/').slice(0, 3).join('/')
+    // TODO https or http?
+    instanceUrl = `http://${baseDomain}/${instance.route}`
     window.open(instanceUrl, '_blank')
 }
 

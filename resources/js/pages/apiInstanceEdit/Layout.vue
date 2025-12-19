@@ -311,18 +311,15 @@ const visitInstance = () => {
     }
     
     let instanceUrl
-    if (props.api_type === 'php') {
-        instanceUrl = `${hermesBaseUrl}/api_instances/${apiInstanceData.value.id}/main`
-    } else {
-        const domain = apiInstanceData.value.environment?.domain
-        if (!domain) {
-            showError('Environment domain not found', 'Error')
-            return
-        }
-        const baseDomain = domain.split('/').slice(0, 3).join('/')
-        // TODO https or http?
-        instanceUrl = `http://${baseDomain}/${apiInstanceData.value.route}`
+    const domain = apiInstanceData.value.environment?.domain
+    if (!domain) {
+        showError('Environment domain not found', 'Error')
+        return
     }
+    const baseDomain = domain.split('/').slice(0, 3).join('/')
+    // TODO https or http?
+    instanceUrl = `http://${baseDomain}/${apiInstanceData.value.route}`
+    
     window.open(instanceUrl, '_blank')
 }
 
