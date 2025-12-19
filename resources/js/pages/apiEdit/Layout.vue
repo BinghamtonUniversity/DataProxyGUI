@@ -752,6 +752,7 @@ const handleSave = async () => {
     // }
     
     const requestData = props.api_type === 'php' ? denormalizeToPhp(apiData.value): apiData.value
+    // debugger;
     // console.log('Saving API data:', requestData)
     const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/code`, {
         method: 'PUT',
@@ -771,6 +772,7 @@ const handleSave = async () => {
     success('API data saved successfully!', 'API Data Saved')
     const responseData = await response.json()
     const normalizedData = normalizeApiData(responseData, props.api_type as 'python' | 'php')
+    // debugger;
     updateApiData(normalizedData)
     console.log("Orgiinal", originalApiData.value)
     originalApiData.value = JSON.parse(JSON.stringify(normalizedData))
