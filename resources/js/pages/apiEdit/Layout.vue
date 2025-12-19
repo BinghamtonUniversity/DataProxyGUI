@@ -700,7 +700,6 @@ const handleApiDataImport = (formData: any) => {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
         }
         updateApiData(importedData)
-        originalApiData.value = JSON.parse(JSON.stringify(importedData))
         hasUnsavedChanges.value = true
         closeApiDataImportModal()
         success('API data imported successfully!', 'Import Successful')
