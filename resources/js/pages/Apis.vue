@@ -364,10 +364,15 @@ const handleFormSubmit = async (formValues: any) => {
         if (modalMode.value === 'new') {
             // Create new API
             const cleanedData = cleanFormData(formValues);
-
+            // TO-DO:: For php APIs, set created_by_id and user_id to 1 (temporary workaround)
             if(cleanedData.api_type === 'php'){
                 cleanedData.created_by_id = 1
                 cleanedData.user_id = 1
+            }
+
+            // Check if name contains spaces
+            if (cleanedData.api_type === 'php' && cleanedData.name && cleanedData.name.includes(' ')) {
+                throw new Error('API name cannot contain spaces. Please use underscores or hyphens instead.');
             }
             
             const response = await fetch(`/api/apis/${cleanedData.api_type}`, {
@@ -391,6 +396,7 @@ const handleFormSubmit = async (formValues: any) => {
 
 
             // Format and add to local state
+            // TO-DO: created_by_id mapping for php??
             apis.value.push({
                 ...newApi,
                 api_type: newApi.api_type || 'php',

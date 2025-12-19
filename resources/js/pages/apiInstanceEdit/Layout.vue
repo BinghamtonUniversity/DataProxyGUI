@@ -152,7 +152,7 @@ const fetchAllData = async () => {
       resourcesResponse.json(),
     ])
 
-    apiUsers.value = apiUsersData.filter((user: ApiUser) => user.api_type === props.api_type)
+    apiUsers.value = apiUsersData
     resources.value = resourcesData
 
   } catch (error) {
