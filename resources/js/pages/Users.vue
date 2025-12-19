@@ -93,6 +93,10 @@ const formConfig = {
             label: "Admin",
             type: "checkbox",
             placeholder: "",
+            options: [
+                { label: 'false', value: false, color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' },
+                { label: 'true', value: true, color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' }
+            ],
             value: false,
             help: "Whether the user is an admin",
             info: "Whether the user is an admin",
@@ -106,6 +110,10 @@ const formConfig = {
             type: "checkbox",
             placeholder: "",
             value: true,
+            options: [
+                { label: 'false', value: false, color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' },
+                { label: 'true', value: true, color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' }
+            ],
             help: "Whether the user is active",
             info: "Whether the user is active",
             width: "12",
@@ -118,6 +126,10 @@ const formConfig = {
             type: "checkbox",
             placeholder: "",
             value: false,
+            options: [
+                { label: 'false', value: false, color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' },
+                { label: 'true', value: true, color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' }
+            ],
             help: "Whether the user is a developer",
             info: "Whether the user is a developer",
             width: "12",
@@ -202,6 +214,10 @@ const openNewModal = () => {
 const openEditModal = (row?: any) => {
     if (row) {
         modalMode.value = 'edit';
+
+        // admin: row.admin == true ? "true" : "false",
+        //     active: row.active == true ? "true" : "false",
+        //     developer: row.developer == true ? "true" : "false"
         // Create a clean copy for editing, preserving original data
         editingRow.value = { 
             id: row.id,
@@ -413,11 +429,6 @@ onMounted(() => {
                 :showNew="true"
                 :showEdit="true"
                 :showDelete="true"
-                :rowActions="[
-                    { type: 'view', label: 'View', icon: 'eye', colorClass: 'text-green-600 hover:bg-green-50' },
-                    { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
-                    { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
-                ]"
                 @create="openNewModal"
                 @edit="openEditModal"
                 @delete="handleDelete"
