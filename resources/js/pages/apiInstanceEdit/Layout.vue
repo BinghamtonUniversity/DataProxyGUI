@@ -25,6 +25,7 @@ interface Props {
 const props = defineProps<Props>()
 const currentTab = ref(props.activeTab || 'main')
 
+const hermesBaseUrl = import.meta.env.VITE_HERMES_BASEURL
 
 // Toaster
 const { success, error: showError, warning, info } = useToaster()
@@ -302,6 +303,26 @@ const componentProps = computed(() => ({
     // refreshApiInstanceData
 }))
 
+// TODO: determine if https or http is needed
+const visitInstance = () => {
+    if (!apiInstanceData.value) {
+        showError('Instance data not loaded', 'Error')
+        return
+    }
+    
+    let instanceUrl
+    const domain = apiInstanceData.value.environment?.domain
+    if (!domain) {
+        showError('Environment domain not found', 'Error')
+        return
+    }
+    const baseDomain = domain.split('/').slice(0, 3).join('/')
+    // TODO https or http?
+    instanceUrl = `http://${baseDomain}/${apiInstanceData.value.route}`
+    
+    window.open(instanceUrl, '_blank')
+}
+
 const handleSave = async() => {
     // Store the nested objects before the API call
     const preservedNestedData = {
@@ -321,8 +342,29 @@ const handleSave = async() => {
             public: apiInstanceData.value?.public,
             api_id: apiInstanceData.value?.api.id,
             api_version_id: apiInstanceData.value?.api_version_id,
-            environment_id: apiInstanceData.value?.environment_id
+            environment_id: apiInstanceData.value?.environment.id
         }
+    
+    // Create comparable object from original data with same structure as requestData
+    const originalRequestData = {
+        id: originalApiInstanceData.value?.id,
+        name: originalApiInstanceData.value?.name,
+        route: props.api_type === 'php'? undefined : originalApiInstanceData.value?.route,
+        slug: props.api_type === 'php'? originalApiInstanceData.value?.route : undefined,
+        route_user_map: originalApiInstanceData.value?.route_user_map,
+        resources: originalApiInstanceData.value?.resources,
+        options: originalApiInstanceData.value?.options,
+        public: originalApiInstanceData.value?.public,
+        api_id: originalApiInstanceData.value?.api?.id,
+        api_version_id: originalApiInstanceData.value?.api_version_id,
+        environment_id: originalApiInstanceData.value?.environment?.id
+    }
+   
+    const hasChanges = JSON.stringify(originalRequestData) !== JSON.stringify(requestData)
+    if (!hasChanges) {
+        info('No changes detected to save.', 'Nothing to Save')
+        return
+    }   
     
     const response = await fetch(`/ajax/api_instances/${props.api_type}/${props.instance_id}`, {
         method: 'PUT',
@@ -450,6 +492,16 @@ onUnmounted(() => {
         <div class="px-4 py-6">
             <Heading :title="`API Instance - ${props.instance_id}`" description="Manage your API Instance" />
             <div class="flex justify-end items-center gap-2 mb-6">
+                <Button 
+                    @click="visitInstance"
+                    variant="outline"
+                    class="flex items-center gap-2"
+                >   
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                    Visit Instance
+                </Button>
                 <!-- Save Button -->
                 <Button 
                     @click="handleSave"

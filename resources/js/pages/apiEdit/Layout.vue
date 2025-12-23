@@ -305,14 +305,13 @@ const viewInstance = (instance: any) => {
 // TODO: determine if https or http is needed
 const directToInstanceRoute = (instance: any) => {
     let instanceUrl;
-    if (api.value?.api_type === 'php') {
-         instanceUrl = `${hermesBaseUrl}/api_instances/${instance.id}/main`
-    } else {
-        let domain = environment.value.find((env: Environment) => env.id === instance.environment_id)?.domain
-        const baseDomain = domain?.split('/').slice(0, 3).join('/')
-        // TODO https or http?
-        instanceUrl = `http://${baseDomain}/${instance.route}`
-    }
+    // if (api.value?.api_type === 'php') {
+    //      instanceUrl = `${hermesBaseUrl}/api_instances/${instance.id}/main`
+    // } else {      
+    let domain = environment.value.find((env: Environment) => env.id === instance.environment_id)?.domain
+    const baseDomain = domain?.split('/').slice(0, 3).join('/')
+    // TODO https or http?
+    instanceUrl = `http://${baseDomain}/${instance.route}`
     window.open(instanceUrl, '_blank')
 }
 
@@ -358,10 +357,67 @@ const performSearch = () => {
         })
     }
 
+    // Special handling for models with their new structure
+    const searchInModels = (items: any[]) => {
+        if (!items || !Array.isArray(items)) return
+
+        items.forEach((item: any) => {
+            const name = item.name || ''
+            const nameMatch = name && name.toLowerCase().includes(query)
+            
+            // Search in content
+            const content = item.content || ''
+            const contentMatch = content && content.toLowerCase().includes(query)
+            
+            // Search in inheritance
+            const inheritance = item.inheritance || ''
+            const inheritanceMatch = inheritance && inheritance.toLowerCase().includes(query)
+            
+            // Search in class_meta (both name and value)
+            const classMetaMatch = item.class_meta && Array.isArray(item.class_meta) && item.class_meta.some((meta: any) => {
+                const metaName = (meta.name || '').toLowerCase().includes(query)
+                const metaValue = (meta.value || '').toLowerCase().includes(query)
+                return metaName || metaValue
+            })
+            
+            // Search in class_methods (name, params, and content)
+            const classMethodsMatch = item.class_methods && Array.isArray(item.class_methods) && item.class_methods.some((method: any) => {
+                const methodName = (method.name || '').toLowerCase().includes(query)
+                const methodParams = (method.params || []).some((param: string) => param.toLowerCase().includes(query))
+                const methodContent = (method.content || '').toLowerCase().includes(query)
+                return methodName || methodParams || methodContent
+            })
+            
+            if (nameMatch || contentMatch || inheritanceMatch || classMetaMatch || classMethodsMatch) {
+                // Build a description that shows where the match was found
+                let description = ''
+                if (contentMatch) {
+                    description = content.substring(0, 100) + (content.length > 100 ? '...' : '')
+                } else if (inheritanceMatch) {
+                    description = `Inheritance: ${inheritance}`
+                } else if (classMetaMatch) {
+                    description = 'Found in class meta properties'
+                } else if (classMethodsMatch) {
+                    description = 'Found in class methods'
+                } else {
+                    description = name || 'No description'
+                }
+                
+                results.push({
+                    category: 'Models',
+                    type: 'model',
+                    name: name || 'Unnamed',
+                    description: description,
+                    data: item
+                })
+            }
+        })
+    }
+
     searchInArray(data.version_urls || [], 'Routes', 'route')
     searchInArray(data.resources || [], 'Resources', 'resource')
     searchInArray(data.version_views || [], 'Functions', 'function')
-    searchInArray(data.version_models || [], 'Models', 'model')
+    searchInModels(data.version_models || [])
     searchInArray(data.version_files || [], 'Files', 'file')
 
     const topLevelFields = [
@@ -438,7 +494,7 @@ const handleSearchResultClick = (result: any) => {
         }, 500)
     }
     
-    if (result.category === 'Functions' || result.category === 'Files') {
+    if (result.category === 'Functions' || result.category === 'Files' || result.category === 'Models') {
         setTimeout(() => {
             window.dispatchEvent(new CustomEvent('search-result-selected', {
                 detail: {
@@ -701,7 +757,6 @@ const handleApiDataImport = (formData: any) => {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
         }
         updateApiData(importedData)
-        originalApiData.value = JSON.parse(JSON.stringify(importedData))
         hasUnsavedChanges.value = true
         closeApiDataImportModal()
         success('API data imported successfully!', 'Import Successful')
@@ -733,6 +788,13 @@ const handleSave = async () => {
             return
         }
     }
+    // Skip save when there are no changes
+    const hasChanges = JSON.stringify(originalApiData.value) !== JSON.stringify(apiData.value)
+    if (!hasChanges) {
+        info('No changes detected to save.', 'Nothing to Save')
+        return
+    }
+
 
     // const emptyViews = apiData.value.version_views.filter(
     //     (view: any) => !view.content || view.content.trim() === ''

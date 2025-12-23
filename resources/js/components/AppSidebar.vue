@@ -69,8 +69,8 @@ const footerNavItems: NavItem[] = [
         icon: Folder,
         children: [
             {
-                title: 'CAS Users',
-                href: '/cas_users',
+                title: 'Users',
+                href: '/users',
                 icon: Users,
             },
             {
