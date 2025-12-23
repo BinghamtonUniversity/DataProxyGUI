@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowUpDown, ChevronDown, Plus, Trash2, Code, Pencil } from 'lucide-vue-next'
-import { h, ref, computed, watch, onUnmounted } from 'vue'
+import { h, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
 import { type ApiData, ModelData, Api } from '@/types'
@@ -615,7 +615,179 @@ const handleDeleteMethod = (method: { name: string; params: string[]; content: s
     selectedModel.value.class_methods = selectedModel.value.class_methods?.filter(m => m.name !== method.name)
 }
 
-// Clean up timeouts when component unmounts
+// Handle search result selection
+const handleSearchResult = (event: CustomEvent) => {
+    const { category, name, data, searchQuery } = event.detail
+    
+    if (category === 'Models' && props.apiData?.version_models) {
+        // Find the model by name
+        const modelToSelect = props.apiData.version_models.find(model => model.name === name)
+        if (modelToSelect) {
+            selectedModel.value = modelToSelect
+            
+            // Determine which section to show based on where the match was found
+            const query = searchQuery?.toLowerCase().trim() || ''
+            let sectionToShow: 'properties' | 'content' | { type: 'method', index: number } = 'content'
+            
+            // Check if match is in class_methods
+            if (modelToSelect.class_methods && Array.isArray(modelToSelect.class_methods)) {
+                const methodIndex = modelToSelect.class_methods.findIndex((method: any) => {
+                    const methodName = (method.name || '').toLowerCase().includes(query)
+                    const methodParams = (method.params || []).some((param: string) => param.toLowerCase().includes(query))
+                    const methodContent = (method.content || '').toLowerCase().includes(query)
+                    return methodName || methodParams || methodContent
+                })
+                
+                if (methodIndex !== -1) {
+                    sectionToShow = { type: 'method', index: methodIndex }
+                }
+            }
+            
+            // Check if match is in inheritance or class_meta (show properties)
+            const inheritance = (modelToSelect.inheritance || '').toLowerCase().includes(query)
+            const classMetaMatch = modelToSelect.class_meta && Array.isArray(modelToSelect.class_meta) && 
+                modelToSelect.class_meta.some((meta: any) => {
+                    const metaName = (meta.name || '').toLowerCase().includes(query)
+                    const metaValue = (meta.value || '').toLowerCase().includes(query)
+                    return metaName || metaValue
+                })
+            
+            if (inheritance || classMetaMatch) {
+                sectionToShow = 'properties'
+            }
+            
+            // Set the section
+            selectSection(sectionToShow)
+            
+            // Scroll to the model in the list
+            setTimeout(() => {
+                const modelButton = document.querySelector(`[data-model-name="${name}"]`)
+                if (modelButton) {
+                    modelButton.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    modelButton.classList.add('search-highlight-item')
+                    setTimeout(() => {
+                        modelButton.classList.remove('search-highlight-item')
+                    }, 3000)
+                }
+                
+                // If there's a search query and we're showing content or a method, highlight it in the editor
+                if (searchQuery && searchQuery.trim() && (sectionToShow === 'content' || typeof sectionToShow === 'object')) {
+                    highlightTextInEditor(searchQuery.trim())
+                }
+            }, 200) // Increased delay to ensure editor is loaded
+        }
+    }
+}
+
+// Function to highlight text in the editor
+const highlightTextInEditor = (searchText: string) => {
+    let attempts = 0
+    const maxAttempts = 20 // Try for up to 10 seconds (20 * 500ms)
+    
+    const tryHighlight = () => {
+        attempts++
+        
+        // Try multiple methods to find the Monaco editor
+        let editorInstance = null
+        
+        // Method 1: Look for VueMonacoEditor component
+        const vueMonacoEditor = document.querySelector('vue-monaco-editor')
+        if (vueMonacoEditor && (vueMonacoEditor as any).__vueParentComponent) {
+            const component = (vueMonacoEditor as any).__vueParentComponent
+            if (component.exposed && component.exposed.editor) {
+                editorInstance = component.exposed.editor.value
+            }
+        }
+        
+        // Method 2: Look for Monaco editor in DOM
+        if (!editorInstance) {
+            const editorElement = document.querySelector('.monaco-editor')
+            if (editorElement) {
+                editorInstance = (editorElement as any).__monacoEditor
+            }
+        }
+        
+        // Method 3: Look for Monaco editor in window
+        if (!editorInstance && window.monaco) {
+            const editors = window.monaco.editor.getEditors()
+            if (editors.length > 0) {
+                // Find the editor that contains our current content
+                const currentContent = currentCode.value || ''
+                editorInstance = editors.find(e => {
+                    const model = e.getModel()
+                    return model && model.getValue().includes(currentContent)
+                })
+            }
+        }
+        
+        // Method 4: Try to find any Monaco editor
+        if (!editorInstance && window.monaco) {
+            const editors = window.monaco.editor.getEditors()
+            if (editors.length > 0) {
+                editorInstance = editors[0] // Use the first available editor
+            }
+        }
+        
+        if (editorInstance) {
+            try {
+                const model = editorInstance.getModel()
+                if (model && model.getValue().length > 0) {
+                    // Find all matches of the search text
+                    const matches = model.findMatches(searchText, false, false, false, null, false)
+                    
+                    if (matches.length > 0) {
+                        // Try to get the range from the match object
+                        const firstMatch = matches[0]
+                        const range = firstMatch.range || firstMatch
+                        
+                        try {
+                            // Set selection to the first match
+                            editorInstance.setSelection(range)
+                            editorInstance.revealRangeInCenter(range)
+                            editorInstance.focus()
+                        } catch (selectionError) {
+                            // Try alternative approach - just focus and scroll to the first match
+                            editorInstance.focus()
+                        }
+                        
+                        // Highlight all matches with a bright yellow background
+                        const decorations = editorInstance.deltaDecorations([], matches.map((match: any) => ({
+                            range: match.range || match,
+                            options: {
+                                inlineClassName: 'search-highlight',
+                                isWholeLine: false
+                            }
+                        })))
+                        
+                        // Remove highlights after 5 seconds
+                        setTimeout(() => {
+                            editorInstance.deltaDecorations(decorations, [])
+                        }, 5000)
+                        
+                        return // Success, stop trying
+                    }
+                }
+            } catch (error) {
+                // Continue trying
+            }
+        }
+        
+        // If we haven't found the editor yet and haven't exceeded max attempts, try again
+        if (attempts < maxAttempts) {
+            setTimeout(tryHighlight, 500) // Try again in 500ms
+        }
+    }
+    
+    // Start trying after a short delay
+    setTimeout(tryHighlight, 200)
+}
+
+// Add event listener for search results
+onMounted(() => {
+    window.addEventListener('search-result-selected', handleSearchResult as EventListener)
+})
+
+// Clean up timeouts and event listeners when component unmounts
 onUnmounted(() => {
   if (saveSuccessTimeout.value) {
     clearTimeout(saveSuccessTimeout.value)
@@ -623,6 +795,7 @@ onUnmounted(() => {
   if (isSavingTimeout.value) {
     clearTimeout(isSavingTimeout.value)
   }
+  window.removeEventListener('search-result-selected', handleSearchResult as EventListener)
 })
 </script>
 
@@ -1028,3 +1201,18 @@ onUnmounted(() => {
     </div>
 
 </template>
+
+<style>
+.search-highlight {
+    background-color: #ffeb3b !important;
+    color: #000 !important;
+    border-radius: 2px;
+    padding: 1px 2px;
+}
+
+.search-highlight-item {
+    background-color: #ffeb3b !important;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+</style>

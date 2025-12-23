@@ -357,10 +357,67 @@ const performSearch = () => {
         })
     }
 
+    // Special handling for models with their new structure
+    const searchInModels = (items: any[]) => {
+        if (!items || !Array.isArray(items)) return
+
+        items.forEach((item: any) => {
+            const name = item.name || ''
+            const nameMatch = name && name.toLowerCase().includes(query)
+            
+            // Search in content
+            const content = item.content || ''
+            const contentMatch = content && content.toLowerCase().includes(query)
+            
+            // Search in inheritance
+            const inheritance = item.inheritance || ''
+            const inheritanceMatch = inheritance && inheritance.toLowerCase().includes(query)
+            
+            // Search in class_meta (both name and value)
+            const classMetaMatch = item.class_meta && Array.isArray(item.class_meta) && item.class_meta.some((meta: any) => {
+                const metaName = (meta.name || '').toLowerCase().includes(query)
+                const metaValue = (meta.value || '').toLowerCase().includes(query)
+                return metaName || metaValue
+            })
+            
+            // Search in class_methods (name, params, and content)
+            const classMethodsMatch = item.class_methods && Array.isArray(item.class_methods) && item.class_methods.some((method: any) => {
+                const methodName = (method.name || '').toLowerCase().includes(query)
+                const methodParams = (method.params || []).some((param: string) => param.toLowerCase().includes(query))
+                const methodContent = (method.content || '').toLowerCase().includes(query)
+                return methodName || methodParams || methodContent
+            })
+            
+            if (nameMatch || contentMatch || inheritanceMatch || classMetaMatch || classMethodsMatch) {
+                // Build a description that shows where the match was found
+                let description = ''
+                if (contentMatch) {
+                    description = content.substring(0, 100) + (content.length > 100 ? '...' : '')
+                } else if (inheritanceMatch) {
+                    description = `Inheritance: ${inheritance}`
+                } else if (classMetaMatch) {
+                    description = 'Found in class meta properties'
+                } else if (classMethodsMatch) {
+                    description = 'Found in class methods'
+                } else {
+                    description = name || 'No description'
+                }
+                
+                results.push({
+                    category: 'Models',
+                    type: 'model',
+                    name: name || 'Unnamed',
+                    description: description,
+                    data: item
+                })
+            }
+        })
+    }
+
     searchInArray(data.version_urls || [], 'Routes', 'route')
     searchInArray(data.resources || [], 'Resources', 'resource')
     searchInArray(data.version_views || [], 'Functions', 'function')
-    searchInArray(data.version_models || [], 'Models', 'model')
+    searchInModels(data.version_models || [])
     searchInArray(data.version_files || [], 'Files', 'file')
 
     const topLevelFields = [
@@ -437,7 +494,7 @@ const handleSearchResultClick = (result: any) => {
         }, 500)
     }
     
-    if (result.category === 'Functions' || result.category === 'Files') {
+    if (result.category === 'Functions' || result.category === 'Files' || result.category === 'Models') {
         setTimeout(() => {
             window.dispatchEvent(new CustomEvent('search-result-selected', {
                 detail: {
