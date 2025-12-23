@@ -202,7 +202,7 @@ const fetchApiData = async () => {
         if(props.api_type === 'php' && apiData.value.version_views.length === 0){
             apiData.value.version_views.push({
                 name: 'Constructor',
-                content: '',
+                content: '// Do not delete this placeholder comment if no content exists.',
             })
         }
         hasUnsavedChanges.value = false
@@ -745,7 +745,6 @@ const handleSave = async () => {
     // }
     
     const requestData = props.api_type === 'php' ? denormalizeToPhp(apiData.value): apiData.value
-    // debugger;
     // console.log('Saving API data:', requestData)
     const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/code`, {
         method: 'PUT',
