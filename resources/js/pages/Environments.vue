@@ -443,7 +443,7 @@ onMounted(() => {
                 :title="modalMode === 'new' ? 'Add New Environment' : 'Edit Environment'"
                 @close="closeModal"
             >
-                                                                   <FormViewer 
+            <FormViewer 
                       :formConfig="formConfig" 
                       :initialData="editingRow"
                       :cancelAction="'close'"
