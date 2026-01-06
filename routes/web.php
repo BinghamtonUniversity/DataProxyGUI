@@ -79,6 +79,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/users', function () {
         return Inertia::render('Users');
     })->name('users');
+    
+    Route::get('/unit-tests', function () {
+        return Inertia::render('development/UnitTests');
+    })->name('unit-tests');
 
     // API Routes - Generic resource controller
     Route::prefix('api')->group(function () {
@@ -126,6 +130,12 @@ Route::middleware(['auth'])->group(function () {
         //API Versions
         Route::get('/apis/{id}/api_versions', [App\Http\Controllers\Api\ApiController::class, 'apiVersionsIndex']);
         Route::get('/api_versions', [App\Http\Controllers\Api\ApiController::class, 'apiVersionsList']);
+
+        // Tests
+        Route::get('/tests', [App\Http\Controllers\Api\TestsController::class, 'listTests']);
+        Route::get('/tests/stats', [App\Http\Controllers\Api\TestsController::class, 'getTestStats']);
+        Route::post('/tests/run', [App\Http\Controllers\Api\TestsController::class, 'runAllTests']);
+        Route::post('/tests/run-file', [App\Http\Controllers\Api\TestsController::class, 'runTestFile']);
 
         // API Developer routes
         Route::get('/apis/{id}/developers', [App\Http\Controllers\Api\ApiDevelopersController::class, 'getApiDevelopers']);
