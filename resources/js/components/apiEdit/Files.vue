@@ -70,7 +70,12 @@ const handleUpdateCode = (updatedCode: string) => {
             ...props.apiData,
             version_files: props.apiData.version_files.map(func => 
                 func.name === selectedFile.value?.name 
-                    ? { ...func, content: updatedCode }
+                    ? { 
+                        ...func, 
+                        content: props.api_type === 'php' && !updatedCode.trimStart().startsWith('<?php')
+                            ? `<?php ${updatedCode}` 
+                            : updatedCode 
+                    }
                     : func
             )
         }

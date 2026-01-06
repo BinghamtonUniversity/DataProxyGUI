@@ -408,7 +408,10 @@ const handleFormSubmit = async (formValues: any) => {
         } else {
             // Update existing API
             const cleanedData = cleanFormData(formValues);
-      
+             // Check if name contains spaces
+            if (cleanedData.api_type === 'php' && cleanedData.name && cleanedData.name.includes(' ')) {
+                throw new Error('API name cannot contain spaces. Please use underscores or hyphens instead.');
+            }
             
             const response = await fetch(`/api/apis/${editingRow.value.api_type}/${editingRow.value.id}`, {
                 method: 'PUT',
