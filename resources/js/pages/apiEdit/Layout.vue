@@ -34,6 +34,40 @@ const currentTab = ref(props.activeTab || 'routes')
 const hasUnsavedChanges = ref(false)
 const originalApiData = ref<ApiData | null>(null)
 
+// Track validation errors from child components
+const validationErrors = ref<{ [key: string]: number }>({})
+const totalValidationErrors = computed(() => {
+    return Object.values(validationErrors.value).reduce((sum, count) => sum + count, 0)
+})
+
+// Map tab IDs to component IDs for validation error tracking
+const tabToComponentMap: { [key: string]: string } = {
+    'functions': 'functions',
+    'files': 'files',
+    'models': 'models'
+}
+
+// Get error count for a specific tab
+const getTabErrorCount = (tabId: string) => {
+    const componentId = tabToComponentMap[tabId]
+    return componentId ? (validationErrors.value[componentId] || 0) : 0
+}
+
+// Get error breakdown text for tooltip
+const getErrorBreakdown = computed(() => {
+    const errors: string[] = []
+    if (validationErrors.value.functions > 0) {
+        errors.push(`${validationErrors.value.functions} in Functions`)
+    }
+    if (validationErrors.value.files > 0) {
+        errors.push(`${validationErrors.value.files} in Files`)
+    }
+    if (validationErrors.value.models > 0) {
+        errors.push(`${validationErrors.value.models} in Models`)
+    }
+    return errors.length > 0 ? errors.join(', ') : ''
+})
+
 // Toaster
 const { success, error: showError, warning, info } = useToaster()
 
@@ -781,6 +815,14 @@ const handleSave = async () => {
         showError('No apiData found to save in Layout.')
         return
     }
+    
+    // Prevent save if there are validation errors
+    if (totalValidationErrors.value > 0) {
+        const errorDetails = getErrorBreakdown.value
+        showError(`Cannot save: There are ${totalValidationErrors.value} validation error(s). ${errorDetails ? `(${errorDetails})` : ''} Please fix all errors before saving.`, 'Validation Errors')
+        return
+    }
+    
     if (isVersionSwitch.value) {
         const confirmed = confirm('You have switched to a different version. Are you sure you want to save?')
         if (!confirmed) {
@@ -848,6 +890,11 @@ const activeComponent = computed(() => {
     return tabs.find(tab => tab.id === currentTab.value)?.component || tabs[0].component
 })
 
+// Handle validation errors from child components
+const handleValidationError = (componentId: string, errorCount: number) => {
+    validationErrors.value[componentId] = errorCount
+}
+
 // Component props to pass down
 const componentProps = computed(() => ({
     api_id: props.api_id,
@@ -860,7 +907,8 @@ const componentProps = computed(() => ({
     refreshApiData,
     handleSave,
     highlightQuery: highlightQuery.value || "",
-    highlightTarget: highlightTarget.value || ""
+    highlightTarget: highlightTarget.value || "",
+    onValidationError: handleValidationError
 }))
 
 
@@ -904,6 +952,12 @@ onMounted(() => {
     keydownHandler = (event: KeyboardEvent) => {
         if ((event.ctrlKey || event.metaKey) && event.key === 's') {
             event.preventDefault()
+            // Check validation errors before saving
+            if (totalValidationErrors.value > 0) {
+                const errorDetails = getErrorBreakdown.value
+                showError(`Cannot save: There are ${totalValidationErrors.value} validation error(s). ${errorDetails ? `(${errorDetails})` : ''} Please fix all errors before saving.`, 'Validation Errors')
+                return
+            }
             handleSave()
         }
     }
@@ -1018,12 +1072,17 @@ onUnmounted(() => {
                 <Button 
                     @click="handleSave"
                     variant="outline"
+                    :disabled="totalValidationErrors > 0"
                     class="flex items-center gap-2"
+                    :title="totalValidationErrors > 0 ? `Cannot save: ${totalValidationErrors} validation error(s) found (${getErrorBreakdown})` : 'Save API data'"
                 >   
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
                     </svg>
                     Save
+                    <span v-if="totalValidationErrors > 0" class="ml-1 px-1.5 py-0.5 text-xs bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200 rounded-full">
+                        {{ totalValidationErrors }}
+                    </span>
                 </Button>
                 
                 <!-- Dropdown Button -->
@@ -1097,12 +1156,21 @@ onUnmounted(() => {
                         :key="tab.id"
                         variant="ghost"
                         :class="[
-                            'flex-1 px-4 py-2 rounded-t-md text-center transition-colors',
+                            'flex-1 px-4 py-2 rounded-t-md text-center transition-colors relative',
                             { 'bg-muted font-semibold': currentTab === tab.id }
                         ]"
                         @click="navigateToTab(tab.id)"
+                        :title="getTabErrorCount(tab.id) > 0 ? `${getTabErrorCount(tab.id)} validation error(s) in ${tab.title}` : ''"
                     >
-                        {{ tab.title }}
+                        <span class="flex items-center justify-center gap-2">
+                            {{ tab.title }}
+                            <span 
+                                v-if="getTabErrorCount(tab.id) > 0" 
+                                class="px-1.5 py-0.5 text-xs bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200 rounded-full font-semibold"
+                            >
+                                {{ getTabErrorCount(tab.id) }}
+                            </span>
+                        </span>
                     </Button>
                 </nav>
 

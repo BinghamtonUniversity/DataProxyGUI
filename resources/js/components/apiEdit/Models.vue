@@ -35,6 +35,7 @@ interface Props {
     handleSave?: () => Promise<void>
     highlightQuery?: string
     highlightTarget?: string
+    onValidationError?: (componentId: string, errorCount: number) => void
 }
 
 const props = defineProps<Props>()
@@ -283,6 +284,10 @@ const handleValidation = (markers: any) => {
     validationErrors.value = errors.length
     validationWarnings.value = warnings.length
     
+    // Report validation errors to parent Layout component
+    if (props.onValidationError) {
+        props.onValidationError('models', errors.length)
+    }
     
     // Provide immediate feedback to user about validation status
     if (errors.length > 0) {
