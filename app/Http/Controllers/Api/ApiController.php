@@ -257,7 +257,7 @@ class ApiController extends BaseDjangoController
             $errorMessage = $result['data']['error']
                 ?? $result['data']['detail']
                 ?? $result['data']['message']
-                ?? 'Unknown error occurred on Django side.';
+                ?? `Unknown error occurred on {$api_type} side.`;
 
             return response()->json([
                 'error' => 'Failed to update API details.',
