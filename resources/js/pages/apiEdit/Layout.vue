@@ -754,13 +754,12 @@ const handleApiDataImport = (formData: any) => {
             ? ['version_urls', 'version_views', 'version_models', 'version_files', 'resources']
             : ['functions', 'files', 'resources', 'routes'] // php
 
-        //TODO:: change constructor function to work with php // __EMPTY__
-
         const missingFields = requiredFields.filter(field => !importedData.hasOwnProperty(field))
 
         if (missingFields.length > 0) {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
         }
+        importedData.updated_at = new Date().toISOString()
         const normalizedData = normalizeApiData(importedData, props.api_type as 'python' | 'php')
 
         updateApiData(normalizedData)
