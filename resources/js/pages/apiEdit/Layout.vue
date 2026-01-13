@@ -236,7 +236,7 @@ const fetchApiData = async () => {
         if(props.api_type === 'php' && apiData.value.version_views.length === 0){
             apiData.value.version_views.push({
                 name: 'Constructor',
-                content: '// Do not delete this placeholder comment if no content exists.',
+                content: '//__EMPTY__',
             })
         }
         hasUnsavedChanges.value = false
@@ -784,13 +784,20 @@ const handleApiDataImport = (formData: any) => {
             throw new Error('Invalid JSON structure')
         }
         
-        const requiredFields = ['version_urls', 'version_views', 'version_models', 'version_files', 'resources']
+        const requiredFields = props.api_type === 'python' 
+            ? ['version_urls', 'version_views', 'version_models', 'version_files', 'resources']
+            : ['functions', 'files', 'resources', 'routes'] // php
+
+        //TODO:: change constructor function to work with php // __EMPTY__
+
         const missingFields = requiredFields.filter(field => !importedData.hasOwnProperty(field))
-        
+
         if (missingFields.length > 0) {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
         }
-        updateApiData(importedData)
+        const normalizedData = normalizeApiData(importedData, props.api_type as 'python' | 'php')
+
+        updateApiData(normalizedData)
         hasUnsavedChanges.value = true
         closeApiDataImportModal()
         success('API data imported successfully!', 'Import Successful')
@@ -836,28 +843,28 @@ const handleSave = async () => {
         info('No changes detected to save.', 'Nothing to Save')
         return
     }
-
-
-    // const emptyViews = apiData.value.version_views.filter(
-    //     (view: any) => !view.content || view.content.trim() === ''
-    // )
-
-    // if (emptyViews.length > 0) {
-    //     const emptyNames = emptyViews.map((v: any) => v.name || '(Unnamed View)').join(', ')
-    //     showError(`The following functions have empty content: ${emptyNames}`)
-    //     return
-    // }
     
     const requestData = props.api_type === 'php' ? denormalizeToPhp(apiData.value): apiData.value
-    // console.log('Saving API data:', requestData)
+    // we dont have html form element here, so we use JSON body
+
+    // const formData = new URLSearchParams();
+    // Object.keys(requestData).forEach(key => {
+    //     if (typeof requestData[key] === 'object') {
+    //         formData.append(key, JSON.stringify(requestData[key]));
+    //     } else {
+    //         formData.append(key, requestData[key]);
+    //     }
+    // });
+    
+    // debugger;
     const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/code`, {
         method: 'PUT',
         headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json', //'application/x-www-form-urlencoded; charset=UTF-8',
             'Accept': 'application/json',
             'X-CSRF-TOKEN': getCsrfToken() || '',
         },
-        body: JSON.stringify(requestData)
+        body: JSON.stringify(requestData) // formData
     })
 
     if (!response.ok) {
@@ -867,8 +874,18 @@ const handleSave = async () => {
     }
     success('API data saved successfully!', 'API Data Saved')
     const responseData = await response.json()
-    const normalizedData = normalizeApiData(responseData, props.api_type as 'python' | 'php')
+    // might need to parse json here if responseData is string in the formData case
+
+
+    if (props.api_type === 'php' && responseData.functions) {
+        responseData.functions = responseData.functions.map((func: { name: string; content: string }) => ({
+            ...func,
+            content: func.name === 'Constructor' && func.content === '//__EMPTY__' ? '' : func.content
+        }));
+    }
     // debugger;
+    const normalizedData = normalizeApiData(responseData, props.api_type as 'python' | 'php')
+    
     updateApiData(normalizedData)
     console.log("Orgiinal", originalApiData.value)
     originalApiData.value = JSON.parse(JSON.stringify(normalizedData))

@@ -67,6 +67,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/schedules', function () {
         return Inertia::render('Schedules');
     })->name('schedules');
+
     Route::get('/activity_logs', function () {
         return Inertia::render('ActivityLogs');
     })->name('activity_logs');
@@ -116,9 +117,11 @@ Route::middleware(['auth'])->group(function () {
         //Activity Logs
         Route::get('/activity_logs', [App\Http\Controllers\Api\ActivityLogsController::class, 'activityLogsIndex']);
 
+        // Documentation
+        Route::get('/api_docs/{api_type}/{api_instance_id}', [App\Http\Controllers\Api\DocumentationController::class, 'apiDocs']);
+
         //API Users
         Route::get('/api_users', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersIndex']);
-        //TO:DO need to add api_type parameter to the following routes??
         Route::post('/api_users', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersStore']);
         Route::put('/api_users/{id}', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersUpdate']);
         Route::delete('/api_users/{id}', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersDestroy']);
