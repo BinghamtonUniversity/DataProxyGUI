@@ -204,7 +204,7 @@
       <table :class="currentTheme.table">
         <thead>
           <tr>
-            <th :class="[currentTheme.headerCell, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']">
+            <th v-if="showCheckboxes" :class="[currentTheme.headerCell, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']">
               <CheckboxField
                 :name="'select-all'"
                 :value="allSelected"
@@ -244,7 +244,7 @@
         </thead>
         <tbody>
           <tr v-if="filter">
-            <td :class="[currentTheme.filterCell]">
+            <td v-if="showCheckboxes" :class="[currentTheme.filterCell]">
               <button @click="clearFilters" :class="currentTheme.clearButton" title="Clear all filters">Clear</button>
             </td>
             <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.filterCell]">
@@ -288,7 +288,7 @@
               props.clickableRows ? 'cursor-pointer' : ''
             ]"
           >
-            <td :class="[currentTheme.cell, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']" @click.stop>
+            <td v-if="showCheckboxes" :class="[currentTheme.cell, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']" @click.stop>
               <CheckboxField
                 :name="'row-select-' + idx"
                 :value="selectedRows.includes((currentPage - 1) * pageSize + idx) ? 'true' : 'false'"
@@ -407,7 +407,7 @@
                 </button>
                 
                 <!-- Multiple actions as individual buttons when rowActionDropdown is false -->
-                <div v-else-if="!props.rowActionDropdown" class="flex gap-1">
+                <div v-else-if="!props.rowActionDropdown" class="">
                   <button 
                     v-for="action in rowActions" 
                     :key="action.type"
@@ -415,7 +415,7 @@
                     :class="[currentTheme.menuButton, action.colorClass, 'text-sm px-3 py-2 cursor-pointer']"
                     :title="!props.rowActionLabels ? action.label : ''"
                   >
-                    <font-awesome-icon v-if="action.icon" :icon="action.icon" :class="props.rowActionLabels ? 'mr-1.5' : ''" />
+                    <font-awesome-icon v-if="action.icon" :icon="action.icon" :class="action.iconClass ? action.iconClass : 'mr-1.5'" />
                     <span v-if="props.rowActionLabels">{{ action.label }}</span>
                   </button>
                 </div>
@@ -590,6 +590,11 @@ const props = defineProps({
   },
   // Control row action labels
   rowActionLabels: {
+    type: Boolean,
+    default: true
+  },
+  // Control checkbox visibility
+  showCheckboxes: {
     type: Boolean,
     default: true
   }
