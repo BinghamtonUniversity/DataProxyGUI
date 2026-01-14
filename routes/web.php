@@ -80,9 +80,9 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('Users');
     })->name('users');
     
-    Route::get('/unit-tests', function () {
-        return Inertia::render('development/UnitTests');
-    })->name('unit-tests');
+    // Route::get('/unit-tests', function () {
+    //     return Inertia::render('development/UnitTests');
+    // })->name('unit-tests');
 
     // API Routes - Generic resource controller
     Route::prefix('api')->group(function () {
