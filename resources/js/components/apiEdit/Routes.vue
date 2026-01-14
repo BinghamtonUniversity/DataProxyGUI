@@ -657,7 +657,7 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
 
 <template>
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
-        <div class="relative min-h-[100vh] flex-1 p-4 bg-white dark:bg-gray-900">
+        <div class="relative min-h-[100vh] flex-1 p-4">
             
             <!-- Loading State -->
             <template v-if="loadingApiData">
