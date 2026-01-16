@@ -250,7 +250,7 @@
             <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.filterCell]">
               <span v-if="col.options">
                 <select
-                  class="input-field"
+                  class="input-field bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600 rounded-md p-2"
                   :id="col.key + '-filter'"
                   :name="col.key + '-filter'"
                   v-model="filters[col.key]"
@@ -260,6 +260,7 @@
                     v-for="opt in col.options" 
                     :key="typeof opt === 'object' ? opt.value : opt" 
                     :value="typeof opt === 'object' ? opt.value : opt"
+                    class="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200"
                   >
                     {{ typeof opt === 'object' ? opt.label : opt }}
                   </option>
