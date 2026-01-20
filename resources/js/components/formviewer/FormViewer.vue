@@ -194,7 +194,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:modelValue', 'submit', 'reset', 'validation-error', 'validation-success', 'action', 'customAction', 'actionHandler']);
+const emit = defineEmits(['update:modelValue', 'change', 'submit', 'reset', 'validation-error', 'validation-success', 'action', 'customAction', 'actionHandler']);
 
 const formData = ref({});
 const validationErrors = ref([]);
@@ -364,7 +364,11 @@ const handleFieldChange = (fieldName, value) => {
     ...formData.value,
     [fieldName]: value
   };
+  
+  // Emit change event for user-initiated changes (only from handleFieldChange)
+  emit('change', formData.value);
   emit('update:modelValue', formData.value);
+  
   const errors = validateField(value, field);
   if (errors.length > 0) {
     handleValidationError(fieldName, { errors: errors });
@@ -710,12 +714,11 @@ watch(() => props.formConfig, () => {
 watch(() => props.initialData, () => {
   initializeFormData();
 }, { deep: true });
-
-watch(formData, (newData) => {
-  emit('update:modelValue', newData);
-}, { deep: true });
-
+// watch(formData, (newData) => {
+//   emit('update:modelValue', newData);
+// }, { deep: true });
 // Watch for changes in formData to re-evaluate conditions
+// Note: We don't emit update:modelValue here to avoid loops - it's only emitted from handleFieldChange
 watch(formData, () => {
   // Force re-render when form data changes to update conditional logic
 }, { deep: true });
