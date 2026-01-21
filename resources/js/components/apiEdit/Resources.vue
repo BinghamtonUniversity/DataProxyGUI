@@ -1,50 +1,7 @@
 <script setup lang="ts">
-import type {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-} from '@tanstack/vue-table'
-import {
-  FlexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useVueTable,
-} from '@tanstack/vue-table'
-import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
-import { h, ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
+import { ref } from 'vue'
 import { type ApiData, type ResourceData, Api } from '@/types'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import DataGrid from '@/components/datagrid/DataGrid.vue'
@@ -300,139 +257,9 @@ const openEditResourceDialog = (resource: any, index: number) => {
 }
 
 
-// Table state
-const sorting = ref<SortingState>([])
-const columnFilters = ref<ColumnFiltersState>([])
-const columnVisibility = ref<VisibilityState>({
-  type: props.api_type === 'python',
-  model_name: props.api_type === 'python',
-})
 
-watch(() => props.api_type, (newApiType: string) => {
-  columnVisibility.value = {
-    ...columnVisibility.value,
-    type: newApiType === 'python',
-    model_name: newApiType === 'python',
-  }
-})
-const rowSelection = ref({})
 
-// Define table columns
-const columns: ColumnDef<ResourceData>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => h(Checkbox, {
-      'modelValue': table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate'),
-      'onUpdate:modelValue': value => table.toggleAllPageRowsSelected(!!value),
-      'ariaLabel': 'Select all',
-    }),
-    cell: ({ row }) => h('div', { onClick: e => e.stopPropagation() }, [
-        h(Checkbox, {
-            'modelValue': row.getIsSelected(),
-            'onUpdate:modelValue': value => row.toggleSelected(!!value),
-            'ariaLabel': 'Select row',
-        })
-    ]),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: 'name',
-    header: ({ column }) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
-    },
-    cell: ({ row }) => h('div', { 
-      class: 'font-medium text-blue-600',
-      innerHTML: highlightText(row.getValue('name'), props.highlightQuery || '')
-    }),
-  },
-  {
-    accessorKey: 'type',
-    header: 'Type',
-    cell: ({ row }) => {
-      const type = row.getValue('type') as string
-      return h('div', { 
-        class: 'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300',
-        innerHTML: highlightText(type, props.highlightQuery || '')
-      })
-    },
-  },
-  {
-    accessorKey: 'model_name',
-    header: ({ column }) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Model Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
-    },
-    cell: ({ row }) => h('div', { 
-      class: 'font-medium',
-      innerHTML: highlightText(row.getValue('model_name'), props.highlightQuery || '')
-    }),
-  },
-  {
-    id: 'actions',
-    enableHiding: false,
-    cell: ({ row }) => {
-            const route = row.original
-            return h('div', { 'data-actions-cell': true }, [
-                h(Button, {
-                    variant: 'ghost',
-                    size: 'sm',
-                    onClick: (e: MouseEvent) => {
-                        e.stopPropagation()
-                        handleDelete(route)
-                    },
-                    class: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20'
-                }, {
-                    default: () => [h(Trash2, { class: 'h-4 w-4' })]
-                })
-            ])
-        },
-    },
-]
 
-// Create table instance
-const table = computed(() => {
-  if (!props.apiData?.resources || !Array.isArray(props.apiData.resources)) {
-    return null
-  }
-
-  return useVueTable({
-    data: props.apiData.resources as ResourceData[],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: updaterOrValue => valueUpdater(updaterOrValue, sorting),
-    onColumnFiltersChange: updaterOrValue => valueUpdater(updaterOrValue, columnFilters),
-    onColumnVisibilityChange: updaterOrValue => valueUpdater(updaterOrValue, columnVisibility),
-    onRowSelectionChange: updaterOrValue => valueUpdater(updaterOrValue, rowSelection),
-    state: {
-      get sorting() { return sorting.value },
-      get columnFilters() { return columnFilters.value },
-      get columnVisibility() { return columnVisibility.value },
-      get rowSelection() { return rowSelection.value },
-    },
-  })
-})
-
-// Computed properties
-const headerGroups = computed(() => table.value?.getHeaderGroups() || [])
-const tableRows = computed(() => table.value?.getRowModel().rows || [])
-const hidableColumns = computed(() => table.value?.getAllColumns().filter(column => column.getCanHide()) || [])
-const nameFilterValue = computed({
-  get: () => table.value?.getColumn('name')?.getFilterValue() as string || '',
-  set: (value: string) => table.value?.getColumn('name')?.setFilterValue(value)
-})
-const selectedRowsCount = computed(() => table.value?.getFilteredSelectedRowModel().rows.length || 0)
-const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.length || 0)
-const canPreviousPage = computed(() => table.value?.getCanPreviousPage() || false)
-const canNextPage = computed(() => table.value?.getCanNextPage() || false)
 
 // Function to highlight text in UI elements
 const highlightText = (text: string, query: string) => {
@@ -482,7 +309,7 @@ const highlightText = (text: string, query: string) => {
             </template>
             
             <!-- Data Table -->
-            <template v-else-if="apiData?.resources && Array.isArray(apiData.resources) && table">
+            <template v-else-if="apiData?.resources && Array.isArray(apiData.resources)">
               <AlertModal
                 :isOpen="newResourceDialogOpen"
                 :title="isEditMode ? 'Edit Resource' : 'Create New Resource'"
@@ -499,17 +326,18 @@ const highlightText = (text: string, query: string) => {
                 ]" />
             </AlertModal>
               <DataGrid
+            
                 :schema="resourcesSchema"
                 :data="apiData.resources"
                 :clickableRows="true"
                 :rowActionDropdown="false"
-                :showCheckboxes="true"
+                :showCheckboxes="false"
                 :actions="[
                   {name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus'}
                 ]"
                 :rowActions="[
-                  { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
-                  { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50' }
+                  { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20' },
+                  { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20' }
                 ]"
                 @actionHandler="handleDataGridActionHandler"
                 @rowActionHandler="handleDataGridRowActionHandler"
