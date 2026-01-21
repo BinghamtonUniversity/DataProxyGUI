@@ -759,6 +759,7 @@ const handleApiDataImport = (formData: any) => {
         if (missingFields.length > 0) {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
         }
+
         importedData.updated_at = new Date().toISOString()
         const normalizedData = normalizeApiData(importedData, props.api_type as 'python' | 'php')
 
@@ -802,16 +803,6 @@ const handleSave = async () => {
     }
     
     const requestData = props.api_type === 'php' ? denormalizeToPhp(apiData.value): apiData.value
-    // we dont have html form element here, so we use JSON body
-
-    // const formData = new URLSearchParams();
-    // Object.keys(requestData).forEach(key => {
-    //     if (typeof requestData[key] === 'object') {
-    //         formData.append(key, JSON.stringify(requestData[key]));
-    //     } else {
-    //         formData.append(key, requestData[key]);
-    //     }
-    // });
     
     // debugger;
     const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/code`, {
