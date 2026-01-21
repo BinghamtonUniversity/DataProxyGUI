@@ -694,9 +694,20 @@ const initializeFormData = () => {
     Object.keys(props.initialData).forEach(key => {
       const field = props.formConfig.fields.find(f => f && f.name === key);
       if (field && field.type === 'fieldset') {
-        // Don't overwrite fieldset objects with strings
-        if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
-          newData[key] = { ...newData[key], ...props.initialData[key] };
+        // If fieldset has array attribute, it should be an array
+        if (field.array) {
+          // For array fieldsets, use the initialData array directly if it's an array
+          if (Array.isArray(props.initialData[key])) {
+            newData[key] = props.initialData[key];
+          } else if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
+            // If it's an object but should be array, convert it
+            newData[key] = [];
+          }
+        } else {
+          // Regular fieldset: merge objects
+          if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
+            newData[key] = { ...newData[key], ...props.initialData[key] };
+          }
         }
       } else {
         newData[key] = props.initialData[key];
