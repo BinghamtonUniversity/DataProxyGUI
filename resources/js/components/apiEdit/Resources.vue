@@ -44,9 +44,12 @@ const formConfig = {
   description: 'Create a new resource',
   fields: [
     { name: 'name', label: 'Name', type: 'text', required: true },
-    { name: 'type', label: 'Type', type: 'text', required: false, show: false },
-    { name: 'model_name', label: 'Model Name', type: 'text', required: false, show: false },
-  ]
+    { name: 'type', label: 'Type', type: 'select', required: props.api_type === 'python' ? true : false, show: props.api_type === 'python' ? true : false, options: ['Model', 'Password', 'Other'] },
+    { name: 'model_name', label: 'Model Name', type: 'select', required: "show", show: {op: 'and', conditions: [{type: 'matches', name: 'type', value: ['Model']}]}, options: props.apiData?.version_models?.map((model: any) => model.name) || [] },
+  ],
+  files: false,
+  name: "new-resource-form",
+
 }
 const resourcesSchema = {
   label: 'Resources',
@@ -58,7 +61,6 @@ const resourcesSchema = {
       label: "Name",
       type: "text",
       placeholder: "Resource Name",
-
       value: "",
       help: "Name of the resource",
       info: "Name of the resource",
@@ -66,6 +68,26 @@ const resourcesSchema = {
       offset: "0",
       required: true,
       showColumn: true
+    },
+    {
+      name: "type",
+      label: "Type",
+      type: "select",
+      placeholder: "Resource Type",
+      value: "",
+      help: "Type of the resource",
+      info: "Type of the resource",
+      showColumn: props.api_type === 'python' ? true : false,
+    },
+    {
+      name: "model_name",
+      label: "Model Name",
+      type: "select",
+      placeholder: "Model Name",
+      value: "",
+      help: "Model Name",
+      info: "Model Name",
+      showColumn: props.api_type === 'python' ? true : false,
     }
   ]
 }
