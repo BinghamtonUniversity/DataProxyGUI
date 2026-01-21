@@ -284,15 +284,19 @@ const submitNewRoute = async (e: Event) => {
 
     
     try {
+      
         const newRoute = {
             description: newRouteForm.value.description,
             path: newRouteForm.value.path,
             verb: newRouteForm.value.verb,
             view_name: newRouteForm.value.view_name,
-            required: newRouteForm.value.required.filter(param => param.name.trim() && param.description.trim() && param.example.trim()),
-            optional: newRouteForm.value.optional.filter(param => param.name.trim() && param.description.trim() && param.example.trim()),
+            required: newRouteForm.value.required,
+            optional: newRouteForm.value.optional,
+            // NOTE (ECT): Trimming is not working as expected, so we are not using it for now
+            // required: newRouteForm.value.required.filter(param => param.name.trim() && param.description.trim() && param.example.trim()),
+            // optional: newRouteForm.value.optional.filter(param => param.name.trim() && param.description.trim() && param.example.trim()),
         }
-
+        
         // Duplicate verb + path check
         const existingRoutes = props.apiData.version_urls || []
         const duplicate = existingRoutes.some((route, index) => {
@@ -408,6 +412,7 @@ const openEditRouteDialog = ( payload: any, index: number) => {
       example: p.example || ''
     })) || []
   }
+
   newRouteDialogOpen.value = true
 }
 
@@ -615,6 +620,9 @@ const handleDataGridActionHandler = (actionData: { action: string; selectedRows:
         case 'delete':
             handleDelete(actionData.selectedData[0]);
             break;
+        case 'parameters':
+            openParamsDialog(actionData.selectedData[0], actionData.selectedIndex[0]);
+            break;
         default:
             console.log('Unknown action type:', actionData.action);
             break;
@@ -697,6 +705,7 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                         ]"
                         :actions="[
                             { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
+                            { name: 'parameters', type: 'warning', min: 1, max: 1, label: 'Parameter Configuration', icon: 'cog', loc: 'right' },
                             { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
                             { name: 'delete', type: 'danger', min: 1, max: 25, label: 'Delete', icon: 'trash', loc: 'right' }
                         ]"
