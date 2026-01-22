@@ -187,7 +187,10 @@ const fetchApiData = async () => {
     apiError.value = ''
     try {
         const response = await fetch(`/ajax/apis/${props.api_id}/versions/latest`)
-        if (!response.ok) throw new Error('Failed to fetch API data')
+        if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.error || 'Failed to fetch API data')
+        }
         const data = await response.json()
         apiData.value = data
         originalApiData.value = JSON.parse(JSON.stringify(data))
@@ -1063,8 +1066,8 @@ onUnmounted(() => {
                         <!-- Error state -->
                         <div v-else-if="apiError" class="text-center py-8">
                         <div class="text-red-600 dark:text-red-400">
-                            <p class="text-lg font-semibold">Error loading API data</p>
-                            <p class="text-sm">{{ apiError }}</p>
+                            <p class="text-lg font-semibold">{{ apiError }}</p>
+                            <p class="text-sm">Couldn't load API data.</p>
                             <button @click="fetchApiData" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                             Try Again
                             </button>

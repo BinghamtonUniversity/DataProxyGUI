@@ -103,8 +103,14 @@ class ApiController extends BaseDjangoController
             return response()->json($result['data']);
         }
 
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
+        }
+
         return response()->json([
-            'error' => "Failed to fetch apis}",
+            'error' => "Failed to fetch apis",
             'status' => $result['status']
         ], $result['status']);
     }
@@ -115,6 +121,12 @@ class ApiController extends BaseDjangoController
 
         if ($result['success']) {
             return response()->json($result['data']);
+        }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
         }
 
         return response()->json([
@@ -133,6 +145,12 @@ class ApiController extends BaseDjangoController
         if ($result['success']) {
             return response()->json($result['data'], 201);
         }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
+        }
        
         return response()->json([
             'error' => "Failed to create apis",
@@ -148,6 +166,13 @@ class ApiController extends BaseDjangoController
         if ($result['success']) {
             return response()->json($result['data']);
         }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
+        }
+        
 
         return response()->json([
             'error' => "Failed to update apis",
@@ -167,6 +192,12 @@ class ApiController extends BaseDjangoController
             return response()->json([
                 'message' => ucfirst('apis') . ' deleted successfully'
             ]);
+        }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
         }
 
         return response()->json([
@@ -217,6 +248,12 @@ class ApiController extends BaseDjangoController
 
         if ($result['success']) {
             return response()->json($result['data']);
+        }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
         }
 
         return response()->json([
@@ -352,6 +389,12 @@ class ApiController extends BaseDjangoController
 
         if ($result['success']) {
             return response()->json($result['data']);
+        }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
         }
 
         return response()->json([
@@ -524,6 +567,12 @@ class ApiController extends BaseDjangoController
 
         if ($result['success']) {
             return response()->json($result['data']);
+        }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
         }
 
         return response()->json([

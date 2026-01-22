@@ -515,7 +515,12 @@ const fetchAllData = async () => {
       fetch(`/api/api_versions`),
     ])
 
-    if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
+    if (!apiInstancesResponse.ok) {
+      const errorData = await apiInstancesResponse.json()
+      error(errorData.error || 'Failed to fetch API instances', 'Error')
+      throw new Error(errorData.error || 'Failed to fetch API instances')
+    }
+
     if (!environmentsResponse.ok) throw new Error('Failed to fetch environments')
     if (!apisResponse.ok) throw new Error('Failed to fetch APIs')
     if (!apiVersionsResponse.ok) throw new Error('Failed to fetch API versions')
@@ -580,7 +585,9 @@ const fetchAllData = async () => {
      });
 
   } catch (error) {
+
     console.error('Error fetching data:', error)
+    
   } finally {
     loading.value = false
   }
