@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { type ApiData, type ResourceData, Api } from '@/types'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
@@ -36,21 +36,29 @@ const newResourceError = ref('')
 const isEditMode = ref(false)
 const editingResourceIndex = ref<number | null>(null)
 
+// FormViewer ref for validation
+const formViewerRef = ref<InstanceType<typeof FormViewer> | null>(null)
+
 // Toaster
 const { success, error, warning, info } = useToaster();
 
-const formConfig = {
-  label: 'New Resource',
-  description: 'Create a new resource',
-  fields: [
-    { name: 'name', label: 'Name', type: 'text', required: true },
-    { name: 'type', label: 'Type', type: 'select', required: props.api_type === 'python' ? true : false, show: props.api_type === 'python' ? true : false, options: ['Model', 'Password', 'Other'] },
-    { name: 'model_name', label: 'Model Name', type: 'select', required: "show", show: {op: 'and', conditions: [{type: 'matches', name: 'type', value: ['Model']}]}, options: props.apiData?.version_models?.map((model: any) => model.name) || [] },
-  ],
-  files: false,
-  name: "new-resource-form",
-
-}
+// Computed formConfig that dynamically sets required for model_name based on visibility
+const formConfig = computed(() => {
+  // Check if model_name field should be visible (when type is 'Model')
+  const isModelNameVisible = newResourceForm.value.type === 'Model'
+  
+  return {
+    label: 'New Resource',
+    description: 'Create a new resource',
+    fields: [
+      { name: 'name', label: 'Name', type: 'text', required: true },
+      { name: 'type', label: 'Type', type: 'select', required: props.api_type === 'python' ? true : false, show: props.api_type === 'python' ? true : false, options: ['Model', 'Password', 'Other'] },
+      { name: 'model_name', label: 'Model Name', type: 'select', required: isModelNameVisible, show: {op: 'and', conditions: [{type: 'matches', name: 'type', value: ['Model']}]}, options: props.apiData?.version_models?.map((model: any) => model.name) || [] },
+    ],
+    files: false,
+    name: "new-resource-form",
+  }
+})
 const resourcesSchema = {
   label: 'Resources',
   description: 'A list of resources with their information.',
@@ -92,15 +100,24 @@ const resourcesSchema = {
   ]
 }
 
-const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
+const handleFormAction = async (actionData: { type: string; action: string; formData: any }) => {
 
   switch (actionData.action) {
     case 'close':
       closeNewResourceDialog()
       break
     case 'save':
+      // Validate form before submitting
+      if (formViewerRef.value) {
+        const isValid = formViewerRef.value.validateForm()
+        if (!isValid) {
+          // Validation failed - errors are already displayed by FormViewer
+          return
+        }
+      }
+      
       newResourceForm.value = actionData.formData
-      submitNewResource()
+      await submitNewResource()
       break
   }
 }
@@ -166,6 +183,15 @@ const submitNewResource = async () => {
   }
   
   try {
+    // Additional validation: model_name is required when type is 'Model'
+    if (props.api_type === 'python' && newResourceForm.value.type === 'Model') {
+      if (!newResourceForm.value.model_name || newResourceForm.value.model_name.trim() === '') {
+        newResourceError.value = 'Model Name is required when Type is "Model".'
+        newResourceLoading.value = false
+        return
+      }
+    }
+
     const newResource: any = {
       name: newResourceForm.value.name
     }
@@ -338,6 +364,7 @@ const highlightText = (text: string, query: string) => {
                 @close="closeNewResourceDialog"
             >
                 <FormViewer 
+                ref="formViewerRef"
                 :formConfig="formConfig" 
                 :initialData="newResourceForm" 
                 :cancelAction="'close'"
