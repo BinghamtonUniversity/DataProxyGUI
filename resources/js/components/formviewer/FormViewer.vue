@@ -194,7 +194,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:modelValue', 'submit', 'reset', 'validation-error', 'validation-success', 'action', 'customAction', 'actionHandler']);
+const emit = defineEmits(['update:modelValue', 'change', 'submit', 'reset', 'validation-error', 'validation-success', 'action', 'customAction', 'actionHandler']);
 
 const formData = ref({});
 const validationErrors = ref([]);
@@ -364,7 +364,11 @@ const handleFieldChange = (fieldName, value) => {
     ...formData.value,
     [fieldName]: value
   };
+  
+  // Emit change event for user-initiated changes (only from handleFieldChange)
+  emit('change', formData.value);
   emit('update:modelValue', formData.value);
+  
   const errors = validateField(value, field);
   if (errors.length > 0) {
     handleValidationError(fieldName, { errors: errors });
@@ -690,9 +694,20 @@ const initializeFormData = () => {
     Object.keys(props.initialData).forEach(key => {
       const field = props.formConfig.fields.find(f => f && f.name === key);
       if (field && field.type === 'fieldset') {
-        // Don't overwrite fieldset objects with strings
-        if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
-          newData[key] = { ...newData[key], ...props.initialData[key] };
+        // If fieldset has array attribute, it should be an array
+        if (field.array) {
+          // For array fieldsets, use the initialData array directly if it's an array
+          if (Array.isArray(props.initialData[key])) {
+            newData[key] = props.initialData[key];
+          } else if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
+            // If it's an object but should be array, convert it
+            newData[key] = [];
+          }
+        } else {
+          // Regular fieldset: merge objects
+          if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
+            newData[key] = { ...newData[key], ...props.initialData[key] };
+          }
         }
       } else {
         newData[key] = props.initialData[key];
@@ -710,12 +725,11 @@ watch(() => props.formConfig, () => {
 watch(() => props.initialData, () => {
   initializeFormData();
 }, { deep: true });
-
-watch(formData, (newData) => {
-  emit('update:modelValue', newData);
-}, { deep: true });
-
+// watch(formData, (newData) => {
+//   emit('update:modelValue', newData);
+// }, { deep: true });
 // Watch for changes in formData to re-evaluate conditions
+// Note: We don't emit update:modelValue here to avoid loops - it's only emitted from handleFieldChange
 watch(formData, () => {
   // Force re-render when form data changes to update conditional logic
 }, { deep: true });

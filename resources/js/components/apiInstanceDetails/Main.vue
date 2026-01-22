@@ -7,6 +7,7 @@ import { ApiInstance, ApiUser, Resource, type ApiData } from '@/types'
 import { getCsrfToken } from '@/lib/utils'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
+import FormViewer from '@/components/formviewer/FormViewer.vue';
 
 interface Props {
     instance_id: string,
@@ -18,12 +19,21 @@ interface Props {
     apiInstanceError: string
     updateApiInstanceData: (updatedApiInstanceData: Partial<ApiInstance> ) => void
 }
-
 const props = defineProps<Props>()
-
 // Toaster
 const { success, error, warning, info } = useToaster();
 
+const formConfig = computed(() => ({
+    label: 'API Instance Details',
+    description: '',
+    fields: [
+        { name: 'name', label: 'Name', type: 'text', required: true },
+        { name: 'route', label: 'Route', type: 'text', required: true },
+        { name: 'api', label: 'API', type: 'text', required: true, edit:false },
+        { name: 'api_version', label: 'API Version', type: 'text', required: true, edit:false  },
+        { name: 'environment', label: 'Environment', type: 'text', required: true, edit:false  }
+    ]
+}));
 // Local reactive data for editable fields
 const editableData = ref({
     name: '',
@@ -40,37 +50,6 @@ watch(
   },
   { immediate: true } // run once right away as well
 )
-
-// Watch for changes in editableData and propagate them up
-watch([
-    () => editableData.value.name,
-    () => editableData.value.route
-], () => {
-    if (props.apiInstanceData) {
-        const updatedData: ApiInstance = {
-            ...props.apiInstanceData,
-            name: editableData.value.name,
-            route: editableData.value.route
-        }
-        
-        const requestData = {
-            id: updatedData.id,
-            name: updatedData.name,
-            route: updatedData.route, 
-            route_user_map: updatedData.route_user_map,
-            resources: updatedData.resources, 
-            options: updatedData.options,
-            public: updatedData.public,
-            api_id: updatedData.api_id,
-            api_version_id: updatedData.api_version_id,
-            environment_id: updatedData.environment_id
-        }
-
-        props.updateApiInstanceData(requestData)
-    }
-}, { deep: true })
-
-
 // Watch for changes in apiInstanceData and update local data
 const updateLocalData = () => {
     if (props.apiInstanceData) {
@@ -82,37 +61,71 @@ const updateLocalData = () => {
 // Initialize local data when component mounts
 updateLocalData()
 
-// Computed properties for read-only fields
-const readOnlyData = computed(() => ({
+const formData = computed(() => ({
+    name: editableData.value.name,
+    route: editableData.value.route,
     api: props.apiInstanceData?.api.name,
     api_version: props.apiInstanceData?.api_version==null ? 'Latest working version' : props.apiInstanceData?.api_version.stable === false ? 'Latest working version' : props.apiInstanceData?.api_version.summary ?? undefined,
     environment: props.apiInstanceData?.environment.name
 }))
 
-// Save function
-const saveChanges = async () => {
-    if (props.apiInstanceData) {
+let oldFormData =  formData.value;
+
+// Computed properties for read-only fields
+// const readOnlyData = computed(() => ({
+//     api: props.apiInstanceData?.api.name,
+//     api_version: props.apiInstanceData?.api_version==null ? 'Latest working version' : props.apiInstanceData?.api_version.stable === false ? 'Latest working version' : props.apiInstanceData?.api_version.summary ?? undefined,
+//     environment: props.apiInstanceData?.environment.name
+// }))
+
+// // Save function
+// const saveChanges = async () => {
+//     if (props.apiInstanceData) {
+//         const updatedData: ApiInstance = {
+//             ...props.apiInstanceData,
+//             name: editableData.value.name,
+//             route: editableData.value.route
+//         }
+       
+//         const requestData = {
+//             id: updatedData.id,
+//             name: updatedData.name,
+//             route: updatedData.route, 
+//             route_user_map: updatedData.route_user_map,
+//             resources: updatedData.resources, 
+//             options: updatedData.options,
+//             public: updatedData.public,
+//             api_id: updatedData.api_id,
+//             api_version_id: updatedData.api_version_id,
+//             environment_id: updatedData.environment_id
+//         }
+
+//         props.updateApiInstanceData(requestData)
+//         success('Changes saved', 'Success');
+//     }
+// }
+
+const handleFormDataUpdate = (data: any) => {
+    debugger;
+    if (props.apiInstanceData &&data){
         const updatedData: ApiInstance = {
             ...props.apiInstanceData,
-            name: editableData.value.name,
-            route: editableData.value.route
+            name: data.name,
+            route: data.route
         }
-       
         const requestData = {
-            id: updatedData.id,
-            name: updatedData.name,
-            route: updatedData.route, 
-            route_user_map: updatedData.route_user_map,
-            resources: updatedData.resources, 
-            options: updatedData.options,
-            public: updatedData.public,
-            api_id: updatedData.api_id,
-            api_version_id: updatedData.api_version_id,
-            environment_id: updatedData.environment_id
-        }
-
-        props.updateApiInstanceData(requestData)
-        success('Changes saved', 'Success');
+                id: updatedData.id,
+                name: updatedData.name,
+                route: updatedData.route, 
+                route_user_map: updatedData.route_user_map,
+                resources: updatedData.resources, 
+                options: updatedData.options,
+                public: updatedData.public,
+                api_id: updatedData.api_id,
+                api_version_id: updatedData.api_version_id,
+                environment_id: updatedData.environment_id
+            }
+            props.updateApiInstanceData(requestData)
     }
 }
 </script>
@@ -128,9 +141,11 @@ const saveChanges = async () => {
         </div>
         
         <div v-else-if="apiInstanceData" class="space-y-4">
-            <h2 class="text-2xl font-bold">API Instance Details</h2>
-            
-            <!-- Editable Fields -->
+
+            <FormViewer :formConfig="formConfig" :initialData="formData" :showActions="false" @change="handleFormDataUpdate" :actions="[
+                { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' }
+            ]" />
+     <!--
             <div class="space-y-4">
                 <div>
                     <Label for="name" class="mb-1">Name</Label>
@@ -153,7 +168,7 @@ const saveChanges = async () => {
                 </div>
             </div>
             
-            <!-- Read-only Fields -->
+         
             <div class="space-y-4">
                 <div>
                     <Label for="api" class="mb-1">API</Label>
@@ -187,7 +202,7 @@ const saveChanges = async () => {
                         class="w-full bg-gray-50"
                     />
                 </div>
-            </div>
+            </div> -->
             
             <!-- Save Button -->
             <!-- <div class="pt-4">

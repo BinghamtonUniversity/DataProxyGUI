@@ -36,6 +36,7 @@ export function mapPhpToApiData(php: any): ApiData {
     version_models: [],                 // PHP does NOT send this
     version_views: php.functions ?? [], // alias
     version_urls: php.routes?.map((item: any) => ({
+      description: item.description,
       path: item.path,
       verb: item.verb,
       optional: item.optional || [],
@@ -95,6 +96,7 @@ export function denormalizeToPhp(api: ApiData): any {
         : func.content,
     })),
     routes: api.version_urls.map((item) => ({ 
+      description: item.description,
       path: item.path, 
       verb: item.verb, 
       optional: item.optional, 

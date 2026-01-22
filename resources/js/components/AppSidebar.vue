@@ -73,11 +73,11 @@ const footerNavItems: NavItem[] = [
                 href: '/users',
                 icon: Users,
             },
-            {
-                title: 'Unit Tests',
-                href: '/unit-tests',
-                icon: CheckCircle,
-            },
+            // {
+            //     title: 'Unit Tests',
+            //     href: '/unit-tests',
+            //     icon: CheckCircle,
+            // },
             {
                 title: 'DataGrid Example',
                 href: '/datagrid-example',

@@ -1,52 +1,12 @@
 <script setup lang="ts">
-import type {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-} from '@tanstack/vue-table'
-import {
-  FlexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useVueTable,
-} from '@tanstack/vue-table'
-import { ArrowUpDown, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
-import { h, ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
+import { ref, computed } from 'vue'
 import { type ApiData, type ResourceData, Api } from '@/types'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
+import DataGrid from '@/components/datagrid/DataGrid.vue'
+import AlertModal from '@/components/AlertModal.vue'
+import FormViewer from '@/components/formviewer/FormViewer.vue'
 
 interface Props {
     api_id: string
@@ -65,6 +25,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const newResourceDialogOpen = ref(false)
+
 const newResourceForm = ref({
   name: '',
   type: '' as string | null,
@@ -75,8 +36,117 @@ const newResourceError = ref('')
 const isEditMode = ref(false)
 const editingResourceIndex = ref<number | null>(null)
 
+// FormViewer ref for validation
+const formViewerRef = ref<InstanceType<typeof FormViewer> | null>(null)
+
 // Toaster
 const { success, error, warning, info } = useToaster();
+
+// Computed formConfig that dynamically sets required for model_name based on visibility
+const formConfig = computed(() => {
+  // Check if model_name field should be visible (when type is 'Model')
+  const isModelNameVisible = newResourceForm.value.type === 'Model'
+  
+  return {
+    label: 'New Resource',
+    description: 'Create a new resource',
+    fields: [
+      { name: 'name', label: 'Name', type: 'text', required: true },
+      { name: 'type', label: 'Type', type: 'select', required: props.api_type === 'python' ? true : false, show: props.api_type === 'python' ? true : false, options: ['Model', 'Password', 'Other'] },
+      { name: 'model_name', label: 'Model Name', type: 'select', required: isModelNameVisible, show: {op: 'and', conditions: [{type: 'matches', name: 'type', value: ['Model']}]}, options: props.apiData?.version_models?.map((model: any) => model.name) || [] },
+    ],
+    files: false,
+    name: "new-resource-form",
+  }
+})
+const resourcesSchema = {
+  label: 'Resources',
+  description: 'A list of resources with their information.',
+  name: "resources-schema",
+  fields: [
+    {
+      name: "name",
+      label: "Name",
+      type: "text",
+      placeholder: "Resource Name",
+      value: "",
+      help: "Name of the resource",
+      info: "Name of the resource",
+      width: "12",
+      offset: "0",
+      required: true,
+      showColumn: true
+    },
+    {
+      name: "type",
+      label: "Type",
+      type: "select",
+      placeholder: "Resource Type",
+      value: "",
+      help: "Type of the resource",
+      info: "Type of the resource",
+      showColumn: props.api_type === 'python' ? true : false,
+    },
+    {
+      name: "model_name",
+      label: "Model Name",
+      type: "select",
+      placeholder: "Model Name",
+      value: "",
+      help: "Model Name",
+      info: "Model Name",
+      showColumn: props.api_type === 'python' ? true : false,
+    }
+  ]
+}
+
+const handleFormAction = async (actionData: { type: string; action: string; formData: any }) => {
+
+  switch (actionData.action) {
+    case 'close':
+      closeNewResourceDialog()
+      break
+    case 'save':
+      // Validate form before submitting
+      if (formViewerRef.value) {
+        const isValid = formViewerRef.value.validateForm()
+        if (!isValid) {
+          // Validation failed - errors are already displayed by FormViewer
+          return
+        }
+      }
+      
+      newResourceForm.value = actionData.formData
+      await submitNewResource()
+      break
+  }
+}
+
+// DataGrid action handlers
+const handleDataGridActionHandler = (actionData: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
+  switch (actionData.action) {
+    case 'create':
+      openNewResourceDialog()
+      break
+  }
+}
+
+const handleDataGridRowActionHandler = (actionData: { type: string; payload: any, index: number }) => {
+  switch (actionData.type) {
+    case 'single-edit':
+      openEditResourceDialog(actionData.payload, actionData.index)
+      break
+    case 'single-delete':
+      handleDelete(actionData.payload)
+      break
+  }
+}
+
+const handleDataGridRowClick = (row: any, index: number) => {
+  console.log('row', row)
+  console.log('index', index)
+  openEditResourceDialog(row, index)
+}
 
 // New Resource Dialog handlers
 const openNewResourceDialog = () => {
@@ -88,18 +158,21 @@ const openNewResourceDialog = () => {
   newResourceError.value = ''
   isEditMode.value = false
   editingResourceIndex.value = null
+
   newResourceDialogOpen.value = true
 }
 
 const closeNewResourceDialog = () => {
   newResourceDialogOpen.value = false
+  
   newResourceError.value = ''
   isEditMode.value = false
   editingResourceIndex.value = null
 }
 
-const submitNewResource = async (e: Event) => {
-  e.preventDefault()
+
+const submitNewResource = async () => {
+  
   newResourceLoading.value = true
   newResourceError.value = ''
   
@@ -110,6 +183,15 @@ const submitNewResource = async (e: Event) => {
   }
   
   try {
+    // Additional validation: model_name is required when type is 'Model'
+    if (props.api_type === 'python' && newResourceForm.value.type === 'Model') {
+      if (!newResourceForm.value.model_name || newResourceForm.value.model_name.trim() === '') {
+        newResourceError.value = 'Model Name is required when Type is "Model".'
+        newResourceLoading.value = false
+        return
+      }
+    }
+
     const newResource: any = {
       name: newResourceForm.value.name
     }
@@ -223,139 +305,9 @@ const openEditResourceDialog = (resource: any, index: number) => {
 }
 
 
-// Table state
-const sorting = ref<SortingState>([])
-const columnFilters = ref<ColumnFiltersState>([])
-const columnVisibility = ref<VisibilityState>({
-  type: props.api_type === 'python',
-  model_name: props.api_type === 'python',
-})
 
-watch(() => props.api_type, (newApiType: string) => {
-  columnVisibility.value = {
-    ...columnVisibility.value,
-    type: newApiType === 'python',
-    model_name: newApiType === 'python',
-  }
-})
-const rowSelection = ref({})
 
-// Define table columns
-const columns: ColumnDef<ResourceData>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => h(Checkbox, {
-      'modelValue': table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate'),
-      'onUpdate:modelValue': value => table.toggleAllPageRowsSelected(!!value),
-      'ariaLabel': 'Select all',
-    }),
-    cell: ({ row }) => h('div', { onClick: e => e.stopPropagation() }, [
-        h(Checkbox, {
-            'modelValue': row.getIsSelected(),
-            'onUpdate:modelValue': value => row.toggleSelected(!!value),
-            'ariaLabel': 'Select row',
-        })
-    ]),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: 'name',
-    header: ({ column }) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
-    },
-    cell: ({ row }) => h('div', { 
-      class: 'font-medium text-blue-600',
-      innerHTML: highlightText(row.getValue('name'), props.highlightQuery || '')
-    }),
-  },
-  {
-    accessorKey: 'type',
-    header: 'Type',
-    cell: ({ row }) => {
-      const type = row.getValue('type') as string
-      return h('div', { 
-        class: 'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300',
-        innerHTML: highlightText(type, props.highlightQuery || '')
-      })
-    },
-  },
-  {
-    accessorKey: 'model_name',
-    header: ({ column }) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Model Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })])
-    },
-    cell: ({ row }) => h('div', { 
-      class: 'font-medium',
-      innerHTML: highlightText(row.getValue('model_name'), props.highlightQuery || '')
-    }),
-  },
-  {
-    id: 'actions',
-    enableHiding: false,
-    cell: ({ row }) => {
-            const route = row.original
-            return h('div', { 'data-actions-cell': true }, [
-                h(Button, {
-                    variant: 'ghost',
-                    size: 'sm',
-                    onClick: (e: MouseEvent) => {
-                        e.stopPropagation()
-                        handleDelete(route)
-                    },
-                    class: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20'
-                }, {
-                    default: () => [h(Trash2, { class: 'h-4 w-4' })]
-                })
-            ])
-        },
-    },
-]
 
-// Create table instance
-const table = computed(() => {
-  if (!props.apiData?.resources || !Array.isArray(props.apiData.resources)) {
-    return null
-  }
-
-  return useVueTable({
-    data: props.apiData.resources as ResourceData[],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: updaterOrValue => valueUpdater(updaterOrValue, sorting),
-    onColumnFiltersChange: updaterOrValue => valueUpdater(updaterOrValue, columnFilters),
-    onColumnVisibilityChange: updaterOrValue => valueUpdater(updaterOrValue, columnVisibility),
-    onRowSelectionChange: updaterOrValue => valueUpdater(updaterOrValue, rowSelection),
-    state: {
-      get sorting() { return sorting.value },
-      get columnFilters() { return columnFilters.value },
-      get columnVisibility() { return columnVisibility.value },
-      get rowSelection() { return rowSelection.value },
-    },
-  })
-})
-
-// Computed properties
-const headerGroups = computed(() => table.value?.getHeaderGroups() || [])
-const tableRows = computed(() => table.value?.getRowModel().rows || [])
-const hidableColumns = computed(() => table.value?.getAllColumns().filter(column => column.getCanHide()) || [])
-const nameFilterValue = computed({
-  get: () => table.value?.getColumn('name')?.getFilterValue() as string || '',
-  set: (value: string) => table.value?.getColumn('name')?.setFilterValue(value)
-})
-const selectedRowsCount = computed(() => table.value?.getFilteredSelectedRowModel().rows.length || 0)
-const totalRowsCount = computed(() => table.value?.getFilteredRowModel().rows.length || 0)
-const canPreviousPage = computed(() => table.value?.getCanPreviousPage() || false)
-const canNextPage = computed(() => table.value?.getCanNextPage() || false)
 
 // Function to highlight text in UI elements
 const highlightText = (text: string, query: string) => {
@@ -383,7 +335,7 @@ const highlightText = (text: string, query: string) => {
 
 <template>
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
-        <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
+        <div class="relative min-h-[100vh] flex-1 p-4">
             
             <!-- Loading State -->
             <template v-if="loadingApiData">
@@ -403,165 +355,46 @@ const highlightText = (text: string, query: string) => {
                     </div>
                 </div>
             </template>
-
+            
             <!-- Data Table -->
-            <template v-else-if="apiData?.resources && Array.isArray(apiData.resources) && table">
-                <div class="w-full">
-                    <!-- Table Controls -->
-                    <div class="flex items-center py-4">
-                        <Input
-                            class="max-w-sm"
-                            placeholder="Filter by name..."
-                            v-model="nameFilterValue"
-                        />
-                        
-                        <Dialog v-model:open="newResourceDialogOpen">
-                            <DialogTrigger as-child>
-                                <Button class="ml-4 text-green-600" variant="outline" @click="openNewResourceDialog">
-                                <Plus class="mr-2 h-4 w-4" />
-                                New Resource
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent class="sm:max-w-md">
-                                <form @submit="submitNewResource" class="space-y-6">
-                                <DialogHeader>
-                                    <DialogTitle>{{ isEditMode ? 'Edit Resource' : 'Create New Resource' }}</DialogTitle>
-                                </DialogHeader>
-                                <div class="grid gap-4">
-                                    <div>
-                                    <Label for="resource-name" class="mb-1">Name</Label>
-                                    <Input id="resource-name" v-model="newResourceForm.name" required placeholder="Resource name" />
-                                    </div>
-                                    <div v-if="props.api_type === 'python'">
-                                      <Label for="resource-type" class="mb-1">Type</Label>
-                                      <DropdownMenu>
-                                          <DropdownMenuTrigger as-child>
-                                          <Button
-                                              type="button"
-                                              variant="outline"
-                                              class="w-full justify-between"
-                                          >
-                                              {{ newResourceForm.type || 'Select type' }}
-                                              <ChevronDown class="ml-1 h-4 w-4" />
-                                          </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="start" class="w-full">
-                                          <DropdownMenuItem
-                                              v-for="type in ['Model', 'Password', 'Other']"
-                                              :key="type"
-                                              @click="newResourceForm.type = type"
-                                              :class="['w-full', {'font-semibold text-blue-600': newResourceForm.type === type }]"
-                                          >
-                                              {{ type }}
-                                          </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </div>
-                                    <div v-if="newResourceForm.type === 'Model'">
-                                        <Label for="model-name" class="mb-1">Model Name</Label>
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger as-child>
-                                          <Button
-                                              type="button"
-                                              variant="outline"
-                                              class="w-full justify-between"
-                                          >
-                                              {{ newResourceForm.model_name || 'Select model' }}
-                                              <ChevronDown class="ml-1 h-4 w-4" />
-                                          </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="start" class="w-full">
-                                          <DropdownMenuItem
-                                              v-for="model in apiData.version_models || []"
-                                              :key="model.name"
-                                              @click="newResourceForm.model_name = model.name"
-                                              :class="['w-full', {'font-semibold text-blue-600': newResourceForm.model_name === model.name }]"
-                                          >
-                                              {{ model.name }}
-                                          </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                      </DropdownMenu>
-                                        <!-- <Input id="model-name" v-model="newResourceForm.model_name" required placeholder="Model name" /> -->
-                                    </div>
-                                    <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
-                                </div>
-                                <DialogFooter class="gap-2">
-                                    <DialogClose as-child>
-                                    <Button variant="secondary" type="button" @click="closeNewResourceDialog">Cancel</Button>
-                                    </DialogClose>
-                                    <Button type="submit" variant="default" :disabled="newResourceLoading || (props.api_type === 'python' && !newResourceForm.type)">
-                                    <span v-if="newResourceLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
-                                    <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
-                                    </Button>
-                                </DialogFooter>
-                                </form>
-                            </DialogContent>
-                            </Dialog>
-                    </div>
-
-                    <!-- Data Table -->
-                    <div class="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow v-for="headerGroup in headerGroups" :key="headerGroup.id">
-                                    <TableHead v-for="header in headerGroup.headers" :key="header.id">
-                                        <FlexRender 
-                                            v-if="!header.isPlaceholder" 
-                                            :render="header.column.columnDef.header" 
-                                            :props="header.getContext()" 
-                                        />
-                                    </TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                <template v-if="tableRows.length">
-                                    <TableRow 
-                                        v-for="(row,index) in tableRows" 
-                                        :key="row.id" 
-                                        :data-state="row.getIsSelected() && 'selected'"
-                                        :data-resource-name="row.original.name"
-                                        class="cursor-pointer hover:bg-muted/50"
-                                        @click="openEditResourceDialog(row.original, index)"
-                                    >
-                                        <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
-                                            <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
-                                        </TableCell>
-                                    </TableRow>
-                                </template>
-                                <TableRow v-else>
-                                    <TableCell :colspan="columns.length" class="h-24 text-center">
-                                        No resources found.
-                                    </TableCell>
-                                </TableRow>
-                            </TableBody>
-                        </Table>
-                    </div>
-
-                    <!-- Pagination -->
-                    <div class="flex items-center justify-end space-x-2 py-4">
-                        <div class="flex-1 text-sm text-muted-foreground">
-                            {{ selectedRowsCount }} of {{ totalRowsCount }} row(s) selected.
-                        </div>
-                        <div class="space-x-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                :disabled="!canPreviousPage"
-                                @click="table?.previousPage()"
-                            >
-                                Previous
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                :disabled="!canNextPage"
-                                @click="table?.nextPage()"
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+            <template v-else-if="apiData?.resources && Array.isArray(apiData.resources)">
+              <AlertModal
+                :isOpen="newResourceDialogOpen"
+                :title="isEditMode ? 'Edit Resource' : 'Create New Resource'"
+                @close="closeNewResourceDialog"
+            >
+                <FormViewer 
+                ref="formViewerRef"
+                :formConfig="formConfig" 
+                :initialData="newResourceForm" 
+                :cancelAction="'close'"
+                :actionHandler="handleFormAction"
+                :actions="[
+                  { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+                  { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+                ]" />
+            </AlertModal>
+              <DataGrid
+            
+                :schema="resourcesSchema"
+                :data="apiData.resources"
+                :clickableRows="true"
+                :rowActionDropdown="false"
+                :showCheckboxes="false"
+                :actions="[
+                  {name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus'}
+                ]"
+                :rowActions="[
+                  { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20' },
+                  { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20' }
+                ]"
+                @actionHandler="handleDataGridActionHandler"
+                @rowActionHandler="handleDataGridRowActionHandler"
+                @rowClick="handleDataGridRowClick"
+              
+              />
+             
+                
             </template>
 
             <!-- No Data State -->
@@ -576,3 +409,160 @@ const highlightText = (text: string, query: string) => {
     </div>
   
 </template>
+<!--  OLD CODE --------------
+<div class="w-full">
+
+  <div class="flex items-center py-4">
+      <Input
+          class="max-w-sm"
+          placeholder="Filter by name..."
+          v-model="nameFilterValue"
+      />
+      
+      <Dialog v-model:open="newResourceDialogOpen">
+          <DialogTrigger as-child>
+              <Button class="ml-4 text-green-600" variant="outline" @click="openNewResourceDialog">
+              <Plus class="mr-2 h-4 w-4" />
+              New Resource
+              </Button>
+          </DialogTrigger>
+          <DialogContent class="sm:max-w-md">
+              <form @submit="submitNewResource" class="space-y-6">
+              <DialogHeader>
+                  <DialogTitle>{{ isEditMode ? 'Edit Resource' : 'Create New Resource' }}</DialogTitle>
+              </DialogHeader>
+              <div class="grid gap-4">
+                  <div>
+                  <Label for="resource-name" class="mb-1">Name</Label>
+                  <Input id="resource-name" v-model="newResourceForm.name" required placeholder="Resource name" />
+                  </div>
+                  <div v-if="props.api_type === 'python'">
+                    <Label for="resource-type" class="mb-1">Type</Label>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            class="w-full justify-between"
+                        >
+                            {{ newResourceForm.type || 'Select type' }}
+                            <ChevronDown class="ml-1 h-4 w-4" />
+                        </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" class="w-full">
+                        <DropdownMenuItem
+                            v-for="type in ['Model', 'Password', 'Other']"
+                            :key="type"
+                            @click="newResourceForm.type = type"
+                            :class="['w-full', {'font-semibold text-blue-600': newResourceForm.type === type }]"
+                        >
+                            {{ type }}
+                        </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div v-if="newResourceForm.type === 'Model'">
+                      <Label for="model-name" class="mb-1">Model Name</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            class="w-full justify-between"
+                        >
+                            {{ newResourceForm.model_name || 'Select model' }}
+                            <ChevronDown class="ml-1 h-4 w-4" />
+                        </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" class="w-full">
+                        <DropdownMenuItem
+                            v-for="model in apiData.version_models || []"
+                            :key="model.name"
+                            @click="newResourceForm.model_name = model.name"
+                            :class="['w-full', {'font-semibold text-blue-600': newResourceForm.model_name === model.name }]"
+                        >
+                            {{ model.name }}
+                        </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                  </div>
+                  <div v-if="newResourceError" class="text-red-600 text-sm">{{ newResourceError }}</div>
+              </div>
+              <DialogFooter class="gap-2">
+                  <DialogClose as-child>
+                  <Button variant="secondary" type="button" @click="closeNewResourceDialog">Cancel</Button>
+                  </DialogClose>
+                  <Button type="submit" variant="default" :disabled="newResourceLoading || (props.api_type === 'python' && !newResourceForm.type)">
+                  <span v-if="newResourceLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
+                  <span v-else>{{ isEditMode ? 'Save' : 'Create' }}</span>
+                  </Button>
+              </DialogFooter>
+              </form>
+          </DialogContent>
+          </Dialog>
+  </div>
+
+
+  <div class="rounded-md border">
+      <Table>
+          <TableHeader>
+              <TableRow v-for="headerGroup in headerGroups" :key="headerGroup.id">
+                  <TableHead v-for="header in headerGroup.headers" :key="header.id">
+                      <FlexRender 
+                          v-if="!header.isPlaceholder" 
+                          :render="header.column.columnDef.header" 
+                          :props="header.getContext()" 
+                      />
+                  </TableHead>
+              </TableRow>
+          </TableHeader>
+          <TableBody>
+              <template v-if="tableRows.length">
+                  <TableRow 
+                      v-for="(row,index) in tableRows" 
+                      :key="row.id" 
+                      :data-state="row.getIsSelected() && 'selected'"
+                      :data-resource-name="row.original.name"
+                      class="cursor-pointer hover:bg-muted/50"
+                      @click="openEditResourceDialog(row.original, index)"
+                  >
+                      <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
+                          <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
+                      </TableCell>
+                  </TableRow>
+              </template>
+              <TableRow v-else>
+                  <TableCell :colspan="columns.length" class="h-24 text-center">
+                      No resources found.
+                  </TableCell>
+              </TableRow>
+          </TableBody>
+      </Table>
+  </div>
+
+
+  <div class="flex items-center justify-end space-x-2 py-4">
+      <div class="flex-1 text-sm text-muted-foreground">
+          {{ selectedRowsCount }} of {{ totalRowsCount }} row(s) selected.
+      </div>
+      <div class="space-x-2">
+          <Button
+              variant="outline"
+              size="sm"
+              :disabled="!canPreviousPage"
+              @click="table?.previousPage()"
+          >
+              Previous
+          </Button>
+          <Button
+              variant="outline"
+              size="sm"
+              :disabled="!canNextPage"
+              @click="table?.nextPage()"
+          >
+              Next
+          </Button>
+      </div>
+  </div>
+</div> -->

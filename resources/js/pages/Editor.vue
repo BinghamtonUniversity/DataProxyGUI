@@ -261,6 +261,106 @@ const validateCode = (editorInstance: any, monaco: any) => {
           severity: monaco.MarkerSeverity.Error,
         });
       }
+
+      // 🔸 Detect forbidden threading/concurrency/async keywords and modules
+      const forbiddenModules = [
+        'threading',
+        'concurrent.futures',
+        'concurrent',
+        'asyncio',
+        'multiprocessing',
+        'gevent',
+        'eventlet',
+        'greenlet'
+      ];
+
+      const forbiddenKeywords = ['async', 'await'];
+      const forbiddenClasses = ['ThreadPoolExecutor', 'ProcessPoolExecutor', 'create_task', 'gather'];
+
+      // Check for module imports
+      for (const module of forbiddenModules) {
+        // Match: import threading, import concurrent.futures, from threading import, etc.
+        const escapedModule = module.replace(/\./g, '\\.');
+        const importPatterns = [
+          new RegExp(`^\\s*import\\s+${escapedModule}\\b`, 'i'),
+          new RegExp(`^\\s*from\\s+${escapedModule}\\s+import`, 'i'),
+          new RegExp(`\\bimport\\s+${escapedModule}\\b`, 'i'),
+          new RegExp(`\\bfrom\\s+${escapedModule}\\s+import`, 'i')
+        ];
+
+        for (const pattern of importPatterns) {
+          if (pattern.test(line)) {
+            const match = line.match(pattern);
+            if (match) {
+              const startCol = line.indexOf(match[0]) + 1;
+              markers.push({
+                startLineNumber: i + 1,
+                startColumn: startCol,
+                endLineNumber: i + 1,
+                endColumn: startCol + match[0].length,
+                message: `Forbidden: '${module}' module is not allowed (threading/concurrency operations are disabled)`,
+                severity: monaco.MarkerSeverity.Error,
+              });
+              break; // Only report once per line
+            }
+          }
+        }
+
+        // Check for module usage (e.g., threading.Thread(), asyncio.run())
+        const moduleUsagePattern = new RegExp(`\\b${escapedModule}\\.`, 'i');
+        if (moduleUsagePattern.test(line)) {
+          const match = line.match(moduleUsagePattern);
+          if (match) {
+            const startCol = line.indexOf(match[0]) + 1;
+            markers.push({
+              startLineNumber: i + 1,
+              startColumn: startCol,
+              endLineNumber: i + 1,
+              endColumn: startCol + match[0].length - 1,
+              message: `Forbidden: '${module}' module usage is not allowed (threading/concurrency operations are disabled)`,
+              severity: monaco.MarkerSeverity.Error,
+            });
+          }
+        }
+      }
+
+      // Check for async/await keywords
+      for (const keyword of forbiddenKeywords) {
+        const keywordPattern = new RegExp(`\\b${keyword}\\b`, 'i');
+        if (keywordPattern.test(line)) {
+          const match = line.match(keywordPattern);
+          if (match) {
+            const startCol = line.indexOf(match[0]) + 1;
+            markers.push({
+              startLineNumber: i + 1,
+              startColumn: startCol,
+              endLineNumber: i + 1,
+              endColumn: startCol + keyword.length,
+              message: `Forbidden: '${keyword}' keyword is not allowed (async operations are disabled)`,
+              severity: monaco.MarkerSeverity.Error,
+            });
+          }
+        }
+      }
+
+      // Check for forbidden classes/functions
+      for (const className of forbiddenClasses) {
+        const classPattern = new RegExp(`\\b${className}\\b`, 'i');
+        if (classPattern.test(line)) {
+          const match = line.match(classPattern);
+          if (match) {
+            const startCol = line.indexOf(match[0]) + 1;
+            markers.push({
+              startLineNumber: i + 1,
+              startColumn: startCol,
+              endLineNumber: i + 1,
+              endColumn: startCol + className.length,
+              message: `Forbidden: '${className}' is not allowed (threading/concurrency operations are disabled)`,
+              severity: monaco.MarkerSeverity.Error,
+            });
+          }
+        }
+      }
     }
 
     // 🔸 Check unmatched parentheses/brackets/braces

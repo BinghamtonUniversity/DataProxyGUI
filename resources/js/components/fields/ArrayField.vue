@@ -181,6 +181,7 @@ const arrayConfig = computed(() => {
 
 const minItems = computed(() => arrayConfig.value.min || 0);
 const maxItems = computed(() => arrayConfig.value.max || 10);
+const addConfig = computed(() => arrayConfig.value.add || {});
 const duplicateConfig = computed(() => arrayConfig.value.duplicate || {});
 const removeConfig = computed(() => arrayConfig.value.remove || {});
 
@@ -218,6 +219,9 @@ const getDefaultValue = () => {
 
 // Array control methods
 const canAdd = () => {
+  const enable = addConfig.value.enable;
+  if (enable === false || enable === 'never') return false;
+  if (enable === 'auto') return arrayValues.value.length < maxItems.value;
   return arrayValues.value.length < maxItems.value;
 };
 
