@@ -456,16 +456,160 @@ function runCustomValidations(value, config, matchValues = {}) {
   return errors;
 }
 
+// Recursively validate nested fields in a fieldset
+function validateFieldset(value, config, matchValues = {}) {
+  const errors = [];
+  
+  // If fieldset is required but value is empty
+  if (config.required) {
+    if (!value || (typeof value === 'object' && Object.keys(value).length === 0)) {
+      errors.push('This section is required.');
+      return errors; // Return early if required fieldset is empty
+    }
+  }
+  
+  // Validate nested fields if fieldset has fields array
+  if (config.fields && Array.isArray(config.fields) && value && typeof value === 'object') {
+    config.fields.forEach(field => {
+      if (field && field.name) {
+        const fieldValue = value[field.name];
+        const fieldConfig = {
+          type: field.type || 'text',
+          required: field.required || false,
+          minLength: field.minLength,
+          maxLength: field.maxLength,
+          pattern: field.pattern,
+          min: field.min,
+          max: field.max,
+          ...field
+        };
+        
+        // Validate the nested field
+        const fieldErrors = validateField(fieldValue, fieldConfig, value);
+        if (fieldErrors.length > 0) {
+          // Prefix error with field name for clarity
+          fieldErrors.forEach(error => {
+            errors.push(`${field.label || field.name}: ${error}`);
+          });
+        }
+      }
+    });
+  }
+  
+  return errors;
+}
+
+// Validate array fields (arrays of simple values or arrays of fieldsets)
+function validateArray(value, config, matchValues = {}) {
+  const errors = [];
+  
+  // If value is not an array, check if it's required
+  if (!Array.isArray(value)) {
+    if (config.required && (value === undefined || value === null || value === '')) {
+      errors.push('This field is required.');
+    }
+    // If not required or value is not empty, return no errors (it's optional)
+    return errors;
+  }
+  
+  // Check min/max array length
+  const arrayConfig = config.array || {};
+  const minItems = arrayConfig.min;
+  const maxItems = arrayConfig.max;
+  
+  if (minItems !== undefined && value.length < minItems) {
+    errors.push(`At least ${minItems} item(s) are required.`);
+  }
+  
+  if (maxItems !== undefined && value.length > maxItems) {
+    errors.push(`Maximum ${maxItems} item(s) allowed.`);
+  }
+  
+  // If array is required and empty
+  if (config.required && value.length === 0) {
+    errors.push('At least one item is required.');
+    return errors; // Return early if required array is empty
+  }
+  
+  // Validate each item in the array
+  value.forEach((item, index) => {
+    if (config.fields && Array.isArray(config.fields)) {
+      // Array of fieldsets - validate each fieldset
+      // Don't pass the array's required flag to individual fieldset items
+      const fieldsetConfig = { 
+        ...config, 
+        fields: config.fields,
+        required: false, // Individual items in an array are not required (the array itself is)
+        type: 'fieldset'
+      };
+      const fieldsetErrors = validateFieldset(item, fieldsetConfig, matchValues);
+      if (fieldsetErrors.length > 0) {
+        fieldsetErrors.forEach(error => {
+          errors.push(`Item ${index + 1}: ${error}`);
+        });
+      }
+    } else {
+      // Array of simple values - validate each item
+      // Don't pass the array's required flag to individual items
+      const itemConfig = {
+        type: config.type || 'text',
+        required: false, // Individual items in an array are not required (the array itself is)
+        minLength: config.minLength,
+        maxLength: config.maxLength,
+        pattern: config.pattern,
+        min: config.min,
+        max: config.max,
+        ...config
+      };
+      // Remove the array-specific config from item validation
+      delete itemConfig.array;
+      delete itemConfig.required; // Already set to false above
+      const itemErrors = validateField(item, itemConfig, matchValues);
+      if (itemErrors.length > 0) {
+        itemErrors.forEach(error => {
+          errors.push(`Item ${index + 1}: ${error}`);
+        });
+      }
+    }
+  });
+  
+  return errors;
+}
+
 // Main validation function
 export function validateField(value, config, matchValues = {}) {
-
-
   const errors = [];
+  
+  // Handle array validation FIRST (for fieldsets with array attribute or regular arrays)
+  // A fieldset with array attribute should be treated as an array, not a fieldset
+  if (config.array || (config.type === 'fieldset' && config.array)) {
+    const arrayErrors = validateArray(value, config, matchValues);
+    errors.push(...arrayErrors);
+    // Return early for arrays - don't run other rules
+    return errors;
+  }
+  
+  // Handle regular fieldset validation (fieldset without array attribute)
+  if (config.type === 'fieldset') {
+    const fieldsetErrors = validateFieldset(value, config, matchValues);
+    errors.push(...fieldsetErrors);
+    // Don't run other rules for fieldsets, as we've handled it above
+    return errors;
+  }
+  
+  // Handle array validation for non-fieldset types
+  if (Array.isArray(value) && config.type && config.type !== 'fieldset') {
+    const arrayErrors = validateArray(value, config, matchValues);
+    errors.push(...arrayErrors);
+    // Continue with other validations for array items if needed
+  }
+  
   // Built-in rules
   for (const ruleName in rules) {
     const error = rules[ruleName](value, config);
     if (error) errors.push(error);
   }
+  
   // Custom rules
   errors.push(...runCustomValidations(value, config, matchValues));
 

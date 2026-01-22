@@ -48,8 +48,10 @@ const optionalParamsData = ref<any>(null);
 // Toaster
 const { success, error, warning, info } = useToaster();
 
-// FormViewer ref for validation
+// FormViewer refs for validation
 const newRouteFormViewer = ref<any>(null);
+const requiredParamsFormViewer = ref<any>(null);
+const optionalParamsFormViewer = ref<any>(null);
 
 // DataGrid form configuration for routes
 const routeFormConfig = {
@@ -216,30 +218,50 @@ const newRouteFormConfig = {
     ]
 }
 
-const handleRequiredParamsFormAction = (actionData: { type: string; action: string; formData: any }) => {
+const handleRequiredParamsFormAction = async (actionData: { type: string; action: string; formData: any }) => {
   switch (actionData.action) {
     case 'close':
       closeRequiredParamsDialog()
       break
     case 'save':
+    case 'submit':
+      // Validate form before submitting
+      if (requiredParamsFormViewer.value) {
+        const isValid = requiredParamsFormViewer.value.validateForm()
+        debugger;
+        if (!isValid) {
+          debugger;
+          // Validation failed - errors are already displayed by FormViewer
+          return
+        }
+      }
+      debugger;
       requiredParamsData.value = { 
         required_parameters: actionData.formData.required_parameters || []
       }
-      submitRequiredParams()
+      await submitRequiredParams()
       break
   }
 }
 
-const handleOptionalParamsFormAction = (actionData: { type: string; action: string; formData: any }) => {
+const handleOptionalParamsFormAction = async (actionData: { type: string; action: string; formData: any }) => {
   switch (actionData.action) {
     case 'close':
       closeOptionalParamsDialog()
       break
     case 'save':
+      // Validate form before submitting
+      if (optionalParamsFormViewer.value) {
+        const isValid = optionalParamsFormViewer.value.validateForm()
+        if (!isValid) {
+          // Validation failed - errors are already displayed by FormViewer
+          return
+        }
+      }
       optionalParamsData.value = {
         optional_parameters: actionData.formData.optional_parameters || []
       }
-      submitOptionalParams()
+      await submitOptionalParams()
       break
   }
 }
@@ -423,7 +445,6 @@ const submitNewRoute = async (formData: any) => {
         }
 
         props.updateApiData(updatedApiData)
-        debugger;
         if(isEditMode.value) {
             success('Updated successfully', 'Route Updated');
         } else {
@@ -622,6 +643,7 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                     @close="closeRequiredParamsDialog"
                 >
                     <FormViewer 
+                    ref="requiredParamsFormViewer"
                     :formConfig="requiredParamsFormConfig" 
                     :initialData="requiredParamsData" 
                     :actions="[ { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' }, 
@@ -637,6 +659,7 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                     @close="closeOptionalParamsDialog"
                 >   
                     <FormViewer 
+                    ref="optionalParamsFormViewer"
                     :formConfig="optionalParamsFormConfig" 
                     :initialData="optionalParamsData" 
                     :actions="[ { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },

@@ -483,7 +483,8 @@ const validateFieldLocal = (fieldName) => {
     ...field
   };
   
-  // Use the imported validation function
+  // Use the imported validation function (which now handles fieldsets and arrays recursively)
+  // validateField already handles nested fields in fieldsets and arrays, so we don't need to recurse here
   const errors = validateField(fieldValue, config, formData.value);
 
   // If there are errors, add them to validation errors
@@ -504,7 +505,7 @@ const validateForm = () => {
   validationErrors.value = [];
   fieldErrors.value = {}; // Clear field-specific errors
   
-  // Validate all fields
+  // Validate all fields (including nested fields recursively)
   if (props.formConfig && props.formConfig.fields) {
     props.formConfig.fields.forEach(field => {
       if (field && field.name) {
