@@ -18,6 +18,12 @@ class ApiDevelopersController extends BaseDjangoController{
             return response()->json($result['data']);
         }
 
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
+        }
+
         return response()->json([
             'error' => "Failed to fetch API developers for API {$id}",
             'status' => $result['status']
@@ -33,6 +39,12 @@ class ApiDevelopersController extends BaseDjangoController{
 
         if ($result['success']) {
             return response()->json($result['data'], 201);
+        }
+
+        if ($result['status'] === 403) {    
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
         }
 
         return response()->json([
@@ -53,6 +65,12 @@ class ApiDevelopersController extends BaseDjangoController{
             return response()->json($result['data']);
         }
 
+        if ($result['status'] === 403) {    
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
+        }
+
         return response()->json([
             'error' => "Failed to update API developer assignment",
             'details' => $result['data'],
@@ -71,6 +89,12 @@ class ApiDevelopersController extends BaseDjangoController{
             return response()->json([
                 'message' => 'API developer assignment removed successfully'
             ]);
+        }
+
+        if ($result['status'] === 403) {    
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
         }
 
         return response()->json([

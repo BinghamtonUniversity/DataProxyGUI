@@ -71,7 +71,7 @@ export interface RouteData {
 export interface ResourceData{
   name: string
   type: string
-  model_name: string
+  model_name?: string | null
 }
 
 

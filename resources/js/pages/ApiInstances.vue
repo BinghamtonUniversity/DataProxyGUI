@@ -385,6 +385,12 @@ const submitNewApiInstance = async ( formData: any) => {
       request_method = 'PUT'
     }
 
+    const normalizedFormData = {
+      ...formData,
+      api_version_id:
+        formData.api_version_id === -1 ? "" : formData.api_version_id,
+    }
+
     // For PHP APIs, set slug
     if(formData.api_type === 'php' && !formData.slug) {
       formData.slug = formData.route;
@@ -586,7 +592,12 @@ const fetchAllData = async (mode: string = 'default') => {
       fetch(`/api/api_versions`),
     ])
 
-    if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
+    if (!apiInstancesResponse.ok) {
+      const errorData = await apiInstancesResponse.json()
+      error(errorData.error || 'Failed to fetch API instances', 'Error')
+      throw new Error(errorData.error || 'Failed to fetch API instances')
+    }
+
     if (!environmentsResponse.ok) throw new Error('Failed to fetch environments')
     if (!apisResponse.ok) throw new Error('Failed to fetch APIs')
     if (!apiVersionsResponse.ok) throw new Error('Failed to fetch API versions')
@@ -663,7 +674,9 @@ const fetchAllData = async (mode: string = 'default') => {
      });
 
   } catch (error) {
+
     console.error('Error fetching data:', error)
+    
   } finally {
     loading.value = false
   }
