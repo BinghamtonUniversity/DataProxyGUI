@@ -76,9 +76,8 @@ class ApiController extends BaseDjangoController
     {
         // Handle special case for environments DELETE endpoint
         $endpoint = "{$resource}/{$id}";
-
+        
         $result = $this->makeDjangoRequest('DELETE', $endpoint);
-
 
         if ($result['success']) {
             return response()->json([
@@ -105,6 +104,12 @@ class ApiController extends BaseDjangoController
             return response()->json($djangoResult['data']);
         }
 
+        if ($djangoResult['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
+        }
+
         return response()->json([
             'error' => 'Failed to fetch APIs',
             'django_status' => $djangoResult['status'],
@@ -117,6 +122,12 @@ class ApiController extends BaseDjangoController
 
         if ($result['success']) {
             return response()->json($result['data']);
+        }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
         }
 
         return response()->json([
@@ -136,6 +147,12 @@ class ApiController extends BaseDjangoController
         if ($result['success']) {
             return response()->json($result['data'], 201);
         }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
+        }
        
         return response()->json([
             'error' => "Failed to create apis",
@@ -151,6 +168,13 @@ class ApiController extends BaseDjangoController
         if ($result['success']) {
             return response()->json($result['data']);
         }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
+        }
+        
 
         return response()->json([
             'error' => "Failed to update apis",
@@ -170,6 +194,12 @@ class ApiController extends BaseDjangoController
             return response()->json([
                 'message' => ucfirst('apis') . ' deleted successfully'
             ]);
+        }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
         }
 
         return response()->json([
@@ -223,6 +253,12 @@ class ApiController extends BaseDjangoController
 
         if ($result['success']) {
             return response()->json($result['data']);
+        }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
         }
 
         return response()->json([
@@ -368,94 +404,6 @@ class ApiController extends BaseDjangoController
     //     ], $result['status']);
     // }
 
-    /**
-     * Get API developers for a specific API
-     */
-    public function getApiDevelopers($id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('GET', "apis/{$id}/developers");
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to fetch API developers for API {$id}",
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    /**
-     * Create a new API developer assignment
-     */
-    public function createApiDeveloper(Request $request, $id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('POST', "apis/{$id}/developers", $request->all());
-
-        if ($result['success']) {
-            return response()->json($result['data'], 201);
-        }
-
-        return response()->json([
-            'error' => "Failed to assign developer to API {$id}",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    /**
-     * Update an API developer assignment
-     */
-    public function updateApiDeveloper(Request $request, $api_id, $id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('PUT', "apis/{$api_id}/developers/{$id}", $request->all());
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to update API developer assignment",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    /**
-     * Delete an API developer assignment
-     */
-    public function deleteApiDeveloper($api_id, $id): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('DELETE', "apis/{$api_id}/developers/{$id}");
-
-        if ($result['success']) {
-            return response()->json([
-                'message' => 'API developer assignment removed successfully'
-            ]);
-        }
-
-        return response()->json([
-            'error' => "Failed to remove API developer assignment",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-    // // ===========================================
-    // // API's Instances
-    // // ===========================================
-    // public function apisInstancesIndex($id): JsonResponse
-    // {
-    //     $result = $this->makeDjangoRequest('GET', "apis/{$id}/instances");
-    
-    //     if ($result['success']) {
-    //         return response()->json($result['data']);
-    //     }
-
-    //     return response()->json([
-    //         'error' => "Failed to fetch API's instances for API {$id}",
-    //         'status' => $result['status']
-    //     ], $result['status']);
-    // }
 
     /**
      * Magic method to handle dynamic resource calls
@@ -533,6 +481,12 @@ class ApiController extends BaseDjangoController
 
         if ($result['success']) {
             return response()->json($result['data']);
+        }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
         }
 
         return response()->json([

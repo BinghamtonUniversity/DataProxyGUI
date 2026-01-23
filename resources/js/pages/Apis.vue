@@ -261,13 +261,15 @@ const fetchApiUsers = async () => {
             credentials: 'same-origin'
         });
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json()
+            showError(errorData.error || 'Failed to fetch API users', 'Error')
+            throw new Error(errorData.error || 'Failed to fetch API users')
         }
         const data = await response.json();
         apiUsers.value = data;
     } catch (err: any) {
         error.value = err.message || 'Failed to fetch API users';
-        showError('Failed to fetch API users. Please try again.', 'Error');
+        // showError('Failed to fetch API users. Please try again.', 'Error');
         console.error('Error fetching API users:', err);
     }
 };
@@ -289,7 +291,9 @@ const fetchApis = async () => {
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json()
+            showError(errorData.error || 'Failed to fetch APIs', 'Error');
+            throw new Error(errorData.error || 'Failed to fetch API data')
         }
         
         const data = await response.json();
@@ -327,7 +331,7 @@ const fetchApis = async () => {
         
     } catch (err: any) {
         error.value = err.message || 'Failed to fetch APIs';
-        showError('Failed to fetch APIs. Please try again.', 'Error');
+        // showError('Failed to fetch APIs. Please try again.', 'Error');
         console.error('Error fetching APIs:', err);
     } finally {
         loading.value = false;
@@ -364,17 +368,12 @@ const handleFormSubmit = async (formValues: any) => {
         if (modalMode.value === 'new') {
             // Create new API
             const cleanedData = cleanFormData(formValues);
-            // TO-DO:: For php APIs, set created_by_id and user_id to 1 (temporary workaround)
-            if(cleanedData.api_type === 'php'){
-                cleanedData.created_by_id = 1
-                cleanedData.user_id = 1
-            }
 
             // Check if name contains spaces
             if (cleanedData.api_type === 'php' && cleanedData.name && cleanedData.name.includes(' ')) {
                 throw new Error('API name cannot contain spaces. Please use underscores or hyphens instead.');
             }
-            
+
             const response = await fetch(`/api/apis/${cleanedData.api_type}`, {
                 method: 'POST',
                 headers: {
@@ -585,8 +584,8 @@ onMounted(() => {
                 <!-- Error State -->
                 <div v-else-if="error" class="flex justify-center items-center py-12">
                     <div class="text-red-600 dark:text-red-400">
-                        <p class="text-lg font-semibold">Error loading APIs</p>
-                        <p class="text-sm">{{ error }}</p>
+                        <p class="text-lg font-semibold">{{ error }}</p>
+                        <p class="text-sm">Couldn't load APIs.</p>
                         <button @click="fetchApis" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                             Try Again
                         </button>

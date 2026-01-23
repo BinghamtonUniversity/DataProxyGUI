@@ -427,7 +427,7 @@ const submitNewRoute = async (formData: any) => {
         }
         
         let updatedApiData
-    
+        
         if (isEditMode.value && editingRouteIndex.value !== null) {
             updatedApiData = {
                 ...props.apiData,
@@ -695,11 +695,11 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                         <p>No routes available for this API version.</p>
                     </div>
                 </div>
+            
             </template>
 
-      
         </div>
-
     </div>
 </template>
+
 

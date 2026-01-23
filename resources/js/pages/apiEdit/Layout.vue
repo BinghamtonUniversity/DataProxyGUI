@@ -117,6 +117,9 @@ const hermesBaseUrl = import.meta.env.VITE_HERMES_BASEURL
 const highlightQuery = ref<string>('')
 const highlightTarget = ref<string>('')
 
+// Ref to access Functions component for validation checking
+const functionsComponentRef = ref<InstanceType<typeof Functions> | null>(null)
+
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: `API Edit`,
@@ -226,7 +229,10 @@ const fetchApiData = async () => {
     apiError.value = ''
     try {
         const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`)
-        if (!response.ok) throw new Error('Failed to fetch API data')
+        if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.error || 'Failed to fetch API data')
+        }
         const data = await response.json()
         // console.log('Fetched API data:', apiData.value)
         apiData.value = normalizeApiData(data, props.api_type as 'python' | 'php')
@@ -788,13 +794,13 @@ const handleApiDataImport = (formData: any) => {
             ? ['version_urls', 'version_views', 'version_models', 'version_files', 'resources']
             : ['functions', 'files', 'resources', 'routes'] // php
 
-        //TODO:: change constructor function to work with php // __EMPTY__
-
         const missingFields = requiredFields.filter(field => !importedData.hasOwnProperty(field))
 
         if (missingFields.length > 0) {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
         }
+
+        importedData.updated_at = new Date().toISOString()
         const normalizedData = normalizeApiData(importedData, props.api_type as 'python' | 'php')
 
         updateApiData(normalizedData)
@@ -823,11 +829,15 @@ const handleSave = async () => {
         return
     }
     
-    // Prevent save if there are validation errors
-    if (totalValidationErrors.value > 0) {
-        const errorDetails = getErrorBreakdown.value
-        showError(`Cannot save: There are ${totalValidationErrors.value} validation error(s). ${errorDetails ? `(${errorDetails})` : ''} Please fix all errors before saving.`, 'Validation Errors')
-        return
+    // Check for validation errors in Functions component (regardless of current tab)
+    if (functionsComponentRef.value) {
+        const hasErrors = functionsComponentRef.value.hasValidationErrors
+        const errorCount = functionsComponentRef.value.validationErrors
+        
+        if (hasErrors) {
+            showError(`Cannot save: There ${errorCount === 1 ? 'is' : 'are'} ${errorCount} validation error${errorCount === 1 ? '' : 's'} in the Functions tab. Please fix the errors before saving.`, 'Validation Errors')
+            return
+        }
     }
     
     if (isVersionSwitch.value) {
@@ -845,16 +855,6 @@ const handleSave = async () => {
     }
     
     const requestData = props.api_type === 'php' ? denormalizeToPhp(apiData.value): apiData.value
-    // we dont have html form element here, so we use JSON body
-
-    // const formData = new URLSearchParams();
-    // Object.keys(requestData).forEach(key => {
-    //     if (typeof requestData[key] === 'object') {
-    //         formData.append(key, JSON.stringify(requestData[key]));
-    //     } else {
-    //         formData.append(key, requestData[key]);
-    //     }
-    // });
     
     // debugger;
     const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/code`, {
@@ -1201,7 +1201,7 @@ onUnmounted(() => {
                             <Resources v-bind="componentProps" />
                         </div>
                         <div v-show="currentTab === 'functions'">
-                            <Functions v-bind="componentProps" />
+                            <Functions ref="functionsComponentRef" v-bind="componentProps" />
                         </div>
                         <div v-show="currentTab === 'models' && api_type === 'python'">
                             <Models v-bind="componentProps" />
@@ -1228,8 +1228,8 @@ onUnmounted(() => {
                         <!-- Error state -->
                         <div v-else-if="apiError" class="text-center py-8">
                         <div class="text-red-600 dark:text-red-400">
-                            <p class="text-lg font-semibold">Error loading API data</p>
-                            <p class="text-sm">{{ apiError }}</p>
+                            <p class="text-lg font-semibold">{{ apiError }}</p>
+                            <p class="text-sm">Couldn't load API data.</p>
                             <button @click="fetchApiData" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                             Try Again
                             </button>
