@@ -167,8 +167,8 @@ const requiredParamsFormConfig = {
     fields: [
         { name: 'required_parameters', label: '', type: 'fieldset', 
             array: {
-            "min": 1,
-            "max": ""
+            "min": 0,
+            "max": 20
             },
             fields:[
                 { name: 'name', label: 'Name', type: 'text',offset: "0",width: "6", required: true },
@@ -186,8 +186,8 @@ const optionalParamsFormConfig = {
     fields: [
       { name: 'optional_parameters', label: '', type: 'fieldset',
         array: {
-          "min": 1,
-          "max": ""
+          "min": 0,
+          "max": 20
         },
         fields: [
           { name: 'name', label: 'Name', type: 'text',offset: "0",width: "6", required: true },
@@ -228,14 +228,14 @@ const handleRequiredParamsFormAction = async (actionData: { type: string; action
       // Validate form before submitting
       if (requiredParamsFormViewer.value) {
         const isValid = requiredParamsFormViewer.value.validateForm()
-        debugger;
+        // debugger;
         if (!isValid) {
-          debugger;
+          // debugger;
           // Validation failed - errors are already displayed by FormViewer
           return
         }
       }
-      debugger;
+      // debugger;
       requiredParamsData.value = { 
         required_parameters: actionData.formData.required_parameters || []
       }

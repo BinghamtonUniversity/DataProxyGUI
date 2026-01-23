@@ -389,7 +389,7 @@ const handleSave = async() => {
     }
     success('API Instance data saved successfully!')
     const responseData = await response.json()
-    console.log('Saved API Instance data:', responseData)
+    // console.log('Saved API Instance data:', responseData)
     
     // Merge response with preserved nested objects
     apiInstanceData.value = {

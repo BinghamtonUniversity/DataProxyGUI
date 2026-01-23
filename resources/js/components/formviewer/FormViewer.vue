@@ -530,7 +530,7 @@ const validateForm = () => {
       formData.value = currentFormData;
     });
   }
-  
+
   return validationErrors.value.length === 0;
 };
 
