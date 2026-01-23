@@ -80,6 +80,9 @@ const editingPermissionIndex = ref<number | null>(null)
 // Toaster
 const { success, error, warning, info } = useToaster();
 
+// FormViewer ref for validation
+const permissionFormViewer = ref<InstanceType<typeof FormViewer> | null>(null)
+
 const formConfig = computed(() => ({
     label: 'New Permission',
     description: 'Create a new permission',
@@ -111,13 +114,13 @@ const permissionSchema = computed(() => ({
         { name: 'route', label: 'Route', type: 'text', required: true }
     ]
 }))   
-const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
+const handleFormAction = async (actionData: { type: string; action: string; formData: any }) => {
     switch (actionData.action) {
         case 'close':
             closeNewPermissionDialog()
             break
         case 'save':
-           
+            // Validation is handled automatically by FormViewer when validateOnSubmit is true
             newPermissionForm.value = {
                 api_user: actionData.formData.api_user,
                 user: actionData.formData.api_user,
@@ -125,7 +128,7 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
                 route: actionData.formData.route
             }
           
-            submitNewPermission(actionData.formData)
+            await submitNewPermission(actionData.formData)
             break
     }
 }
@@ -334,10 +337,18 @@ const handleDataGridRowClick = (row: any, index: number) => {
                     :title="isEditMode ? 'Edit Permission' : 'Create New Permission'"
                     @close="closeNewPermissionDialog"
                 >
-                    <FormViewer :formConfig="formConfig" :initialData="newPermissionForm" :cancelAction="'close'" :actionHandler="handleFormAction" :actions="[
-                        { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
-                        { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
-                    ]" />
+                    <FormViewer 
+                        ref="permissionFormViewer"
+                        :formConfig="formConfig" 
+                        :initialData="newPermissionForm" 
+                        :cancelAction="'close'" 
+                        :actionHandler="handleFormAction"
+                        :validateOnSubmit="true"
+                        :actions="[
+                            { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+                            { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+                        ]" 
+                    />
 
                 </AlertModal>
                 <DataGrid
