@@ -72,59 +72,45 @@ const formData = computed(() => ({
     environment: props.apiInstanceData?.environment.name
 }))
 
-let oldFormData =  formData.value;
-
-// Computed properties for read-only fields
-// const readOnlyData = computed(() => ({
-//     api: props.apiInstanceData?.api.name,
-//     api_version: props.apiInstanceData?.api_version==null ? 'Latest working version' : props.apiInstanceData?.api_version.stable === false ? 'Latest working version' : props.apiInstanceData?.api_version.summary ?? undefined,
-//     environment: props.apiInstanceData?.environment.name
-// }))
-
-// // Save function
-// const saveChanges = async () => {
-//     if (props.apiInstanceData) {
-//         const updatedData: ApiInstance = {
-//             ...props.apiInstanceData,
-//             name: editableData.value.name,
-//             route: editableData.value.route
-//         }
-       
-//         const requestData = {
-//             id: updatedData.id,
-//             name: updatedData.name,
-//             route: updatedData.route, 
-//             route_user_map: updatedData.route_user_map,
-//             resources: updatedData.resources, 
-//             options: updatedData.options,
-//             public: updatedData.public,
-//             api_id: updatedData.api_id,
-//             api_version_id: updatedData.api_version_id,
-//             environment_id: updatedData.environment_id
-//         }
-
-//         props.updateApiInstanceData(requestData)
-//         success('Changes saved', 'Success');
-//     }
-// }
 
 const handleFormDataUpdate = (data: any) => {
+    // Merge incoming data with existing formData to preserve read-only fields
+    // FormViewer only emits changed fields, so we need to merge with current formData
+    const mergedData = {
+        ...formData.value, // Preserve all existing fields (including read-only ones)
+        ...data // Override with changed fields
+    }
     
     // Validate form before updating
     if (formViewerRef.value) {
         const isValid = formViewerRef.value.validateForm()
         if (!isValid) {
             // Validation failed - errors are already displayed by FormViewer
-            error('Please fix validation errors before saving', 'Validation Error')
+            // Don't save, but update local editableData to keep UI in sync
+            if (data.name !== undefined) {
+                editableData.value.name = data.name || ''
+            }
+            if (data.route !== undefined) {
+                editableData.value.route = data.route || ''
+            }
             return
         }
     }
     
-    if (props.apiInstanceData && data){
+    // Update local editableData
+    if (data.name !== undefined) {
+        editableData.value.name = data.name || ''
+    }
+    if (data.route !== undefined) {
+        editableData.value.route = data.route || ''
+    }
+    
+    // Save with merged data (preserves read-only fields)
+    if (props.apiInstanceData && mergedData){
         const updatedData: ApiInstance = {
             ...props.apiInstanceData,
-            name: data.name,
-            route: data.route
+            name: mergedData.name || '',
+            route: mergedData.route || ''
         }
         const requestData = {
                 id: updatedData.id,
@@ -139,7 +125,6 @@ const handleFormDataUpdate = (data: any) => {
                 environment_id: updatedData.environment_id
             }
             props.updateApiInstanceData(requestData)
-            // success('Changes saved successfully', 'Success')
     }
 }
 
@@ -151,12 +136,33 @@ const handleFormAction = async (actionData: { type: string; action: string; form
                 const isValid = formViewerRef.value.validateForm()
                 if (!isValid) {
                     // Validation failed - errors are already displayed by FormViewer
+                    error('Please fix validation errors before saving', 'Validation Error')
                     return
                 }
             }
             
-            // Use the validated form data
-            handleFormDataUpdate(actionData.formData)
+            // Save the validated form data
+            if (props.apiInstanceData && actionData.formData) {
+                const updatedData: ApiInstance = {
+                    ...props.apiInstanceData,
+                    name: actionData.formData.name || '',
+                    route: actionData.formData.route || ''
+                }
+                const requestData = {
+                    id: updatedData.id,
+                    name: updatedData.name,
+                    route: updatedData.route, 
+                    route_user_map: updatedData.route_user_map,
+                    resources: updatedData.resources, 
+                    options: updatedData.options,
+                    public: updatedData.public,
+                    api_id: updatedData.api_id,
+                    api_version_id: updatedData.api_version_id,
+                    environment_id: updatedData.environment_id
+                }
+                props.updateApiInstanceData(requestData)
+                success('Changes saved successfully', 'Success')
+            }
             break
     }
 }
@@ -179,74 +185,8 @@ const handleFormAction = async (actionData: { type: string; action: string; form
                 @change="handleFormDataUpdate"
                 :formConfig="formConfig" 
                 :initialData="formData" 
-                :actionHandler="handleFormAction"
                 :showActions="false"
             />
-     <!--
-            <div class="space-y-4">
-                <div>
-                    <Label for="name" class="mb-1">Name</Label>
-                    <Input 
-                        id="name" 
-                        v-model="editableData.name" 
-                        placeholder="Enter name"
-                        class="w-full"
-                    />
-                </div>
-                
-                <div>
-                    <Label for="route" class="mb-1">Route</Label>
-                    <Input 
-                        id="route" 
-                        v-model="editableData.route" 
-                        placeholder="Enter route"
-                        class="w-full"
-                    />
-                </div>
-            </div>
-            
-         
-            <div class="space-y-4">
-                <div>
-                    <Label for="api" class="mb-1">API</Label>
-                    <Input 
-                        id="api" 
-                        v-model="readOnlyData.api" 
-                        readonly
-                        disabled
-                        class="w-full bg-gray-50"
-                    />
-                </div>
-                
-                <div>
-                    <Label for="api-version" class="mb-1">API Version</Label>
-                    <Input 
-                        id="api-version" 
-                        v-model="readOnlyData.api_version" 
-                        readonly
-                        disabled
-                        class="w-full bg-gray-50"
-                    />
-                </div>
-                
-                <div>
-                    <Label for="environment" class="mb-1">Environment</Label>
-                    <Input 
-                        id="environment" 
-                        v-model="readOnlyData.environment" 
-                        readonly
-                        disabled
-                        class="w-full bg-gray-50"
-                    />
-                </div>
-            </div> -->
-            
-            <!-- Save Button -->
-            <!-- <div class="pt-4">
-                <Button @click="saveChanges" class="w-full md:w-auto">
-                    Save Changes
-                </Button>
-            </div> -->
         </div>
         
         <div v-else class="text-gray-500">
