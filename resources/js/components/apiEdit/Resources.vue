@@ -53,7 +53,7 @@ const formConfig = computed(() => {
     fields: [
       { name: 'name', label: 'Name', type: 'text', required: true },
       { name: 'type', label: 'Type', type: 'select', required: props.api_type === 'python' ? true : false, show: props.api_type === 'python' ? true : false, options: ['Model', 'Password', 'Other'] },
-      { name: 'model_name', label: 'Model Name', type: 'select', required: isModelNameVisible, show: {op: 'and', conditions: [{type: 'matches', name: 'type', value: ['Model']}]}, options: props.apiData?.version_models?.map((model: any) => model.name) || [] },
+      { name: 'model_name', label: 'Model Name', type: 'select', required: isModelNameVisible, show: [{op: 'and', conditions: [{type: 'matches', name: 'type', value: ['Model']}]}], options: props.apiData?.version_models?.map((model: any) => model.name) || [] },
     ],
     files: false,
     name: "new-resource-form",
