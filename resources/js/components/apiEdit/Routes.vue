@@ -470,15 +470,9 @@ const handleDelete = async (route: RouteData) => {
 }
 
 const openEditRouteDialog = ( payload: any, index: number) => {
-const openEditRouteDialog = ( payload: any, index: number) => {
   isEditMode.value = true
   editingRouteIndex.value = index
   newRouteForm.value = {
-    description: payload.description || '',
-    path: payload.path,
-    verb: payload.verb,
-    view_name: payload.view_name,
-    required: payload.required?.map((p: any) => ({
     description: payload.description || '',
     path: payload.path,
     verb: payload.verb,
@@ -488,7 +482,6 @@ const openEditRouteDialog = ( payload: any, index: number) => {
       description: p.description || '',
       example: p.example || ''
     })) || [],
-    optional: payload.optional?.map((p: any) => ({
     optional: payload.optional?.map((p: any) => ({
       name: p.name,
       description: p.description || '',

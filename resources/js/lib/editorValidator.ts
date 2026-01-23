@@ -45,6 +45,20 @@ export function validateCode(
     let inMultilineString = false
     let multilineStringChar = ''
 
+    // 🔸 Forbidden threading/concurrency/async configuration
+    const forbiddenModules = [
+      'threading',
+      'concurrent.futures',
+      'concurrent',
+      'asyncio',
+      'multiprocessing',
+      'gevent',
+      'eventlet',
+      'greenlet'
+    ]
+    const forbiddenKeywords = ['async', 'await']
+    const forbiddenClasses = ['ThreadPoolExecutor', 'ProcessPoolExecutor', 'create_task', 'gather']
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
       const trimmed = line.trim()
@@ -66,6 +80,92 @@ export function validateCode(
       
       // Skip empty lines and comments
       if (!trimmed || trimmed.startsWith('#')) continue
+
+      // 🔸 Detect forbidden threading/concurrency/async keywords and modules
+      // Check for module imports
+      for (const module of forbiddenModules) {
+        // Match: import threading, import concurrent.futures, from threading import, etc.
+        const escapedModule = module.replace(/\./g, '\\.')
+        const importPatterns = [
+          new RegExp(`^\\s*import\\s+${escapedModule}\\b`, 'i'),
+          new RegExp(`^\\s*from\\s+${escapedModule}\\s+import`, 'i'),
+          new RegExp(`\\bimport\\s+${escapedModule}\\b`, 'i'),
+          new RegExp(`\\bfrom\\s+${escapedModule}\\s+import`, 'i')
+        ]
+        
+        for (const pattern of importPatterns) {
+          if (pattern.test(line)) {
+            const match = line.match(pattern)
+            if (match) {
+              const startCol = line.indexOf(match[0]) + 1
+              markers.push({
+                startLineNumber: i + 1,
+                startColumn: startCol,
+                endLineNumber: i + 1,
+                endColumn: startCol + match[0].length,
+                message: `Forbidden: '${module}' module is not allowed (threading/concurrency operations are disabled)`,
+                severity: 8, // Monaco.MarkerSeverity.Error
+              })
+              break // Only report once per line
+            }
+          }
+        }
+        
+        // Check for module usage (e.g., threading.Thread(), asyncio.run())
+        const moduleUsagePattern = new RegExp(`\\b${escapedModule}\\.`, 'i')
+        if (moduleUsagePattern.test(line)) {
+          const match = line.match(moduleUsagePattern)
+          if (match) {
+            const startCol = line.indexOf(match[0]) + 1
+            markers.push({
+              startLineNumber: i + 1,
+              startColumn: startCol,
+              endLineNumber: i + 1,
+              endColumn: startCol + match[0].length - 1,
+              message: `Forbidden: '${module}' module usage is not allowed (threading/concurrency operations are disabled)`,
+              severity: 8, // Monaco.MarkerSeverity.Error
+            })
+          }
+        }
+      }
+      
+      // Check for async/await keywords
+      for (const keyword of forbiddenKeywords) {
+        const keywordPattern = new RegExp(`\\b${keyword}\\b`, 'i')
+        if (keywordPattern.test(line)) {
+          const match = line.match(keywordPattern)
+          if (match) {
+            const startCol = line.indexOf(match[0]) + 1
+            markers.push({
+              startLineNumber: i + 1,
+              startColumn: startCol,
+              endLineNumber: i + 1,
+              endColumn: startCol + keyword.length,
+              message: `Forbidden: '${keyword}' keyword is not allowed (async operations are disabled)`,
+              severity: 8, // Monaco.MarkerSeverity.Error
+            })
+          }
+        }
+      }
+      
+      // Check for forbidden classes/functions
+      for (const className of forbiddenClasses) {
+        const classPattern = new RegExp(`\\b${className}\\b`, 'i')
+        if (classPattern.test(line)) {
+          const match = line.match(classPattern)
+          if (match) {
+            const startCol = line.indexOf(match[0]) + 1
+            markers.push({
+              startLineNumber: i + 1,
+              startColumn: startCol,
+              endLineNumber: i + 1,
+              endColumn: startCol + className.length,
+              message: `Forbidden: '${className}' is not allowed (threading/concurrency operations are disabled)`,
+              severity: 8, // Monaco.MarkerSeverity.Error
+            })
+          }
+        }
+      }
 
       // Calculate current indentation
       const leadingSpaces = line.search(/\S/)
@@ -211,6 +311,8 @@ export function validateCode(
         }
       }
 
+      
+
       // Invalid variable names
       const assignmentMatch = trimmed.match(/^(\w+)\s*=/)
       if (assignmentMatch) {
@@ -250,6 +352,7 @@ export function validateCode(
           severity: 8,
         })
       }
+      
     }
 
     // Check for unclosed brackets at end of file
@@ -263,6 +366,7 @@ export function validateCode(
         severity: 8,
       })
     })
+
   }
 
   // --------------------------------------------------------------------
@@ -274,42 +378,73 @@ export function validateCode(
     let openBrackets = 0
     let hasOpenTag = false
     const unclosedBraces: number[] = []
+    
+    // Track multi-line string state
+    let inMultiLineString = false
+    let multiLineStringChar = ''
+    let multiLineStringStart = -1
+    
+    // Track multi-line comment state
+    let inMultiLineComment = false
+    let multiLineCommentStart = -1
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
       const trimmed = line.trim()
       
-      // Skip empty lines and comments
-      if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('/*')) continue
+      // Skip empty lines
+      if (!trimmed) continue
 
       // Check for PHP open tag
       if (trimmed.includes('<?php') || trimmed.includes('<?')) {
         hasOpenTag = true
       }
 
-      // Track braces with positions
-      let inString = false
-      let stringChar = ''
+      // Track characters with proper string and comment handling
       let escaped = false
 
       for (let j = 0; j < line.length; j++) {
         const ch = line[j]
+        const nextCh = j + 1 < line.length ? line[j + 1] : ''
+
+        // Handle multi-line comment start
+        if (!inMultiLineString && !inMultiLineComment && ch === '/' && nextCh === '*') {
+          inMultiLineComment = true
+          multiLineCommentStart = i
+          j++ // Skip the *
+          continue
+        }
+
+        // Handle multi-line comment end
+        if (inMultiLineComment && ch === '*' && nextCh === '/') {
+          inMultiLineComment = false
+          multiLineCommentStart = -1
+          j++ // Skip the /
+          continue
+        }
+
+        // Skip processing if in multi-line comment
+        if (inMultiLineComment) {
+          continue
+        }
 
         // Handle string detection
         if ((ch === '"' || ch === "'") && !escaped) {
-          if (!inString) {
-            inString = true
-            stringChar = ch
-          } else if (ch === stringChar) {
-            inString = false
-            stringChar = ''
+          if (!inMultiLineString) {
+            inMultiLineString = true
+            multiLineStringChar = ch
+            multiLineStringStart = i
+          } else if (ch === multiLineStringChar) {
+            inMultiLineString = false
+            multiLineStringChar = ''
+            multiLineStringStart = -1
           }
         }
 
         escaped = ch === '\\' && !escaped
 
-        // Track brackets outside strings
-        if (!inString) {
+        // Track brackets outside strings and comments
+        if (!inMultiLineString && !inMultiLineComment) {
           if (ch === '{') {
             openBraces++
             unclosedBraces.push(i)
@@ -324,31 +459,58 @@ export function validateCode(
         }
       }
 
-      // Check for unterminated strings
-      if (inString) {
-        markers.push({
-          startLineNumber: i + 1,
-          startColumn: 1,
-          endLineNumber: i + 1,
-          endColumn: line.length + 1,
-          message: 'Unterminated string literal',
-          severity: 8,
-        })
+      // Skip further line checks if we're in a multi-line string or comment
+      if (inMultiLineString || inMultiLineComment) {
+        continue
       }
 
-      // Missing semicolon check (improved)
+      // Skip single-line comments
+      if (trimmed.startsWith('//') || trimmed.startsWith('#')) {
+        continue
+      }
+
+      // Check if next non-empty line starts with -> (method chaining continuation)
+      let nextLineStartsWithArrow = false
+      for (let j = i + 1; j < lines.length; j++) {
+        const nextTrimmed = lines[j].trim()
+        if (nextTrimmed) {
+          nextLineStartsWithArrow = nextTrimmed.startsWith('->')
+          break
+        }
+      }
+
+      // Improved semicolon check
+      // A statement needs a semicolon if:
+      // 1. It doesn't end with {, }, ;, :, or ,
+      // 2. It's not a control structure keyword
+      // 3. It's not a method chain (ends with -> OR next line starts with ->)
+      // 4. It's not inside parentheses (method calls can span multiple lines)
+      // 5. It's not a modifier/declaration keyword
+      // 6. Current line doesn't start with -> (it's a continuation)
+      const startsWithMethodChain = trimmed.startsWith('->')
+      const endsWithMethodChain = trimmed.endsWith('->')
+      const endsWithContinuation = trimmed.endsWith(',') || trimmed.endsWith('(') || trimmed.endsWith('[')
+      const isControlStructure = trimmed.match(/^(if|else|elseif|while|for|foreach|function|class|switch|case|default|do|try|catch|finally)\b/)
+      const isModifier = trimmed.match(/^(public|private|protected|static|abstract|final|const|namespace|use|interface|trait|extends|implements)\s/)
+      const isPhpTag = trimmed.startsWith('<?php') || trimmed.startsWith('<?') || trimmed.startsWith('?>')
+      const isArrayStart = trimmed.endsWith('[') || trimmed.match(/^\s*[\]\[]/)
+      
       if (
         trimmed.length > 0 &&
         !trimmed.endsWith(';') &&
         !trimmed.endsWith('{') &&
         !trimmed.endsWith('}') &&
         !trimmed.endsWith(':') &&
-        !trimmed.startsWith('<?php') &&
-        !trimmed.startsWith('<?') &&
-        !trimmed.startsWith('?>') &&
-        !trimmed.match(/^(if|else|elseif|while|for|foreach|function|class|switch|case|default|do|try|catch|finally)\b/) &&
-        !trimmed.match(/^\*/) && // Not a comment line
-        !trimmed.match(/^(public|private|protected|static|abstract|final)\s/) &&
+        !startsWithMethodChain && // Line is a continuation from previous
+        !endsWithMethodChain && // Line continues to next
+        !nextLineStartsWithArrow && // Next line is a continuation
+        !endsWithContinuation &&
+        !isControlStructure &&
+        !isModifier &&
+        !isPhpTag &&
+        !isArrayStart &&
+        openParens === 0 && // Not inside a function call
+        openBrackets === 0 && // Not inside an array
         hasOpenTag
       ) {
         markers.push({
@@ -372,6 +534,30 @@ export function validateCode(
           severity: 8,
         })
       }
+    }
+
+    // Check for unterminated multi-line string
+    if (inMultiLineString) {
+      markers.push({
+        startLineNumber: multiLineStringStart + 1,
+        startColumn: 1,
+        endLineNumber: lines.length,
+        endColumn: lines[lines.length - 1].length + 1,
+        message: 'Unterminated string literal',
+        severity: 8,
+      })
+    }
+
+    // Check for unterminated multi-line comment
+    if (inMultiLineComment) {
+      markers.push({
+        startLineNumber: multiLineCommentStart + 1,
+        startColumn: 1,
+        endLineNumber: lines.length,
+        endColumn: lines[lines.length - 1].length + 1,
+        message: 'Unterminated comment block',
+        severity: 8,
+      })
     }
 
     // Final checks

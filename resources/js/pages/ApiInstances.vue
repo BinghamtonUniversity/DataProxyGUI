@@ -385,12 +385,6 @@ const submitNewApiInstance = async ( formData: any) => {
       request_method = 'PUT'
     }
 
-    const normalizedFormData = {
-      ...formData,
-      api_version_id:
-        formData.api_version_id === -1 ? "" : formData.api_version_id,
-    }
-
     // For PHP APIs, set slug
     if(formData.api_type === 'php' && !formData.slug) {
       formData.slug = formData.route;
