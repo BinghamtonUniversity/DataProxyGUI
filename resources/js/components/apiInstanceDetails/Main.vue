@@ -23,6 +23,9 @@ const props = defineProps<Props>()
 // Toaster
 const { success, error, warning, info } = useToaster();
 
+// FormViewer ref for validation
+const formViewerRef = ref<InstanceType<typeof FormViewer> | null>(null)
+
 const formConfig = computed(() => ({
     label: 'API Instance Details',
     description: '',
@@ -106,8 +109,18 @@ let oldFormData =  formData.value;
 // }
 
 const handleFormDataUpdate = (data: any) => {
-    debugger;
-    if (props.apiInstanceData &&data){
+    
+    // Validate form before updating
+    if (formViewerRef.value) {
+        const isValid = formViewerRef.value.validateForm()
+        if (!isValid) {
+            // Validation failed - errors are already displayed by FormViewer
+            error('Please fix validation errors before saving', 'Validation Error')
+            return
+        }
+    }
+    
+    if (props.apiInstanceData && data){
         const updatedData: ApiInstance = {
             ...props.apiInstanceData,
             name: data.name,
@@ -126,6 +139,25 @@ const handleFormDataUpdate = (data: any) => {
                 environment_id: updatedData.environment_id
             }
             props.updateApiInstanceData(requestData)
+            // success('Changes saved successfully', 'Success')
+    }
+}
+
+const handleFormAction = async (actionData: { type: string; action: string; formData: any }) => {
+    switch (actionData.action) {
+        case 'save':
+            // Validate form before submitting
+            if (formViewerRef.value) {
+                const isValid = formViewerRef.value.validateForm()
+                if (!isValid) {
+                    // Validation failed - errors are already displayed by FormViewer
+                    return
+                }
+            }
+            
+            // Use the validated form data
+            handleFormDataUpdate(actionData.formData)
+            break
     }
 }
 </script>
@@ -142,9 +174,14 @@ const handleFormDataUpdate = (data: any) => {
         
         <div v-else-if="apiInstanceData" class="space-y-4">
 
-            <FormViewer :formConfig="formConfig" :initialData="formData" :showActions="false" @change="handleFormDataUpdate" :actions="[
-                { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' }
-            ]" />
+            <FormViewer 
+                ref="formViewerRef"
+                @change="handleFormDataUpdate"
+                :formConfig="formConfig" 
+                :initialData="formData" 
+                :actionHandler="handleFormAction"
+                :showActions="false"
+            />
      <!--
             <div class="space-y-4">
                 <div>
