@@ -1324,9 +1324,21 @@ function getFieldProps(field) {
         step: field.step || 1,
       };
     case 'fieldset':
+      // Ensure nested fields have required set to false if undefined or string "false"
+      const processedFields = (field.fields || []).map(nestedField => ({
+        ...nestedField,
+        required: (() => {
+          if (nestedField.required === undefined) return false;
+          if (typeof nestedField.required === 'boolean') return nestedField.required;
+          if (nestedField.required === 'true' || nestedField.required === true) return true;
+          if (nestedField.required === 'false' || nestedField.required === false) return false;
+          // For conditional logic (string 'conditional' or arrays), pass through as-is
+          return nestedField.required;
+        })()
+      }));
       return {
         ...baseProps,
-        fields: field.fields || [],
+        fields: processedFields,
       };
     case 'array':
       return {
@@ -1493,17 +1505,57 @@ function createAndAddField(event, position) {
           return;
         }
         
-        // Remove the field from its original position
-        const [movedField] = currentFields.splice(sourceIndex, 1);
-        
-        // Adjust the target position if we removed an element before it
-        const adjustedPosition = sourceIndex < position ? position - 1 : position;
-        
-        // Insert the field at the new position
-        currentFields.splice(adjustedPosition, 0, movedField);
-        
-        // Update selection to the new position
-        selectedFieldIndex.value = adjustedPosition;
+        // If we're in a nested fieldset, get the actual fieldset from the structure
+        if (navigationPath.value.length > 0) {
+          const pathItem = navigationPath.value[navigationPath.value.length - 1];
+          // Get the parent fields array
+          const parentFields = navigationPath.value.length > 1 
+            ? navigationPath.value[navigationPath.value.length - 2].field.fields
+            : fields.value;
+          
+          // Get the actual fieldset from the structure
+          const actualFieldset = parentFields && parentFields[pathItem.index];
+          
+          if (actualFieldset && actualFieldset.type === 'fieldset') {
+            // Ensure the fieldset has a fields array
+            if (!actualFieldset.fields) {
+              actualFieldset.fields = [];
+              return;
+            }
+            const fieldsetFields = actualFieldset.fields;
+            // Remove the field from its original position
+            const [movedField] = fieldsetFields.splice(sourceIndex, 1);
+            
+            // Adjust the target position if we removed an element before it
+            const adjustedPosition = sourceIndex < position ? position - 1 : position;
+            
+            // Insert the field at the new position
+            fieldsetFields.splice(adjustedPosition, 0, movedField);
+            
+            // Update currentFieldset reference
+            currentFieldset.value = actualFieldset;
+            
+            // Update selection to the new position
+            selectedFieldIndex.value = adjustedPosition;
+            
+            // Manually trigger update for nested fieldsets
+            nextTick(() => {
+              emitFormDataUpdate();
+            });
+          }
+        } else {
+          // Root level - modify directly
+          const [movedField] = currentFields.splice(sourceIndex, 1);
+          
+          // Adjust the target position if we removed an element before it
+          const adjustedPosition = sourceIndex < position ? position - 1 : position;
+          
+          // Insert the field at the new position
+          currentFields.splice(adjustedPosition, 0, movedField);
+          
+          // Update selection to the new position
+          selectedFieldIndex.value = adjustedPosition;
+        }
         return;
       }
       
@@ -1574,8 +1626,37 @@ function createAndAddField(event, position) {
         newField.removeEnable = 'auto';
         newField.duplicateClone = false;
       }
-      const currentFields = getCurrentFields();
-      currentFields.splice(position, 0, newField);
+      // If we're in a nested fieldset, get the actual fieldset from the structure
+      if (navigationPath.value.length > 0) {
+        const pathItem = navigationPath.value[navigationPath.value.length - 1];
+        // Get the parent fields array
+        const parentFields = navigationPath.value.length > 1 
+          ? navigationPath.value[navigationPath.value.length - 2].field.fields
+          : fields.value;
+        
+        // Get the actual fieldset from the structure
+        const actualFieldset = parentFields && parentFields[pathItem.index];
+        
+        if (actualFieldset && actualFieldset.type === 'fieldset') {
+          // Ensure the fieldset has a fields array
+          if (!actualFieldset.fields) {
+            actualFieldset.fields = [];
+          }
+          // Directly modify the actual fieldset's fields array
+          actualFieldset.fields.splice(position, 0, newField);
+          // Update currentFieldset reference
+          currentFieldset.value = actualFieldset;
+          // Manually trigger update for nested fieldsets
+          nextTick(() => {
+            emitFormDataUpdate();
+          });
+        }
+      } else {
+        // Root level - modify directly
+        const currentFields = getCurrentFields();
+        currentFields.splice(position, 0, newField);
+      }
+      
       selectedFieldIndex.value = position;
     } catch (error) {
       console.error('Error parsing dropped data:', error);
@@ -1590,8 +1671,38 @@ function selectField(index) {
 }
 
 function removeField(index) {
-  const currentFields = getCurrentFields();
-  currentFields.splice(index, 1);
+  // If we're in a nested fieldset, get the actual fieldset from the structure
+  if (navigationPath.value.length > 0) {
+    const pathItem = navigationPath.value[navigationPath.value.length - 1];
+    // Get the parent fields array
+    const parentFields = navigationPath.value.length > 1 
+      ? navigationPath.value[navigationPath.value.length - 2].field.fields
+      : fields.value;
+    
+    // Get the actual fieldset from the structure
+    const actualFieldset = parentFields && parentFields[pathItem.index];
+    
+    if (actualFieldset && actualFieldset.type === 'fieldset') {
+      // Ensure the fieldset has a fields array
+      if (!actualFieldset.fields) {
+        actualFieldset.fields = [];
+        return;
+      }
+      // Directly modify the actual fieldset's fields array
+      actualFieldset.fields.splice(index, 1);
+      // Update currentFieldset reference
+      currentFieldset.value = actualFieldset;
+      // Manually trigger update for nested fieldsets
+      nextTick(() => {
+        emitFormDataUpdate();
+      });
+    }
+  } else {
+    // Root level - modify directly
+    const currentFields = getCurrentFields();
+    currentFields.splice(index, 1);
+  }
+  
   // Clear selection if the removed field was selected
   if (selectedFieldIndex.value === index) {
     selectedFieldIndex.value = null;
@@ -1789,8 +1900,29 @@ function getCurrentFields() {
   if (navigationPath.value.length === 0) {
     return fields.value;
   } else {
-    const result = currentFieldset.value?.fields || [];
-    return result;
+    // Get the actual fieldset from the structure to ensure we have the right reference
+    const pathItem = navigationPath.value[navigationPath.value.length - 1];
+    const parentFields = navigationPath.value.length > 1 
+      ? navigationPath.value[navigationPath.value.length - 2].field.fields
+      : fields.value;
+    
+    const actualFieldset = parentFields && parentFields[pathItem.index];
+    
+    if (actualFieldset && actualFieldset.type === 'fieldset') {
+      // Ensure the fieldset has a fields array initialized
+      if (!actualFieldset.fields) {
+        actualFieldset.fields = [];
+      }
+      // Update currentFieldset reference to the actual fieldset
+      currentFieldset.value = actualFieldset;
+      return actualFieldset.fields;
+    }
+    
+    // Fallback: ensure currentFieldset has fields array
+    if (currentFieldset.value && !currentFieldset.value.fields) {
+      currentFieldset.value.fields = [];
+    }
+    return currentFieldset.value?.fields || [];
   }
 }
 
@@ -1909,8 +2041,12 @@ function getFieldJson(field) {
       }
       break;
     case 'fieldset':
-      if (field.fields && Array.isArray(field.fields) && field.fields.length > 0) {
-        base.fields = field.fields.map(getFieldJson).filter(field => field && Object.keys(field).length > 0);
+      // Always include fields array for fieldsets, even if empty
+      if (field.fields && Array.isArray(field.fields)) {
+        const nestedFields = field.fields.map(getFieldJson).filter(field => field && Object.keys(field).length > 0);
+        if (nestedFields.length > 0) {
+          base.fields = nestedFields;
+        }
       }
       break;
     case 'array':
@@ -1984,15 +2120,19 @@ function getFieldJson(field) {
       base.parse = field.parse;
     }
   }
+  // Handle required property - only include if explicitly set to true or conditional
+  // If undefined or 'false', don't include it (defaults to false)
   if (field.required !== undefined) {
-    if (field.required === 'true') {
+    if (field.required === 'true' || field.required === true) {
       base.required = true;
-    } else if (field.required == 'false') {
-      // Don't include default false value
+    } else if (field.required === 'false' || field.required === false) {
+      // Don't include default false value - field is not required
     } else {
+      // Conditional logic or other non-boolean value - include it
       base.required = field.required;
     }
   }
+  // If required is undefined, don't include it (field is not required by default)
 
   // Add conditional logic groups (overrides the above conditions)
   if (field.show === 'conditional' && field.showGroups) {
@@ -2360,6 +2500,32 @@ watch(
   { immediate: true }
 );
 
+// Helper function to initialize default values for a field (including nested fields in fieldsets)
+function initializeFieldDefaults(field) {
+  if (!field) return;
+  
+  // Initialize default values if they don't exist
+  if (field.show === undefined) {
+    field.show = 'true';
+  }
+  if (field.edit === undefined) {
+    field.edit = 'true';
+  }
+  if (field.parse === undefined) {
+    field.parse = 'true';
+  }
+  if (field.required === undefined) {
+    field.required = 'false';
+  }
+  
+  // Recursively initialize nested fields in fieldsets
+  if (field.type === 'fieldset' && field.fields && Array.isArray(field.fields)) {
+    field.fields.forEach(nestedField => {
+      initializeFieldDefaults(nestedField);
+    });
+  }
+}
+
 // Watch for changes in formData prop to update internal state
 watch(() => props.formData, (newFormData) => {
   if (isUpdatingFromProps.value) return;
@@ -2371,6 +2537,8 @@ watch(() => props.formData, (newFormData) => {
       fields.value = newFormData.fields.map(field => {
         const cleanField = { ...field };
         delete cleanField.updateKey;
+        // Initialize default values for all fields (including nested ones)
+        initializeFieldDefaults(cleanField);
         return cleanField;
       });
     }
@@ -2385,8 +2553,8 @@ watch(() => props.formData, (newFormData) => {
   }, 100);
 }, { deep: true, immediate: true });
 
-// Watch for changes in formName and fields to emit updates
-watch([formName, fields], () => {
+// Helper function to emit form data updates
+function emitFormDataUpdate() {
   if (isUpdatingFromProps.value) return;
   
   emit('update:formData', {
@@ -2394,6 +2562,11 @@ watch([formName, fields], () => {
     files: false,
     fields: (fields.value || []).map(getFieldJson).filter(field => field && Object.keys(field).length > 0)
   });
+}
+
+// Watch for changes in formName and fields to emit updates
+watch([formName, fields], () => {
+  emitFormDataUpdate();
 }, { deep: true });
 
 // Ensure all fields have updateKey property on mount
@@ -2411,6 +2584,8 @@ onMounted(() => {
     fields.value = props.formData.fields.map(field => {
       const cleanField = { ...field };
       delete cleanField.updateKey;
+      // Initialize default values for all fields (including nested ones)
+      initializeFieldDefaults(cleanField);
       return cleanField;
     });
   }

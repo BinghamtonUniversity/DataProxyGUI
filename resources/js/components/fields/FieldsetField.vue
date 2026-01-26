@@ -51,7 +51,14 @@
                      formData: combinedData
                    } : {
                      ...field,
-                     required: typeof field.required === 'boolean' ? field.required : true,
+                     required: (() => {
+                       if (field.required === undefined) return false;
+                       if (typeof field.required === 'boolean') return field.required;
+                       if (field.required === 'true' || field.required === true) return true;
+                       if (field.required === 'false' || field.required === false) return false;
+                       // For conditional logic (string 'conditional' or arrays), pass through as-is
+                       return field.required;
+                     })(),
                      disabled: typeof field.disabled === 'boolean' ? field.disabled : false,
                      show: shouldShowField(field, combinedData),
                      edit: shouldEditField(field, combinedData),

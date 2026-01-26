@@ -456,6 +456,23 @@ function runCustomValidations(value, config, matchValues = {}) {
   return errors;
 }
 
+// Check if a fieldset item is empty (all fields are empty/undefined)
+function isFieldsetEmpty(value, fields) {
+  if (!value || typeof value !== 'object') return true;
+  if (!fields || !Array.isArray(fields)) return false;
+  
+  // Check if all fields are empty
+  return fields.every(field => {
+    if (!field || !field.name) return true;
+    const fieldValue = value[field.name];
+    // Consider field empty if undefined, null, empty string, or empty array
+    return fieldValue === undefined || 
+           fieldValue === null || 
+           fieldValue === '' || 
+           (Array.isArray(fieldValue) && fieldValue.length === 0);
+  });
+}
+
 // Recursively validate nested fields in a fieldset
 function validateFieldset(value, config, matchValues = {}) {
   const errors = [];
@@ -501,6 +518,8 @@ function validateFieldset(value, config, matchValues = {}) {
 
 // Validate array fields (arrays of simple values or arrays of fieldsets)
 function validateArray(value, config, matchValues = {}) {
+
+  
   const errors = [];
   
   // If value is not an array, check if it's required
@@ -517,10 +536,7 @@ function validateArray(value, config, matchValues = {}) {
   const minItems = arrayConfig.min;
   const maxItems = arrayConfig.max;
   
-  if (minItems !== undefined && value.length < minItems) {
-    errors.push(`At least ${minItems} item(s) are required.`);
-  }
-  
+  // Check array length constraints
   if (maxItems !== undefined && value.length > maxItems) {
     errors.push(`Maximum ${maxItems} item(s) allowed.`);
   }
@@ -532,22 +548,32 @@ function validateArray(value, config, matchValues = {}) {
   }
   
   // Validate each item in the array
+  // Track if we have at least one non-empty item (for minItems requirement)
+  let hasNonEmptyItem = false;
+  
   value.forEach((item, index) => {
     if (config.fields && Array.isArray(config.fields)) {
-      // Array of fieldsets - validate each fieldset
-      // Don't pass the array's required flag to individual fieldset items
-      const fieldsetConfig = { 
-        ...config, 
-        fields: config.fields,
-        required: false, // Individual items in an array are not required (the array itself is)
-        type: 'fieldset'
-      };
-      const fieldsetErrors = validateFieldset(item, fieldsetConfig, matchValues);
-      if (fieldsetErrors.length > 0) {
-        fieldsetErrors.forEach(error => {
-          errors.push(`Item ${index + 1}: ${error}`);
-        });
+      // Array of fieldsets - check if item is empty first
+      const isEmpty = isFieldsetEmpty(item, config.fields);
+      
+      if (!isEmpty) {
+        hasNonEmptyItem = true;
+        // Only validate non-empty items
+        // Don't pass the array's required flag to individual fieldset items
+        const fieldsetConfig = { 
+          ...config, 
+          fields: config.fields,
+          required: false, // Individual items in an array are not required (the array itself is)
+          type: 'fieldset'
+        };
+        const fieldsetErrors = validateFieldset(item, fieldsetConfig, matchValues);
+        if (fieldsetErrors.length > 0) {
+          fieldsetErrors.forEach(error => {
+            errors.push(`Item ${index + 1}: ${error}`);
+          });
+        }
       }
+      // Skip validation for empty items - they're allowed as placeholders
     } else {
       // Array of simple values - validate each item
       // Don't pass the array's required flag to individual items
@@ -573,6 +599,17 @@ function validateArray(value, config, matchValues = {}) {
     }
   });
   
+  // Check minItems requirement - need at least minItems non-empty items
+  if (minItems !== undefined && minItems > 0) {
+    if (!hasNonEmptyItem && value.length > 0) {
+      // We have items but they're all empty
+      errors.push(`At least ${minItems} item(s) with data are required.`);
+    } else if (value.length < minItems) {
+      // We don't have enough items
+      errors.push(`At least ${minItems} item(s) are required.`);
+    }
+  }
+  debugger;
   return errors;
 }
 
