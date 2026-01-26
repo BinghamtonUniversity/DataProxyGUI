@@ -167,8 +167,8 @@ const requiredParamsFormConfig = {
     fields: [
         { name: 'required_parameters', label: '', type: 'fieldset', 
             array: {
-            "min": 1,
-            "max": ""
+            "min": 0,
+            "max": 20
             },
             fields:[
                 { name: 'name', label: 'Name', type: 'text',offset: "0",width: "6", required: true },
@@ -186,8 +186,8 @@ const optionalParamsFormConfig = {
     fields: [
       { name: 'optional_parameters', label: '', type: 'fieldset',
         array: {
-          "min": 1,
-          "max": ""
+          "min": 0,
+          "max": 20
         },
         fields: [
           { name: 'name', label: 'Name', type: 'text',offset: "0",width: "6", required: true },
@@ -227,15 +227,13 @@ const handleRequiredParamsFormAction = async (actionData: { type: string; action
     case 'submit':
       // Validate form before submitting
       if (requiredParamsFormViewer.value) {
-        const isValid = requiredParamsFormViewer.value.validateForm()
+        const isValid = requiredParamsFormViewer.value.validateForm();
         debugger;
         if (!isValid) {
-          debugger;
           // Validation failed - errors are already displayed by FormViewer
           return
         }
       }
-      debugger;
       requiredParamsData.value = { 
         required_parameters: actionData.formData.required_parameters || []
       }
@@ -646,6 +644,7 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                     ref="requiredParamsFormViewer"
                     :formConfig="requiredParamsFormConfig" 
                     :initialData="requiredParamsData" 
+                    :validateOnSubmit="true"
                     :actions="[ { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' }, 
                                 { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
                             ]" 
@@ -662,6 +661,7 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                     ref="optionalParamsFormViewer"
                     :formConfig="optionalParamsFormConfig" 
                     :initialData="optionalParamsData" 
+                    :validateOnSubmit="true"
                     :actions="[ { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
                                 { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
                                 ]" 
