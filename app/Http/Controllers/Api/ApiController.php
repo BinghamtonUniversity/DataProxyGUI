@@ -34,10 +34,10 @@ class ApiController extends BaseDjangoController
      */
     public function store(Request $request, string $resource): JsonResponse
     {
-        Log::info('Store method called', [
-            'resource' => $resource,
-            'request_data' => $request->all()
-        ]);
+        // Log::info('Store method called', [
+        //     'resource' => $resource,
+        //     'request_data' => $request->all()
+        // ]);
         $result = $this->makeDjangoRequest('POST', $resource, $request->all());
 
         if ($result['success']) {
@@ -138,9 +138,9 @@ class ApiController extends BaseDjangoController
 
     public function apisStore(Request $request, string $api_type): JsonResponse
     {
-        Log::info('Store method called', [
-            'request_data' => $request->all()
-        ]);
+        // Log::info('Store method called', [
+        //     'request_data' => $request->all()
+        // ]);
      
         $result = $this->makeBackendRequest('POST', 'apis', $request->all(), [], $api_type);
 
@@ -237,7 +237,7 @@ class ApiController extends BaseDjangoController
      */
     public function ApiEditIndex(Request $request, string $api_type, string $api_id): JsonResponse
     {
-        Log::info('ApiEditIndex called', ['api_id' => $api_id]);
+        // Log::info('ApiEditIndex called', ['api_id' => $api_id]);
 
         $endpoint = "apis/{$api_id}/versions/latest";
 
@@ -245,11 +245,11 @@ class ApiController extends BaseDjangoController
 
         //$result = $this->makeBackendRequest($backend, 'GET', $endpoint);
         $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
-        Log::info('Backend request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
+        // Log::info('Backend request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -270,7 +270,7 @@ class ApiController extends BaseDjangoController
 
     public function ApiEditUpdate(Request $request, string $api_type, string $api_id): JsonResponse
     {
-        Log::info('ApiEditUpdate called', ['api_id' => $api_id]);
+        // Log::info('ApiEditUpdate called', ['api_id' => $api_id]);
 
         $endpoint = "apis/{$api_id}/code";
         $requestData = $request->all();
@@ -279,11 +279,11 @@ class ApiController extends BaseDjangoController
             $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $api_type);
             //$result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
 
-            Log::info('Request result', [
-                'success' => $result['success'],
-                'status' => $result['status'],
-                'data' => $result['data']
-            ]);
+            // Log::info('Request result', [
+            //     'success' => $result['success'],
+            //     'status' => $result['status'],
+            //     'data' => $result['data']
+            // ]);
 
             if ($result['success']) {
                 return response()->json($result['data']);
@@ -535,7 +535,7 @@ class ApiController extends BaseDjangoController
      */
     public function exportApiVersion(Request $request, string $api_type, string $api_id)
     {
-        Log::info('Export API Version called', ['api_id' => $api_id]);
+        // Log::info('Export API Version called', ['api_id' => $api_id]);
 
         $endpoint = "apis/{$api_id}/versions/latest";
         
