@@ -492,13 +492,22 @@ function validateFieldset(value, config, matchValues = {}) {
         const fieldValue = value[field.name];
         const fieldConfig = {
           type: field.type || 'text',
-          required: field.required || false,
           minLength: field.minLength,
           maxLength: field.maxLength,
           pattern: field.pattern,
           min: field.min,
           max: field.max,
-          ...field
+          ...field,
+          // Explicitly set required after spread to ensure correct value
+          // Convert string "false" to boolean false, undefined to false
+          required: (() => {
+            if (field.required === undefined) return false;
+            if (typeof field.required === 'boolean') return field.required;
+            if (field.required === 'true' || field.required === true) return true;
+            if (field.required === 'false' || field.required === false) return false;
+            // For conditional logic (string 'conditional' or arrays), pass through as-is
+            return field.required;
+          })()
         };
         
         // Validate the nested field
