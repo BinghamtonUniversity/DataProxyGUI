@@ -14,7 +14,8 @@ import Functions from '@/components/apiEdit/Functions.vue'
 import Models from '@/components/apiEdit/Models.vue'
 import Options from '@/components/apiEdit/Options.vue'
 import Files from '@/components/apiEdit/Files.vue'
-import { mapDjangoToApiData, mapPhpToApiData } from '@/lib/utils'
+import { mapDjangoToApiData, mapPhpToApiData, getCsrfToken } from '@/lib/utils'
+
 
 interface Props {
     api: Api
@@ -60,11 +61,7 @@ const selectedFile = computed(() => {
     }
 })
 
-// Get CSRF token from meta tag
-const getCsrfToken = () => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    return token;
-}
+
 function normalizeApiData(payload: any, backend: 'python' | 'php'): ApiData {
   return backend === 'python'
     ? mapDjangoToApiData(payload)

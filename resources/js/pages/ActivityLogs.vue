@@ -6,6 +6,7 @@ import DataGrid from '@/components/datagrid/DataGrid.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted } from 'vue';
+import { getCsrfToken } from '@/lib/utils';
 
 // Use Laravel API routes instead of direct Django calls to avoid CORS
 const apiBaseUrl = '/api';
@@ -180,11 +181,11 @@ const cleanFormData = (formData: any) => {
     return cleaned;
 };
 
-// Get CSRF token from meta tag
-const getCsrfToken = () => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    return token;
-};
+// // Get CSRF token from meta tag
+// const getCsrfToken = () => {
+//     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+//     return token;
+// };
 
 // Fetch schedules from API
 const fetchActivityLogs = async () => {
@@ -192,7 +193,7 @@ const fetchActivityLogs = async () => {
         loading.value = true;
         error.value = null;
         
-        const response = await fetch(`/api/activity_logs`, {
+        const response = await fetch(`api/activity_logs`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',

@@ -612,7 +612,7 @@ const openEditResourceDialog = (resource: Resource) => {
 const fetchResources = async () => {
   loading.value = true
   try {
-    const response = await fetch(`/ajax/resources`)
+    const response = await fetch(`ajax/resources`)
     const data = await response.json()
     resources.value = data.map((res: Resource) => ({
       ...res,
@@ -630,8 +630,8 @@ const fetchAllData = async () => {
   loading.value = true
   try {
     const [resourcesResponse, environmentsResponse] = await Promise.all([
-      fetch(`/ajax/resources`),
-      fetch(`/api/environments`),
+      fetch(`ajax/resources`),
+      fetch(`api/environments`),
     ])
 
     if (!resourcesResponse.ok) throw new Error('Failed to fetch resources')

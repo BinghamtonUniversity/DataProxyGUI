@@ -7,6 +7,7 @@ import AlertModal from '@/components/AlertModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { type ApiData } from '@/types';
+import { getCsrfToken } from '@/lib/utils';
 
 interface Props {
     api_id: string
@@ -136,10 +137,10 @@ const formConfig = {
 };
 
 // Get CSRF token from meta tag
-const getCsrfToken = () => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    return token;
-};
+// const getCsrfToken = () => {
+//     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+//     return token;
+// };
 
 // Clean form data for API submission
 const cleanFormData = (formData: any) => {

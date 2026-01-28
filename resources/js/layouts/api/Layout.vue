@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { type NavItem, ApiData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
+import { getCsrfToken } from '@/lib/utils';
 
 // Getting it from web.php parameter
 interface Props {
@@ -50,11 +51,11 @@ const loadingApiData = ref(true)
 const apiError = ref('')
 const apiBaseUrl = '/api'
 
-// Get CSRF token from meta tag
-const getCsrfToken = () => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    return token;
-}
+// // Get CSRF token from meta tag
+// const getCsrfToken = () => {
+//     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+//     return token;
+// }
 
 const fetchApiData = async () => {
     loadingApiData.value = true

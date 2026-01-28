@@ -32,11 +32,11 @@ class ResourcesController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function resourcesIndex(): JsonResponse
+    public function resourcesIndex(string $server_slug): JsonResponse
     {
         $endpoint = "resources";
         // Log::info('Fetching all resources', ['endpoint' => $endpoint]);
-        $result = $this->makeDjangoRequest('GET', $endpoint);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
         // Log::info('Django request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],

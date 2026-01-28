@@ -8,9 +8,10 @@ import AlertModal from '@/components/AlertModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted } from 'vue';
+import { getCsrfToken } from '@/lib/utils';
 
 // Use Laravel API routes instead of direct Django calls to avoid CORS
-const apiBaseUrl = '/api';
+const apiBaseUrl = 'api';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -139,11 +140,6 @@ const formConfig = {
     ]
 };
 
-// Get CSRF token from meta tag
-const getCsrfToken = () => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    return token;
-};
 
 // Clean form data for API submission
 const cleanFormData = (formData: any) => {
