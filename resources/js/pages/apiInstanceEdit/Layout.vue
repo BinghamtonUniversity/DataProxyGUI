@@ -19,6 +19,7 @@ import { getCsrfToken, mapPhpToApiInstance } from '@/lib/utils'
 import Toaster from '@/components/toaster/Toaster.vue'
 
 interface Props {
+    server_slug: string,
     api_type: string
     instance_id: string
     activeTab?: string

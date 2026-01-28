@@ -17,6 +17,12 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ]
 
+// interface Props {
+//     server_slug: string;
+// }
+
+// const props = defineProps<Props>()
+
 // Modal state
 const showModal = ref(false);
 const modalMode = ref<'new' | 'edit'>('new');
@@ -251,7 +257,7 @@ const cleanFormData = (formData: any) => {
 };
 const fetchApiUsers = async () => {
     try {
-        const response = await fetch('/api/api_users', {
+        const response = await fetch('api/api_users', {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -280,7 +286,7 @@ const fetchApis = async () => {
         loading.value = true;
         error.value = null;
         
-        const response = await fetch('/api/apis', {
+        const response = await fetch(`api/apis`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -489,8 +495,8 @@ const handleAction = (actionData: any) => {
 const handleRowClick = (row: any) => {
     // console.log('Row clicked:', row);
     const apiType = row.api_type;
-    
-    router.visit(`/apis/${apiType}/${row.id}/routes`);
+    // debugger;
+    router.visit(`apis/${apiType}/${row.id}/routes`);
 };
 
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {

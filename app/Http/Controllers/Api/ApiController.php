@@ -15,9 +15,9 @@ class ApiController extends BaseDjangoController
     /**
      * Generic index method for any resource
      */
-    public function index(string $resource): JsonResponse
+    public function index(string $resource, string $server_slug): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', $resource);
+        $result = $this->makeBackendRequest('GET', $resource, [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -95,16 +95,16 @@ class ApiController extends BaseDjangoController
     // ===========================================
     // APIS
     // ===========================================
-    public function apisIndex(): JsonResponse
+    public function apisIndex(Request $request, string $server_slug): JsonResponse
     {
 
-        $djangoResult = $this->makeBackendRequest('GET', 'apis', [], [], 'django');
+        $result = $this->makeBackendRequest('GET', 'apis', [], [], $server_slug);
 
-        if ($djangoResult['success']) { 
-            return response()->json($djangoResult['data']);
+        if ($result['success']) { 
+            return response()->json($result['data']);
         }
 
-        if ($djangoResult['status'] === 403) {
+        if ($result['status'] === 403) {
             return response()->json([
                 'error' => 'Unauthorized'
             ], 403);
@@ -112,13 +112,13 @@ class ApiController extends BaseDjangoController
 
         return response()->json([
             'error' => 'Failed to fetch APIs',
-            'django_status' => $djangoResult['status'],
-           ], 500);
+            'status' => $result['status'],
+        ], 500);
     }
 
-    public function apisShow($api_type, $id): JsonResponse
+    public function apisShow(string $server_slug, string $api_type, $id): JsonResponse
     {
-        $result = $this->makeBackendRequest('GET', "apis/{$id}", [], [], $api_type);
+        $result = $this->makeBackendRequest('GET', "apis/{$id}", [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -212,11 +212,11 @@ class ApiController extends BaseDjangoController
     // ===========================================
     // API Versions
     // ===========================================
-    public function apiVersionsIndex($instance_id): JsonResponse
+    public function apiVersionsIndex(string $server_slug, $instance_id): JsonResponse
     {
         $endpoint = "apis/{$instance_id}/versions";
 
-        $result = $this->makeDjangoRequest('GET', $endpoint);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -235,7 +235,7 @@ class ApiController extends BaseDjangoController
     /**
      * APIEdit Index - Fetch API details with optional tab filtering
      */
-    public function ApiEditIndex(Request $request, string $api_type, string $api_id): JsonResponse
+    public function ApiEditIndex(Request $request, string $server_slug, string $api_type, string $api_id): JsonResponse
     {
         // Log::info('ApiEditIndex called', ['api_id' => $api_id]);
 
@@ -244,7 +244,7 @@ class ApiController extends BaseDjangoController
         // $backend = $request->query('backend');
 
         //$result = $this->makeBackendRequest($backend, 'GET', $endpoint);
-        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
         // Log::info('Backend request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
@@ -325,10 +325,10 @@ class ApiController extends BaseDjangoController
      * @param mixed $id The resource ID (for update/destroy operations)
      * @return JsonResponse
      */
-    public function handleResource(string $resource, string $action, ?Request $request=null, $id = null): JsonResponse
+    public function handleResource(string $resource, string $action, ?Request $request=null, $id = null, ?string $server_slug = null): JsonResponse
     {
         // Validate resource name
-        $allowedResources = ['environments', 'users', 'apis'];
+        $allowedResources = ['environments', 'users'];
         if (!in_array($resource, $allowedResources)) {
             return response()->json([
                 'error' => "Resource '{$resource}' not supported",
@@ -348,62 +348,26 @@ class ApiController extends BaseDjangoController
         // Route to appropriate method
         switch ($action) {
             case 'index':
-                return $this->index($resource);
+                return $this->index($resource, $server_slug);
             case 'store':
                 if (!$request) {
                     return response()->json(['error' => 'Request object required for store action'], 400);
                 }
-                return $this->store($request, $resource);
+                return $this->store($request, $resource, $server_slug);
             case 'update':
                 if (!$request || !$id) {
                     return response()->json(['error' => 'Request object and ID required for update action'], 400);
                 }
-                return $this->update($request, $resource, $id);
+                return $this->update($request, $resource, $id, $server_slug);
             case 'destroy':
                 if (!$id) {
                     return response()->json(['error' => 'ID required for destroy action'], 400);
                 }
-                return $this->destroy($resource, $id);
+                return $this->destroy($resource, $id, $server_slug);
             default:
                 return response()->json(['error' => 'Invalid action'], 400);
         }
     }
-
-    /**
-     * Get the latest version of a specific API
-     */
-    // public function getLatestApiVersion($id): JsonResponse
-    // {
-    //     $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions/latest");
-
-    //     if ($result['success']) {
-    //         return response()->json($result['data']);
-    //     }
-
-    //     return response()->json([
-    //         'error' => "Failed to fetch latest version for API {$id}",
-    //         'status' => $result['status']
-    //     ], $result['status']);
-    // }
-
-    // /**
-    //  * Update API code/configuration
-    //  */
-    // public function updateApiCode(Request $request, $id): JsonResponse
-    // {
-    //     $result = $this->makeDjangoRequest('PUT', "apis/{$id}/code", $request->all());
-
-    //     if ($result['success']) {
-    //         return response()->json($result['data']);
-    //     }
-
-    //     return response()->json([
-    //         'error' => "Failed to update API code for API {$id}",
-    //         'details' => $result['data'],
-    //         'status' => $result['status']
-    //     ], $result['status']);
-    // }
-
 
     /**
      * Magic method to handle dynamic resource calls
@@ -423,25 +387,26 @@ class ApiController extends BaseDjangoController
             
             // Get current request instance for all actions that need it
             $request = request();
+            $server_slug = $request->route('server_slug');
             
             switch ($action) {
                 case 'index':
                     // No parameters needed
-                    return $this->handleResource($resource, $action, null, null);
+                    return $this->handleResource($resource, $action, null, null, $server_slug);
                     
                 case 'store':
                     // No ID needed, just request
-                    return $this->handleResource($resource, $action, $request, null);
+                    return $this->handleResource($resource, $action, $request, null, $server_slug);
                     
                 case 'update':
                     // ID is the first parameter, request is current request
                     $id = $parameters[0] ?? null;
-                    return $this->handleResource($resource, $action, $request, $id);
+                    return $this->handleResource($resource, $action, $request, $id, $server_slug);
                     
                 case 'destroy':
                     // ID is the first parameter, no request needed
                     $id = $parameters[0] ?? null;
-                    return $this->handleResource($resource, $action, null, $id);
+                    return $this->handleResource($resource, $action, null, $id, $server_slug);
                     
                 default:
                     throw new \BadMethodCallException("Unknown action: {$action}");
@@ -515,9 +480,9 @@ class ApiController extends BaseDjangoController
             'error' => "Failed to fetch version details for API version {$version_id}",
         ], 500);
     }
-    public function apiVersionsList(): JsonResponse
+    public function apiVersionsList(Request $request, string $server_slug): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', 'api_versions');
+        $result = $this->makeBackendRequest('GET', 'api_versions', [], [], $server_slug);
         return response()->json($result['data']);
         if ($result['success']) {
             return response()->json($result['data']);

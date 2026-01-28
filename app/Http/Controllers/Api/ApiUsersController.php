@@ -10,17 +10,18 @@ class ApiUsersController extends BaseDjangoController{
     // ===========================================
     // API Users
     // ===========================================
-    public function apiUsersIndex(): JsonResponse
+    public function apiUsersIndex(Request $request, string $server_slug): JsonResponse
     {
-        $djangoResult = $this->makeBackendRequest('GET', 'api_users', [], [], 'django');
+        $result = $this->makeBackendRequest('GET', 'api_users', [], [], $server_slug);
 
-        if ($djangoResult['success']) {
-            return response()->json($djangoResult['data']);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
         }
 
         return response()->json([
             'error' => 'Failed to fetch API Users from the backend',
-            'django_status' => $djangoResult['status'],
+            'django_status' => $result['status'],
         ], 500);
     }
 

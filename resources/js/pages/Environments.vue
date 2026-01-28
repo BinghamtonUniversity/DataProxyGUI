@@ -10,7 +10,7 @@ import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted } from 'vue';
 
 // Use Laravel API routes instead of direct Django calls to avoid CORS
-const apiBaseUrl = '/api';
+const apiBaseUrl = 'api';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {

@@ -546,7 +546,7 @@ const handleClickOutside = (event: Event) => {
 const fetchApiInstances = async () => {
   loading.value = true
   try {
-    const response = await fetch(`/api/api_instances`)
+    const response = await fetch(`api/api_instances`)
     api_instances.value = await response.json()
 
    
@@ -580,10 +580,10 @@ const fetchAllData = async (mode: string = 'default') => {
       apisResponse,
       apiVersionsResponse
     ] = await Promise.all([
-      fetch(`/api/api_instances`),
-      fetch(`/api/environments`),
-      fetch(`/api/apis`),
-      fetch(`/api/api_versions`),
+      fetch(`api/api_instances`),
+      fetch(`api/environments`),
+      fetch(`api/apis`),
+      fetch(`api/api_versions`),
     ])
 
     if (!apiInstancesResponse.ok) {
@@ -592,7 +592,7 @@ const fetchAllData = async (mode: string = 'default') => {
       throw new Error(errorData.error || 'Failed to fetch API instances')
     }
 
-    if (!environmentsResponse.ok) throw new Error('Failed to fetch environments')
+    // if (!environmentsResponse.ok) throw new Error('Failed to fetch environments')
     if (!apisResponse.ok) throw new Error('Failed to fetch APIs')
     if (!apiVersionsResponse.ok) throw new Error('Failed to fetch API versions')
 

@@ -8,22 +8,22 @@ use Illuminate\Support\Facades\Log;
 
 class ApiInstancesController extends BaseDjangoController{
 
-    public function apiInstancesIndex(): JsonResponse
+    public function apiInstancesIndex(Request $request, string $server_slug): JsonResponse
     {
-        $djangoResult = $this->makeBackendRequest('GET', 'api_instances', [], [], 'django');
+        $result = $this->makeBackendRequest('GET', 'api_instances', [], [], $server_slug);
 
-        if ( $djangoResult['success']) { // $phpResult['success'] ||
-            return response()->json($djangoResult['data']);
+        if ( $result['success']) { // $phpResult['success'] ||
+            return response()->json($result['data']);
         }
 
-        $djangoErrorMessage = $djangoResult['data']['error']
-            ?? $djangoResult['data']['detail']
-            ?? $djangoResult['data']['message']
+        $errorMessage = $result['data']['error']
+            ?? $result['data']['detail']
+            ?? $result['data']['message']
             ?? 'Unknown error occurred on Django side.';
 
         return response()->json([
-            'error' => $djangoErrorMessage,
-            'django_status' => $djangoResult['status'],
+            'error' => $errorMessage,
+            'django_status' => $result['status'],
         ], 500);
     }
 

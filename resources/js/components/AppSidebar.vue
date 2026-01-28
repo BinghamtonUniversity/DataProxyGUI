@@ -7,50 +7,53 @@ import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { BookOpen, Folder, LayoutGrid, Users, Database, File, Calendar, History, Building2, Globe, ShieldCheckIcon, ShieldCheck, TestTube, CheckCircle } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
+import { useProxyServer } from '@/composables/useProxyServer';
+
+const { buildUrl, serverSlug } = useProxyServer();
 
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: '/dashboard',
+        href: buildUrl('dashboard'),
         icon: LayoutGrid,
     },
     {
         title: 'Environments',
-        href: '/environments',
+        href: buildUrl('environments'),
         icon: Building2,
     },
     {
         title: 'API Accounts',
-        href: '/api_accounts',
+        href: buildUrl('api_accounts'),
         icon: Users,
     },
     {
         title: 'Users',
-        href: '/users',
+        href: buildUrl('users'),
         icon: ShieldCheck,
     },
     {
         title: 'APIS',
-        href: '/apis',
+        href: buildUrl('apis'),
         icon: Folder,
     },
     {
         title: 'API Instances',
-        href: '/api_instances',
+        href: buildUrl('api_instances'),
         icon: Database,
     },
     {
         title: 'Resources',
-        href: '/resources',
+        href: buildUrl('resources'),
         icon: File,
     },
     {
         title: 'Schedules',
-        href: '/schedules',
+        href: buildUrl('schedules'),
         icon: Calendar,
     },{
         title: 'Activity Logs',
-        href: '/activity_logs',
+        href: buildUrl('activity_logs'),
         icon: History,
     },
 
@@ -119,7 +122,7 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="route('dashboard')">
+                        <Link :href="buildUrl('environments')">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
