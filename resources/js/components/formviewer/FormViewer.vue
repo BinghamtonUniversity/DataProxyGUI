@@ -75,7 +75,8 @@
         :class="getActionClasses(action)"
         :disabled="action.disabled || isSubmitting"
       >
-        <span v-if="action.type === 'save' && isSubmitting">Submitting...</span>
+        <font-awesome-icon v-if="action.icon" :icon="action.icon" class="w-4 h-4 mr-2" />
+        <span v-if="isSubmitting">Submitting...</span>
         <span v-else v-html="action.label"></span>
       </button>
     </div>
