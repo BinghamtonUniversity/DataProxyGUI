@@ -52,8 +52,8 @@
           // Border classes
           'border-l-0',
           'border-t border-b border-gray-300 dark:!border-gray-600',
-          // Border radius classes
-          'rounded-r-md',
+          // Border radius classes is not needed for password field 'rounded-r-md',
+    
           // Focus states
           'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
           // Disabled states
