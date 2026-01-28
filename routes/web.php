@@ -17,11 +17,16 @@ Route::prefix('oidc')->group(function () {
     Route::get('/callback', [OidcController::class, 'callback'])->name('oidc.callback');
 });
 
+// Returns Inertia page listing available proxy servers
+Route::get('/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'index'])->middleware(['auth']);
+
+// Returns JSON list of available proxy servers
+Route::get('/api/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'getServers'])->middleware(['auth']);
 
 // ===========================================
 // API Export - (JSON export in new tab)
 // ============================================
-Route::middleware(['auth'])->group(function () {
+Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(function () {
     Route::post('/logout', [OidcController::class, 'logout'])->name('logout');
 
     Route::get('dashboard', function () {
@@ -83,6 +88,7 @@ Route::middleware(['auth'])->group(function () {
     // Route::get('/unit-tests', function () {
     //     return Inertia::render('development/UnitTests');
     // })->name('unit-tests');
+
 
     // API Routes - Generic resource controller
     Route::prefix('api')->group(function () {
@@ -163,14 +169,14 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('/apis/{api_type}/{api_id}')->group(function () {
 
         // Developers page - separate from tab layout
-        Route::get('/developers', function ($api_type, $api_id) {
+        Route::get('/developers', function ($server_slug, $api_type, $api_id) {
             return Inertia::render('apiEdit/ApiDevelopersPage', [
                 'api_id' => $api_id,
             ]);
         })->name('apiEdit.developers');
 
         // Main page route - renders the Inertia component
-        Route::get('/{tab?}', function ($api_type, $api_id, $tab = 'routes') {
+        Route::get('/{tab?}', function ($server_slug, $api_type, $api_id, $tab = 'routes') {
             // Validate tab parameter
             $validTabs = ['routes', 'resources', 'functions', 'files', 'models', 'options'];
 
@@ -220,7 +226,7 @@ Route::middleware(['auth'])->group(function () {
     // API Instance Edit Routes (Inertia pages for editing API Instances)
     Route::prefix('/api_instances/{api_type}/{instance_id}')->group(function () {
         // Main page route - renders the Inertia component
-        Route::get('/{tab?}', function ($api_type, $instance_id, $tab = 'main') {
+        Route::get('/{tab?}', function ($server_slug, $api_type, $instance_id, $tab = 'main') {
             // Validate tab parameter
             $validTabs = ['main', 'resources', 'permissions', 'options'];
 
@@ -229,6 +235,7 @@ Route::middleware(['auth'])->group(function () {
             }
 
             return Inertia::render('apiInstanceEdit/Layout', [
+                'server_slug' => $server_slug,
                 'api_type' => $api_type,
                 'instance_id' => $instance_id,
                 'activeTab' => $tab,

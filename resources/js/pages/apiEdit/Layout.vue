@@ -20,6 +20,7 @@ import Toaster from '@/components/toaster/Toaster.vue'
 import { getCsrfToken, mapDjangoToApiData, mapPhpToApiData, denormalizeToPhp } from '@/lib/utils'
 
 interface Props {
+    server_slug: string
     api_type: string
     api_id: string
     activeTab?: string 
@@ -213,13 +214,13 @@ const apiDataImportFormConfig = ref({
 })
 
 const fetchApi = async () => {
-    const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}`)
+    const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}`)
     if (!response.ok) throw new Error('Failed to fetch API')
     api.value = await response.json()
 }
 
 const fetchEnvironment = async () => {
-    const response = await fetch(`/api/environments`)
+    const response = await fetch(`/${props.server_slug}/api/environments`)
     if (!response.ok) throw new Error('Failed to fetch Environment')
     environment.value = await response.json()
 }
@@ -228,7 +229,7 @@ const fetchApiData = async () => {
     loadingApiData.value = true
     apiError.value = ''
     try {
-        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`)
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`)
         if (!response.ok) {
             const errorData = await response.json()
             throw new Error(errorData.error || 'Failed to fetch API data')
@@ -245,6 +246,7 @@ const fetchApiData = async () => {
                 content: '//__EMPTY__',
             })
         }
+        
         hasUnsavedChanges.value = false
     } catch (e: any) {
         apiError.value = e.message || 'Error fetching API data'
@@ -898,7 +900,7 @@ const navigateToTab = (tabId: string) => {
     currentTab.value = tabId
     // props.activeTab? = tabId 
     // This uses History API to update the URL without triggering navigation
-    const newUrl = `/apis/${props.api_type}/${props.api_id}/${tabId}`
+    const newUrl = `/${props.server_slug}/apis/${props.api_type}/${props.api_id}/${tabId}`
     window.history.pushState({ tab: tabId }, '', newUrl)
 }
 
