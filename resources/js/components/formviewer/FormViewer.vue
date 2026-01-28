@@ -561,7 +561,7 @@ const handleAction = async (action) => {
   }
   
   switch (type) {
-    case 'save':
+    case 'submit':
       await submitForm();
       break;
     case 'cancel':
