@@ -1,10 +1,10 @@
 <template>
   <div class="array-field-container">
     <!-- Array Header -->
-    <div v-if="field.array && field.label" class="array-header mb-2">
+    <!-- <div v-if="field.array && field.label" class="array-header mb-2">
       <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ field.label }}</h3>
       <p v-if="field.help" class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ field.help }}</p>
-    </div>
+    </div> -->
 
     <!-- Array Items with inline + - controls -->
     <div v-if="arrayValues.length > 0" class="array-items flex flex-col gap-2">
