@@ -372,7 +372,7 @@ const handleFieldChange = (fieldName, value) => {
   };
   
   // Emit change event for user-initiated changes (only from handleFieldChange)
-  emit('change', formData.value);
+  emit('change', formData.value, fieldName);
   emit('update:modelValue', formData.value);
   
   const errors = validateField(value, field);
