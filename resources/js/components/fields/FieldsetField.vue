@@ -290,7 +290,8 @@ onMounted(() => {
   padding: 0 !important;
   margin: 0 !important;
   box-shadow: none !important;
-  outline: none !important;
+  outline: none !important; 
+
 }
 
 /* Fieldset specific styles */
@@ -314,6 +315,11 @@ onMounted(() => {
 
 .fieldset-content {
   margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(114, 114, 114);
+  padding: 1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
 /* Ensure proper spacing between field items */
