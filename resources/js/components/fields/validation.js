@@ -559,6 +559,7 @@ function validateArray(value, config, matchValues = {}) {
   // Validate each item in the array
   // Track if we have at least one non-empty item (for minItems requirement)
   let hasNonEmptyItem = false;
+  let nonEmptyItemCount = 0;
   
   value.forEach((item, index) => {
     if (config.fields && Array.isArray(config.fields)) {
@@ -567,6 +568,7 @@ function validateArray(value, config, matchValues = {}) {
       
       if (!isEmpty) {
         hasNonEmptyItem = true;
+        nonEmptyItemCount++;
         // Only validate non-empty items
         // Don't pass the array's required flag to individual fieldset items
         const fieldsetConfig = { 
@@ -584,7 +586,16 @@ function validateArray(value, config, matchValues = {}) {
       }
       // Skip validation for empty items - they're allowed as placeholders
     } else {
-      // Array of simple values - validate each item
+      // Array of simple values - check if item has data first
+      const isEmpty = item === undefined || item === null || item === '' || 
+                      (Array.isArray(item) && item.length === 0);
+      
+      if (!isEmpty) {
+        hasNonEmptyItem = true;
+        nonEmptyItemCount++;
+      }
+      
+      // Validate each item (even empty ones for format validation)
       // Don't pass the array's required flag to individual items
       const itemConfig = {
         type: config.type || 'text',
@@ -610,12 +621,14 @@ function validateArray(value, config, matchValues = {}) {
   
   // Check minItems requirement - need at least minItems non-empty items
   if (minItems !== undefined && minItems > 0) {
-    if (!hasNonEmptyItem && value.length > 0) {
-      // We have items but they're all empty
-      errors.push(`At least ${minItems} item(s) with data are required.`);
-    } else if (value.length < minItems) {
-      // We don't have enough items
-      errors.push(`At least ${minItems} item(s) are required.`);
+    if (nonEmptyItemCount < minItems) {
+      if (nonEmptyItemCount === 0 && value.length > 0) {
+        // We have items but they're all empty
+        errors.push(`At least ${minItems} item(s) with data are required.`);
+      } else {
+        // We don't have enough non-empty items
+        errors.push(`At least ${minItems} item(s) with data are required.`);
+      }
     }
   }
   debugger;

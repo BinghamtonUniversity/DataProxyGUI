@@ -39,11 +39,22 @@
           :class="getFieldLayoutClasses(field)"
           class="field-item"
         >
+          <!-- ArrayField for fields with array attribute -->
+          <ArrayField
+            v-if="field.array"
+            :field="field"
+            :value="internalValue[field.name] || []"
+            :disabled="disabled || field.disabled"
+            :edit="edit && shouldEditField(field, combinedData)"
+            @update:value="(value) => handleChildFieldChange(field.name, value)"
+            @validation-error="(data) => handleChildValidationError(field.name, data)"
+            @validation-success="(data) => handleChildValidationSuccess(field.name, data)"
+          />
+          <!-- Regular field component -->
           <component
-            v-if="getFieldComponent(field.type, field)"
+            v-else-if="getFieldComponent(field.type, field)"
             :is="getFieldComponent(field.type, field)"
             v-bind="field.type === 'output' ? { field } : 
-                   (field.type === 'fieldset' && field.array) ? { field } :
                    field.type === 'fieldset' ? {
                      ...field,
                      show: shouldShowField(field, combinedData),
@@ -64,7 +75,7 @@
                      edit: shouldEditField(field, combinedData),
                      inFieldset: true
                    }"
-            :value="field.array ? (internalValue[field.name] || []) : (internalValue[field.name] || field.value || '')"
+            :value="internalValue[field.name] || field.value || ''"
             :disabled="disabled || field.disabled"
             :edit="edit && shouldEditField(field, formData)"
             @update:value="(value) => handleChildFieldChange(field.name, value)"
@@ -176,6 +187,7 @@ const getFieldComponent = (fieldType, field = null) => {
     case 'switch': return SwitchField;
     case 'output': return OutputField;
     case 'fieldset': return FieldsetField;
+    case 'array': return ArrayField;
     default: return null;
   }
 };
