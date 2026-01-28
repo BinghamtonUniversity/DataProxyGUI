@@ -35,13 +35,13 @@ class ResourcesController extends BaseDjangoController{
     public function resourcesIndex(): JsonResponse
     {
         $endpoint = "resources";
-        Log::info('Fetching all resources', ['endpoint' => $endpoint]);
+        // Log::info('Fetching all resources', ['endpoint' => $endpoint]);
         $result = $this->makeDjangoRequest('GET', $endpoint);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
+        // Log::info('Django request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -60,9 +60,9 @@ class ResourcesController extends BaseDjangoController{
     
     public function resourcesStore(Request $request): JsonResponse
     {
-        Log::info('Store method called', [
-            'request_data' => $request->all()
-        ]);
+        // Log::info('Store method called', [
+        //     'request_data' => $request->all()
+        // ]);
         $result = $this->makeDjangoRequest('POST', 'resources', $request->all());
 
         if ($result['success']) {
@@ -83,18 +83,18 @@ class ResourcesController extends BaseDjangoController{
 
     public function resourcesUpdate(Request $request, string $resource_id): JsonResponse
     {
-        Log::info('resourcesUpdate called', ['resource_id' => $resource_id]);
+        // Log::info('resourcesUpdate called', ['resource_id' => $resource_id]);
 
         $endpoint = "resources/{$resource_id}";
 
         $requestData = $request->all();
         
         $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
+        // Log::info('Django request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
 
         if ($result['success']) {
             return response()->json($result['data']);

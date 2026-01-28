@@ -394,8 +394,8 @@
                 {{ row[col.key] }}
               </span>
             </td>
-            <td :class="[currentTheme.cell, 'text-right']">
-              <div v-if="rowActions.length > 0" class="relative" @click.stop>
+            <td :class="[currentTheme.cell]">
+              <div v-if="rowActions.length > 0" class="relative flex justify-end" @click.stop>
                 <!-- Single action button when only one action -->
                 <button 
                   v-if="rowActions.length === 1"
@@ -408,12 +408,12 @@
                 </button>
                 
                 <!-- Multiple actions as individual buttons when rowActionDropdown is false -->
-                <div v-else-if="!props.rowActionDropdown" class="">
+                <div v-else-if="!props.rowActionDropdown" class="flex justify-end gap-2 flex-nowrap">
                   <button 
                     v-for="action in rowActions" 
                     :key="action.type"
                     @click="emitAction(action.type, row, (currentPage - 1) * pageSize + idx)" 
-                    :class="[currentTheme.menuButton, action.colorClass, 'text-sm px-3 py-2 cursor-pointer']"
+                    :class="[currentTheme.menuButton, action.colorClass, 'text-sm px-3 py-2 cursor-pointer whitespace-nowrap flex-shrink']"
                     :title="!props.rowActionLabels ? action.label : ''"
                   >
                     <font-awesome-icon v-if="action.icon" :icon="action.icon" :class="action.iconClass ? action.iconClass : 'mr-1.5'" />

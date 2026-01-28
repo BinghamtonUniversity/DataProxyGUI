@@ -473,11 +473,26 @@ export function validateCode(
       let nextLineStartsWithArrow = false
       for (let j = i + 1; j < lines.length; j++) {
         const nextTrimmed = lines[j].trim()
-        if (nextTrimmed) {
+        // Skip empty lines and comments
+        if (!nextTrimmed || nextTrimmed.startsWith('//') || nextTrimmed.startsWith('#')) {
+          continue
+        }
+        // Check if it's inside a multi-line comment at this position
+        // We need to track comment state for lookahead
+        let tempInComment = inMultiLineComment
+        if (nextTrimmed.startsWith('/*')) {
+          tempInComment = true
+        }
+        if (nextTrimmed.endsWith('*/')) {
+          tempInComment = false
+        }
+        
+        if (!tempInComment) {
           nextLineStartsWithArrow = nextTrimmed.startsWith('->')
           break
         }
       }
+      
 
       // Improved semicolon check
       // A statement needs a semicolon if:

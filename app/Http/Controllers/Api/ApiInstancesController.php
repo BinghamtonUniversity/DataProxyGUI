@@ -29,7 +29,7 @@ class ApiInstancesController extends BaseDjangoController{
 
     public function apiInstancesStore(Request $request, string $api_type): JsonResponse
     {
-        Log::info('ApiInstancesStore called');
+        // Log::info('ApiInstancesStore called');
 
         $requestData = $request->all();
         
@@ -58,7 +58,7 @@ class ApiInstancesController extends BaseDjangoController{
 
    public function apiInstancesUpdate(Request $request, string $api_type, string $api_instance_id): JsonResponse
     {
-        Log::info('ApiInstancesUpdate called', ['api_instance_id' => $api_instance_id, 'api_type' => $api_type]);
+        // Log::info('ApiInstancesUpdate called', ['api_instance_id' => $api_instance_id, 'api_type' => $api_type]);
 
         $endpoint = "api_instances/{$api_instance_id}";
         $requestData = $request->all();
@@ -66,11 +66,11 @@ class ApiInstancesController extends BaseDjangoController{
         try {
             $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $api_type);
 
-            Log::info('Backend request result', [
-                'success' => $result['success'],
-                'status' => $result['status'],
-                'data' => $result['data']
-            ]);
+            // Log::info('Backend request result', [
+            //     'success' => $result['success'],
+            //     'status' => $result['status'],
+            //     'data' => $result['data']
+            // ]);
 
             if ($result['success']) {
                 return response()->json($result['data']);
@@ -132,16 +132,16 @@ class ApiInstancesController extends BaseDjangoController{
     // ===========================================
     public function ApiInstancesEditIndex(string $api_type, string $instance_id): JsonResponse
     {
-        Log::info('ApiInstancesEditIndex called', ['instance_id' => $instance_id, 'api_type' => $api_type]);
+        // Log::info('ApiInstancesEditIndex called', ['instance_id' => $instance_id, 'api_type' => $api_type]);
 
         $endpoint = "api_instances/{$instance_id}";
         
         $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
-        Log::info('APIInstanceEditIndex Backend request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
+        // Log::info('APIInstanceEditIndex Backend request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -161,7 +161,7 @@ class ApiInstancesController extends BaseDjangoController{
 
     public function ApiInstancesEditUpdate(Request $request, string $api_type, string $instance_id, ): JsonResponse
     {
-        Log::info('ApiInstancesEditUpdate called', ['instance_id' => $instance_id, 'api_type' => $api_type]);
+        // Log::info('ApiInstancesEditUpdate called', ['instance_id' => $instance_id, 'api_type' => $api_type]);
 
         $endpoint = "api_instances/{$instance_id}";
         $requestData = $request->all();
@@ -169,11 +169,11 @@ class ApiInstancesController extends BaseDjangoController{
         try {
             $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $api_type);
 
-            Log::info('Backend request result', [
-                'success' => $result['success'],
-                'status' => $result['status'],
-                'data' => $result['data']
-            ]);
+            // Log::info('Backend request result', [
+            //     'success' => $result['success'],
+            //     'status' => $result['status'],
+            //     'data' => $result['data']
+            // ]);
 
             if ($result['success']) {
                 return response()->json($result['data']);

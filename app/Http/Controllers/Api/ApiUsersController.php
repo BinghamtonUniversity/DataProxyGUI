@@ -26,7 +26,7 @@ class ApiUsersController extends BaseDjangoController{
 
     public function apiUsersStore(Request $request): JsonResponse
     {
-        Log::info('apiUsersStore called');
+        // Log::info('apiUsersStore called');
 
         $requestData = $request->all();
         
@@ -55,18 +55,18 @@ class ApiUsersController extends BaseDjangoController{
 
     public function apiUsersUpdate(Request $request, string $api_user_id): JsonResponse
     {
-        Log::info('apiUsersUpdate called', ['api_instance_id' => $api_user_id]);
+        // Log::info('apiUsersUpdate called', ['api_instance_id' => $api_user_id]);
 
         $endpoint = "api_users/{$api_user_id}";
 
         $requestData = $request->all();
         
         $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
-        Log::info('Django request result', [
-            'success' => $result['success'],
-            'status' => $result['status'],
-            'data' => $result['data']
-        ]);
+        // Log::info('Django request result', [
+        //     'success' => $result['success'],
+        //     'status' => $result['status'],
+        //     'data' => $result['data']
+        // ]);
 
         if ($result['success']) {
             return response()->json($result['data']);
