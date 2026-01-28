@@ -95,7 +95,7 @@ const fetchApiInstanceData = async () => {
     loading.value = true
     apiInstanceError.value = ''
     try {
-        const response = await fetch(`/ajax/api_instances/${props.api_type}/${props.instance_id}`)
+        const response = await fetch(`/${props.server_slug}/ajax/api_instances/${props.api_type}/${props.instance_id}`)
  
         if (!response.ok) throw new Error('Failed to fetch API Instance data')
         const data = await response.json()
@@ -122,7 +122,7 @@ const fetchAllData = async () => {
   loading.value = true
   try {
     // Fetch the API instance to get the environment type
-    const apiInstancesResponse = await fetch(`/ajax/api_instances/${props.api_type}/${props.instance_id}`)
+    const apiInstancesResponse = await fetch(`/${props.server_slug}/ajax/api_instances/${props.api_type}/${props.instance_id}`)
     if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
     
     const apiInstancesData = await apiInstancesResponse.json()
@@ -141,8 +141,8 @@ const fetchAllData = async () => {
       apiUsersResponse,
       resourcesResponse,
     ] = await Promise.all([
-      fetch(`/api/api_users`),
-      fetch(`/ajax/resources/type/${props.api_type}/${environmentType}`), 
+      fetch(`/${props.server_slug}/api/api_users`),
+      fetch(`/${props.server_slug}/ajax/resources/type/${props.api_type}/${environmentType}`), 
     ])
 
     if (!apiUsersResponse.ok) throw new Error('Failed to fetch API users')
@@ -278,7 +278,7 @@ const navigateToTab = (tabId: string) => {
     currentTab.value = tabId
     
     // This uses History API to update the URL without triggering navigation
-    const newUrl = `/api_instances/${props.api_type}/${props.instance_id}/${tabId}`
+    const newUrl = `/${props.server_slug}/api_instances/${props.api_type}/${props.instance_id}/${tabId}`
     window.history.pushState({ tab: tabId }, '', newUrl)
 }
 

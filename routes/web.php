@@ -18,7 +18,7 @@ Route::prefix('oidc')->group(function () {
 });
 
 // Returns Inertia page listing available proxy servers
-Route::get('/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'index'])->middleware(['auth']);
+// Route::get('/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'index'])->middleware(['auth']);
 
 // Returns JSON list of available proxy servers
 Route::get('/api/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'getServers'])->middleware(['auth']);

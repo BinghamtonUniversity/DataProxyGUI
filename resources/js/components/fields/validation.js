@@ -618,7 +618,7 @@ function validateArray(value, config, matchValues = {}) {
       errors.push(`At least ${minItems} item(s) are required.`);
     }
   }
-  debugger;
+  // debugger;
   return errors;
 }
 

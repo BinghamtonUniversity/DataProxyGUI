@@ -421,7 +421,7 @@ const submitNewApiInstance = async ( formData: any) => {
     }
     closeNewApiInstanceDialog()
     await fetchApiInstances()
-    // await fetchAllData()
+    await fetchAllData()
   } catch (err: any) {
     newApiInstanceError.value = err.message || 'Error saving API Instance'
     error(newApiInstanceError.value, 'Error');
@@ -724,7 +724,7 @@ const handleDataGridRowClick = (row: any) => {
   // console.log('API Type:', api_type); 
   // $api_type = row.api.api_type;
   // debugger;
-  router.visit(`/api_instances/${row.api_type}/${row.id}/main`);
+  router.visit(`api_instances/${row.api_type}/${row.id}/main`);
 };
 </script>
 

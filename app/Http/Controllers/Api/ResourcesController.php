@@ -10,12 +10,12 @@ class ResourcesController extends BaseDjangoController{
     // ===========================================
     // Resources 
     // ===========================================
-    public function resourcesByTypeIndex($api_type, $type): JsonResponse
+    public function resourcesByTypeIndex($server_slug, $api_type, $type): JsonResponse
     {
         $endpoint = "resources/type/{$type}";
 
         // $result = $this->makeDjangoRequest('GET', $endpoint);
-        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
