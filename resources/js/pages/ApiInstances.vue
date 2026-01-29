@@ -378,10 +378,10 @@ const submitNewApiInstance = async ( formData: any) => {
   }
 
   try {
-    let url = `/api/api_instances/${formData.api_type}`
+    let url = `api/api_instances/${formData.api_type}`
     let request_method = 'POST'
     if (isEditMode.value && editingApiInstanceId.value) {
-      url = `/api/api_instances/${formData.api_type}/${editingApiInstanceId.value}`
+      url = `api/api_instances/${formData.api_type}/${editingApiInstanceId.value}`
       request_method = 'PUT'
     }
 
@@ -437,7 +437,7 @@ const handleDeleteInstance = async (instance: ApiInstance) => {
     return
   }
   try{
-    const response = await fetch(`/api/api_instances/${instance.api_type}/${instance.id}`, {
+    const response = await fetch(`api/api_instances/${instance.api_type}/${instance.id}`, {
       method: 'DELETE',
       headers: {
         'X-CSRF-TOKEN': getCsrfToken() || '',

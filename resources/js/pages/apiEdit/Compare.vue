@@ -18,6 +18,7 @@ import { mapDjangoToApiData, mapPhpToApiData, getCsrfToken } from '@/lib/utils'
 
 
 interface Props {
+    server_slug: string
     api: Api
     api_type: string
     api_id: string

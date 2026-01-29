@@ -669,8 +669,8 @@ const openDiffModal = async (version: any) => {
         await switchToLatestVersion()
         return
     }
-    
-    window.location.href = `/apis/${props.api_type}/${props.api_id}/compare/${version.id}`
+
+    window.location.href = `/${props.server_slug}/apis/${props.api_type}/${props.api_id}/compare/${version.id}`
 }
 
 const isLatestVersionStable = computed(() => {
