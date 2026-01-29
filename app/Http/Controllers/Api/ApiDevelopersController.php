@@ -10,9 +10,9 @@ class ApiDevelopersController extends BaseDjangoController{
     /**
      * Get API developers for a specific API
      */
-    public function getApiDevelopers($id): JsonResponse
+    public function getApiDevelopers(string $server_slug, string $api_id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', "apis/{$id}/developers");
+        $result = $this->makeBackendRequest('GET', "apis/{$api_id}/developers", [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -25,7 +25,7 @@ class ApiDevelopersController extends BaseDjangoController{
         }
 
         return response()->json([
-            'error' => "Failed to fetch API developers for API {$id}",
+            'error' => "Failed to fetch API developers for API {$api_id}",
             'status' => $result['status']
         ], $result['status']);
     }
@@ -33,9 +33,9 @@ class ApiDevelopersController extends BaseDjangoController{
     /**
      * Create a new API developer assignment
      */
-    public function createApiDeveloper(Request $request, $id): JsonResponse
+    public function createApiDeveloper(Request $request, string $server_slug, string $api_id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('POST', "apis/{$id}/developers", $request->all());
+        $result = $this->makeBackendRequest('POST', "apis/{$api_id}/developers", $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data'], 201);
@@ -48,7 +48,7 @@ class ApiDevelopersController extends BaseDjangoController{
         }
 
         return response()->json([
-            'error' => "Failed to assign developer to API {$id}",
+            'error' => "Failed to assign developer to API {$api_id}",
             'details' => $result['data'],
             'status' => $result['status']
         ], $result['status']);
@@ -57,9 +57,9 @@ class ApiDevelopersController extends BaseDjangoController{
     /**
      * Update an API developer assignment
      */
-    public function updateApiDeveloper(Request $request, $api_id, $id): JsonResponse
+    public function updateApiDeveloper(Request $request, string $server_slug, string $api_id, $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('PUT', "apis/{$api_id}/developers/{$id}", $request->all());
+        $result = $this->makeBackendRequest('PUT', "apis/{$api_id}/developers/{$id}", $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -81,9 +81,9 @@ class ApiDevelopersController extends BaseDjangoController{
     /**
      * Delete an API developer assignment
      */
-    public function deleteApiDeveloper($api_id, $id): JsonResponse
+    public function deleteApiDeveloper(string $server_slug, string $api_id, $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('DELETE', "apis/{$api_id}/developers/{$id}");
+        $result = $this->makeBackendRequest('DELETE', "apis/{$api_id}/developers/{$id}", [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json([

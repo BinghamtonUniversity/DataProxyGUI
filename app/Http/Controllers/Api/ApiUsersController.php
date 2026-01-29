@@ -25,13 +25,13 @@ class ApiUsersController extends BaseDjangoController{
         ], 500);
     }
 
-    public function apiUsersStore(Request $request): JsonResponse
+    public function apiUsersStore(Request $request, string $server_slug): JsonResponse
     {
         // Log::info('apiUsersStore called');
 
         $requestData = $request->all();
         
-        $result = $this->makeDjangoRequest('POST', "api_users", $requestData);
+        $result = $this->makeBackendRequest('POST', "api_users", $requestData, [], $server_slug);
         // Log::info('Django request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
@@ -54,7 +54,7 @@ class ApiUsersController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function apiUsersUpdate(Request $request, string $api_user_id): JsonResponse
+    public function apiUsersUpdate(Request $request, string $server_slug,string $api_user_id): JsonResponse
     {
         // Log::info('apiUsersUpdate called', ['api_instance_id' => $api_user_id]);
 
@@ -62,7 +62,7 @@ class ApiUsersController extends BaseDjangoController{
 
         $requestData = $request->all();
         
-        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+        $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $server_slug);
         // Log::info('Django request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
@@ -85,12 +85,11 @@ class ApiUsersController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function apiUsersDestroy($id): JsonResponse
+    public function apiUsersDestroy(string $server_slug, string $id): JsonResponse
     {
         $endpoint = "api_users/{$id}";
         
-        $result = $this->makeDjangoRequest('DELETE', $endpoint);
-
+        $result = $this->makeBackendRequest('DELETE', $endpoint, [], [], $server_slug);
         if ($result['success']) {
             return response()->json([
                 'message' => ucfirst('api_user') . ' deleted successfully'
@@ -109,9 +108,9 @@ class ApiUsersController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function apiUsersDecryptedSecret($id): JsonResponse
+    public function apiUsersDecryptedSecret(string $server_slug, string $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', "api_users/{$id}/decrypted_secret");
+        $result = $this->makeBackendRequest('GET', "api_users/{$id}/decrypted_secret", [], [], $server_slug);
         return response()->json($result['data']);
 
         $errorMessage = $result['data']['error']

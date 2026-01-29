@@ -1249,6 +1249,7 @@ onUnmounted(() => {
             <ApiDevelopers 
                 :api_id="props.api_id"
                 :apiData="apiData"
+                :server_slug="props.server_slug"
                 :loadingApiData="loadingApiData"
                 :apiError="apiError"
                 :updateApiData="updateApiData"

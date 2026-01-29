@@ -11,6 +11,7 @@ import { getCsrfToken } from '@/lib/utils';
 
 interface Props {
     api_id: string
+    server_slug: string
     // api_type: string
     apiData: ApiData | null
     loadingApiData: boolean
@@ -20,9 +21,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-
-// Use Laravel API routes instead of direct Django calls to avoid CORS
-const apiBaseUrl = '/api';
 
 // Modal state
 const showModal = ref(false);
@@ -190,7 +188,7 @@ const fetchAvailableUsers = async () => {
 // Fetch all developers for display purposes (not filtered by availability)
 const fetchAllUsers = async () => {
     try {
-        const response = await fetch(`${apiBaseUrl}/users`, {
+        const response = await fetch(`/${props.server_slug}/api/users`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -242,7 +240,7 @@ const fetchApiDevelopers = async () => {
         loading.value = true;
         error.value = null;
         
-        const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/developers`, {
+        const response = await fetch(`/${props.server_slug}/api/apis/${props.api_id}/developers`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -293,7 +291,7 @@ const handleFormSubmit = async (formValues: any) => {
             // Create new API developer assignment via API
             const cleanedData = cleanFormData(formValues);
 
-            const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/developers`, {
+            const response = await fetch(`/${props.server_slug}/api/apis/${props.api_id}/developers`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -371,7 +369,7 @@ const handleDelete = async (selectedRowIds?: number[]) => {
         try {
             // Delete API developer assignments via API
             for (const dev of developersToDelete) {
-                const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/developers/${dev.api_developer_id}`, {
+                const response = await fetch(`/${props.server_slug}/api/apis/${props.api_id}/developers/${dev.api_developer_id}`, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
