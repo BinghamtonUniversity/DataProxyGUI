@@ -12,7 +12,7 @@ import { getCsrfToken } from '@/lib/utils';
 
 
 // Use Laravel API routes instead of direct Django calls to avoid CORS
-const apiBaseUrl = '/api';
+const apiBaseUrl = 'api';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -413,7 +413,7 @@ const fetchSchedules = async () => {
         loading.value = true;
         error.value = null;
         
-        const response = await fetch(`/api/schedulers`, {
+        const response = await fetch(`api/schedulers`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -442,7 +442,7 @@ const fetchSchedules = async () => {
 // Fetch API instances for the combobox
 const fetchApiInstances = async () => {
     try {
-        const response = await fetch(`/api/api_instances`, {
+        const response = await fetch(`api/api_instances`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -455,7 +455,7 @@ const fetchApiInstances = async () => {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const environmentsResponse = await fetch(`/api/environments`, {
+        const environmentsResponse = await fetch(`api/environments`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',

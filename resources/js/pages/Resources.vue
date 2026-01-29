@@ -455,11 +455,11 @@ const submitNewResource = async (formData: any) => {
   }
 
   try {
-    let url = `/ajax/resources`
+    let url = `ajax/resources`
     let request_method = 'POST'
 
     if (isEditMode.value && editingResourceId.value) {
-      url = `/ajax/resources/${editingResourceId.value}`
+      url = `ajax/resources/${editingResourceId.value}`
       request_method = 'PUT'
     }
 
@@ -564,7 +564,7 @@ const handleDeleteResource = async (resource: Resource) => {
   }
   
   try {
-    const response = await fetch(`/ajax/resources/${resource.id}`, {
+    const response = await fetch(`ajax/resources/${resource.id}`, {
       method: 'DELETE',
       headers: {
         'X-CSRF-TOKEN': getCsrfToken() || '',
