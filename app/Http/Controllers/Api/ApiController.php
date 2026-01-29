@@ -32,13 +32,13 @@ class ApiController extends BaseDjangoController
     /**
      * Generic store method for any resource
      */
-    public function store(Request $request, string $resource): JsonResponse
+    public function store(Request $request, string $resource, string $server_slug): JsonResponse
     {
         // Log::info('Store method called', [
         //     'resource' => $resource,
         //     'request_data' => $request->all()
         // ]);
-        $result = $this->makeDjangoRequest('POST', $resource, $request->all());
+        $result = $this->makeBackendRequest('POST', $resource, $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data'], 201);
@@ -54,9 +54,9 @@ class ApiController extends BaseDjangoController
     /**
      * Generic update method for any resource
      */
-    public function update(Request $request, string $resource, $id): JsonResponse
+    public function update(Request $request, string $resource, string $id, string $server_slug): JsonResponse
     {
-        $result = $this->makeDjangoRequest('PUT', "{$resource}/{$id}", $request->all());
+        $result = $this->makeBackendRequest('PUT', "{$resource}/{$id}", $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -72,12 +72,12 @@ class ApiController extends BaseDjangoController
     /**
      * Generic destroy method for any resource
      */
-    public function destroy(string $resource, $id): JsonResponse
+    public function destroy(string $resource, $id, string $server_slug): JsonResponse
     {
         // Handle special case for environments DELETE endpoint
         $endpoint = "{$resource}/{$id}";
         
-        $result = $this->makeDjangoRequest('DELETE', $endpoint);
+        $result = $this->makeBackendRequest('DELETE', $endpoint, [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json([
@@ -136,13 +136,13 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function apisStore(Request $request, string $api_type): JsonResponse
+    public function apisStore(Request $request, string $server_slug, string $api_type): JsonResponse
     {
         // Log::info('Store method called', [
         //     'request_data' => $request->all()
         // ]);
      
-        $result = $this->makeBackendRequest('POST', 'apis', $request->all(), [], $api_type);
+        $result = $this->makeBackendRequest('POST', 'apis', $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data'], 201);
@@ -161,9 +161,9 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function apisUpdate(Request $request, string $api_type, string $id): JsonResponse
+    public function apisUpdate(Request $request, string $server_slug, string $api_type, string $id): JsonResponse
     {
-        $result = $this->makeBackendRequest('PUT', "apis/{$id}", $request->all(), [], $api_type);
+        $result = $this->makeBackendRequest('PUT', "apis/{$id}", $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -183,12 +183,12 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function apisDestroy(string $api_type, string $id): JsonResponse
+    public function apisDestroy(string $server_slug, string $api_type, string $id): JsonResponse
     {
         // Handle special case for environments DELETE endpoint
         $endpoint = "apis/{$id}";
         
-        $result = $this->makeBackendRequest('DELETE', $endpoint, [], [], $api_type);
+        $result = $this->makeBackendRequest('DELETE', $endpoint, [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json([
@@ -268,7 +268,7 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function ApiEditUpdate(Request $request, string $api_type, string $api_id): JsonResponse
+    public function ApiEditUpdate(Request $request, string $server_slug, string $api_type, string $api_id): JsonResponse
     {
         // Log::info('ApiEditUpdate called', ['api_id' => $api_id]);
 
@@ -276,14 +276,14 @@ class ApiController extends BaseDjangoController
         $requestData = $request->all();
 
         try {
-            $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $api_type);
+            $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $server_slug);
             //$result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
 
-            // Log::info('Request result', [
-            //     'success' => $result['success'],
-            //     'status' => $result['status'],
-            //     'data' => $result['data']
-            // ]);
+            Log::info('Request result', [
+                'success' => $result['success'],
+                'status' => $result['status'],
+                'data' => $result['data']
+            ]);
 
             if ($result['success']) {
                 return response()->json($result['data']);
@@ -400,12 +400,12 @@ class ApiController extends BaseDjangoController
                     
                 case 'update':
                     // ID is the first parameter, request is current request
-                    $id = $parameters[0] ?? null;
+                    $id = $parameters[1] ?? null;
                     return $this->handleResource($resource, $action, $request, $id, $server_slug);
                     
                 case 'destroy':
                     // ID is the first parameter, no request needed
-                    $id = $parameters[0] ?? null;
+                    $id = $parameters[1] ?? null;
                     return $this->handleResource($resource, $action, null, $id, $server_slug);
                     
                 default:
@@ -420,10 +420,9 @@ class ApiController extends BaseDjangoController
     /**
      * Get all versions of a specific API
      */
-    public function getApiVersions($api_type, $id): JsonResponse
+    public function getApiVersions(string $server_slug, string $api_type, $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', "apis/{$id}/versions");
-        //$result = $this->makeBackendRequest('GET', "apis/{$id}/versions", [], [], $api_type);
+        $result = $this->makeBackendRequest('GET', "apis/{$id}/versions", [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -437,12 +436,11 @@ class ApiController extends BaseDjangoController
     /**
      * Publish a new version of a specific API
      */
-    public function publishApiVersion(Request $request, $api_type, $id): JsonResponse
+    public function publishApiVersion(Request $request, string $server_slug, string $api_type, $id): JsonResponse
     {
         $data = $request->all();
         
-        // $result = $this->makeDjangoRequest('PUT', "apis/{$id}/publish", $data);
-        $result = $this->makeBackendRequest('PUT', "apis/{$id}/publish", $data, [], $api_type);
+        $result = $this->makeBackendRequest('PUT', "apis/{$id}/publish", $data, [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -462,15 +460,14 @@ class ApiController extends BaseDjangoController
     /**
      * Get details of a specific API version
      */
-    public function getApiVersionDetails( $api_type, $api_id, $version_id): JsonResponse
+    public function getApiVersionDetails(string $server_slug, string $api_type, $api_id, $version_id): JsonResponse
     {
-        // $result = $this->makeDjangoRequest('GET', "apis/{$api_id}/versions/{$version_id}");
-        if ($api_type === 'php') {
-            $result = $this->makeBackendRequest('GET', "api_versions/{$version_id}", [], [], $api_type);
-        } else {
-            $result = $this->makeDjangoRequest('GET', "apis/{$api_id}/versions/{$version_id}");
+        // TO:DO: Switch based on server_slug - routes are not the same for php and django backends
+        if ($server_slug === 'hermes') {
+            $result = $this->makeBackendRequest('GET', "api_versions/{$version_id}", [], [], $server_slug);
+        } if ($server_slug === 'hermod') {
+            $result = $this->makeBackendRequest('GET', "apis/{$api_id}/versions/{$version_id}", [], [], $server_slug);
         }
-        // $result = $this->makeBackendRequest('GET', "apis/{$api_id}/versions/{$version_id}", [], [], $api_type);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -498,14 +495,14 @@ class ApiController extends BaseDjangoController
     /**
      * Export API Version - Display JSON in new tab
      */
-    public function exportApiVersion(Request $request, string $api_type, string $api_id)
+    public function exportApiVersion(Request $request, string $server_slug, string $api_type, string $api_id)
     {
         // Log::info('Export API Version called', ['api_id' => $api_id]);
 
         $endpoint = "apis/{$api_id}/versions/latest";
         
         // $result = $this->makeDjangoRequest('GET', $endpoint);
-        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
         // Log::info('Django request result for export', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
@@ -527,17 +524,4 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function allApiVersionsIndex(): JsonResponse
-    {
-        $result = $this->makeDjangoRequest('GET', 'api_versions');
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        return response()->json([
-            'error' => "Failed to fetch all API versions",
-            'status' => $result['status']
-        ], $result['status']);
-    }
 }

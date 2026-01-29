@@ -380,7 +380,7 @@ const handleFormSubmit = async (formValues: any) => {
                 throw new Error('API name cannot contain spaces. Please use underscores or hyphens instead.');
             }
 
-            const response = await fetch(`/api/apis/${cleanedData.api_type}`, {
+            const response = await fetch(`api/apis/${cleanedData.api_type}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -418,7 +418,7 @@ const handleFormSubmit = async (formValues: any) => {
                 throw new Error('API name cannot contain spaces. Please use underscores or hyphens instead.');
             }
             
-            const response = await fetch(`/api/apis/${editingRow.value.api_type}/${editingRow.value.id}`, {
+            const response = await fetch(`api/apis/${editingRow.value.api_type}/${editingRow.value.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -524,7 +524,7 @@ const handleDelete = async (selectedRowIds?: number[]) => {
         try {
             // Delete APIs via API
             for (const api of apisToDelete) {
-                const response = await fetch(`/api/apis/${api.api_type}/${api.id}`, {
+                const response = await fetch(`api/apis/${api.api_type}/${api.id}`, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
