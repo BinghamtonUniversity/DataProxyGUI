@@ -540,14 +540,14 @@ const handleAction = async (action) => {
   const { type, action: actionName } = action;
   
   // If validateOnSubmit is enabled and this is a save action, validate first
-  if (props.validateOnSubmit && (type === 'save' ||type === 'submit' ||  actionName === 'save' || actionName === 'submit')) {
-    const isValid = validateForm();
-    if (!isValid) {
-      // Validation failed - errors are already displayed by FormViewer
-      // Don't call actionHandler if validation fails
-      return;
-    }
-  }
+  // if (props.validateOnSubmit && (type === 'save' ||type === 'submit' ||  actionName === 'save' || actionName === 'submit')) {
+  //   const isValid = validateForm();
+  //   if (!isValid) {
+  //     // Validation failed - errors are already displayed by FormViewer
+  //     // Don't call actionHandler if validation fails
+  //     return;
+  //   }
+  // }
   
   // If actionHandler is provided, call it first
   if (props.actionHandler && typeof props.actionHandler === 'function') {
