@@ -31,7 +31,7 @@
         </div>
         
         <!-- Content -->
-        <div class="text-muted-foreground text-sm">
+        <div>
           <slot></slot>
         </div>
         

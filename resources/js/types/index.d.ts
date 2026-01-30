@@ -187,4 +187,14 @@ export interface Resource {
   resource_type: string,
 }
 
+export interface ProxyServer {
+  id: number,
+  name: string,
+  slug: string,
+  server: string,
+  type: string,
+  username: string,
+  password: string,
+  is_active: boolean,
+}
 export type BreadcrumbItemType = BreadcrumbItem;
