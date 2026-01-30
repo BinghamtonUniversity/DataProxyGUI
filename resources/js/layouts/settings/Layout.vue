@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-
+import { User, Palette, Server } from 'lucide-vue-next';
+import Toaster from '@/components/toaster/Toaster.vue';
 const sidebarNavItems: NavItem[] = [
     {
         title: 'Profile',
         href: '/settings/profile',
+        icon: User,
     },
     // {
     //     title: 'Password',
@@ -17,6 +19,12 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Appearance',
         href: '/settings/appearance',
+        icon: Palette,
+    },
+    {
+        title: 'Servers',
+        href: '/settings/servers',
+        icon: Server,
     },
 ];
 
@@ -40,6 +48,7 @@ const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.locati
                         as-child
                     >
                         <Link :href="item.href">
+                            <component :is="item.icon" class="w-4 h-4 mr-2 text-w-600 dark:text-white-400" />
                             {{ item.title }}
                         </Link>
                     </Button>
@@ -48,11 +57,13 @@ const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.locati
 
             <Separator class="my-6 md:hidden" />
 
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+            <div class="flex-1 ">
+                <section class="w-full space-y-12">
                     <slot />
                 </section>
             </div>
         </div>
+        <!-- Global Toaster -->
+        <Toaster />
     </div>
 </template>

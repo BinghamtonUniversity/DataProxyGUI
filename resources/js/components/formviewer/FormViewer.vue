@@ -777,8 +777,8 @@ defineExpose({
 
 <style scoped>
 .form-viewer-container {
-  width: 100%;
-  max-width: none;
+  width: 100% !important;
+  max-width: none !important;
 }
 
 /* Force next element to start on new row but respect column width */

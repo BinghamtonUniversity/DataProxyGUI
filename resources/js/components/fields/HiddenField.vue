@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="hidden-field-container">
+  <div v-if="show" class="hidden-field-container hidden" style="display: none;">
     <!-- Hidden Input -->
     <input
       :id="fieldId"

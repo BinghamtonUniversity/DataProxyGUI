@@ -22,6 +22,11 @@ Route::prefix('oidc')->group(function () {
 
 // Returns JSON list of available proxy servers
 Route::get('/api/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'getServers'])->middleware(['auth']);
+Route::post('/api/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'store'])->middleware(['auth']);
+Route::put('/api/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'update'])->middleware(['auth']);
+Route::delete('/api/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'destroy'])->middleware(['auth']);
+Route::put('/api/proxy-servers/bulk', [App\Http\Controllers\ProxyServerController::class, 'bulkUpdate'])->middleware(['auth']);
+
 
 // ===========================================
 // API Export - (JSON export in new tab)

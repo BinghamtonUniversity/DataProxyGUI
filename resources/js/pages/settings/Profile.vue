@@ -53,7 +53,7 @@ const user = page.props.auth.user as User;
         <Head title="Profile settings" />
 
         <SettingsLayout>
-            <div class="flex flex-col space-y-6">
+            <div class=" flex flex-col space-y-6 md:max-w-3xl">
                 <HeadingSmall title="Profile information" description="Update your avatar" />
 
                 <form class="space-y-6" >
