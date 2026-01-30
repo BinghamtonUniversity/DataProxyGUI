@@ -400,6 +400,9 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
         case 'close':
             closeModal();
             break;
+        case 'save':
+            handleFormSubmit(actionData.formData);
+            break;
         default:
             console.log('Unknown FormViewer action type:', actionData.type);
     }
@@ -408,7 +411,6 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
 const handleDelete = async (selectedRowIds?: number[]) => {
     if (selectedRowIds && selectedRowIds.length > 0) {
         const usersToDelete = users.value.filter(user => selectedRowIds.includes(user.id));
-        
         try {
             // Delete API users via API
             for (const user of usersToDelete) {
@@ -451,7 +453,7 @@ const handleDelete = async (selectedRowIds?: number[]) => {
 };
 
 // Handle custom actions from DataGrid
-const handleCustomAction = (actionData: { action: string; selectedRows: any[]; selectedData: any[] }) => {
+const handleCustomAction = (actionData: { type: string; action: string; selectedRows: any[]; selectedData: any[] ,selectedIndex: any[]}) => {
 
     
     switch (actionData.action) {
@@ -464,9 +466,8 @@ const handleCustomAction = (actionData: { action: string; selectedRows: any[]; s
             break;
         case 'delete':
             // Handle bulk delete
-            if (actionData.selectedRows.length > 0) {
-                handleDelete(actionData.selectedRows);
-            }
+            handleDelete([actionData.selectedData[0].id]);
+
             break;
         case 'show_secret':
             // Show decrypted secret for selected users
@@ -523,7 +524,7 @@ onMounted(async () => {
                     '|',
                     {name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right'},
                     '|',
-                    {name: 'delete', type: 'danger', min: 1, max: 25, label: 'Delete', icon: 'trash', loc: 'right'}
+                    {name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right'}
                 ]"
                 :rowActions="[
                     { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
@@ -545,8 +546,7 @@ onMounted(async () => {
                     :formConfig="formConfig" 
                     :initialData="editingRow"
                     :cancelAction="'close'"
-                    @submit="handleFormSubmit"
-                    @action="handleFormAction"
+                    :actionHandler="handleFormAction"
                     :disabled="submitting"
                     :actions="[
                         { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
