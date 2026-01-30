@@ -455,11 +455,11 @@ const submitNewResource = async (formData: any) => {
   }
 
   try {
-    let url = `/ajax/resources`
+    let url = `ajax/resources`
     let request_method = 'POST'
 
     if (isEditMode.value && editingResourceId.value) {
-      url = `/ajax/resources/${editingResourceId.value}`
+      url = `ajax/resources/${editingResourceId.value}`
       request_method = 'PUT'
     }
 
@@ -564,7 +564,7 @@ const handleDeleteResource = async (resource: Resource) => {
   }
   
   try {
-    const response = await fetch(`/ajax/resources/${resource.id}`, {
+    const response = await fetch(`ajax/resources/${resource.id}`, {
       method: 'DELETE',
       headers: {
         'X-CSRF-TOKEN': getCsrfToken() || '',
@@ -612,7 +612,7 @@ const openEditResourceDialog = (resource: Resource) => {
 const fetchResources = async () => {
   loading.value = true
   try {
-    const response = await fetch(`/ajax/resources`)
+    const response = await fetch(`ajax/resources`)
     const data = await response.json()
     resources.value = data.map((res: Resource) => ({
       ...res,
@@ -630,8 +630,8 @@ const fetchAllData = async () => {
   loading.value = true
   try {
     const [resourcesResponse, environmentsResponse] = await Promise.all([
-      fetch(`/ajax/resources`),
-      fetch(`/api/environments`),
+      fetch(`ajax/resources`),
+      fetch(`api/environments`),
     ])
 
     if (!resourcesResponse.ok) throw new Error('Failed to fetch resources')

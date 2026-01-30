@@ -10,12 +10,12 @@ class ResourcesController extends BaseDjangoController{
     // ===========================================
     // Resources 
     // ===========================================
-    public function resourcesByTypeIndex($api_type, $type): JsonResponse
+    public function resourcesByTypeIndex(string $server_slug, string $api_type, $type): JsonResponse
     {
         $endpoint = "resources/type/{$type}";
 
         // $result = $this->makeDjangoRequest('GET', $endpoint);
-        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -32,11 +32,11 @@ class ResourcesController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function resourcesIndex(): JsonResponse
+    public function resourcesIndex(string $server_slug): JsonResponse
     {
         $endpoint = "resources";
         // Log::info('Fetching all resources', ['endpoint' => $endpoint]);
-        $result = $this->makeDjangoRequest('GET', $endpoint);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
         // Log::info('Django request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
@@ -58,12 +58,12 @@ class ResourcesController extends BaseDjangoController{
         ], $result['status']);
     }
     
-    public function resourcesStore(Request $request): JsonResponse
+    public function resourcesStore(Request $request, string $server_slug): JsonResponse
     {
         // Log::info('Store method called', [
         //     'request_data' => $request->all()
         // ]);
-        $result = $this->makeDjangoRequest('POST', 'resources', $request->all());
+        $result = $this->makeBackendRequest('POST', 'resources', $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data'], 201);
@@ -81,7 +81,7 @@ class ResourcesController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function resourcesUpdate(Request $request, string $resource_id): JsonResponse
+    public function resourcesUpdate(Request $request, string $server_slug, string $resource_id): JsonResponse
     {
         // Log::info('resourcesUpdate called', ['resource_id' => $resource_id]);
 
@@ -89,7 +89,7 @@ class ResourcesController extends BaseDjangoController{
 
         $requestData = $request->all();
         
-        $result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
+        $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $server_slug);
         // Log::info('Django request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
@@ -113,12 +113,11 @@ class ResourcesController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function resourcesDestroy($id): JsonResponse
+    public function resourcesDestroy(string $server_slug, string $id): JsonResponse
     {
         $endpoint = "resources/{$id}";
         
-        $result = $this->makeDjangoRequest('DELETE', $endpoint);
-
+        $result = $this->makeBackendRequest('DELETE', $endpoint, [], [], $server_slug);
         if ($result['success']) {
             return response()->json([
                 'message' => ucfirst('resource') . ' deleted successfully'

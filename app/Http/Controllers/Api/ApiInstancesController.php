@@ -27,13 +27,13 @@ class ApiInstancesController extends BaseDjangoController{
         ], 500);
     }
 
-    public function apiInstancesStore(Request $request, string $api_type): JsonResponse
+    public function apiInstancesStore(Request $request, string $server_slug, string $api_type): JsonResponse
     {
         // Log::info('ApiInstancesStore called');
 
         $requestData = $request->all();
         
-        $result = $this->makeBackendRequest('POST', 'api_instances', $requestData, [], $api_type);
+        $result = $this->makeBackendRequest('POST', 'api_instances', $requestData, [], $server_slug);
         // Log::info('Django request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
@@ -56,7 +56,7 @@ class ApiInstancesController extends BaseDjangoController{
         ], $result['status']);
     }
 
-   public function apiInstancesUpdate(Request $request, string $api_type, string $api_instance_id): JsonResponse
+   public function apiInstancesUpdate(Request $request, string $server_slug, string $api_type, string $api_instance_id): JsonResponse
     {
         // Log::info('ApiInstancesUpdate called', ['api_instance_id' => $api_instance_id, 'api_type' => $api_type]);
 
@@ -64,7 +64,7 @@ class ApiInstancesController extends BaseDjangoController{
         $requestData = $request->all();
 
         try {
-            $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $api_type);
+            $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $server_slug);
 
             // Log::info('Backend request result', [
             //     'success' => $result['success'],
@@ -103,11 +103,11 @@ class ApiInstancesController extends BaseDjangoController{
     }
 
 
-    public function apiInstancesDestroy(string $api_type, string $id): JsonResponse
+    public function apiInstancesDestroy(string $server_slug,string $api_type, string $id): JsonResponse
     {
         $endpoint = "api_instances/{$id}";
         
-        $result = $this->makeBackendRequest('DELETE', $endpoint, [], [], $api_type);
+        $result = $this->makeBackendRequest('DELETE', $endpoint, [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json([
@@ -130,13 +130,13 @@ class ApiInstancesController extends BaseDjangoController{
     // ===========================================
     // API Instance by ID - AJAX call for fetching single instance
     // ===========================================
-    public function ApiInstancesEditIndex(string $api_type, string $instance_id): JsonResponse
+    public function ApiInstancesEditIndex(string $server_slug,string $api_type, string $instance_id): JsonResponse
     {
         // Log::info('ApiInstancesEditIndex called', ['instance_id' => $instance_id, 'api_type' => $api_type]);
 
         $endpoint = "api_instances/{$instance_id}";
         
-        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
         // Log::info('APIInstanceEditIndex Backend request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
@@ -159,7 +159,7 @@ class ApiInstancesController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function ApiInstancesEditUpdate(Request $request, string $api_type, string $instance_id, ): JsonResponse
+    public function ApiInstancesEditUpdate(Request $request, string $server_slug, string $api_type, string $instance_id, ): JsonResponse
     {
         // Log::info('ApiInstancesEditUpdate called', ['instance_id' => $instance_id, 'api_type' => $api_type]);
 
@@ -167,7 +167,7 @@ class ApiInstancesController extends BaseDjangoController{
         $requestData = $request->all();
 
         try {
-            $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $api_type);
+            $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $server_slug);
 
             // Log::info('Backend request result', [
             //     'success' => $result['success'],

@@ -631,7 +631,6 @@ function validateArray(value, config, matchValues = {}) {
       }
     }
   }
-
   return errors;
 }
 

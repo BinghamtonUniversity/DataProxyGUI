@@ -11,9 +11,9 @@ class SchedulersController extends BaseDjangoController{
     // ===========================================
     // Schedulers
     // ===========================================
-    public function schedulersIndex(): JsonResponse
+    public function schedulersIndex(string $server_slug): JsonResponse
     {
-        $result = $this->makeDjangoRequest('GET', 'schedulers');
+        $result = $this->makeBackendRequest('GET', 'schedulers', [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -25,9 +25,9 @@ class SchedulersController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function schedulersStore(Request $request): JsonResponse
+    public function schedulersStore(Request $request, $server_slug): JsonResponse
     {
-        $result = $this->makeDjangoRequest('POST', 'schedulers', $request->all());
+        $result = $this->makeBackendRequest('POST', 'schedulers', $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data'], 201);
@@ -40,9 +40,9 @@ class SchedulersController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function schedulersUpdate(Request $request, $id): JsonResponse
+    public function schedulersUpdate(Request $request, string $server_slug, string $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('PUT', "schedulers/{$id}", $request->all());
+        $result = $this->makeBackendRequest('PUT', "schedulers/{$id}", $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -55,9 +55,9 @@ class SchedulersController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function schedulersDestroy($id): JsonResponse
+    public function schedulersDestroy(string $server_slug, string $id): JsonResponse
     {
-        $result = $this->makeDjangoRequest('DELETE', "schedulers/{$id}");
+        $result = $this->makeBackendRequest('DELETE', "schedulers/{$id}", [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json([

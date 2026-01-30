@@ -6,6 +6,8 @@ import { ref, onMounted } from 'vue';
 import { Database, Folder, Users, Building2, History, ArrowRight, Activity } from 'lucide-vue-next';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
+import { getCsrfToken } from '@/lib/utils';
+
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -41,10 +43,10 @@ const error = ref<string | null>(null);
 const { error: showError } = useToaster();
 
 // Get CSRF token from meta tag
-const getCsrfToken = () => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    return token;
-};
+// const getCsrfToken = () => {
+//     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+//     return token;
+// };
 
 // Format timestamp for display
 const formatTimestamp = (timestamp: string | null | undefined) => {

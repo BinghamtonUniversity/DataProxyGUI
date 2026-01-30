@@ -288,7 +288,7 @@ const fetchVersions = async () => {
     loadingVersions.value = true
     versionsError.value = ''
     try {
-        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions`, {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -315,7 +315,7 @@ const fetchInstances = async () => {
     loadingInstances.value = true
     instancesError.value = ''
     try {
-        const response = await fetch(`/api/api_instances`, {
+        const response = await fetch(`/${props.server_slug}/api/api_instances`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -571,7 +571,7 @@ const fetchVersionDetails = async (versionId: number) => {
     loadingVersionDetails.value = true
     versionDetailsError.value = ''
     try {
-        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/${versionId}`, {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/${versionId}`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -599,7 +599,7 @@ const fetchVersionDetails = async (versionId: number) => {
 
 const switchToVersion = async (version: any) => {
     try {
-        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/${version.id}`, {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/${version.id}`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -629,7 +629,7 @@ const switchToVersion = async (version: any) => {
 
 const switchToLatestVersion = async () => {
     try {
-        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`, {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -669,8 +669,8 @@ const openDiffModal = async (version: any) => {
         await switchToLatestVersion()
         return
     }
-    
-    window.location.href = `/apis/${props.api_type}/${props.api_id}/compare/${version.id}`
+
+    window.location.href = `/${props.server_slug}/apis/${props.api_type}/${props.api_id}/compare/${version.id}`
 }
 
 const isLatestVersionStable = computed(() => {
@@ -705,7 +705,7 @@ const publishApiVersion = async (formData: any) => {
         }
     }
     try {
-        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/publish`, {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/publish`, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/json',
@@ -751,7 +751,7 @@ const handleDevelopersAction = (action: string) => {
     
     switch (action) {
         case 'export':
-            const exportUrl = `/apis/${props.api_type}/${props.api_id}/version/latest`
+            const exportUrl = `/${props.server_slug}/apis/${props.api_type}/${props.api_id}/version/latest`
             window.open(exportUrl, '_blank')
             break
         case 'import':
@@ -859,10 +859,10 @@ const handleSave = async () => {
     const requestData = props.api_type === 'php' ? denormalizeToPhp(apiData.value): apiData.value
     
     // debugger;
-    const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/code`, {
+    const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/code`, {
         method: 'PUT',
         headers: {
-            'Content-Type': 'application/json', //'application/x-www-form-urlencoded; charset=UTF-8',
+            'Content-Type': 'application/json',
             'Accept': 'application/json',
             'X-CSRF-TOKEN': getCsrfToken() || '',
         },
@@ -876,8 +876,6 @@ const handleSave = async () => {
     }
     success('API data saved successfully!', 'API Data Saved')
     const responseData = await response.json()
-    // might need to parse json here if responseData is string in the formData case
-
 
     if (props.api_type === 'php' && responseData.functions) {
         responseData.functions = responseData.functions.map((func: { name: string; content: string }) => ({
@@ -1251,6 +1249,7 @@ onUnmounted(() => {
             <ApiDevelopers 
                 :api_id="props.api_id"
                 :apiData="apiData"
+                :server_slug="props.server_slug"
                 :loadingApiData="loadingApiData"
                 :apiError="apiError"
                 :updateApiData="updateApiData"

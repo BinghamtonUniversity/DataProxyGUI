@@ -8,6 +8,7 @@ import AlertModal from '@/components/AlertModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted } from 'vue';
+import { getCsrfToken } from '@/lib/utils';
 
 // Use Laravel API routes instead of direct Django calls to avoid CORS
 const apiBaseUrl = 'api';
@@ -169,10 +170,10 @@ const cleanFormData = (formData: any) => {
 };
 
 // Get CSRF token from meta tag
-const getCsrfToken = () => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    return token;
-};
+// const getCsrfToken = () => {
+//     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+//     return token;
+// };
 
 // Fetch environments from API
 const fetchEnvironments = async () => {

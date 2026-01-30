@@ -6,6 +6,7 @@ import ApiDevelopers from '@/components/apiEdit/ApiDevelopers.vue';
 import { type ApiData } from '@/types';
 
 interface Props {
+    server_slug: string;
     api_type: string;
     api_id: string;
 }
@@ -91,6 +92,7 @@ onMounted(() => {
                     <!-- API Developers Component -->
                     <ApiDevelopers 
                         :api_id="props.api_id"
+                        :server_slug="props.server_slug"
                         :api_type="props.api_type"
                         :apiData="apiData"
                         :loadingApiData="loadingApiData"
