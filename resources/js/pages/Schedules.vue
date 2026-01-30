@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
+import { ApiInstance, type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
@@ -24,8 +24,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 // Modal state
 const showModal = ref(false);
 const modalMode = ref<'new' | 'edit'>('new');
+let selectedInstanceId = ref<number | null>(null);
 const editingRow = ref<any>(null);
-const submitting = ref(false);
+const loadingRoutes = ref(false);
 
 // Data state
 const schedules = ref<any[]>([]);
@@ -38,7 +39,7 @@ const environmentsData = ref<any[]>([]);
 const { success, error: showError, warning, info } = useToaster();
 
 // Form configuration for schedules
-const scheduleSchema = {
+const scheduleSchema = computed(() => ({
     label: 'Schedules',
     description: 'A list of schedules with their information.',
     name: "schedule-schema",
@@ -82,23 +83,28 @@ const scheduleSchema = {
             options: [
                 {
                     label: "GET",
-                    value: "GET"
+                    value: "GET",
+                    color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                 },
                 {
                     label: "POST",
-                    value: "POST"
+                    value: "POST",
+                    color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                 },
                 {
                     label: "PUT",
-                    value: "PUT"
+                    value: "PUT",
+                    color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
                 },
                 {
                     label: "DELETE",
-                    value: "DELETE"
+                    value: "DELETE",
+                    color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                 },
                 {
                     label: "PATCH",
-                    value: "PATCH"
+                    value: "PATCH",
+                    color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
                 }
             ]
         },
@@ -112,7 +118,10 @@ const scheduleSchema = {
             info: "verb of the schedule",
             width: "12",
             offset: "0",
-            options: [],
+            options: apiInstances.value.map(instance => ({
+                label: `${instance.name} (${environmentsData.value.find((environment: any) => environment.id === instance.environment_id)?.name || 'Unknown Environment'})`,
+                value: instance.id
+            })),
             required: true
         },
         {
@@ -138,11 +147,13 @@ const scheduleSchema = {
             options: [
                 {
                     label: "true",
-                    value: true
+                    value: true,
+                    color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                 },
                 {
                     label: "false",
-                    value: false
+                    value: false,
+                    color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                 }
             ],
             width: "12",
@@ -233,10 +244,10 @@ const scheduleSchema = {
             showColumn: false
         }
     ]
-};
+}));
 
 // Form configuration for environments
-const formConfig = {
+const formConfig = computed(() => ({
     label: 'Schedules',
     description: 'A list of schedules with their information.',
     name: "schedule-form",
@@ -310,7 +321,10 @@ const formConfig = {
             info: "API instance for the schedule",
             width: "12",
             offset: "0",
-            options: [],
+            options: apiInstances.value.map(instance => ({
+                label: `${instance.name} (${environmentsData.value.find((environment: any) => environment.id === instance.environment_id)?.name || 'Unknown Environment'})`,
+                value: instance.id
+            })),
             required: true
         },
         {
@@ -342,16 +356,16 @@ const formConfig = {
             label: "Enabled",
             type: "checkbox",
             placeholder: "Enter the api instance id of the schedule",
-            value: "false",
+            value: false,
             options: [
               
                 {
-                    label: "false",
-                    value: "false"
+                    label: "False",
+                    value: false,
                 },
                 {
-                    label: "true",
-                    value: "true"
+                    label: "True",
+                    value: true
                 },
             ],
             width: "12",
@@ -359,7 +373,7 @@ const formConfig = {
             required: false
         }
     ]
-};
+}));
 // Format timestamp for display
 const formatTimestamp = (timestamp: string | null | undefined) => {
     if (!timestamp || timestamp === null || timestamp === undefined) {
@@ -472,8 +486,8 @@ const fetchApiInstances = async () => {
         
         const data = await response.json();
         apiInstances.value = data;
-
-        formConfig.fields[3].options = apiInstances.value.map(instance => ({
+        
+        formConfig.value.fields[3].options = apiInstances.value.map(instance => ({
             label: `${instance.name} (${environmentsData.value.find((environment: any) => environment.id === instance.environment_id)?.name || 'Unknown Environment'})`,
             value: instance.id
         }));
@@ -492,18 +506,30 @@ const openNewModal = () => {
     showModal.value = true;
 };
 
-const openEditModal = (row?: any) => {
+const openEditModal = async (row?: any) => {
     if (row) {
         modalMode.value = 'edit';
+        loadingRoutes.value = true;
         // Create a clean copy for editing, preserving original data
         editingRow.value = { 
             id: row.id,
             name: row.name,
-            domain: row.domain,
-            type: row.type
+            cron: row.cron,
+            verb: row.verb,
+            api_instance_id: row.api_instance_id,
+            route: row.route,
+            enabled: row.enabled
             // Don't include created_at, updated_at as they're server-managed
         };
-     
+        const apiVersion = await fetchAPIVersion(apiInstances.value.find(instance => instance.id === editingRow.value.api_instance_id));
+            
+        formConfig.value.fields[4].options = apiVersion.version_urls.map((route: any) => ({
+                label: `${route.path}`,
+                value: route.path
+        }));
+        formConfig.value.fields[4].placeholder = 'Select a route';
+        
+        loadingRoutes.value = false;
         showModal.value = true;
     } else {
         warning('Please select exactly one row to edit.', 'Selection Required');
@@ -516,175 +542,204 @@ const closeModal = () => {
 };
 
 const handleFormSubmit = async (formValues: any) => {
-    // try {
-    //     submitting.value = true;
+    try {
+
+    console.log('Form values:', formValues);
+
+    if (modalMode.value === 'new') {
+        // Create new schedule via API
+
+        const response = await fetch(`${apiBaseUrl}/schedulers`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(formValues)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        const newSchedule = await response.json();
+
+        // Add to local state with server-provided data
+        schedules.value.unshift(newSchedule);
+        closeModal();
+        success(`Schedule "${formValues.name}" added successfully!`, 'Schedule Added');
+    } else if (modalMode.value === 'edit' && editingRow.value) {
+        // Update existing schedule via API
+
+        const response = await fetch(`${apiBaseUrl}/schedulers/${editingRow.value.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(formValues)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        const updatedSchedule = await response.json();
+
+        // Update local state with server-provided data
+        const index = schedules.value.findIndex((schedule: any) => schedule.id === editingRow.value.id);
+        if (index !== -1) {
+            schedules.value[index] = updatedSchedule;
+        }
+        success(`Schedule "${formValues.name}" updated successfully!`, 'Schedule Updated');
+        closeModal();
+    } else {
+        warning('Please select exactly one row to edit.', 'Selection Required');
+    }
+    } catch (err: any) {
+        showError(err.message || 'Failed to save schedule. Please try again.', 'Error');
+        console.error('Form submission error:', err);
+    } finally {
         
-    //     if (modalMode.value === 'new') {
-    //         // Create new environment via API
-    //         const cleanedData = cleanFormData(formValues);
-    //         const response = await fetch(`${apiBaseUrl}/environments`, {
-    //             method: 'POST',
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //                 'Accept': 'application/json',
-    //                 'X-CSRF-TOKEN': getCsrfToken() || '',
-    //             },
-    //             credentials: 'same-origin',
-    //             body: JSON.stringify(cleanedData)
-    //         });
-
-    //         if (!response.ok) {
-    //             const errorData = await response.json().catch(() => ({}));
-    //             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    //         }
-
-    //         const newEnv = await response.json();
-    //         console.log('Server response for create:', newEnv);
-            
-    //         // Add to local state with server-provided data and formatted timestamps
-    //         const formattedNewEnv = {
-    //             ...newEnv,
-    //             // Use server-provided timestamps, not user input
-    //             created_at: formatTimestamp(newEnv.created_at),
-    //             updated_at: formatTimestamp(newEnv.updated_at)
-    //         };
-    //         console.log('Formatted new environment:', formattedNewEnv);
-    //         environments.value.push(formattedNewEnv);
-            
-    //         success(`Environment "${formValues.name}" added successfully!`, 'Environment Added');
-    //     } else if (modalMode.value === 'edit' && editingRow.value) {
-    //         // Update existing environment via API
-    //         const cleanedData = cleanFormData(formValues);
-    //         const response = await fetch(`${apiBaseUrl}/environments/${editingRow.value.id}`, {
-    //             method: 'PUT',
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //                 'Accept': 'application/json',
-    //                 'X-CSRF-TOKEN': getCsrfToken() || '',
-    //             },
-    //             credentials: 'same-origin',
-    //             body: JSON.stringify(cleanedData)
-    //         });
-
-    //         if (!response.ok) {
-    //             const errorData = await response.json().catch(() => ({}));
-    //             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    //         }
-
-    //         const updatedEnv = await response.json();
-    //         console.log('Server response for edit:', updatedEnv);
-            
-    //         // Update local state with server-provided data
-    //         const index = environments.value.findIndex((env: any) => env.id === editingRow.value.id);
-    //         if (index !== -1) {
-    //             const formattedEnv = {
-    //                 ...updatedEnv,
-    //                 // Use server-provided timestamps, not user input
-    //                 created_at: formatTimestamp(updatedEnv.created_at),
-    //                 updated_at: formatTimestamp(updatedEnv.updated_at)
-    //             };
-    //             console.log('Formatted environment for update:', formattedEnv);
-    //             environments.value[index] = formattedEnv;
-    //         }
-            
-    //         success(`Environment "${formValues.name}" updated successfully!`, 'Environment Updated');
-    //     }
-    //     closeModal();
-    // } catch (err: any) {
-    //     showError(err.message || 'Failed to save environment. Please try again.', 'Error');
-    //     console.error('Form submission error:', err);
-    // } finally {
-    //     submitting.value = false;
-    // }
-};
-
-// Handle DataGrid action events
-const handleAction = (actionData: { type: string; payload: any }) => {
-    // console.log('DataGrid action:', actionData);
-    
-    // switch (actionData.type) {
-    //     case 'single-edit':
-    //         openEditModal(actionData.payload);
-    //         break;
-    //     case 'single-delete':
-    //         handleDelete([actionData.payload.id || actionData.payload.name]);
-    //         break;
-    //     case 'view':
-    //         // Handle view action if needed
-    //         console.log('View environment:', actionData.payload);
-    //         break;
-    //     case 'duplicate':
-    //         // Handle duplicate action if needed
-    //         console.log('Duplicate environment:', actionData.payload);
-    //         break;
-    //     default:
-    //         console.log('Unknown action type:', actionData.type);
-    // }
-};
-
-// Handle FormViewer action events
-const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
-    // console.log('FormViewer action:', actionData);
-    
-    // switch (actionData.type) {
-    //     case 'close':
-    //         closeModal();
-    //         break;
-    //     default:
-    //         console.log('Unknown FormViewer action type:', actionData.type);
-    // }
+    }
 };
 
 const handleDelete = async (selectedRowIds?: number[]) => {
-    // if (selectedRowIds && selectedRowIds.length > 0) {
-    //     const envsToDelete = environments.value.filter(env => selectedRowIds.includes(env.id));
-        
-    //     try {
-    //         // Delete environments via API
-    //         for (const env of envsToDelete) {
-    //             const response = await fetch(`${apiBaseUrl}/environments/${env.id}`, {
-    //                 method: 'DELETE',
-    //                 headers: {
-    //                     'Accept': 'application/json',
-    //                     'X-CSRF-TOKEN': getCsrfToken() || '',
-    //                 },
-    //                 credentials: 'same-origin'
-    //             });
+    if (!confirm(`Are you sure you want to delete ${selectedRowIds?.length || 0} schedule(s)? This action cannot be undone.`)) {
+        return;
+    }   
+    
+    try {
+        for (const id of selectedRowIds || []) {
+            const response = await fetch(`${apiBaseUrl}/schedulers/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken() || '',
+                },
+                credentials: 'same-origin'
+            });
 
-    //             if (!response.ok) {
-    //                 const errorData = await response.json().catch(() => ({}));
-    //                 throw new Error(errorData.message || `Failed to delete environment ${env.name}. Status: ${response.status}`);
-    //             }
-    //         }
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            const index = schedules.value.findIndex((schedule: any) => schedule.id === id);
+            if (index !== -1) {
+                schedules.value.splice(index, 1);
+            }
+        }
+
+        success(`${selectedRowIds?.length ?? 0} schedule(s) deleted successfully!`, 'Schedules Deleted');
+    } catch (err: any) {
+        showError(err.message || 'Failed to delete schedules. Please try again.', 'Error');
+        console.error('Delete error:', err);
+    }
+};  
+// Fetch api version details by selected api instance's version
+const fetchAPIVersion = async (api_instance : ApiInstance)=>{
+    let response;
+    try {
+        if (api_instance.api_version_id === null) {
+         response = await fetch(`ajax/apis/${api_instance.api_type}/${api_instance.api_id}/versions/latest`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        });
+    } else {
+         response = await fetch(`ajax/apis/${api_instance.api_type}/${api_instance.api_id}/versions/${api_instance.api_version_id}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        });
+    }
+    if (!response || !response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data;
+    } catch (err: any) {
+        console.error('Error fetching latest version:', err);
+}   
+}
+
+const handleFormDataChange = async (data: any, field: string) => {
+    if (field === 'api_instance_id') {
+        loadingRoutes.value = true;
+        if (data.api_instance_id) {
+            const apiVersion = await fetchAPIVersion(apiInstances.value.find(instance => instance.id === data.api_instance_id));
             
-    //         // Remove from local state after successful API calls
-    //         envsToDelete.forEach(env => {
-    //             const index = environments.value.findIndex(e => e.id === env.id);
-    //             if (index !== -1) {
-    //                 environments.value.splice(index, 1);
-    //             }
-    //         });
-            
-    //         // Show success message
-    //         if (envsToDelete.length === 1) {
-    //             success(`Environment "${envsToDelete[0].name}" deleted successfully!`, 'Environment Deleted');
-    //         } else {
-    //             success(`${envsToDelete.length} environments deleted successfully!`, 'Environments Deleted');
-    //         }
-    //     } catch (err: any) {
-    //         showError(err.message || 'Failed to delete environments. Please try again.', 'Error');
-    //         console.error('Delete error:', err);
-    //     }
-    // } else {
-    //     warning('Please select at least one environment to delete.', 'Selection Required');
-    // }
+            formConfig.value.fields[4].options = apiVersion.version_urls.map((route: any) => ({
+                label: `${route.path}`,
+                value: route.path
+            }));
+        } else {
+            formConfig.value.fields[4].options = [];
+        }
+        loadingRoutes.value = false;
+    }
 };
-const handleFormDataUpdate = (data: any) => {
-    if (data.api_instance_id) {
-        formConfig.fields[4].options = apiInstances.value.find(instance => instance.id === data.api_instance_id)?.route_user_map.map((route: any) => ({
-            label: `${route.route}`,
-            value: route.route
-        }));
+
+const handleDataGridActionHandler = (action: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
+    console.log('DataGrid action:', action);
+    switch (action.action) {
+        case 'create':
+            openNewModal();
+            break;
+        case 'edit':
+            openEditModal(action.selectedData[0]);
+            break;
+        case 'delete':
+            handleDelete([action.selectedData[0].id]);
+            break;
+    }
+};
+
+const handleDataGridRowActionHandler = (action: { type: string; payload: any }) => {
+    console.log('DataGrid row action:', action);
+    switch (action.type) {
+        case 'single-edit':
+            openEditModal(action.payload);
+            break;
+        case 'single-delete':
+            handleDelete([action.payload.id]);
+            break;
+    }
+};
+
+const handleDataGridRowClick = (row: any) => {
+    openEditModal(row);
+    selectedInstanceId.value = row.api_instance_id;
+    formConfig.value.fields[3].options = apiInstances.value.map(instance => ({
+        label: `${instance.name} (${environmentsData.value.find((environment: any) => environment.id === instance.environment_id)?.name || 'Unknown Environment'})`,
+        value: instance.id
+    }));
+};
+
+const handleFormActionHandler = (action: { type: string; action: string; formData: any }) => {
+    console.log('Form action:', action);
+    switch (action.type) {
+        case 'save':
+            handleFormSubmit(action.formData);
+            break;
+        case 'close':
+        case 'cancel':
+            closeModal();
+            break;
     }
 };
 // Fetch data on component mount
@@ -716,19 +771,23 @@ onMounted(async () => {
                 v-else
                 :schema="scheduleSchema"
                 :data="schedules"
-                theme="default"
-                :showNew="true"
-                :showEdit="true"
-                :showDelete="true"
-                :rowActions="[
-                    { type: 'view', label: 'View', icon: 'eye', colorClass: 'text-green-600 hover:bg-green-50' },
-                    { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50' },
-                    { type: 'single-delete', label: 'Delete', icon: 'delete', colorClass: 'text-red-600 hover:bg-red-50' }
+                :clickableRows="true"
+                :rowActionDropdown="false"
+                :rowActionLabels="false"
+                :actions="[
+                    { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
+                    { name: 'arguments', type: 'warning', min: 1, max: 1, label: 'Arguments', icon: 'cog', loc: 'right' },
+                    { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
+                    { name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right' }
                 ]"
-                @create="openNewModal"
-                @edit="openEditModal"
-                @delete="handleDelete"
-                @action="handleAction"
+                :rowActions="[
+                    { type: 'arguments', label: 'Arguments', icon: 'cog', colorClass: 'text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20' },
+                    { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20' },
+                    { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20' }
+                ]"
+                @actionHandler="handleDataGridActionHandler"
+                @rowActionHandler="handleDataGridRowActionHandler"
+                @rowClick="handleDataGridRowClick"
                          >
              </DataGrid>
 
@@ -738,21 +797,33 @@ onMounted(async () => {
                 :title="modalMode === 'new' ? 'Add New Schedule' : 'Edit Schedule'"
                 @close="closeModal"
             >
-                                                                   <FormViewer 
-                      :formConfig="formConfig" 
-                      :initialData="editingRow"
-                      :cancelAction="'close'"
-                      @submit="handleFormSubmit"
-                      @action="handleFormAction"
-                      @update:modelValue="handleFormDataUpdate"
-                      :disabled="submitting"
-                      :actions="[
-                        { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
-                        { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
-                      ]"
-                  />
-                
-                          
+                <div class="relative">
+                    <!-- Loading Overlay -->
+                    <div 
+                        v-if="loadingRoutes" 
+                        class="absolute inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg"
+                    >
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 dark:border-blue-400"></div>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Loading routes...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Viewer -->
+                    <FormViewer 
+                        :formConfig="formConfig" 
+                        :initialData="editingRow"
+                        :cancelAction="'close'"
+                        @change="handleFormDataChange"
+                        :validateOnSubmit="true"
+                        :disabled="loadingRoutes"
+                        :actions="[
+                            { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors', disabled: loadingRoutes },
+                            { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors', disabled: loadingRoutes }
+                        ]"
+                        :actionHandler="handleFormActionHandler"
+                    />
+                </div>
             </AlertModal>
             
             <!-- Global Toaster -->
