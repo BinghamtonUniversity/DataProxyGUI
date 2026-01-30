@@ -30,7 +30,7 @@ class ProxyServerController extends Controller
     public function getServers(Request $request): JsonResponse
     {
         $servers = ProxyServerConfig::where('is_active', true)
-            ->select('id', 'name', 'slug', 'server', 'username', 'password', 'is_active')
+            ->select('id', 'name', 'slug', 'server', 'username', 'password', 'is_active', 'type')
             ->get();
 
         $currentServerSlug = $request->attributes->get('proxy_server')?->slug;

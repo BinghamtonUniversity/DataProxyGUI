@@ -9,7 +9,7 @@
     import CardWidget from '@/components/CardWidget.vue';
     import ButtonWidget from '@/components/ButtonWidget.vue';
     import AlertModal from '@/components/AlertModal.vue';
-    import { Plus, Pencil, Server, Trash } from 'lucide-vue-next';
+    import { Plus, Pencil, Server, Trash, Check, Eye } from 'lucide-vue-next';
     const { success, error, warning, info } = useToaster();
     const breadcrumbItems: BreadcrumbItem[] = [
         {
@@ -52,8 +52,8 @@
         fields: [
             { name: 'id', label: 'ID', type: 'hidden', required: false, show: false, value: null },
             { name: 'name', label: 'Name', type: 'text', required: true, width: 6, placeholder: 'Enter server name' },
-            { name: 'slug', label: 'Slug', type: 'text', required: true, width: 6, placeholder: 'Enter a slug (e.g. server1)' },
-            { name: 'server', label: 'Server URL', type: 'text', required: true, placeholder: 'Enter the server URL (e.g. https://binghamton.edu)' },
+            { name: 'slug', label: 'Slug', type: 'text', required: true, width: 6, placeholder: 'Enter a slug (e.g. server1)', pattern: '^[a-z]+(_[0-9]+)?$' },
+            { name: 'server', label: 'Server URL', type: 'url', required: true, placeholder: 'Enter the server URL (e.g. https://binghamton.edu)' },
             { name: 'type', label: 'Type', type: 'select', required: true, options: [
                 { label: 'PHP Proxy Server', value: 'php' },
                 { label: 'Python Proxy Server', value: 'python' },
@@ -206,10 +206,35 @@
             case 'delete':
                 await deleteServer(action.payload.id);
                 break;
+            case 'check_password':
+                // await checkPassword(action.payload.id);
+                warning('Password checked is in development', 'Warning');
+                break;
             default:
                 console.log('Unknown action type:', action.type);
         }
     }
+    // const checkPassword = async (id: number) => {
+    //     const confirmed = confirm('Are you sure you want to check the password for this server?');
+    //     if (!confirmed) {
+    //         return;
+    //     }
+    //     const response = await fetch(`/api/proxy-servers/${id}/check-password`, {
+    //         method: 'GET',
+    //         headers: {
+    //             'Accept': 'application/json',
+    //             'Content-Type': 'application/json',
+    //             'X-CSRF-TOKEN': getCsrfToken() || '',
+    //         },
+    //     });
+    //     if (!response.ok) {
+    //         const errorData = await response.json().catch(() => ({}));
+    //         error(errorData.message || `HTTP error! status: ${response.status}`);
+    //         return;
+    //     }
+    //     const data = await response.json();
+    //     success('Password checked successfully', 'Success');
+    // }
     const deleteServer = async (id: number) => {
         if (confirm('Are you sure you want to delete this server?')) {
         const response = await fetch(`/api/proxy-servers/${id}`, {
@@ -282,6 +307,13 @@
                                 icon: Trash,
                                 iconClass: 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20',
                                 label: 'Delete',
+                            },
+                            {
+                                type: 'check_password',
+                                action: 'check_password',
+                                icon: Eye,
+                                iconClass: 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20',
+                                label: 'Check Password',
                             }
                         ]"
                         :clickable="false"
@@ -291,7 +323,7 @@
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <span class="text-sm text-muted-foreground">Type:</span>
-                                <span class="text-sm font-medium">{{ server.type || 'N/A' }}</span>
+                                <span class="text-sm font-medium capitalize", :class="server.type === 'php' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded-md' : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded-md'">{{ server.type || 'N/A' }}</span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-sm text-muted-foreground">Username:</span>
@@ -343,7 +375,7 @@
                                 action: 'close', 
                                 label: 'Cancel', 
                                 modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' 
-                            }
+                            },
                         ]"
                         :actionHandler="handleServerFormAction"
                     />
