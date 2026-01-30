@@ -6,12 +6,12 @@
       <p v-if="field.help" class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ field.help }}</p>
     </div> -->
 
-    <!-- Array Items with inline + - controls -->
+    <!-- Array Items -->
     <div v-if="arrayValues.length > 0" class="array-items flex flex-col gap-2">
       <div 
         v-for="(item, index) in arrayValues" 
         :key="`${field.name}-${index}`"
-        class="flex items-center gap-2"
+        class="array-item"
       >
         <!-- Field Component -->
         <component
@@ -24,45 +24,6 @@
           @validation-error="(data) => handleValidationError(index, data)"
           @validation-success="(data) => handleValidationSuccess(index, data)"
         />
-        <!-- Inline + - Controls -->
-        <div v-if="edit && !disabled" class="flex items-center gap-1 ml-1">
-          <!-- Add (+) Button -->
-          <button
-            v-if="canAdd()"
-            @click="addItemAfter(index)"
-            type="button"
-            class="icon-btn plus-btn"
-            :title="getAddLabel()"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
-            </svg>
-          </button>
-          <!-- Duplicate Button -->
-          <button
-            v-if="canDuplicate(index) && canAdd()"
-            @click="duplicateItem(index)"
-            type="button"
-            class="icon-btn duplicate-btn"
-            :title="getDuplicateLabel()"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-          </button>
-          <!-- Remove (-) Button -->
-          <button
-            v-if="canRemove(index)"
-            @click="removeItem(index)"
-            type="button"
-            class="icon-btn minus-btn"
-            :title="getRemoveLabel()"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6" />
-            </svg>
-          </button>
-        </div>
       </div>
     </div>
 
@@ -87,6 +48,46 @@
           <li v-for="error in arrayErrors" :key="error">{{ error }}</li>
         </ul>
       </div>
+    </div>
+
+    <!-- Bottom Right Controls -->
+    <div v-if="arrayValues.length > 0 && edit && !disabled" class="flex justify-end gap-1 mt-2">
+      <!-- Add (+) Button -->
+      <button
+        v-if="canAdd()"
+        @click="addItem"
+        type="button"
+        class="icon-btn plus-btn"
+        :title="getAddLabel()"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
+        </svg>
+      </button>
+      <!-- Duplicate Button -->
+      <button
+        v-if="canDuplicate(arrayValues.length - 1) && canAdd()"
+        @click="duplicateItem(arrayValues.length - 1)"
+        type="button"
+        class="icon-btn duplicate-btn"
+        :title="getDuplicateLabel()"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      </button>
+      <!-- Remove (-) Button -->
+      <button
+        v-if="canRemove(arrayValues.length - 1)"
+        @click="removeItem(arrayValues.length - 1)"
+        type="button"
+        class="icon-btn minus-btn"
+        :title="getRemoveLabel()"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6" />
+        </svg>
+      </button>
     </div>
   </div>
 </template>
