@@ -70,7 +70,7 @@ function normalizeApiData(payload: any, backend: 'python' | 'php'): ApiData {
 }
 const fetchCurrentVersion = async () => {
     try {
-        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`)
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`)
         if (!response.ok) throw new Error('Failed to fetch current version')
         const data = await response.json()
         const versionData =normalizeApiData(data, props.api_type as 'python' | 'php')
@@ -82,7 +82,7 @@ const fetchCurrentVersion = async () => {
 
 const fetchSelectedVersion = async () => {
     try {
-        const response = await fetch(`/ajax/apis/${props.api_type}/${props.api_id}/versions/${props.version_id}`)
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/${props.version_id}`)
         if (!response.ok) throw new Error('Failed to fetch selected version')
         const data = await response.json()
         const versionData =normalizeApiData(data, props.api_type as 'python' | 'php')

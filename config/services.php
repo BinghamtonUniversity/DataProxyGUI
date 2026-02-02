@@ -37,16 +37,16 @@ return [
 
     'django' => [
         'base_url' => env('VITE_DJANGO_BASEURL'),
-        'hermes_base_url' => env('VITE_HERMES_BASEURL'),
+        // 'hermes_base_url' => env('VITE_HERMES_BASEURL'),
         'api_user' => env('API_USER'),
         'api_password' => env('API_PASSWORD'),
     ],
 
-    'php' => [
-        'base_url' => env('PHP_BASE_URL'),
-        'api_user' => env('PHP_AUTH_USER'),
-        'api_password' => env('PHP_AUTH_PASSWORD'),
-    ],
+    // 'php' => [
+    //     'base_url' => env('PHP_BASE_URL'),
+    //     'api_user' => env('PHP_AUTH_USER'),
+    //     'api_password' => env('PHP_AUTH_PASSWORD'),
+    // ],
     
     'appkey' => env('LARAVEL_APP_KEY'),
 

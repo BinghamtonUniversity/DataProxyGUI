@@ -136,9 +136,10 @@ class BaseDjangoController extends Controller
             
             $baseUrl = $proxyConfig->server;
             $user = $proxyConfig->username;
-            $password = $proxyConfig->password;
+            $password = $proxyConfig->getDecryptedPasswordAttribute();
+          
         } else {
-            // Fallback to default config
+            // Fallback to default config ?
             $baseUrl = config('services.django.base_url');
             $user = config('services.django.api_user');
             $password = config('services.django.api_password');
@@ -167,6 +168,17 @@ class BaseDjangoController extends Controller
                 'DELETE' => $request->delete($fullUrl),
                 default => throw new \InvalidArgumentException("Unsupported HTTP method: {$method}"),
             };
+
+            // log error
+            Log::info("Proxy API request: {$method} {$fullUrl}", [
+                'backend' => $baseUrl,
+                'user' => $user,
+                'request_data' => $data,
+                'server_slug' => $serverSlug,
+                'status' => $response->status(),
+                'success' => $response->successful(),
+
+            ]);
 
             return [
                 'success' => $response->successful(),

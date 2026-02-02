@@ -44,7 +44,6 @@ class SetProxyServer
 
         Inertia::share('server_slug', $slug);
 
-        
         // Store in session
         // session(['current_proxy_server' => $slug]);
         
