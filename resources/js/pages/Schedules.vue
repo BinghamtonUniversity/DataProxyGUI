@@ -489,10 +489,7 @@ const fetchSchedules = async () => {
         
         const data = await response.json();
         // Ensure api_instance_id is a number for proper option matching
-        schedules.value = data.map((schedule: any) => ({
-            ...schedule,
-            api_instance_id: schedule.api_instance_id != null ? Number(schedule.api_instance_id) : null
-        }));
+        schedules.value = data;
         
     } catch (err: any) {
         error.value = err.message || 'Failed to fetch schedules';
