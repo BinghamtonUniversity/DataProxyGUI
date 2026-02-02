@@ -15,7 +15,7 @@ class ProxyServerController extends Controller
     {   
         // should we fetch all servers or only active ones?
         $servers = ProxyServerConfig::where('is_active', true)
-            ->select('id', 'name', 'slug', 'server', 'username', 'password', 'is_active')
+            ->select('id', 'name', 'slug', 'server', 'username', 'password', 'type', 'is_active')
             ->get();
 
         $currentServerSlug = $request->attributes->get('proxy_server')?->slug;
