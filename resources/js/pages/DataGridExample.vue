@@ -102,6 +102,18 @@ const closeModal = () => {
     editingRow.value = null;
 };
 
+const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
+    switch (actionData.type) {
+        case 'save':
+            handleFormSubmit(actionData.formData);
+            break;
+        case 'close':
+            closeModal();
+            break;
+        default:
+            console.log('Unknown FormViewer action type:', actionData.type);
+    }
+};
 const handleFormSubmit = (formValues: any) => {
     try {
         if (modalMode.value === 'new') {
@@ -202,7 +214,11 @@ nextTick(() => {
                 <FormViewer 
                     :formConfig="formConfig" 
                     :initialData="editingRow"
-                    @submit="handleFormSubmit" 
+                    :actionHandler="handleFormAction"
+                    :actions="[
+                        { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+                        { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+                    ]"
                 />
                 
                 <template #footer>
