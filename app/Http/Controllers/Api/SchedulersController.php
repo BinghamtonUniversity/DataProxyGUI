@@ -18,10 +18,14 @@ class SchedulersController extends BaseDjangoController{
         if ($result['success']) {
             return response()->json($result['data']);
         }
-
+        $errorMessage = $result['data']['error']
+            ?? $result['data']['detail']
+            ?? $result['data']['message']
+            ?? 'Unknown error occurred on Django side.';
         return response()->json([
-            'error' => "Failed to fetch schedulers}",
-            'status' => $result['status']
+            'error' => $errorMessage,
+            'status' => $result['status'],
+            'result' => $result,
         ], $result['status']);
     }
 

@@ -34,9 +34,55 @@ const loading = ref(false); //TODO: change to true
 const error = ref<string | null>(null);
 const apiInstances = ref<any[]>([]);
 const environmentsData = ref<any[]>([]);
+const formRef = ref<InstanceType<typeof FormViewer> | null>(null);
+const showArgumentsModal = ref<boolean>(false);
 
 // Toaster
 const { success, error: showError, warning, info } = useToaster();
+
+const argumentsFormConfig = computed(() => ({
+    label: 'Arguments',
+    description: 'A list of arguments with their information.',
+    name: "arguments-form",
+    files: false,
+    fields: [
+        {
+            name: "args",
+            label: "Args",
+            type: "fieldset",
+            array: {
+                min: 0,
+
+            },
+            fields: [
+                {
+                    name: "name",
+                    label: "Name",
+                    type: "text",
+                    placeholder: "Enter the name of the argument",
+                    value: "",
+                    required: true
+                },
+                {
+                    name: "value",
+                    label: "Value",
+                    type: "text",
+                    placeholder: "Enter the value of the argument",
+                    value: "",
+                    required: true
+                }
+            ]
+        }
+    ]
+}));
+
+// Computed options for API instances in the schema
+const apiInstanceOptions = computed(() => {
+    return apiInstances.value.map(instance => ({
+        label: `${instance.name} (${environmentsData.value.find((environment: any) => environment.id === instance.environment_id)?.name || 'Unknown Environment'})`,
+        value: instance.id
+    }));
+});
 
 // Form configuration for schedules
 const scheduleSchema = computed(() => ({
@@ -118,10 +164,7 @@ const scheduleSchema = computed(() => ({
             info: "verb of the schedule",
             width: "12",
             offset: "0",
-            options: apiInstances.value.map(instance => ({
-                label: `${instance.name} (${environmentsData.value.find((environment: any) => environment.id === instance.environment_id)?.name || 'Unknown Environment'})`,
-                value: instance.id
-            })),
+            options: apiInstanceOptions.value,
             required: true
         },
         {
@@ -170,7 +213,10 @@ const scheduleSchema = computed(() => ({
             info: "arguments of the schedule",
             width: "12",
             offset: "0",
-            required: true
+            required: true,
+            isArrayObject: true,
+            targetObjectAttribute: "name",
+            targetColor: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
         },
         {
             name: "last_exec_cron",
@@ -442,7 +488,11 @@ const fetchSchedules = async () => {
         }
         
         const data = await response.json();
-        schedules.value = data;
+        // Ensure api_instance_id is a number for proper option matching
+        schedules.value = data.map((schedule: any) => ({
+            ...schedule,
+            api_instance_id: schedule.api_instance_id != null ? Number(schedule.api_instance_id) : null
+        }));
         
     } catch (err: any) {
         error.value = err.message || 'Failed to fetch schedules';
@@ -507,7 +557,9 @@ const openNewModal = () => {
 };
 
 const openEditModal = async (row?: any) => {
+
     if (row) {
+        
         modalMode.value = 'edit';
         loadingRoutes.value = true;
         // Create a clean copy for editing, preserving original data
@@ -522,7 +574,7 @@ const openEditModal = async (row?: any) => {
             // Don't include created_at, updated_at as they're server-managed
         };
         const apiVersion = await fetchAPIVersion(apiInstances.value.find(instance => instance.id === editingRow.value.api_instance_id));
-            
+ 
         formConfig.value.fields[4].options = apiVersion.version_urls.map((route: any) => ({
                 label: `${route.path}`,
                 value: route.path
@@ -543,9 +595,18 @@ const closeModal = () => {
 
 const handleFormSubmit = async (formValues: any) => {
     try {
-
-    console.log('Form values:', formValues);
-
+        if (formRef.value) {
+            const isValid = formRef.value.validateForm();
+            if (!isValid) {
+                warning('Please fix validation errors before saving.', 'Validation Error');
+                return;
+            }
+        }
+    } catch (err: any) {
+        showError(err.message || 'Failed to save schedule. Please try again.', 'Error');
+        console.error('Form submission error:', err);
+    }
+    try {
     if (modalMode.value === 'new') {
         // Create new schedule via API
 
@@ -566,6 +627,8 @@ const handleFormSubmit = async (formValues: any) => {
         }
 
         const newSchedule = await response.json();
+
+        newSchedule.api_instance_id = newSchedule.api_instance != null ? Number(newSchedule.api_instance) : newSchedule.api_instance_id!=null ? Number(newSchedule.api_instance_id) : null;
 
         // Add to local state with server-provided data
         schedules.value.unshift(newSchedule);
@@ -591,12 +654,16 @@ const handleFormSubmit = async (formValues: any) => {
         }
 
         const updatedSchedule = await response.json();
+        updatedSchedule.api_instance_id = updatedSchedule.api_instance != null ? Number(updatedSchedule.api_instance) : updatedSchedule.api_instance_id!=null ? Number(updatedSchedule.api_instance_id) : null;
+
+
 
         // Update local state with server-provided data
         const index = schedules.value.findIndex((schedule: any) => schedule.id === editingRow.value.id);
         if (index !== -1) {
             schedules.value[index] = updatedSchedule;
         }
+
         success(`Schedule "${formValues.name}" updated successfully!`, 'Schedule Updated');
         closeModal();
     } else {
@@ -606,7 +673,8 @@ const handleFormSubmit = async (formValues: any) => {
         showError(err.message || 'Failed to save schedule. Please try again.', 'Error');
         console.error('Form submission error:', err);
     } finally {
-        
+
+       
     }
 };
 
@@ -677,6 +745,57 @@ const fetchAPIVersion = async (api_instance : ApiInstance)=>{
 }   
 }
 
+const handleArgumentsFormActionHandler = (action: { type: string; action: string; formData: any }) => {
+    console.log('Arguments form action:', action);
+    switch (action.type) {
+        case 'close':
+            showArgumentsModal.value = false;
+            break;
+        case 'save':
+            handleArgumentsFormSubmit(action.formData);
+            showArgumentsModal.value = false;
+            break;
+        default:
+            console.log('Unknown arguments form action type:', action.type);
+    }
+};
+
+const handleArgumentsFormSubmit = async (formData: any) => {
+    
+    try {
+        const response = await fetch(`${apiBaseUrl}/schedulers/${editingRow.value.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(formData)
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        const updatedSchedule = await response.json();
+        updatedSchedule.api_instance_id = updatedSchedule.api_instance != null ? Number(updatedSchedule.api_instance) : updatedSchedule.api_instance_id!=null ? Number(updatedSchedule.api_instance_id) : null;
+
+        
+        const index = schedules.value.findIndex((schedule: any) => schedule.id === editingRow.value.id);
+        if (index !== -1) {
+            schedules.value[index] = updatedSchedule;
+        }
+        success(`Schedule "${editingRow.value.name}" updated successfully!`, 'Schedule Updated');
+        closeArgumentsModal();
+    } catch (err: any) {
+        showError(err.message || 'Failed to save schedule. Please try again.', 'Error');
+        console.error('Form submission error:', err);
+    }
+};
+const closeArgumentsModal = () => {
+    showArgumentsModal.value = false;
+    editingRow.value = null;
+};
 const handleFormDataChange = async (data: any, field: string) => {
     if (field === 'api_instance_id') {
         loadingRoutes.value = true;
@@ -703,17 +822,28 @@ const handleDataGridActionHandler = (action: { action: string; selectedRows: any
         case 'edit':
             openEditModal(action.selectedData[0]);
             break;
+        case 'arguments':
+            openArgumentsModal(action.selectedData[0]);
+            break;
         case 'delete':
             handleDelete([action.selectedData[0].id]);
             break;
     }
 };
 
+const openArgumentsModal = (row: any) => {
+    showArgumentsModal.value = true;
+    editingRow.value = row;
+};
+
 const handleDataGridRowActionHandler = (action: { type: string; payload: any }) => {
     console.log('DataGrid row action:', action);
     switch (action.type) {
         case 'single-edit':
-            openEditModal(action.payload);
+            openEditModal(action.payload    );
+            break;
+        case 'arguments':
+            openArgumentsModal(action.payload);
             break;
         case 'single-delete':
             handleDelete([action.payload.id]);
@@ -810,7 +940,8 @@ onMounted(async () => {
                     </div>
                     
                     <!-- Form Viewer -->
-                    <FormViewer 
+                    <FormViewer
+                        ref="formRef"
                         :formConfig="formConfig" 
                         :initialData="editingRow"
                         :cancelAction="'close'"
@@ -824,6 +955,25 @@ onMounted(async () => {
                         :actionHandler="handleFormActionHandler"
                     />
                 </div>
+            </AlertModal>
+            
+            <!-- Modal for Arguments -->
+            <AlertModal 
+                :isOpen="showArgumentsModal"
+                :title="'Arguments'"
+                @close="showArgumentsModal = false"
+            >
+                <FormViewer
+                    :formConfig="argumentsFormConfig"
+                    :initialData="editingRow"
+                    :cancelAction="'close'"
+                    :validateOnSubmit="true"
+                    :actions="[
+                        { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors', disabled: loadingRoutes },
+                        { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors', disabled: loadingRoutes }
+                    ]"
+                    :actionHandler="handleArgumentsFormActionHandler"
+                />
             </AlertModal>
             
             <!-- Global Toaster -->
