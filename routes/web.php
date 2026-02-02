@@ -220,8 +220,9 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
     // API Version Comparison
     // ============================================
 
-    Route::get('/apis/{api_type}/{api_id}/compare/{version_id}', function ( $api_type, $api_id, $version_id) {
+    Route::get('/apis/{api_type}/{api_id}/compare/{version_id}', function ($server_slug, $api_type, $api_id, $version_id) {
         return inertia('apiEdit/Compare', [
+            'server_slug' => $server_slug,
             'api_id' => $api_id,
             'api_type' => $api_type,
             'version_id' => $version_id
