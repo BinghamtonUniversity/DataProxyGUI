@@ -923,13 +923,12 @@ onMounted(async () => {
                 :rowActionLabels="false"
                 :actions="[
                     { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
-                    { name: 'arguments', type: 'warning', min: 1, max: 1, label: 'Arguments', icon: 'cog', loc: 'right' },
+                    { name: 'arguments', type: 'info', min: 1, max: 1, label: 'Arguments', icon: 'cog', loc: 'right' },
                     { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
                     { name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right' }
                 ]"
                 :rowActions="[
-                    { type: 'arguments', label: 'Arguments', icon: 'cog', colorClass: 'text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20' },
-                    { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20' },
+                    { type: 'arguments', label: 'Arguments', icon: 'cog', colorClass: 'text-gray-600 hover:bg-gray-50 dark:text-gray dark:hover:bg-gray-900/20' },
                     { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20' }
                 ]"
                 @actionHandler="handleDataGridActionHandler"
