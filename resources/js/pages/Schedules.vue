@@ -35,6 +35,7 @@ const error = ref<string | null>(null);
 const apiInstances = ref<any[]>([]);
 const environmentsData = ref<any[]>([]);
 const formRef = ref<InstanceType<typeof FormViewer> | null>(null);
+const argumentsFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const showArgumentsModal = ref<boolean>(false);
 
 // Toaster
@@ -61,6 +62,8 @@ const argumentsFormConfig = computed(() => ({
                     type: "text",
                     placeholder: "Enter the name of the argument",
                     value: "",
+                    width: "6",
+                    offset: "0",
                     required: true
                 },
                 {
@@ -69,6 +72,7 @@ const argumentsFormConfig = computed(() => ({
                     type: "text",
                     placeholder: "Enter the value of the argument",
                     value: "",
+                    width: "6",
                     required: true
                 }
             ]
@@ -742,15 +746,15 @@ const fetchAPIVersion = async (api_instance : ApiInstance)=>{
 }   
 }
 
-const handleArgumentsFormActionHandler = (action: { type: string; action: string; formData: any }) => {
+const handleArgumentsFormActionHandler = async (action: { type: string; action: string; formData: any }) => {
     console.log('Arguments form action:', action);
     switch (action.type) {
         case 'close':
+        case 'cancel':
             showArgumentsModal.value = false;
             break;
         case 'save':
-            handleArgumentsFormSubmit(action.formData);
-            showArgumentsModal.value = false;
+            await handleArgumentsFormSubmit(action.formData);
             break;
         default:
             console.log('Unknown arguments form action type:', action.type);
@@ -758,7 +762,23 @@ const handleArgumentsFormActionHandler = (action: { type: string; action: string
 };
 
 const handleArgumentsFormSubmit = async (formData: any) => {
-    
+    if (!argumentsFormRef.value) {
+        warning('Form is not ready. Please try again.', 'Validation Error');
+        return;
+    }
+    const isValid = argumentsFormRef.value.validateForm();
+    if (!isValid) {
+        warning('Please fix validation errors before saving.', 'Validation Error');
+        return;
+    }
+    debugger;
+    for (const arg of formData.args) {
+        if (!arg.name || !arg.value) {
+            warning('Please fill in all fields.', 'Validation Error');
+            return;
+        }
+    }
+ 
     try {
         const response = await fetch(`${apiBaseUrl}/schedulers/${editingRow.value.id}`, {
             method: 'PUT',
@@ -909,7 +929,7 @@ onMounted(async () => {
                 ]"
                 :rowActions="[
                     { type: 'arguments', label: 'Arguments', icon: 'cog', colorClass: 'text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20' },
-                    { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20' },
+                    { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-blue hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20' },
                     { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20' }
                 ]"
                 @actionHandler="handleDataGridActionHandler"
@@ -961,6 +981,7 @@ onMounted(async () => {
                 @close="showArgumentsModal = false"
             >
                 <FormViewer
+                    ref="argumentsFormRef"
                     :formConfig="argumentsFormConfig"
                     :initialData="editingRow"
                     :cancelAction="'close'"

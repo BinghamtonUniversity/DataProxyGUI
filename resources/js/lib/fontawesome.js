@@ -24,7 +24,10 @@ import {
   faSave,
   faCancel,
   faSpinner,
-  faCopy
+  faCopy,
+  faExclamation,
+  faExclamationTriangle,
+  faEllipsisVertical
 } from '@fortawesome/free-solid-svg-icons'
 
 // Add icons to library
@@ -50,7 +53,10 @@ library.add(
   faSave,
   faCancel,
   faSpinner,
-  faCopy
+  faCopy,
+  faExclamation,
+  faExclamationTriangle,
+  faEllipsisVertical
 )
 
 export { FontAwesomeIcon }
