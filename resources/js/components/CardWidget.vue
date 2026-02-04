@@ -1,10 +1,10 @@
 <template>
   <div
     :class="[
-      'relative overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-card p-6 transition-all duration-200 card-widget-container ',
+      'relative overflow-hidden rounded-xl border bg-card p-6 transition-all duration-200 card-widget-container  ',
       clickable ? 'cursor-pointer hover:bg-accent/50 hover:shadow-md card-widget-container-clickable' : '',
       disabled ? 'opacity-50 cursor-not-allowed' : '',
-      customClass
+      customClass ? customClass : '',
     ]"
     @click="handleClick"
     @mouseenter="isHovered = true"
@@ -153,8 +153,6 @@ const handleActionClick = async ( action: Action, payload: any ) => {
   position: relative;
   overflow: hidden;
   border-radius: 0.5rem;
-  border: 1px solid #e5e7eb;
-  background-color: #fff;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease-in-out;
 
