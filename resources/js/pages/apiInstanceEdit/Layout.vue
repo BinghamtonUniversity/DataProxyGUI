@@ -234,6 +234,18 @@ const openVersionModal = () => {
 
 // Update API version for the instance
 const updateInstanceVersion = async (version: any) => {
+
+    const requestData = {
+        api_version_id: version.id,
+        name: apiInstanceData.value?.name,
+        route: props.api_type === 'php'? undefined : apiInstanceData.value?.route, 
+        slug: props.api_type === 'php'?  apiInstanceData.value?.route: undefined, 
+        route_user_map: apiInstanceData.value?.route_user_map,
+        resources: apiInstanceData.value?.resources, 
+        options: apiInstanceData.value?.options,
+        public: apiInstanceData.value?.public,
+    }
+   debugger;
     try {
         const response = await fetch(`/${props.server_slug}/ajax/api_instances/${props.api_type}/${props.instance_id}`, {
             method: 'PUT',
@@ -243,9 +255,7 @@ const updateInstanceVersion = async (version: any) => {
                 'X-CSRF-TOKEN': getCsrfToken() || '',
             },
             credentials: 'same-origin',
-            body: JSON.stringify({
-                api_version_id: version.id
-            })
+            body: JSON.stringify(requestData)
         })
 
         if (!response.ok) {
@@ -255,6 +265,7 @@ const updateInstanceVersion = async (version: any) => {
 
         const updatedInstance = await response.json()
         success('API version updated successfully!', 'Version Updated')
+        debugger;
         
         // Close modal and refresh data
         showVersionModal.value = false

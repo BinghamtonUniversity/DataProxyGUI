@@ -8,10 +8,16 @@ import { type BreadcrumbItem } from '@/types';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 
+interface Props {
+    server_slug?: string;
+}
+
+const props = defineProps<Props>();
+
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: 'Appearance settings',
-        href: '/settings/appearance',
+        href: props.server_slug ? `${props.server_slug}/settings/appearance` : '/settings/appearance',
     },
 ];
 </script>

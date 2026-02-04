@@ -17,9 +17,6 @@ Route::prefix('oidc')->group(function () {
     Route::get('/callback', [OidcController::class, 'callback'])->name('oidc.callback');
 });
 
-// Returns Inertia page listing available proxy servers
-// Route::get('/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'index'])->middleware(['auth']);
-
 // Returns JSON list of available proxy servers
 Route::get('/api/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'getServers'])->middleware(['auth']);
 Route::post('/api/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'store'])->middleware(['auth']);

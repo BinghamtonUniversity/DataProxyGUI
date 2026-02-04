@@ -41,6 +41,12 @@ const selectServer = (slug: string) => {
     router.visit(`/${slug}/apis`);
 };
 
+const handleSettings = () => {
+    // Use the route helper with optional server parameter
+    const params = currentServer.value ? { server_slug: currentServer.value } : {};
+    router.visit(route('profile.edit', params));
+};
+
 const handleLogout = () => {
     router.post(route('logout'));
 };
@@ -91,7 +97,7 @@ onMounted(() => {
         <DropdownMenuItem :as-child="true">
             <button
                 class="flex w-full items-center text-left"
-                @click="$inertia.visit(route('profile.edit'))"
+                @click="handleSettings"
             >
                 <Settings class="mr-2 h-4 w-4" />
                 Settings

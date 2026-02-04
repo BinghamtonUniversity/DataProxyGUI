@@ -462,12 +462,7 @@ class ApiController extends BaseDjangoController
      */
     public function getApiVersionDetails(string $server_slug, string $api_type, $api_id, $version_id): JsonResponse
     {
-        // TO:DO: Switch based on server_slug - routes are not the same for php and django backends
-        if ($server_slug === 'hermes') {
-            $result = $this->makeBackendRequest('GET', "api_versions/{$version_id}", [], [], $server_slug);
-        } if ($server_slug === 'hermod') {
-            $result = $this->makeBackendRequest('GET', "apis/{$api_id}/versions/{$version_id}", [], [], $server_slug);
-        }
+        $result = $this->makeBackendRequest('GET', "api_versions/{$version_id}", [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
