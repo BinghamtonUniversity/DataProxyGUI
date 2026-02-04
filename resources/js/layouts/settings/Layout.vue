@@ -6,27 +6,32 @@ import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import { User, Palette, Server } from 'lucide-vue-next';
 import Toaster from '@/components/toaster/Toaster.vue';
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: '/settings/profile',
-        icon: User,
-    },
-    // {
-    //     title: 'Password',
-    //     href: '/settings/password',
-    // },
-    {
-        title: 'Appearance',
-        href: '/settings/appearance',
-        icon: Palette,
-    },
-    {
-        title: 'Servers',
-        href: '/settings/servers',
-        icon: Server,
-    },
-];
+import { useProxyServer } from '@/composables/useProxyServer';
+import { computed } from 'vue';
+
+const { serverSlug } = useProxyServer();
+
+console.log('Current serverSlug in Layout.vue:', serverSlug.value);
+const sidebarNavItems = computed(() => {
+    const baseItems: NavItem[] = [
+        {
+            title: 'Profile',
+            href: serverSlug.value ? `/${serverSlug.value}/settings/profile` : '/settings/profile',
+            icon: User,
+        },
+        {
+            title: 'Appearance',
+            href: serverSlug.value ? `/${serverSlug.value}/settings/appearance` : '/settings/appearance',
+            icon: Palette,
+        },
+        {
+            title: 'Servers',
+            href: serverSlug.value ? `/${serverSlug.value}/settings/servers` : '/settings/servers',
+            icon: Server,
+        },
+    ];
+    return baseItems;
+});
 
 const page = usePage();
 

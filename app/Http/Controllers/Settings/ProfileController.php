@@ -16,18 +16,19 @@ class ProfileController extends Controller
     /**
      * Show the user's profile settings page.
      */
-    public function edit(Request $request): Response
+    public function edit(Request $request, ?string $server_slug = null): Response
     {
         return Inertia::render('settings/Profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'server_slug' => $server_slug,
         ]);
     }
 
     /**
      * Update the user's profile information.
      */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(ProfileUpdateRequest $request, ?string $server_slug = null): RedirectResponse
     {
         $request->user()->fill($request->validated());
 
@@ -37,27 +38,27 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
-        return to_route('profile.edit');
+        return to_route('profile.edit', ['server_slug' => $server_slug]);
     }
 
-    /**
-     * Delete the user's profile.
-     */
-    public function destroy(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'password' => ['required', 'current_password'],
-        ]);
+    // /**
+    //  * Delete the user's profile.
+    //  */
+    // public function destroy(Request $request): RedirectResponse
+    // {
+    //     $request->validate([
+    //         'password' => ['required', 'current_password'],
+    //     ]);
 
-        $user = $request->user();
+    //     $user = $request->user();
 
-        Auth::logout();
+    //     Auth::logout();
 
-        $user->delete();
+    //     $user->delete();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+    //     $request->session()->invalidate();
+    //     $request->session()->regenerateToken();
 
-        return redirect('/');
-    }
+    //     return redirect('/');
+    // }
 }

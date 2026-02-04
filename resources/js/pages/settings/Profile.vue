@@ -13,14 +13,15 @@ import { type BreadcrumbItem, type User } from '@/types';
 interface Props {
     mustVerifyEmail: boolean;
     status?: string;
+    server_slug?: string;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: 'Profile settings',
-        href: '/settings/profile',
+        href: props.server_slug ? `${props.server_slug}/settings/profile` : '/settings/profile',
     },
 ];
 

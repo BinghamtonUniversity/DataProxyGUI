@@ -38,7 +38,7 @@ class OidcController extends Controller
         $code = $request->input('code');
 
         if (!$code) {
-            return redirect('/welcome')->withErrors(['msg' => 'Authorization code missing']);
+            return redirect('/settings/servers')->withErrors(['msg' => 'Authorization code missing']);
         }
 
         $tokenResponse = Http::asForm()
@@ -91,7 +91,7 @@ class OidcController extends Controller
 
         Auth::login($user, true);
 
-        $intendedUrl = session('url.intended', '/dashboard');
+        $intendedUrl = session('url.intended', '/settings/servers');
         session()->forget('url.intended');
 
         return redirect($intendedUrl);
