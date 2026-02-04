@@ -27,7 +27,6 @@ class ProxyServerConfig extends Model
         'is_active' => 'boolean',
     ];
 
-    protected $hidden = ['encrypted_password'];
 
     /**
      * Set the password attribute - hash and encrypt the password
@@ -36,7 +35,6 @@ class ProxyServerConfig extends Model
     {
         if ($password !== '*****') {
             $this->attributes['password'] = Hash::make($password);
-            $this->attributes['encrypted_password'] = Crypt::encrypt($password);
         }
     }
 
@@ -48,17 +46,6 @@ class ProxyServerConfig extends Model
         return '*****';
     }
 
-    /**
-     * Get the decrypted password attribute
-     */
-    public function getDecryptedPasswordAttribute()
-    {
-        try {
-            return Crypt::decrypt($this->attributes['encrypted_password']);
-        } catch (\Exception $e) {
-            return "ERROR";
-        }
-    }
 
     /**
      * Check if the provided password matches the stored password
