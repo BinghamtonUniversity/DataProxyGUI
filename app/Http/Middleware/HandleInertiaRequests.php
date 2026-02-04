@@ -46,6 +46,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'server_slug' => $request->route('server_slug') ?? null,
+
             'ziggy' => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),

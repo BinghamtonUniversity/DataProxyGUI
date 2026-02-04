@@ -8,6 +8,7 @@ import { Link } from '@inertiajs/vue3';
 import { BookOpen, Folder, LayoutGrid, Users, Database, File, Calendar, History, Building2, Globe, ShieldCheckIcon, ShieldCheck, TestTube, CheckCircle } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { useProxyServer } from '@/composables/useProxyServer';
+import NoServerAvailable from '@/pages/NoServerAvailable.vue';
 
 const { buildUrl, serverSlug } = useProxyServer();
 
@@ -129,8 +130,10 @@ const footerNavItems: NavItem[] = [
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>
-
-        <SidebarContent>
+        <SidebarContent v-if="!serverSlug">
+           <NoServerAvailable />
+        </SidebarContent>
+        <SidebarContent v-else>
             <NavMain :items="mainNavItems" />
         </SidebarContent>
 

@@ -25,6 +25,9 @@ Route::delete('/api/proxy-servers/{id}', [App\Http\Controllers\ProxyServerContro
 Route::put('/api/proxy-servers/bulk', [App\Http\Controllers\ProxyServerController::class, 'bulkUpdate'])->middleware(['auth']);
 
 
+require __DIR__.'/settings.php';
+
+
 // ===========================================
 // API Export - (JSON export in new tab)
 // ============================================
@@ -54,9 +57,9 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
         return Inertia::render('TypesExample');
     })->name('types.example');
 
-    Route::get('/settings', function () {
-        return Inertia::render('Settings');
-    })->name('settings');
+    // Route::get('/settings', function () {
+    //     return Inertia::render('Settings');
+    // })->name('settings');
 
     Route::get('/formbuilder-example', function () {
         return Inertia::render('FormBuilderExample');
@@ -260,4 +263,3 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
 
 });
 
-require __DIR__.'/settings.php';

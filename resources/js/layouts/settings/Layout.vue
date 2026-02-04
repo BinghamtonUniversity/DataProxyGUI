@@ -11,7 +11,6 @@ import { computed } from 'vue';
 
 const { serverSlug } = useProxyServer();
 
-console.log('Current serverSlug in Layout.vue:', serverSlug.value);
 const sidebarNavItems = computed(() => {
     const baseItems: NavItem[] = [
         {
