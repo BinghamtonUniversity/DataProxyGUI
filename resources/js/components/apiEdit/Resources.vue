@@ -221,12 +221,14 @@ const submitNewResource = async () => {
 
     if (duplicateName) {
       newResourceError.value = `A resource with the name "${newResource.name}" already exists.`
+      error(newResourceError.value, 'Duplicate Resource Name');
       newResourceLoading.value = false
       return
     }
 
     if (duplicateModel) {
       newResourceError.value = `The model "${newResource.model_name}" is already assigned to another resource.`
+      error(newResourceError.value, 'Duplicate Model Assignment');
       newResourceLoading.value = false
       return
     }
