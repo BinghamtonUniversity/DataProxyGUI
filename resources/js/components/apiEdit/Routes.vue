@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { type ApiData, RouteData, Api } from '@/types'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
@@ -197,7 +197,7 @@ const optionalParamsFormConfig = {
       }
     ]
 }
-const newRouteFormConfig = {
+const newRouteFormConfig = computed(() => ({
     label: 'New Route',
     description: 'Create a new route',
     name: "new-route-form",
@@ -216,7 +216,7 @@ const newRouteFormConfig = {
         ] },
         { name: 'description', label: 'Description', type: 'text', required: false },
     ]
-}
+}))
 
 const handleRequiredParamsFormAction = async (actionData: { type: string; action: string; formData: any }) => {
   switch (actionData.action) {
@@ -415,11 +415,13 @@ const submitNewRoute = async (formData: any) => {
             const samePath = route.path.trim() === newRoute.path
             const sameVerb = route.verb.trim().toUpperCase() === newRoute.verb
             const isSameRoute = isEditMode.value && index === editingRouteIndex.value
+            
             return samePath && sameVerb && !isSameRoute
         })
 
         if (duplicate) {
             newRouteError.value = `A route with path "${newRoute.path}" and verb "${newRoute.verb}" already exists.`
+            error( newRouteError.value, 'Duplicate Route')
             newRouteLoading.value = false
             return
         }
@@ -567,6 +569,8 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
             console.log('Unknown action type:', actionData.type);
     }
 };
+
+
 </script>
 
 <style>
