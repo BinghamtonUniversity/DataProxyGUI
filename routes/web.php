@@ -78,9 +78,9 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
         return Inertia::render('Schedules');
     })->name('schedules');
 
-    Route::get('/activity_logs', function () {
+    Route::get('/activity_log', function () {
         return Inertia::render('ActivityLogs');
-    })->name('activity_logs');
+    })->name('activity_log');
 
     Route::get('/api_accounts', function () {
         return Inertia::render('ApiAccounts');
@@ -126,7 +126,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
         Route::delete('/schedulers/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersDestroy']);
 
         //Activity Logs
-        Route::get('/activity_logs', [App\Http\Controllers\Api\ActivityLogsController::class, 'activityLogsIndex']);
+        Route::get('/activity_log', [App\Http\Controllers\Api\ActivityLogsController::class, 'activityLogsIndex']);
 
         // Documentation
         Route::get('/api_docs/{api_type}/{api_instance_id}', [App\Http\Controllers\Api\DocumentationController::class, 'apiDocs']);

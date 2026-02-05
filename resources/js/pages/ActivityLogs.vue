@@ -13,8 +13,8 @@ const apiBaseUrl = '/api';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Activity Logs',
-        href: '/activity-logs',
+        title: 'Activity Log',
+        href: '/activity-log',
     },
 ];
 
@@ -193,7 +193,7 @@ const fetchActivityLogs = async () => {
         loading.value = true;
         error.value = null;
         
-        const response = await fetch(`api/activity_logs`, {
+        const response = await fetch(`api/activity_log`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
