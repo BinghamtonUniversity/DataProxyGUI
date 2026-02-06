@@ -27,7 +27,8 @@ import {
   faCopy,
   faExclamation,
   faExclamationTriangle,
-  faEllipsisVertical
+  faEllipsisVertical,
+  faPlayCircle
 } from '@fortawesome/free-solid-svg-icons'
 
 // Add icons to library
@@ -56,7 +57,8 @@ library.add(
   faCopy,
   faExclamation,
   faExclamationTriangle,
-  faEllipsisVertical
-)
+  faEllipsisVertical,
+  faPlayCircle
+);
 
-export { FontAwesomeIcon }
+export { FontAwesomeIcon };

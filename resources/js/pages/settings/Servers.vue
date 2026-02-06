@@ -295,7 +295,7 @@ onMounted(() => {
                             type: 'edit',
                             action: 'edit',
                             icon: Pencil,
-                            iconClass: 'text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20',
+                            iconClass: 'text-blue-600 hover:bg-blue-50 dark:text-white-400 dark:hover:bg-white-900/20',
                             label: 'Edit',
                         }]
                          : [
