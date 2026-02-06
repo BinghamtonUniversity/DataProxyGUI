@@ -91,7 +91,7 @@
           @change="onSearchInput"
           @keydown="handleSearchKeydown"
           name="searchQuery"
-          label=""
+          label="Search"
           placeholder="Search (e.g. column_name:contains:string)"
           autocomplete="off"
           spellcheck="false"
@@ -212,8 +212,8 @@
                 :required="false"
               
                 :options="[
-                  { label: '', value: 'false' },
-                  { label: '', value: 'true' }
+                  { label: 'None', value: 'false' },
+                  { label: 'All', value: 'true' }
                 ]"
               />
             </th>
@@ -227,7 +227,7 @@
               @click="handleSort(colIdx)"
             >
               <div class="flex items-center justify-between">
-                <span>{{ col.label }}</span>
+                <label :for="col.key + '-filter'">{{ col.label }}</label>
                 <span 
                   :class="[
                     'ml-2 text-sm transition-colors',
@@ -268,11 +268,13 @@
               </span>
               <span v-else>      
                 <TextField
+                  :fieldId="col.key + '-filter'"
                   :required="false"
                   :value="filters[col.key]"
                   @update:value="filters[col.key] = $event"
                   :name="col.key + '-filter'"
                   :placeholder="col.label"
+                
                 />
               </span>
             </td>
@@ -305,8 +307,10 @@
               />
             </td>
             <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.cell]">
+              <!-- Render Mustache template if column has template -->
+              <span v-if="col.template" class="whitespace-pre-wrap">{{ renderCellTemplate(col.template, row) }}</span>
               <!-- Render merged array objects if this column is a merge target -->
-              <span v-if="col.mergedFrom && getMergedArrayData(row, col.mergedFrom).length > 0">
+              <span v-else-if="col.mergedFrom && getMergedArrayData(row, col.mergedFrom).length > 0">
                 <div class="flex flex-wrap gap-1">
                   <div 
                     v-for="(item, itemIndex) in getMergedArrayData(row, col.mergedFrom)" 
@@ -492,6 +496,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue';
+import Mustache from 'mustache';
 import { getThemeClasses, getDynamicColor } from '../Theme.js';
 import TextField from '../fields/TextField.vue';
 import CheckboxField from '../fields/CheckboxField.vue';
@@ -716,6 +721,7 @@ const allColumns = computed(() => {
       options: field.options || null,
       width: field.width || field.columns || 12,
       showColumn: field.showColumn !== false, // Default to true if not specified
+      template: field.template || null,
       isArrayObject: field.isArrayObject || false,
       isObject: field.isObject || false,
       targetObjectAttribute: field.targetObjectAttribute || null,
@@ -824,6 +830,86 @@ function getObjectData(data) {
   }
 
   return null;
+}
+
+// Format an ISO date string as relative time (e.g. "3 days ago")
+function formatRelativeTime(isoString) {
+  if (isoString === undefined || isoString === null) return '—';
+  const str = String(isoString).trim();
+  if (!str) return '—';
+  try {
+    const date = new Date(str);
+    if (Number.isNaN(date.getTime())) return str;
+    const now = new Date();
+    const sec = Math.floor((now - date) / 1000);
+    if (sec < 0) return 'in the future';
+    if (sec < 60) return 'just now';
+    if (sec < 3600) return `${Math.floor(sec / 60)} minutes ago`;
+    if (sec < 86400) return `${Math.floor(sec / 3600)} hours ago`;
+    if (sec < 86400 * 7) return `${Math.floor(sec / 86400)} days ago`;
+    if (sec < 86400 * 30) return `${Math.floor(sec / 86400 / 7)} weeks ago`;
+    if (sec < 86400 * 365) return `${Math.floor(sec / 86400 / 30)} months ago`;
+    return `${Math.floor(sec / 86400 / 365)} years ago`;
+  } catch {
+    return str;
+  }
+}
+
+// Format "start|end" ISO strings as duration (e.g. "0 minutes and 0 seconds")
+function formatDurationFromText(text) {
+  if (text === undefined || text === null) return '—';
+  const str = String(text).trim();
+  if (!str) return '—';
+  const parts = str.split('|').map((s) => s.trim());
+  if (parts.length < 2) return '—';
+  try {
+    const start = new Date(parts[0]);
+    const end = new Date(parts[1]);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '—';
+    const ms = Math.max(0, end.getTime() - start.getTime());
+    const totalSec = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSec / 60);
+    const seconds = totalSec % 60;
+    const out = [];
+    if (minutes > 0) out.push(`${minutes} minute${minutes !== 1 ? 's' : ''}`);
+    if (seconds > 0 || out.length === 0) out.push(`${seconds} second${seconds !== 1 ? 's' : ''}`);
+    return out.join(' and ');
+  } catch {
+    return '—';
+  }
+}
+
+// Built-in Mustache helpers: Mustache passes (rawTemplate, render). We must call render(rawTemplate) to get the value.
+const defaultTemplateHelpers = {
+  formatRelative() {
+    return (text, render) => formatRelativeTime(render(text));
+  },
+  formatDuration() {
+    return (text, render) => formatDurationFromText(render(text));
+  },
+};
+
+// Render a Mustache template for a cell with the row as context.
+// Legacy: merge row.attributes into the top-level view so {{x}} and {{#attributes}}{{x}}{{/attributes}} resolve the same.
+// Also merge the full row into view.attributes so {{#attributes}}{{enabled}}{{/attributes}} sees top-level fields.
+// Attach helpers to view.attributes so {{#attributes}}{{#formatRelative}}...{{/formatRelative}}{{/attributes}} works.
+function renderCellTemplate(templateStr, row) {
+  if (!templateStr || typeof templateStr !== 'string') return '';
+  try {
+    const plain = row && typeof row === 'object' ? JSON.parse(JSON.stringify(row)) : {};
+    const view = { ...plain };
+    if (plain.attributes && typeof plain.attributes === 'object' && !Array.isArray(plain.attributes)) {
+      Object.assign(view, plain.attributes);
+    }
+    Object.assign(view, defaultTemplateHelpers);
+    if (view.attributes && typeof view.attributes === 'object') {
+      Object.assign(view.attributes, plain);
+      Object.assign(view.attributes, defaultTemplateHelpers);
+    }
+    return Mustache.render(templateStr.trim(), view);
+  } catch {
+    return '';
+  }
 }
 
 // Helper function to get merged array data from multiple source columns

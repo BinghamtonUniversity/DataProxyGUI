@@ -223,8 +223,19 @@ const scheduleSchema = computed(() => ({
             targetColor: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
         },
         {
-            name: "last_exec_cron",
+            name: "status",
             label: "Status",
+            type: "text",
+            placeholder: "Enter the status of the schedule",
+            value: "",
+            help: "status of the schedule",
+            info: "status of the schedule",
+            showColumn: true,
+            template: "Last executed: {{#formatRelative}}{{last_exec_start}}{{/formatRelative}}\nRan for {{#formatDuration}}{{last_exec_start}}|{{last_exec_stop}}{{/formatDuration}}",
+        },
+        {
+            name: "last_exec_cron",
+            label: "Last Exec Cron",
             type: "text",
             placeholder: "Enter the last exec cron of the schedule",
             value: "",
@@ -233,7 +244,7 @@ const scheduleSchema = computed(() => ({
             width: "12",
             offset: "0",
             required: true,
-            showColumn: true
+            showColumn: false,
         },
         {
             name: "last_exec_start",
@@ -246,7 +257,8 @@ const scheduleSchema = computed(() => ({
             width: "12",
             offset: "0",
             required: true,
-            showColumn: false
+            showColumn: false,
+
         },
         {
             name: "last_exec_stop",
@@ -259,7 +271,21 @@ const scheduleSchema = computed(() => ({
             width: "12",
             offset: "0",
             required: true,
-            showColumn: false
+            showColumn: false,
+ 
+        },
+        {
+            name: "last_response",
+            label: "Last Response",
+            type: "text",
+            placeholder: "Enter the last response of the schedule",
+            value: "",
+            help: "last response of the schedule",
+            info: "last response of the schedule",
+            width: "12",
+            offset: "0",
+            required: true,
+            showColumn: true
         },
         {
             name: "created_at",
