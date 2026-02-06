@@ -117,9 +117,10 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
     case 'save':
       handleFormChange(actionData.formData)
       success('Resources updated successfully', 'Success')
-      break
+      break;
+
     default:
-      break
+      console.log('Unknown FormViewer action type:', actionData.type);
   }
 }
 
@@ -150,7 +151,7 @@ const hasExistingResources = computed(() => {
           :edit="true"
           :showActions="false"
           @change="handleFormChange"
-          @action="handleFormAction"
+          :actionHandler="handleFormAction"
         />
       </div>
       

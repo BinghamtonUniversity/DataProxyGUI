@@ -1,23 +1,25 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { type BreadcrumbItem, type ProxyServer } from '@/types';    
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import { useToaster } from '@/composables/useToaster';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import CardWidget from '@/components/CardWidget.vue';
 import ButtonWidget from '@/components/ButtonWidget.vue';
 import AlertModal from '@/components/AlertModal.vue';
 import { Plus, Pencil, Server, Trash, Check, Eye } from 'lucide-vue-next';
+import { useProxyServer } from '@/composables/useProxyServer';
+const { buildUrl, serverSlug } = useProxyServer();
 const { success, error, warning, info } = useToaster();
-
+const isLoading = ref(false);
 interface Props {
     server_slug?: string;
 }
 
 const props = defineProps<Props>();
-
+const currentServerSlug = computed(() => serverSlug.value);
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: 'Servers settings',
@@ -31,6 +33,7 @@ const getCsrfToken = () => {
 };
 
 const getServers = async () => {
+    isLoading.value = true;
     const response = await fetch('/api/proxy-servers', {
         headers: {
             'Accept': 'application/json',
@@ -41,6 +44,7 @@ const getServers = async () => {
     });
     const data = await response.json();
     initialData.value.servers = data.servers;
+    isLoading.value = false;
 }
 const initialData = ref({
     servers: []
@@ -59,7 +63,7 @@ const serverFormConfig = {
     fields: [
         { name: 'id', label: 'ID', type: 'hidden', required: false, show: false, value: null },
         { name: 'name', label: 'Name', type: 'text', required: true, width: 6, placeholder: 'Enter server name' },
-        { name: 'slug', label: 'Slug', type: 'text', required: true, width: 6, placeholder: 'Enter a slug (e.g. server1)', pattern: '^[a-z]+(_[0-9]+)?$' },
+        { name: 'slug', label: 'Slug', type: 'text', required: true, width: 6, placeholder: 'Enter a slug (e.g. server1)', pattern: '^[a-z]+(_[a-z0-9]+)*$' },
         { name: 'server', label: 'Server URL', type: 'url', required: true, placeholder: 'Enter the server URL (e.g. https://binghamton.edu)' },
         { name: 'type', label: 'Type', type: 'select', required: true, options: [
             { label: 'PHP Proxy Server', value: 'php' },
@@ -203,9 +207,11 @@ const handleServerFormAction = async (action: { type: string; action: string; fo
         closeModal();
     }
 }
+const makeCurrent = async (slug: string) => {
+    router.visit(`/${slug}/settings/servers`);
+}
 const handleServerAction = async (action: { type: string; action: string; payload: any }) => {
-    console.log('Server action:', action);
-    debugger;
+
     switch (action.type) {
         case 'edit':
             editServer(action.payload);
@@ -213,35 +219,15 @@ const handleServerAction = async (action: { type: string; action: string; payloa
         case 'delete':
             await deleteServer(action.payload.id);
             break;
-        case 'check_password':
-            // await checkPassword(action.payload.id);
-            warning('Password checked is in development', 'Warning');
+        case 'make_current':
+            await makeCurrent(action.payload.slug);
             break;
         default:
+            error('Unknown action type:', action.type);
             console.log('Unknown action type:', action.type);
     }
 }
-// const checkPassword = async (id: number) => {
-//     const confirmed = confirm('Are you sure you want to check the password for this server?');
-//     if (!confirmed) {
-//         return;
-//     }
-//     const response = await fetch(`/api/proxy-servers/${id}/check-password`, {
-//         method: 'GET',
-//         headers: {
-//             'Accept': 'application/json',
-//             'Content-Type': 'application/json',
-//             'X-CSRF-TOKEN': getCsrfToken() || '',
-//         },
-//     });
-//     if (!response.ok) {
-//         const errorData = await response.json().catch(() => ({}));
-//         error(errorData.message || `HTTP error! status: ${response.status}`);
-//         return;
-//     }
-//     const data = await response.json();
-//     success('Password checked successfully', 'Success');
-// }
+
 const deleteServer = async (id: number) => {
     if (confirm('Are you sure you want to delete this server?')) {
     const response = await fetch(`/api/proxy-servers/${id}`, {
@@ -275,16 +261,17 @@ onMounted(() => {
         <Head title="Servers settings" />
 
         <SettingsLayout>
-            <!-- <div class="w-full max-w-none">
-                <FormViewer 
-                ref="serversFormRef"
-                :formConfig="formConfig" 
-                :initialData="initialData"
-                :validateOnSubmit="false"
-                :actions="[{ type: 'save', action: 'save', label: 'Save', icon: 'save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' }]" 
-                :actionHandler="handleFormAction"
-                />
-            </div> -->
+
+            <div v-if="initialData.servers.length == 0 && !isLoading" class="flex justify-center items-center py-12">
+                <div class="text-center">
+                    <span class="text-gray-600 dark:text-gray-300">No servers found. Please add a server to get started.</span>
+                </div>
+            </div>
+            <div v-if="isLoading" class="flex justify-center items-center py-12">
+                <div class="text-center">
+                    <span class="text-gray-600 dark:text-gray-300">Loading servers...</span>
+                </div>
+            </div>
             <!-- // For each server display a card widget with the server name, slug, server URL, username, password, and active status -->
             <ButtonWidget 
                 :label="'Add Server'"
@@ -295,12 +282,30 @@ onMounted(() => {
             <div class="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-4">
             <div v-for="server in initialData.servers as ProxyServer[]" :key="server.id" class="mb-4">
                 <CardWidget
+                    :customClass="currentServerSlug == server.slug ? 'border-green-600 dark:border-green-900/30 border-2' : ''"
                     :payload="server" 
-                    :title="server.name" 
+                    
+                    :title="currentServerSlug == server.slug ? server.name + ' ( Current )' : server.name" 
                     :subtitle="'Slug: ' + server.slug" 
                     :footerText="'Server: ' + server.server" 
                     :footerIcon="Server"
-                    :actions="[
+                    :actions="currentServerSlug == server.slug ? 
+                    
+                    [{
+                            type: 'edit',
+                            action: 'edit',
+                            icon: Pencil,
+                            iconClass: 'text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20',
+                            label: 'Edit',
+                        }]
+                         : [
+                        {
+                            type: 'make_current', 
+                            action: 'make_current', 
+                            icon: Check, 
+                            iconClass: 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20', 
+                            label: 'Make Current'
+                        },
                         {
                             type: 'edit',
                             action: 'edit',
@@ -315,13 +320,7 @@ onMounted(() => {
                             iconClass: 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20',
                             label: 'Delete',
                         },
-                        {
-                            type: 'check_password',
-                            action: 'check_password',
-                            icon: Eye,
-                            iconClass: 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20',
-                            label: 'Check Password',
-                        }
+                        
                     ]"
                     :clickable="false"
                     :actionHandler="handleServerAction"

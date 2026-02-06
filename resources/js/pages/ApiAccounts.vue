@@ -37,15 +37,15 @@ const secretLoading = ref(false);
 const users = ref<any[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
-
-// Toaster
+const apiAccountFromRef = ref<InstanceType<typeof FormViewer> | null>(null);
+// Toaster      
 const { success, error: showError, warning, info } = useToaster();
 
 // Form configuration for API users
 const formConfig = ref({
-    label: '',
-    description: '',
-    name: "api-users-form",
+    label: 'API Accounts',
+    description: 'API Accounts are used to authenticate API requests. They are created by the system and can be used to authenticate API requests.',
+    name: "api_users_form",
     files: false,
     fields: [
         {
@@ -296,6 +296,15 @@ const copyToClipboard = async () => {
 };
 
 const handleFormSubmit = async (formValues: any) => {
+    if (!apiAccountFromRef.value) {
+        warning('Form is not ready. Please try again.', 'Validation Error');
+        return;
+    }
+    const isValid = apiAccountFromRef.value.validateForm();
+    if (!isValid) {
+        warning('Please fix validation errors before saving.', 'Validation Error');
+        return;
+    }
     try {
         submitting.value = true;
         
@@ -398,6 +407,7 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
     
     switch (actionData.type) {
         case 'close':
+        case 'cancel':
             closeModal();
             break;
         case 'save':
@@ -539,10 +549,11 @@ onMounted(async () => {
             <!-- Modal for New/Edit API User -->
             <AlertModal 
                 :isOpen="showModal"
-                :title="modalMode === 'new' ? 'Add New API User' : 'Edit API User'"
+                :title="modalMode === 'new' ? 'New' : 'Edit'"
                 @close="closeModal"
             >
                 <FormViewer 
+                    ref="apiAccountFromRef"
                     :formConfig="formConfig" 
                     :initialData="editingRow"
                     :cancelAction="'close'"

@@ -620,12 +620,12 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                     :data="apiData?.version_urls || []"
                     theme="default"
                     :clickableRows="true"
-                    :rowActionDropdown="false"
-                    :rowActionLabels="false"
+                    :rowActionDropdown="true"
+                    :rowActionLabels="true"
                     :rowActions="[
                     
                         { type: 'required_parameters', label: 'Required Parameters', icon: 'cog', colorClass: 'text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20' },
-                        { type: 'optional_parameters', label: 'Optional Parameters', icon: 'cog', colorClass: 'text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20' },
+                        { type: 'optional_parameters', label: 'Optional Parameters', icon: 'cog', colorClass: 'text-blue-600 hover:bg-blue-50 dark:text-blue dark:hover:bg-blue-900/20' },
                         { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20' }
                     ]"
                     :actions="[

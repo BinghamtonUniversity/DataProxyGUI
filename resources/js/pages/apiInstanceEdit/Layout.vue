@@ -382,7 +382,15 @@ const handleSave = async() => {
     if (!hasChanges) {
         info('No changes detected to save.', 'Nothing to Save')
         return
-    }   
+    }
+    // if any resource is missing a name or resource, show an error
+    if (requestData.resources && requestData.resources.length != 0) {
+        const hasMissingResource = requestData.resources.some((resource: any) => !resource.name || !resource.resource)
+        if (hasMissingResource) {
+            showError('Resources are missing a value', 'Validation Error')
+            return
+        }
+    }
 
     const response = await fetch(`/${props.server_slug}/ajax/api_instances/${props.api_type}/${props.instance_id}`, {
         method: 'PUT',
