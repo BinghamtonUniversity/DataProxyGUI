@@ -842,11 +842,33 @@ const handleDataGridActionHandler = (action: { action: string; selectedRows: any
         case 'arguments':
             openArgumentsModal(action.selectedData[0]);
             break;
+        case 'manual_run':
+            handleManualRun(action.selectedData[0].id);
+            break;
         case 'delete':
             handleDelete([action.selectedData[0].id]);
             break;
     }
 };
+
+const handleManualRun = async (id: number) => {
+    const response = await fetch(`${apiBaseUrl}/schedulers/${id}/run`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken() || '',
+        },
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        showError(errorData.message || `HTTP error! status: ${response.status}`, 'Error');
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    success('Scheduler run successfully', 'Success');
+};
+
 
 const openArgumentsModal = (row: any) => {
     showArgumentsModal.value = true;
@@ -923,6 +945,7 @@ onMounted(async () => {
                 :rowActionLabels="false"
                 :actions="[
                     { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
+                    { name: 'manual_run', type: 'primary', min: 1, max: 1, label: 'Manual Run', loc: 'left', icon: 'play-circle' },
                     { name: 'arguments', type: 'info', min: 1, max: 1, label: 'Arguments', icon: 'cog', loc: 'right' },
                     { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
                     { name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right' }

@@ -75,4 +75,19 @@ class SchedulersController extends BaseDjangoController{
             'status' => $result['status']
         ], $result['status']);
     }
+    public function manualRunScheduler(string $server_slug, string $id): JsonResponse
+    {
+        $result = $this->makeBackendRequest('GET', "schedulers/{$id}/run", [], [], $server_slug);
+        if ($result['success']) {
+            return response()->json([
+                'message' => "Scheduler run successfully"
+            ]);
+        }
+
+        return response()->json([
+            'error' => "Failed to run scheduler",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
 }

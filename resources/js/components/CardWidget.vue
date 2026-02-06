@@ -195,17 +195,14 @@ const handleActionClick = async ( action: Action, payload: any ) => {
   border: none;
   cursor: pointer;
 }
-.lucide {
 
-  background: transparent !important;
-}
-.dark .lucide {
-  color: transparent !important;
-  background: transparent !important;
-}
 .icon-action-btn:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.05) !important;
-  color: #374151 !important;
+  background: rgba(0, 0, 0, 0.05);
+  color: #374151;
+}
+
+.dark .icon-action-btn {
+  color: #9ca3af;
 }
 
 .dark .icon-action-btn:hover:not(:disabled) {
