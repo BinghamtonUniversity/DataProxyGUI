@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Crypt;
 
 class ProxyServerConfig extends Model
@@ -27,31 +26,42 @@ class ProxyServerConfig extends Model
         'is_active' => 'boolean',
     ];
 
+    /** Mask used when password is unchanged on edit (do not overwrite stored value) */
+    public const PASSWORD_PLACEHOLDER = '*****';
 
     /**
-     * Set the password attribute - hash and encrypt the password
+     * Set the password attribute - encrypt so it can be decrypted for backend requests.
+     * Ignores placeholder so we don't overwrite when user didn't change password.
      */
-    public function setPasswordAttribute($password)
+    public function setPasswordAttribute($password): void
     {
-        if ($password !== '*****') {
-            $this->attributes['password'] = Hash::make($password);
+        if ($password !== null && $password !== '' && $password !== self::PASSWORD_PLACEHOLDER) {
+            $this->attributes['password'] = Crypt::encryptString($password);
         }
     }
 
     /**
-     * Get the password attribute - always return masked value
+     * Get the password attribute - always return masked value for display/API.
      */
-    public function getPasswordAttribute($password)
+    public function getPasswordAttribute($value): string
     {
-        return '*****';
+        return self::PASSWORD_PLACEHOLDER;
     }
 
-
     /**
-     * Check if the provided password matches the stored password
+     * Get the decrypted password for server-side use only (e.g. Basic Auth).
+     * Do not expose this in API responses or logs.
      */
-    public function checkPassword($password)
+    public function getDecryptedPassword(): ?string
     {
-        return Hash::check($password, $this->attributes['password']);
+        $raw = $this->attributes['password'] ?? null;
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        try {
+            return Crypt::decryptString($raw);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }

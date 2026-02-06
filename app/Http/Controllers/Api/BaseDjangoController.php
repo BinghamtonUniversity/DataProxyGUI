@@ -136,7 +136,10 @@ class BaseDjangoController extends Controller
             
             $baseUrl = $proxyConfig->server;
             $user = $proxyConfig->username;
-            $password = $proxyConfig->getDecryptedPasswordAttribute();
+            $password = $proxyConfig->getDecryptedPassword();
+            
+           
+
           
         } else {
             // Fallback to default config ?

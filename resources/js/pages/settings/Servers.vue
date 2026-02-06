@@ -211,8 +211,7 @@ const makeCurrent = async (slug: string) => {
     router.visit(`/${slug}/settings/servers`);
 }
 const handleServerAction = async (action: { type: string; action: string; payload: any }) => {
-    console.log('Server action:', action);
-    debugger;
+
     switch (action.type) {
         case 'edit':
             editServer(action.payload);
@@ -223,34 +222,12 @@ const handleServerAction = async (action: { type: string; action: string; payloa
         case 'make_current':
             await makeCurrent(action.payload.slug);
             break;
-            // await checkPassword(action.payload.id);
-            warning('Password checked is in development', 'Warning');
-            break;
         default:
+            error('Unknown action type:', action.type);
             console.log('Unknown action type:', action.type);
     }
 }
-// const checkPassword = async (id: number) => {
-//     const confirmed = confirm('Are you sure you want to check the password for this server?');
-//     if (!confirmed) {
-//         return;
-//     }
-//     const response = await fetch(`/api/proxy-servers/${id}/check-password`, {
-//         method: 'GET',
-//         headers: {
-//             'Accept': 'application/json',
-//             'Content-Type': 'application/json',
-//             'X-CSRF-TOKEN': getCsrfToken() || '',
-//         },
-//     });
-//     if (!response.ok) {
-//         const errorData = await response.json().catch(() => ({}));
-//         error(errorData.message || `HTTP error! status: ${response.status}`);
-//         return;
-//     }
-//     const data = await response.json();
-//     success('Password checked successfully', 'Success');
-// }
+
 const deleteServer = async (id: number) => {
     if (confirm('Are you sure you want to delete this server?')) {
     const response = await fetch(`/api/proxy-servers/${id}`, {
@@ -284,16 +261,7 @@ onMounted(() => {
         <Head title="Servers settings" />
 
         <SettingsLayout>
-            <!-- <div class="w-full max-w-none">
-                <FormViewer 
-                ref="serversFormRef"
-                :formConfig="formConfig" 
-                :initialData="initialData"
-                :validateOnSubmit="false"
-                :actions="[{ type: 'save', action: 'save', label: 'Save', icon: 'save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' }]" 
-                :actionHandler="handleFormAction"
-                />
-            </div> -->
+
             <div v-if="initialData.servers.length == 0 && !isLoading" class="flex justify-center items-center py-12">
                 <div class="text-center">
                     <span class="text-gray-600 dark:text-gray-300">No servers found. Please add a server to get started.</span>
@@ -321,7 +289,16 @@ onMounted(() => {
                     :subtitle="'Slug: ' + server.slug" 
                     :footerText="'Server: ' + server.server" 
                     :footerIcon="Server"
-                    :actions="currentServerSlug == server.slug ? [] : [
+                    :actions="currentServerSlug == server.slug ? 
+                    
+                    [{
+                            type: 'edit',
+                            action: 'edit',
+                            icon: Pencil,
+                            iconClass: 'text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20',
+                            label: 'Edit',
+                        }]
+                         : [
                         {
                             type: 'make_current', 
                             action: 'make_current', 
