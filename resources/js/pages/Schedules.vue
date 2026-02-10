@@ -37,7 +37,7 @@ const environmentsData = ref<any[]>([]);
 const formRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const argumentsFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const showArgumentsModal = ref<boolean>(false);
-
+const showReportModal = ref<boolean>(false);
 // Toaster
 const { success, error: showError, warning, info } = useToaster();
 
@@ -322,6 +322,50 @@ const scheduleSchema = computed(() => ({
     ]
 }));
 
+const reportFormConfig = computed(() => ({
+    label: 'Report',
+    description: '',
+    name: "report-schema",
+    files: false,
+    fields: [
+        {
+            name: "status",
+            label: "",
+            type: "output",
+            placeholder: "Enter the status of the report",
+            value: "",
+            help: "status of the report",
+            info: "status of the report",
+            template: "Last executed: {{#formatRelative}}{{last_exec_start}}{{/formatRelative}}\nRan for {{#formatDuration}}{{last_exec_start}}|{{last_exec_stop}}{{/formatDuration}}",
+       
+        },
+        {
+            name: "last_response",
+            label: "Last Results:",
+            type: "textarea",
+            placeholder: "Enter the id of the report",
+            value: "",
+
+            info: "last response of the report",
+            width: "12",
+            offset: "0",
+            edit: false,
+            isObject: true,
+
+        },
+        {
+            name: "next_runtimes",
+            label: "Scheduled to run:",
+            type: "textarea",
+            placeholder: "Enter the next runtimes of the report",
+            value: "",
+
+            info: "next runtimes of the report",
+            edit: false,
+            template: "{{next_runtimes}}"
+        }
+    ]
+}));
 // Form configuration for environments
 const formConfig = computed(() => ({
     label: 'Schedules',
@@ -872,7 +916,7 @@ const handleDataGridActionHandler = (action: { action: string; selectedRows: any
             handleManualRun(action.selectedData[0].id);
             break;
         case 'view_report':
-            handleViewReport(action.selectedData[0].id);
+            openReportModal(action.selectedData[0]);
             break;
         case 'delete':
             handleDelete([action.selectedData[0].id]);
@@ -880,9 +924,23 @@ const handleDataGridActionHandler = (action: { action: string; selectedRows: any
     }
 };
 
-const handleViewReport = async (id: number) => {
-    // TODO
-    warning('View report is not implemented yet', 'Not Implemented');
+const openReportModal = (row: any) => {
+    showReportModal.value = true;
+    editingRow.value = row;
+};
+const closeReportModal = () => {
+    showReportModal.value = false;
+    editingRow.value = null;
+};
+
+const handleReportFormActionHandler = (action: { type: string; action: string; formData: any }) => {
+    console.log('Report form action:', action);
+    switch (action.type) {
+        case 'close':
+        case 'cancel':
+            closeReportModal();
+            break;
+    }
 };
 
 const handleManualRun = async (id: number) => {
@@ -1050,7 +1108,25 @@ onMounted(async () => {
                     :actionHandler="handleArgumentsFormActionHandler"
                 />
             </AlertModal>
-            
+
+            <!-- Modal for Report -->
+            <AlertModal 
+                :isOpen="showReportModal"
+                :title="''"
+                @close="showReportModal = false"
+            >
+            <FormViewer
+                :formConfig="reportFormConfig"
+                :initialData="editingRow"
+                :cancelAction="'close'"
+                :validateOnSubmit="true"
+                :actionHandler="handleReportFormActionHandler"
+                :actions="[
+                    { type: 'close', action: 'close', label: 'Close', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+                ]"
+            />
+              
+            </AlertModal>
             <!-- Global Toaster -->
             <Toaster />
         </div>

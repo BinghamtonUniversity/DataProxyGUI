@@ -42,7 +42,7 @@
               show: shouldShowField(field, { ...formData }),
               edit: shouldEditField(field, { ...formData }),
               formData: { ...formData }
-            } : field.type === 'output' ? { field } : {
+            } : field.type === 'output' ? { field, context: { ...formData } } : {
               ...field,
               errors: fieldErrors[field.name] || []
             }"
@@ -290,9 +290,24 @@ const getSafeFieldValue = (field) => {
     return false;
   }
 
-  // Handle arrays/multiple-selection
-  if (field.array || field.multiple) {
+  // Handle arrays/multiple-selection (unless field is explicitly object-display)
+  if (!field.isObject && (field.array || field.multiple)) {
     return Array.isArray(fieldValue) ? fieldValue : [];
+  }
+
+  // field.isObject: display object/array as JSON string (e.g. textarea with last_response)
+  if (field.isObject && typeof fieldValue === 'object' && fieldValue !== null) {
+    return JSON.stringify(fieldValue, null, 2);
+  }
+
+  // When value is a plain object (e.g. from API) for text/textarea/output:
+  // use valueKey to show one property, or stringify for display
+  if (typeof fieldValue === 'object' && fieldValue !== null && !Array.isArray(fieldValue)) {
+    if (field.valueKey && typeof field.valueKey === 'string') {
+      const v = fieldValue[field.valueKey];
+      return v !== undefined && v !== null ? String(v) : (field.defaultValue ?? '');
+    }
+    return JSON.stringify(fieldValue, null, 2);
   }
 
   // Handle all other types (text, number, etc.)
