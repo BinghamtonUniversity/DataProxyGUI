@@ -104,6 +104,7 @@ const handleFormAction = async (actionData: { type: string; action: string; form
 
   switch (actionData.action) {
     case 'close':
+    case 'cancel':
       closeNewResourceDialog()
       break
     case 'save':

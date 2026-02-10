@@ -221,6 +221,7 @@ const newRouteFormConfig = {
 const handleRequiredParamsFormAction = async (actionData: { type: string; action: string; formData: any }) => {
   switch (actionData.action) {
     case 'close':
+    case 'cancel':
       closeRequiredParamsDialog()
       break
     case 'save':
@@ -245,6 +246,7 @@ const handleRequiredParamsFormAction = async (actionData: { type: string; action
 const handleOptionalParamsFormAction = async (actionData: { type: string; action: string; formData: any }) => {
   switch (actionData.action) {
     case 'close':
+    case 'cancel':
       closeOptionalParamsDialog()
       break
     case 'save':
@@ -267,6 +269,7 @@ const handleOptionalParamsFormAction = async (actionData: { type: string; action
 const handleRouteFormAction = async (actionData: { type: string; action: string; formData: any }) => {
   switch (actionData.action) {
     case 'close':
+    case 'cancel':
       closeNewRouteDialog()
       break
     case 'save':

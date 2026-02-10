@@ -28,7 +28,8 @@ import {
   faExclamation,
   faExclamationTriangle,
   faEllipsisVertical,
-  faPlayCircle
+  faPlayCircle,
+  faChartBar
 } from '@fortawesome/free-solid-svg-icons'
 
 // Add icons to library
@@ -58,7 +59,8 @@ library.add(
   faExclamation,
   faExclamationTriangle,
   faEllipsisVertical,
-  faPlayCircle
+  faPlayCircle,
+  faChartBar
 );
 
 export { FontAwesomeIcon };

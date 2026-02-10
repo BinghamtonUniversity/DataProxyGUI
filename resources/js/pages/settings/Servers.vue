@@ -203,7 +203,7 @@ const handleServerFormAction = async (action: { type: string; action: string; fo
         } else {
             error('Please fix validation errors before saving', 'Validation Error');
         }
-    } else if (action.type === 'cancel') {
+    } else if (action.type === 'close' || action.type === 'cancel') {
         closeModal();
     }
 }

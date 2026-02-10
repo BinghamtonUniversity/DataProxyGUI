@@ -429,6 +429,7 @@ const closeNewResourceDialog = () => {
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
   switch (actionData.type) {
     case 'close':
+    case 'cancel':
       closeNewResourceDialog()
       break
     case 'save':

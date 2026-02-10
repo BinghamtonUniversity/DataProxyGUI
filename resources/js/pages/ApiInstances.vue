@@ -339,6 +339,7 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
     switch (actionData.type) {
       
         case 'close':
+        case 'cancel':
             closeNewApiInstanceDialog();
             break;
         case 'save':

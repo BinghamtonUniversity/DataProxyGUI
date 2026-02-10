@@ -285,7 +285,7 @@ const scheduleSchema = computed(() => ({
             width: "12",
             offset: "0",
             required: true,
-            showColumn: true
+            showColumn: false,
         },
         {
             name: "created_at",
@@ -871,10 +871,18 @@ const handleDataGridActionHandler = (action: { action: string; selectedRows: any
         case 'manual_run':
             handleManualRun(action.selectedData[0].id);
             break;
+        case 'view_report':
+            handleViewReport(action.selectedData[0].id);
+            break;
         case 'delete':
             handleDelete([action.selectedData[0].id]);
             break;
     }
+};
+
+const handleViewReport = async (id: number) => {
+    // TODO
+    warning('View report is not implemented yet', 'Not Implemented');
 };
 
 const handleManualRun = async (id: number) => {
@@ -971,6 +979,7 @@ onMounted(async () => {
                 :rowActionLabels="false"
                 :actions="[
                     { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
+                    { name: 'view_report', type: 'info', min: 1, max: 1, label: 'View Report', loc: 'left', icon: 'chart-bar' },
                     { name: 'manual_run', type: 'primary', min: 1, max: 1, label: 'Manual Run', loc: 'left', icon: 'play-circle' },
                     { name: 'arguments', type: 'info', min: 1, max: 1, label: 'Arguments', icon: 'cog', loc: 'right' },
                     { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
