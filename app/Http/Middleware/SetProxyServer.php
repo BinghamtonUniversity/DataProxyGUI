@@ -46,7 +46,10 @@ class SetProxyServer
         // Store server config in request for easy access
         $request->attributes->set('proxy_server', $server);
 
-        Inertia::share('server_slug', $slug);
+        Inertia::share([
+            'server_slug' => $slug,
+            'server_api_type' => $server->type,
+        ]);
         
         return $next($request);
     }

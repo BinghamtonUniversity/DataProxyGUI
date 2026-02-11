@@ -116,7 +116,7 @@ class ApiController extends BaseDjangoController
         ], 500);
     }
 
-    public function apisShow(string $server_slug, string $api_type, $id): JsonResponse
+    public function apisShow(string $server_slug, $id): JsonResponse
     {
         $result = $this->makeBackendRequest('GET', "apis/{$id}", [], [], $server_slug);
 
@@ -136,7 +136,7 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function apisStore(Request $request, string $server_slug, string $api_type): JsonResponse
+    public function apisStore(Request $request, string $server_slug): JsonResponse
     {
         // Log::info('Store method called', [
         //     'request_data' => $request->all()
@@ -161,7 +161,7 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function apisUpdate(Request $request, string $server_slug, string $api_type, string $id): JsonResponse
+    public function apisUpdate(Request $request, string $server_slug, string $id): JsonResponse
     {
         $result = $this->makeBackendRequest('PUT', "apis/{$id}", $request->all(), [], $server_slug);
 
@@ -183,7 +183,7 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function apisDestroy(string $server_slug, string $api_type, string $id): JsonResponse
+    public function apisDestroy(string $server_slug, string $id): JsonResponse
     {
         // Handle special case for environments DELETE endpoint
         $endpoint = "apis/{$id}";
@@ -235,7 +235,7 @@ class ApiController extends BaseDjangoController
     /**
      * APIEdit Index - Fetch API details with optional tab filtering
      */
-    public function ApiEditIndex(Request $request, string $server_slug, string $api_type, string $api_id): JsonResponse
+    public function ApiEditIndex(Request $request, string $server_slug,string $api_id): JsonResponse
     {
         // Log::info('ApiEditIndex called', ['api_id' => $api_id]);
 
@@ -268,7 +268,7 @@ class ApiController extends BaseDjangoController
         ], $result['status']);
     }
 
-    public function ApiEditUpdate(Request $request, string $server_slug, string $api_type, string $api_id): JsonResponse
+    public function ApiEditUpdate(Request $request, string $server_slug, string $api_id): JsonResponse
     {
         // Log::info('ApiEditUpdate called', ['api_id' => $api_id]);
 
@@ -293,7 +293,7 @@ class ApiController extends BaseDjangoController
             $errorMessage = $result['data']['error']
                 ?? $result['data']['detail']
                 ?? $result['data']['message']
-                ?? `Unknown error occurred on {$api_type} side.`;
+                ?? "Unknown error occurred on {$server_slug} side.";
 
             return response()->json([
                 'error' => 'Failed to update API details.',
@@ -420,7 +420,7 @@ class ApiController extends BaseDjangoController
     /**
      * Get all versions of a specific API
      */
-    public function getApiVersions(string $server_slug, string $api_type, $id): JsonResponse
+    public function getApiVersions(string $server_slug, $id): JsonResponse
     {
         $result = $this->makeBackendRequest('GET', "apis/{$id}/versions", [], [], $server_slug);
 
@@ -436,7 +436,7 @@ class ApiController extends BaseDjangoController
     /**
      * Publish a new version of a specific API
      */
-    public function publishApiVersion(Request $request, string $server_slug, string $api_type, $id): JsonResponse
+    public function publishApiVersion(Request $request, string $server_slug, $id): JsonResponse
     {
         $data = $request->all();
         
@@ -460,7 +460,7 @@ class ApiController extends BaseDjangoController
     /**
      * Get details of a specific API version
      */
-    public function getApiVersionDetails(string $server_slug, string $api_type, $api_id, $version_id): JsonResponse
+    public function getApiVersionDetails(string $server_slug, $version_id): JsonResponse
     {
         $result = $this->makeBackendRequest('GET', "api_versions/{$version_id}", [], [], $server_slug);
 
@@ -490,7 +490,7 @@ class ApiController extends BaseDjangoController
     /**
      * Export API Version - Display JSON in new tab
      */
-    public function exportApiVersion(Request $request, string $server_slug, string $api_type, string $api_id)
+    public function exportApiVersion(Request $request, string $server_slug, string $api_id)
     {
         // Log::info('Export API Version called', ['api_id' => $api_id]);
 

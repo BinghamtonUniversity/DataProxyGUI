@@ -6,6 +6,7 @@ export function useProxyServer() {
     const page = usePage();
     
     const serverSlug = computed(() => page.props.server_slug);
+    const serverApiType = computed(() => page.props.server_api_type);
     
     const buildUrl = (path: string) => {
         // Remove leading slash if present
@@ -15,6 +16,7 @@ export function useProxyServer() {
     
     return {
         serverSlug,
+        serverApiType,
         buildUrl
     };
 }

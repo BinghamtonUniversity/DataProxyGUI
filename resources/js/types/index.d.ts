@@ -93,6 +93,9 @@ export interface ApiData { // TO:DO -- API Version Data
   updated_by: number; 
 }
 
+export type ApiDataRequest = Omit<ApiData, 'created_at' | 'updated_at' | 'created_by'>;
+
+
 export interface ApiVersionFunction {
     name: string;
     content: string;

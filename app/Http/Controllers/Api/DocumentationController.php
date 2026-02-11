@@ -10,11 +10,11 @@ use Inertia\Response;
 
 class DocumentationController extends BaseDjangoController{
    
-    public function apiDocs($api_type, $api_instance_id)
+    public function apiDocs($server_slug,$api_instance_id)
     {
         $endpoint = "api_docs/{$api_instance_id}";
 
-        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $api_type);
+        $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
 
         if ($result['success']) {
             // Return the HTML documentation directly
@@ -25,7 +25,7 @@ class DocumentationController extends BaseDjangoController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? "Unknown error occurred on {$api_type} side.";
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         // Return error page
         return response()->view('errors.api-error', [

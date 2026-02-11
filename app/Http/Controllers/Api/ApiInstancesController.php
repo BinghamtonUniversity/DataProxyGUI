@@ -27,7 +27,7 @@ class ApiInstancesController extends BaseDjangoController{
         ], 500);
     }
 
-    public function apiInstancesStore(Request $request, string $server_slug, string $api_type): JsonResponse
+    public function apiInstancesStore(Request $request, string $server_slug): JsonResponse
     {
         // Log::info('ApiInstancesStore called');
 
@@ -47,7 +47,7 @@ class ApiInstancesController extends BaseDjangoController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? `Unknown error occurred on {$api_type} side.`;
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,
@@ -56,7 +56,7 @@ class ApiInstancesController extends BaseDjangoController{
         ], $result['status']);
     }
 
-   public function apiInstancesUpdate(Request $request, string $server_slug, string $api_type, string $api_instance_id): JsonResponse
+   public function apiInstancesUpdate(Request $request, string $server_slug, string $api_instance_id): JsonResponse
     {
         // Log::info('ApiInstancesUpdate called', ['api_instance_id' => $api_instance_id, 'api_type' => $api_type]);
 
@@ -80,7 +80,7 @@ class ApiInstancesController extends BaseDjangoController{
             $errorMessage = $result['data']['error']
                 ?? $result['data']['detail']
                 ?? $result['data']['message']
-                ?? `Unknown error occurred on {$api_type} side.`;
+                ?? "Unknown error occurred on {$server_slug} side.";
 
             return response()->json([
                 'error' => 'Failed to update API Instance.',
@@ -103,7 +103,7 @@ class ApiInstancesController extends BaseDjangoController{
     }
 
 
-    public function apiInstancesDestroy(string $server_slug,string $api_type, string $id): JsonResponse
+    public function apiInstancesDestroy(string $server_slug, string $id): JsonResponse
     {
         $endpoint = "api_instances/{$id}";
         
@@ -118,7 +118,7 @@ class ApiInstancesController extends BaseDjangoController{
         $errorMessage = $result['data']['error']
                 ?? $result['data']['detail']
                 ?? $result['data']['message']
-                ?? `Unknown error occurred on {$api_type} side.`;
+                ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,
@@ -130,7 +130,7 @@ class ApiInstancesController extends BaseDjangoController{
     // ===========================================
     // API Instance by ID - AJAX call for fetching single instance
     // ===========================================
-    public function ApiInstancesEditIndex(string $server_slug,string $api_type, string $instance_id): JsonResponse
+    public function ApiInstancesEditIndex(string $server_slug, string $instance_id): JsonResponse
     {
         // Log::info('ApiInstancesEditIndex called', ['instance_id' => $instance_id, 'api_type' => $api_type]);
 
@@ -150,7 +150,7 @@ class ApiInstancesController extends BaseDjangoController{
         $errorMessage = $result['data']['error']
                 ?? $result['data']['detail']
                 ?? $result['data']['message']
-                ?? `Unknown error occurred on {$api_type} side.`;
+                ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,
@@ -159,7 +159,7 @@ class ApiInstancesController extends BaseDjangoController{
         ], $result['status']);
     }
 
-    public function ApiInstancesEditUpdate(Request $request, string $server_slug, string $api_type, string $instance_id, ): JsonResponse
+    public function ApiInstancesEditUpdate(Request $request, string $server_slug, string $instance_id, ): JsonResponse
     {
         // Log::info('ApiInstancesEditUpdate called', ['instance_id' => $instance_id, 'api_type' => $api_type]);
 
@@ -183,7 +183,7 @@ class ApiInstancesController extends BaseDjangoController{
             $errorMessage = $result['data']['error']
                 ?? $result['data']['detail']
                 ?? $result['data']['message']
-                ?? `Unknown error occurred on {$api_type} side.`;
+                ?? "Unknown error occurred on {$server_slug} side.";
 
             return response()->json([
                 'error' => 'Failed to update API Instance.',
