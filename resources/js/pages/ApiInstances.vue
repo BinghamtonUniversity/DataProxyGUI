@@ -38,6 +38,7 @@ const api_instances = ref<ApiInstance[]>([])
 const environments = ref<Environment[]>([])
 const apis = ref<Api[]>([])
 const api_versions = ref<ApiData[]>([])
+const formRef = ref<InstanceType<typeof FormViewer> | null>(null)
 // Toaster
 const { success, error, warning, info } = useToaster();
 
@@ -64,6 +65,7 @@ const formConfig = {
       placeholder: "Route/Slug",
       value: "",
       required: true,
+      validate: [{ type: 'pattern', regex: '^[a-z0-9]+(?:[-_][a-z0-9]+)*$', message: 'Slug must contain only lowercase letters, numbers, and hyphens', conditions: true }]
       
     },
     {
@@ -359,6 +361,17 @@ const submitNewApiInstance = async ( formData: any) => {
   
   newApiInstanceLoading.value = true
   newApiInstanceError.value = ''
+  
+  if (formRef.value) {
+    const isValid = formRef.value.validateForm();
+    if (!isValid) {   
+      newApiInstanceError.value = 'Please fix validation errors before saving'
+      error(newApiInstanceError.value, 'Validation Error')
+      newApiInstanceLoading.value = false
+      return;
+    }
+  }
+
 
   // Trim and normalize route just in case
   const routeToCheck = formData.route.trim().toLowerCase()
@@ -801,6 +814,7 @@ const handleDataGridRowClick = (row: any) => {
         >
    
         <FormViewer 
+            ref="formRef"
             :formConfig="formConfig" 
             :initialData="newApiInstanceForm"
             :cancelAction="'close'"
