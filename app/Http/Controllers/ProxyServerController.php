@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\ProxyServerConfig;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\Request;
 
 class ProxyServerController extends Controller
 {

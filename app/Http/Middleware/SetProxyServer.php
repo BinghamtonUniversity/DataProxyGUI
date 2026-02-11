@@ -12,6 +12,11 @@ class SetProxyServer
 {
     public function handle(Request $request, Closure $next)
     {
+        if ($request->is('settings/no-servers-available')) {
+            Inertia::share('server_slug', null);
+            return $next($request);
+        }
+        
         $slug = $request->route('server_slug');
 
         if (!$slug) {
@@ -20,10 +25,9 @@ class SetProxyServer
                 ->first();
             
             if (!$firstServer) {
-                return response()->json([
-                    'error' => 'No proxy servers available'
-                ], 404);
-            }
+                // Redirect 
+                return redirect()->route('no-servers-available');;
+            }   
             
             $slug = $firstServer->slug;
         }
@@ -34,18 +38,18 @@ class SetProxyServer
             ->first();
         
         if (!$server) {
-            return response()->json([
-                'error' => 'Invalid proxy server'
-            ], 404);
+            // Redirect to /settings/no-servers-available
+            return redirect()->route('no-servers-available');
         }
+        
 
         // Store server config in request for easy access
         $request->attributes->set('proxy_server', $server);
 
-        Inertia::share('server_slug', $slug);
-
-        // Store in session
-        // session(['current_proxy_server' => $slug]);
+        Inertia::share([
+            'server_slug' => $slug,
+            'server_api_type' => $server->type,
+        ]);
         
         return $next($request);
     }

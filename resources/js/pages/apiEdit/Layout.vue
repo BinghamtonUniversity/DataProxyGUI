@@ -18,13 +18,18 @@ import FormViewer from '@/components/formviewer/FormViewer.vue'
 import { useToaster } from '@/composables/useToaster'
 import Toaster from '@/components/toaster/Toaster.vue'
 import { getCsrfToken, mapDjangoToApiData, mapPhpToApiData, denormalizeToPhp } from '@/lib/utils'
+import { useProxyServer } from '@/composables/useProxyServer'
 
 interface Props {
     server_slug: string
-    api_type: string
+    // api_type: string
     api_id: string
     activeTab?: string 
 }
+
+const { serverSlug, serverApiType } = useProxyServer();
+// console.log('in Layout Server slug prop:', serverApiType.value);
+
 
 const props = defineProps<Props>()
 
@@ -163,7 +168,7 @@ const tabs = [
 ]
 
 const filteredTabs = computed(() => {
-  if (props.api_type === 'php') {
+  if (serverApiType.value === 'php') {
     return tabs.filter(tab => tab.id !== 'models');
   }
   return tabs;
@@ -214,7 +219,7 @@ const apiDataImportFormConfig = ref({
 })
 
 const fetchApi = async () => {
-    const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}`)
+    const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}`)
     if (!response.ok) throw new Error('Failed to fetch API')
     api.value = await response.json()
 }
@@ -229,18 +234,18 @@ const fetchApiData = async () => {
     loadingApiData.value = true
     apiError.value = ''
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`)
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/versions/latest`)
         if (!response.ok) {
             const errorData = await response.json()
             throw new Error(errorData.error || 'Failed to fetch API data')
         }
         const data = await response.json()
         // console.log('Fetched API data:', apiData.value)
-        apiData.value = normalizeApiData(data, props.api_type as 'python' | 'php')
+        apiData.value = normalizeApiData(data, serverApiType.value as 'python' | 'php')
         originalApiData.value = JSON.parse(JSON.stringify(apiData.value))
 
 
-        if(props.api_type === 'php' && apiData.value.version_views.length === 0){
+        if(serverApiType.value === 'php' && apiData.value.version_views.length === 0){
             apiData.value.version_views.push({
                 name: 'Constructor',
                 content: '//__EMPTY__',
@@ -288,7 +293,7 @@ const fetchVersions = async () => {
     loadingVersions.value = true
     versionsError.value = ''
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions`, {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/versions`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -340,7 +345,7 @@ const fetchInstances = async () => {
 }
 
 const viewInstance = (instance: any) => {
-    const instanceUrl = `${window.location.origin}/api_instances/${props.api_type}/${instance.id}/main`
+    const instanceUrl = `${window.location.origin}/api_instances/${serverApiType.value}/${instance.id}/main`
     window.open(instanceUrl, '_blank')
 }
 
@@ -571,7 +576,7 @@ const fetchVersionDetails = async (versionId: number) => {
     loadingVersionDetails.value = true
     versionDetailsError.value = ''
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/${versionId}`, {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/versions/${versionId}`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -599,7 +604,7 @@ const fetchVersionDetails = async (versionId: number) => {
 
 const switchToVersion = async (version: any) => {
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/${version.id}`, {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/versions/${version.id}`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -615,7 +620,7 @@ const switchToVersion = async (version: any) => {
         isVersionSwitch.value = true
         const data = await response.json()
         
-        const versionData =normalizeApiData(data, props.api_type as 'python' | 'php')
+        const versionData =normalizeApiData(data, serverApiType.value as 'python' | 'php')
         updateApiData(versionData)
         originalApiData.value = JSON.parse(JSON.stringify(versionData))
         hasUnsavedChanges.value = true
@@ -629,7 +634,7 @@ const switchToVersion = async (version: any) => {
 
 const switchToLatestVersion = async () => {
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`, {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/versions/latest`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -644,7 +649,7 @@ const switchToLatestVersion = async () => {
         }
         isVersionSwitch.value = false
         const data = await response.json()
-        const versionData =normalizeApiData(data, props.api_type as 'python' | 'php')
+        const versionData =normalizeApiData(data, serverApiType.value as 'python' | 'php')
         updateApiData(versionData)
         originalApiData.value = JSON.parse(JSON.stringify(versionData))
         hasUnsavedChanges.value = true
@@ -670,7 +675,7 @@ const openDiffModal = async (version: any) => {
         return
     }
 
-    window.location.href = `/${props.server_slug}/apis/${props.api_type}/${props.api_id}/compare/${version.id}`
+    window.location.href = `/${props.server_slug}/apis/${props.api_id}/compare/${version.id}`
 }
 
 const isLatestVersionStable = computed(() => {
@@ -705,7 +710,7 @@ const publishApiVersion = async (formData: any) => {
         }
     }
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/publish`, {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/publish`, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/json',
@@ -751,7 +756,7 @@ const handleDevelopersAction = (action: string) => {
     
     switch (action) {
         case 'export':
-            const exportUrl = `/${props.server_slug}/apis/${props.api_type}/${props.api_id}/version/latest`
+            const exportUrl = `/${props.server_slug}/apis/${props.api_id}/version/latest`
             window.open(exportUrl, '_blank')
             break
         case 'import':
@@ -792,7 +797,7 @@ const handleApiDataImport = (formData: any) => {
             throw new Error('Invalid JSON structure')
         }
         
-        const requiredFields = props.api_type === 'python' 
+        const requiredFields = serverApiType.value === 'python' 
             ? ['version_urls', 'version_views', 'version_models', 'version_files', 'resources']
             : ['functions', 'files', 'resources', 'routes'] // php
 
@@ -803,7 +808,7 @@ const handleApiDataImport = (formData: any) => {
         }
 
         importedData.updated_at = new Date().toISOString()
-        const normalizedData = normalizeApiData(importedData, props.api_type as 'python' | 'php')
+        const normalizedData = normalizeApiData(importedData, serverApiType.value as 'python' | 'php')
 
         updateApiData(normalizedData)
         hasUnsavedChanges.value = true
@@ -856,17 +861,19 @@ const handleSave = async () => {
         return
     }
     
-    const requestData = props.api_type === 'php' ? denormalizeToPhp(apiData.value): apiData.value
-    
+    const requestData = serverApiType.value === 'php' ? denormalizeToPhp(apiData.value): apiData.value
+
+    const { created_at, created_by, ...cleanedData } = requestData; //omit these fields
+
     // debugger;
-    const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/code`, {
+    const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/code`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'X-CSRF-TOKEN': getCsrfToken() || '',
         },
-        body: JSON.stringify(requestData) // formData
+        body: JSON.stringify(cleanedData) // formData
     })
 
     if (!response.ok) {
@@ -877,14 +884,14 @@ const handleSave = async () => {
     success('API data saved successfully!', 'API Data Saved')
     const responseData = await response.json()
 
-    if (props.api_type === 'php' && responseData.functions) {
+    if (serverApiType.value === 'php' && responseData.functions) {
         responseData.functions = responseData.functions.map((func: { name: string; content: string }) => ({
             ...func,
             content: func.name === 'Constructor' && func.content === '//__EMPTY__' ? '' : func.content
         }));
     }
     // debugger;
-    const normalizedData = normalizeApiData(responseData, props.api_type as 'python' | 'php')
+    const normalizedData = normalizeApiData(responseData, serverApiType.value as 'python' | 'php')
     
     updateApiData(normalizedData)
     console.log("Orgiinal", originalApiData.value)
@@ -898,7 +905,7 @@ const navigateToTab = (tabId: string) => {
     currentTab.value = tabId
     // props.activeTab? = tabId 
     // This uses History API to update the URL without triggering navigation
-    const newUrl = `/${props.server_slug}/apis/${props.api_type}/${props.api_id}/${tabId}`
+    const newUrl = `/${props.server_slug}/apis/${props.api_id}/${tabId}`
     window.history.pushState({ tab: tabId }, '', newUrl)
 }
 
@@ -915,7 +922,7 @@ const handleValidationError = (componentId: string, errorCount: number) => {
 // Component props to pass down
 const componentProps = computed(() => ({
     api_id: props.api_id,
-    api_type: props.api_type,
+    api_type: serverApiType.value as string,
     api: api.value,
     apiData: apiData.value || null,
     loadingApiData: loadingApiData.value,
@@ -1043,7 +1050,7 @@ onUnmounted(() => {
                     <div class="flex items-center gap-3">
                         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">API - {{ api?.name }}</h1>
                         <div class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs font-medium rounded-md border border-blue-200 dark:border-blue-800">
-                            {{ props.api_type }}
+                            {{ serverApiType }}
                         </div>
                     </div>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Manage your API settings</p>
@@ -1203,7 +1210,7 @@ onUnmounted(() => {
                         <div v-show="currentTab === 'functions'">
                             <Functions ref="functionsComponentRef" v-bind="componentProps" />
                         </div>
-                        <div v-show="currentTab === 'models' && api_type === 'python'">
+                        <div v-show="currentTab === 'models' && serverApiType === 'python'">
                             <Models v-bind="componentProps" />
                         </div>
                         <div v-show="currentTab === 'files'">

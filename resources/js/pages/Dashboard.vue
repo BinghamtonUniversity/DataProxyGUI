@@ -17,7 +17,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 // API base URL
-const apiBaseUrl = '/api';
+const apiBaseUrl = 'api';
 
 // Statistics state with individual loading states
 const stats = ref({
@@ -183,7 +183,7 @@ const fetchEnvironments = async () => {
 const fetchRecentActivityLogs = async () => {
     loadingActivityLogs.value = true;
     try {
-        const response = await fetch(`${apiBaseUrl}/activity_logs`, {
+        const response = await fetch(`${apiBaseUrl}/activity_log`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',

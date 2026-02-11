@@ -22,6 +22,8 @@ import { useToaster } from '@/composables/useToaster';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
+import { useProxyServer } from '@/composables/useProxyServer';
+
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -29,6 +31,8 @@ const breadcrumbs: BreadcrumbItem[] = [
     href: '/api_instances',
   },
 ]
+
+const { serverApiType } = useProxyServer();
 
 const api_instances = ref<ApiInstance[]>([])
 const environments = ref<Environment[]>([])
@@ -81,6 +85,7 @@ const formConfig = {
                   { label: 'Python', value: 'python' }
                 ],
       required: true,
+      edit: false
   
     },
     {
@@ -264,7 +269,7 @@ const newApiInstanceForm = ref<NewApiInstanceForm>({
   route_user_map: [],
   resources: [],
   options: [],
-  api_type: ''
+  api_type: serverApiType.value as string
 })
 const newApiInstanceLoading = ref(false)
 const newApiInstanceError = ref('')
@@ -290,7 +295,7 @@ const openNewApiInstanceDialog = () => {
     route_user_map: [],
     resources: [],
     options: {} as ApiInstanceOptions,
-    api_type: ''
+    api_type: serverApiType.value as string
   }
   newApiInstanceError.value = ''
   newApiInstanceDialogOpen.value = true
@@ -309,28 +314,29 @@ const closeNewApiInstanceDialog = () => {
     route_user_map: [],
     resources: [],
     options: [],
-    api_type: ''
+    api_type: serverApiType.value as string
   }
   isEditMode.value = false
   editingApiInstanceId.value = null
 }
 
-const handleFormDataUpdate = (data: any) => {
-  if (data.api_type == 'python') {
+// TODO: do we need this?? now
+// const handleFormDataUpdate = (data: any) => {
+//   if (data.api_type == 'python') {
 
-    formConfig.fields[4].options = apis.value.filter((api: any) => api.api_type === 'python').map((api: any) => ({
-        label: api.name  || `API ${api.id}`,
-        value: api.id,
-    }));
-  }
-  else{
-    formConfig.fields[4].options = apis.value.filter((api: any) => api.api_type != 'python').map((api: any) => ({
-        label: api.name  || `API ${api.id}`,
-        value: api.id,
-    }));
-  }
+//     formConfig.fields[4].options = apis.value.filter((api: any) => api.api_type === 'python').map((api: any) => ({
+//         label: api.name  || `API ${api.id}`,
+//         value: api.id,
+//     }));
+//   }
+//   else{
+//     formConfig.fields[4].options = apis.value.filter((api: any) => api.api_type !== 'python').map((api: any) => ({
+//         label: api.name  || `API ${api.id}`,
+//         value: api.id,
+//     }));
+//   }
 
-}
+// }
 
 // Handle FormViewer action events
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
@@ -383,10 +389,10 @@ const submitNewApiInstance = async ( formData: any) => {
   }
 
   try {
-    let url = `api/api_instances/${formData.api_type}`
+    let url = `api/api_instances`
     let request_method = 'POST'
     if (isEditMode.value && editingApiInstanceId.value) {
-      url = `api/api_instances/${formData.api_type}/${editingApiInstanceId.value}`
+      url = `api/api_instances/${editingApiInstanceId.value}`
       request_method = 'PUT'
     }
 
@@ -442,7 +448,7 @@ const handleDeleteInstance = async (instance: ApiInstance) => {
     return
   }
   try{
-    const response = await fetch(`api/api_instances/${instance.api_type}/${instance.id}`, {
+    const response = await fetch(`api/api_instances/${instance.id}`, {
       method: 'DELETE',
       headers: {
         'X-CSRF-TOKEN': getCsrfToken() || '',
@@ -501,7 +507,7 @@ const handleRowClick = (instance: ApiInstance, event: MouseEvent) => {
   }
   
 
-  router.visit(`/api_instances/${instance.api_type}/${instance.id}/main`)
+  router.visit(`/api_instances/${instance.id}/main`)
 }
 
 
@@ -628,7 +634,24 @@ const fetchAllData = async (mode: string = 'default') => {
         label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
         value: env.id,
     }));
-    
+
+    // Might need this if we want to filter APIs based on selected API type in the form, 
+    // but for now we assume that each DP returns only one API type
+    // if (serverApiType.value as string === 'python') {
+    //   formConfig.fields[4].options = apis.value
+    //       .filter((api: any) => api.api_type === 'python')
+    //       .map((api: any) => ({
+    //           label: api.name || `API ${api.id}`,
+    //           value: api.id,
+    //       }));
+    // } else {
+    //     formConfig.fields[4].options = apis.value
+    //         .filter((api: any) => api.api_type !== 'python')
+    //         .map((api: any) => ({
+    //             label: api.name || `API ${api.id}`,
+    //             value: api.id,
+    //         }));
+    // }
     formConfig.fields[4].options = apisData.map((api: any) => ({
         label: api.name  || `API ${api.id}`,
         value: api.id,
@@ -703,7 +726,7 @@ const handleDataGridAction = (actionData: { type: string; payload: any }) => {
       handleDeleteInstance(actionData.payload);
       break;
     case 'view':
-      router.visit(`/api_instances/${actionData.payload.api_type}/${actionData.payload.id}/main`);
+      router.visit(`/api_instances/${actionData.payload.id}/main`);
       break;
     default:
       console.log('Unknown action type:', actionData.type);
@@ -729,7 +752,7 @@ const handleDataGridRowClick = (row: any) => {
   // console.log('API Type:', api_type); 
   // $api_type = row.api.api_type;
   // debugger;
-  router.visit(`api_instances/${row.api_type}/${row.id}/main`);
+  router.visit(`api_instances/${row.id}/main`);
 };
 </script>
 
@@ -781,7 +804,6 @@ const handleDataGridRowClick = (row: any) => {
             :formConfig="formConfig" 
             :initialData="newApiInstanceForm"
             :cancelAction="'close'"
-            @update:modelValue="handleFormDataUpdate"
             :actions="[
                 { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
                 { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }

@@ -17,10 +17,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useToaster } from '@/composables/useToaster'
 import { getCsrfToken, mapPhpToApiInstance } from '@/lib/utils'
 import Toaster from '@/components/toaster/Toaster.vue'
+import { useProxyServer } from '@/composables/useProxyServer'
+
 
 interface Props {
     server_slug: string,
-    api_type: string
+    // api_type: string
     instance_id: string
     activeTab?: string
 }
@@ -28,7 +30,7 @@ interface Props {
 const props = defineProps<Props>()
 const currentTab = ref(props.activeTab || 'main')
 
-const hermesBaseUrl = import.meta.env.VITE_HERMES_BASEURL
+const { serverApiType } = useProxyServer();
 
 // Toaster
 const { success, error: showError, warning, info } = useToaster()
@@ -95,11 +97,11 @@ const fetchApiInstanceData = async () => {
     loading.value = true
     apiInstanceError.value = ''
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/api_instances/${props.api_type}/${props.instance_id}`)
+        const response = await fetch(`/${props.server_slug}/ajax/api_instances/${props.instance_id}`)
  
         if (!response.ok) throw new Error('Failed to fetch API Instance data')
         const data = await response.json()
-        if (props.api_type === 'php') {
+        if (serverApiType.value === 'php') {
             apiInstanceData.value = mapPhpToApiInstance(data)
         } else {
             apiInstanceData.value = data
@@ -122,11 +124,11 @@ const fetchAllData = async () => {
   loading.value = true
   try {
     // Fetch the API instance to get the environment type
-    const apiInstancesResponse = await fetch(`/${props.server_slug}/ajax/api_instances/${props.api_type}/${props.instance_id}`)
+    const apiInstancesResponse = await fetch(`/${props.server_slug}/ajax/api_instances/${props.instance_id}`)
     if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
     
     const apiInstancesData = await apiInstancesResponse.json()
-    if (props.api_type === 'php') {
+    if (serverApiType.value === 'php') {
         apiInstanceData.value = mapPhpToApiInstance(apiInstancesData)
     } else {
         apiInstanceData.value = apiInstancesData
@@ -142,7 +144,7 @@ const fetchAllData = async () => {
       resourcesResponse,
     ] = await Promise.all([
       fetch(`/${props.server_slug}/api/api_users`),
-      fetch(`/${props.server_slug}/ajax/resources/type/${props.api_type}/${environmentType}`), 
+      fetch(`/${props.server_slug}/ajax/resources/type/${environmentType}`), 
     ])
 
     if (!apiUsersResponse.ok) throw new Error('Failed to fetch API users')
@@ -203,7 +205,7 @@ const fetchVersions = async () => {
     loadingVersions.value = true
     versionsError.value = ''
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${apiInstanceData.value.api.id}/versions`, {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${apiInstanceData.value.api.id}/versions`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -238,16 +240,16 @@ const updateInstanceVersion = async (version: any) => {
     const requestData = {
         api_version_id: version.id,
         name: apiInstanceData.value?.name,
-        route: props.api_type === 'php'? undefined : apiInstanceData.value?.route, 
-        slug: props.api_type === 'php'?  apiInstanceData.value?.route: undefined, 
+        route: serverApiType.value === 'php'? undefined : apiInstanceData.value?.route, 
+        slug: serverApiType.value === 'php'?  apiInstanceData.value?.route: undefined, 
         route_user_map: apiInstanceData.value?.route_user_map,
         resources: apiInstanceData.value?.resources, 
         options: apiInstanceData.value?.options,
         public: apiInstanceData.value?.public,
     }
-   debugger;
+
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/api_instances/${props.api_type}/${props.instance_id}`, {
+        const response = await fetch(`/${props.server_slug}/ajax/api_instances/${props.instance_id}`, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/json',
@@ -289,7 +291,7 @@ const navigateToTab = (tabId: string) => {
     currentTab.value = tabId
     
     // This uses History API to update the URL without triggering navigation
-    const newUrl = `/${props.server_slug}/api_instances/${props.api_type}/${props.instance_id}/${tabId}`
+    const newUrl = `/${props.server_slug}/api_instances/${props.instance_id}/${tabId}`
     window.history.pushState({ tab: tabId }, '', newUrl)
 }
 
@@ -307,7 +309,7 @@ const isNavigatingWithinSameApiInstance = (url: string): boolean => {
 // Component props to pass down
 const componentProps = computed(() => ({
     instance_id: props.instance_id,
-    api_type: props.api_type,  
+    api_type: serverApiType.value as string,  
     apiInstanceData: apiInstanceData.value,
     apiUsers: apiUsers.value,
     resources: resources.value,
@@ -338,7 +340,7 @@ const visitInstance = () => {
 }
 
 const viewDocumentation = () => {
-    window.open(`/api/api_docs/${props.api_type}/${props.instance_id}`, '_blank');
+    window.open(`/api/api_docs/${props.instance_id}`, '_blank');
 };
 
 const handleSave = async() => {
@@ -352,8 +354,8 @@ const handleSave = async() => {
     const requestData = {
             id: apiInstanceData.value?.id,
             name: apiInstanceData.value?.name,
-            route: props.api_type === 'php'? undefined : apiInstanceData.value?.route, 
-            slug: props.api_type === 'php'?  apiInstanceData.value?.route: undefined, 
+            route: serverApiType.value === 'php'? undefined : apiInstanceData.value?.route, 
+            slug: serverApiType.value === 'php'?  apiInstanceData.value?.route: undefined, 
             route_user_map: apiInstanceData.value?.route_user_map,
             resources: apiInstanceData.value?.resources, 
             options: apiInstanceData.value?.options,
@@ -367,8 +369,8 @@ const handleSave = async() => {
     const originalRequestData = {
         id: originalApiInstanceData.value?.id,
         name: originalApiInstanceData.value?.name,
-        route: props.api_type === 'php'? undefined : originalApiInstanceData.value?.route,
-        slug: props.api_type === 'php'? originalApiInstanceData.value?.route : undefined,
+        route: serverApiType.value === 'php'? undefined : originalApiInstanceData.value?.route,
+        slug: serverApiType.value === 'php'? originalApiInstanceData.value?.route : undefined,
         route_user_map: originalApiInstanceData.value?.route_user_map,
         resources: originalApiInstanceData.value?.resources,
         options: originalApiInstanceData.value?.options,
@@ -383,16 +385,8 @@ const handleSave = async() => {
         info('No changes detected to save.', 'Nothing to Save')
         return
     }
-    // if any resource is missing a name or resource, show an error
-    if (requestData.resources && requestData.resources.length != 0) {
-        const hasMissingResource = requestData.resources.some((resource: any) => !resource.name || !resource.resource)
-        if (hasMissingResource) {
-            showError('Resources are missing a value', 'Validation Error')
-            return
-        }
-    }
 
-    const response = await fetch(`/${props.server_slug}/ajax/api_instances/${props.api_type}/${props.instance_id}`, {
+    const response = await fetch(`/${props.server_slug}/ajax/api_instances/${props.instance_id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -414,7 +408,7 @@ const handleSave = async() => {
     // Merge response with preserved nested objects
     apiInstanceData.value = {
         ...responseData,
-        slug: props.api_type === 'php'? responseData.slug : undefined,
+        slug: serverApiType.value === 'php'? responseData.slug : undefined,
         // Restore nested objects if they're missing in the response -- PHP doesn't return them on update PUT
         api: responseData.api || preservedNestedData.api,
         api_version: responseData.api_version || preservedNestedData.api_version,

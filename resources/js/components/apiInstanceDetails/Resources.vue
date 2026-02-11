@@ -62,7 +62,7 @@ const resourcesFormConfig = computed(() => ({
           name: 'resource',
           label: 'Resource',
           type: 'select',
-          required: true,
+          required: false,
           width: '6',
           offset: '0',
           options: props.resources?.map(r => ({
@@ -97,11 +97,22 @@ const initialFormData = computed(() => {
 const handleFormChange = (formData: any) => {
   if (!props.apiInstanceData) return
 
+  if (formData.resources && formData.resources.length != 0) {
+    for (const resource of formData.resources) {
+        if (!resource.name || !resource.resource) {
+            // remove the resource from the updatedResources
+            formData.resources = formData.resources.filter((r: any) => r.name !== resource.name)
+        }
+    }
+  }
+
   // Map form data back to apiInstanceData.resources structure
   const updatedResources = (formData.resources || []).map((item: any) => ({
     name: item.name || '',
     resource: item.resource || ''
   }))
+
+  
 
   const updatedData = {
     ...props.apiInstanceData,

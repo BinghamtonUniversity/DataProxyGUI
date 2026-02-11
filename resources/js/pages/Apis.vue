@@ -9,6 +9,7 @@ import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { type BreadcrumbItem, type Api, ApiUser } from '@/types';
 import { getCsrfToken } from '@/lib/utils';
+import { useProxyServer } from '@/composables/useProxyServer';
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -17,11 +18,8 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ]
 
-// interface Props {
-//     server_slug: string;
-// }
+const { serverApiType } = useProxyServer();
 
-// const props = defineProps<Props>()
 
 // Modal state
 const showModal = ref(false);
@@ -210,7 +208,7 @@ const formConfig = {
             ],
             multiple: false,
             show: true,
-            edit: true,
+            edit: false,
             parse: true
         },
         {
@@ -329,7 +327,7 @@ const fetchApis = async () => {
         // Format dates for display
         apis.value = apiArray.map((api: Api) => ({
             ...api,
-            api_type: api.api_type || 'php',
+            api_type: api.api_type || 'php', // Default to 'php' if api_type is missing 
             created_at: api.created_at ? new Date(api.created_at).toLocaleDateString() : '',
             // Store original created_by_id for reference, but display app_name
             created_by_id: (api.created_by_id ? apiUsers.value.find((user: ApiUser) => user.id === api.created_by_id)?.app_name : '') as any
@@ -347,7 +345,13 @@ const fetchApis = async () => {
 // Modal functions
 const openNewModal = () => {
     modalMode.value = 'new';
-    editingRow.value = null;
+    // editingRow.value = null;
+    editingRow.value = {
+        name: '',
+        description: '',
+        api_type: serverApiType.value || 'python',
+        tags: ''
+    }
     showModal.value = true;
 };
 
@@ -379,8 +383,8 @@ const handleFormSubmit = async (formValues: any) => {
             if (cleanedData.api_type === 'php' && cleanedData.name && cleanedData.name.includes(' ')) {
                 throw new Error('API name cannot contain spaces. Please use underscores or hyphens instead.');
             }
-
-            const response = await fetch(`api/apis/${cleanedData.api_type}`, {
+``
+            const response = await fetch(`api/apis`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -418,7 +422,7 @@ const handleFormSubmit = async (formValues: any) => {
                 throw new Error('API name cannot contain spaces. Please use underscores or hyphens instead.');
             }
             
-            const response = await fetch(`api/apis/${editingRow.value.api_type}/${editingRow.value.id}`, {
+            const response = await fetch(`api/apis/${editingRow.value.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -482,7 +486,7 @@ const handleAction = (actionData: any) => {
             break;
         case 'view':
             // Navigate to API routes page
-            router.visit(`/apis/${actionData.payload.api_type}/${actionData.payload.id}/routes`);
+            router.visit(`/apis/${actionData.payload.id}/routes`);
             break;
         case 'single-edit':
             openEditModal(actionData.payload);
@@ -496,7 +500,7 @@ const handleRowClick = (row: any) => {
     // console.log('Row clicked:', row);
     const apiType = row.api_type;
     // debugger;
-    router.visit(`apis/${apiType}/${row.id}/routes`);
+    router.visit(`apis/${row.id}/routes`);
 };
 
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
@@ -528,7 +532,7 @@ const handleDelete = async (selectedRowIds?: number[]) => {
         try {
             // Delete APIs via API
             for (const api of apisToDelete) {
-                const response = await fetch(`api/apis/${api.api_type}/${api.id}`, {
+                const response = await fetch(`api/apis/${api.id}`, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',

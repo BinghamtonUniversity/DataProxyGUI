@@ -15,17 +15,20 @@ import Models from '@/components/apiEdit/Models.vue'
 import Options from '@/components/apiEdit/Options.vue'
 import Files from '@/components/apiEdit/Files.vue'
 import { mapDjangoToApiData, mapPhpToApiData, getCsrfToken } from '@/lib/utils'
+import { useProxyServer } from '@/composables/useProxyServer'
+
 
 
 interface Props {
     server_slug: string
     api: Api
-    api_type: string
     api_id: string
     version_id: string
 }
 
 const props = defineProps<Props>()
+const { serverApiType } = useProxyServer();
+
 
 // Data fetching logic
 const currentApiData = ref<ApiData | null>(null)
@@ -70,10 +73,10 @@ function normalizeApiData(payload: any, backend: 'python' | 'php'): ApiData {
 }
 const fetchCurrentVersion = async () => {
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/latest`)
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/versions/latest`)
         if (!response.ok) throw new Error('Failed to fetch current version')
         const data = await response.json()
-        const versionData =normalizeApiData(data, props.api_type as 'python' | 'php')
+        const versionData =normalizeApiData(data, serverApiType.value as 'python' | 'php')
         currentApiData.value = versionData
     } catch (e: any) {
         error.value = e.message || 'Error fetching current version'
@@ -82,10 +85,10 @@ const fetchCurrentVersion = async () => {
 
 const fetchSelectedVersion = async () => {
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_type}/${props.api_id}/versions/${props.version_id}`)
+        const response = await fetch(`/${props.server_slug}/ajax/apis/versions/${props.version_id}`)
         if (!response.ok) throw new Error('Failed to fetch selected version')
         const data = await response.json()
-        const versionData =normalizeApiData(data, props.api_type as 'python' | 'php')
+        const versionData =normalizeApiData(data, serverApiType.value as 'python' | 'php')
         selectedApiData.value = versionData
     } catch (e: any) {
         error.value = e.message || 'Error fetching selected version'
@@ -108,7 +111,7 @@ const fetchAllData = async () => {
 }
 
 // Tab configuration
-const tabs = props.api_type === 'php' ? [
+const tabs = serverApiType.value === 'php' ? [
     { 
         id: 'routes', 
         title: 'Routes'
@@ -161,7 +164,7 @@ const activeTab = ref('routes')
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: 'API Edit',
-        href: `/apis/${props.api_type}/${props.api_id}/routes`,
+        href: `/apis/${props.api_id}/routes`,
     },
     {
         title: 'Version Comparison',
@@ -172,7 +175,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 // Component props for current version
 const currentComponentProps = computed(() => ({
     api_id: props.api_id,
-    api_type: props.api_type,
+    api_type: serverApiType.value as 'python' | 'php',
     api: props.api,
     apiData: currentApiData.value,
     loadingApiData: loading.value,
@@ -216,7 +219,7 @@ const currentComponentProps = computed(() => ({
 // Component props for selected version (read-only)
 const selectedComponentProps = computed(() => ({
     api_id: props.api_id,
-    api_type: props.api_type,
+    api_type: serverApiType.value as 'python' | 'php',
     api: props.api,
     apiData: selectedApiData.value,
     loadingApiData: loading.value,
@@ -378,7 +381,7 @@ const backToFileList = () => {
 
 // Go back to API edit
 const goBack = () => {
-    router.get(`/apis/${props.api_type}/${props.api_id}/${activeTab.value}`)
+    router.get(`/apis/${props.api_id}/${activeTab.value}`)
 }
 
 // Resizing functions
@@ -872,7 +875,7 @@ onMounted(() => {
                                                                 <tbody>
                                                                     <tr v-for="(line, lineIndex) in (func.content || '').split('\n')" :key="lineIndex">
                                                                         <td class="w-12 px-2 py-1 text-right text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 select-none">
-                                                                            {{ lineIndex + 1 }}
+                                                                            {{ Number(lineIndex) + 1 }}
                                                                         </td>
                                                                         <td class="px-3 py-1 font-mono text-gray-900 dark:text-white whitespace-pre">
                                                                             {{ line }}
@@ -911,7 +914,7 @@ onMounted(() => {
                                                                 <tbody>
                                                                     <tr v-for="(line, lineIndex) in (file.content || '').split('\n')" :key="lineIndex">
                                                                         <td class="w-12 px-2 py-1 text-right text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 select-none">
-                                                                            {{ lineIndex + 1 }}
+                                                                            {{ Number(lineIndex) + 1 }}
                                                                         </td>
                                                                         <td class="px-3 py-1 font-mono text-gray-900 dark:text-white whitespace-pre">
                                                                             {{ line }}

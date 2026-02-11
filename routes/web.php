@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\Auth\OidcController;
 
-Route::redirect('/', '/dashboard');
+Route::redirect('/', '/welcome');
 
 Route::get('/welcome', function () {
     return Inertia::render('Welcome');
@@ -24,18 +24,22 @@ Route::put('/api/proxy-servers/{id}', [App\Http\Controllers\ProxyServerControlle
 Route::delete('/api/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'destroy'])->middleware(['auth']);
 Route::put('/api/proxy-servers/bulk', [App\Http\Controllers\ProxyServerController::class, 'bulkUpdate'])->middleware(['auth']);
 
+Route::middleware(['auth'])->group(function () {
+    Route::post('/logout', [OidcController::class, 'logout'])->name('logout');
+});
+
+require __DIR__.'/settings.php';
+
 
 // ===========================================
 // API Export - (JSON export in new tab)
 // ============================================
 Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(function () {
-    Route::post('/logout', [OidcController::class, 'logout'])->name('logout');
+   
 
     Route::get('dashboard', function () {
-        if (auth()->check()) {
-            return Inertia::render('Dashboard');
-        }
-        return redirect()->route('oidc.redirect');
+        return Inertia::render('Dashboard');
+        // return redirect()->route('oidc.redirect');
     })->name('dashboard');
 
     Route::get('/apis', function () {
@@ -54,9 +58,9 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
         return Inertia::render('TypesExample');
     })->name('types.example');
 
-    Route::get('/settings', function () {
-        return Inertia::render('Settings');
-    })->name('settings');
+    // Route::get('/settings', function () {
+    //     return Inertia::render('Settings');
+    // })->name('settings');
 
     Route::get('/formbuilder-example', function () {
         return Inertia::render('FormBuilderExample');
@@ -75,9 +79,9 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
         return Inertia::render('Schedules');
     })->name('schedules');
 
-    Route::get('/activity_logs', function () {
+    Route::get('/activity_log', function () {
         return Inertia::render('ActivityLogs');
-    })->name('activity_logs');
+    })->name('activity_log');
 
     Route::get('/api_accounts', function () {
         return Inertia::render('ApiAccounts');
@@ -106,15 +110,15 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
 
         //APIs
         Route::get('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisIndex']);
-        Route::post('/apis/{api_type}', [App\Http\Controllers\Api\ApiController::class, 'apisStore']);
-        Route::put('/apis/{api_type}/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisUpdate']);
-        Route::delete('/apis/{api_type}/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisDestroy']);
+        Route::post('/apis', [App\Http\Controllers\Api\ApiController::class, 'apisStore']);
+        Route::put('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisUpdate']);
+        Route::delete('/apis/{id}', [App\Http\Controllers\Api\ApiController::class, 'apisDestroy']);
 
         //API Instances
         Route::get('/api_instances', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesIndex']);
-        Route::post('/api_instances/{api_type}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesStore']);
-        Route::put('/api_instances/{api_type}/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesUpdate']);
-        Route::delete('/api_instances/{api_type}/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesDestroy']);
+        Route::post('/api_instances', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesStore']);
+        Route::put('/api_instances/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesUpdate']);
+        Route::delete('/api_instances/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesDestroy']);
 
         //Schedulers
         Route::get('/schedulers', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersIndex']);
@@ -124,10 +128,10 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
         Route::delete('/schedulers/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersDestroy']);
 
         //Activity Logs
-        Route::get('/activity_logs', [App\Http\Controllers\Api\ActivityLogsController::class, 'activityLogsIndex']);
+        Route::get('/activity_log', [App\Http\Controllers\Api\ActivityLogsController::class, 'activityLogsIndex']);
 
         // Documentation
-        Route::get('/api_docs/{api_type}/{api_instance_id}', [App\Http\Controllers\Api\DocumentationController::class, 'apiDocs']);
+        Route::get('/api_docs/{api_instance_id}', [App\Http\Controllers\Api\DocumentationController::class, 'apiDocs']);
 
         //API Users
         Route::get('/api_users', [App\Http\Controllers\Api\ApiUsersController::class, 'apiUsersIndex']);
@@ -162,24 +166,24 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
     Route::prefix('ajax/resources')->group(function () {
         Route::get('/', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesIndex']);
         Route::get('/{id}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesShow']);
-        Route::get('/type/{api_type}/{type}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesByTypeIndex']);
+        Route::get('/type/{type}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesByTypeIndex']);
         Route::post('/', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesStore']);
         Route::put('/{id}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesUpdate']);
         Route::delete('/{id}', [App\Http\Controllers\Api\ResourcesController::class, 'resourcesDestroy']);
     });
 
     // NEW API Edit Routes (Inertia pages for editing APIs)
-    Route::prefix('/apis/{api_type}/{api_id}')->group(function () {
+    Route::prefix('/apis/{api_id}')->group(function () {
 
         // Developers page - separate from tab layout
-        Route::get('/developers', function ($server_slug, $api_type, $api_id) {
+        Route::get('/developers', function ($server_slug, $api_id) {
             return Inertia::render('apiEdit/ApiDevelopersPage', [
                 'api_id' => $api_id,
             ]);
         })->name('apiEdit.developers');
 
         // Main page route - renders the Inertia component
-        Route::get('/{tab?}', function ($server_slug, $api_type, $api_id, $tab = 'routes') {
+        Route::get('/{tab?}', function ($server_slug, $api_id, $tab = 'routes') {
             // Validate tab parameter
             $validTabs = ['routes', 'resources', 'functions', 'files', 'models', 'options'];
 
@@ -188,7 +192,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
             }
 
             return Inertia::render('apiEdit/Layout', [
-                'api_type' => $api_type,
+                // 'api_type' => $api_type,
                 'api_id' => $api_id,
                 'activeTab' => $tab,
             ]);
@@ -199,38 +203,37 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
     // API Latest Version - (JSON responses - AJAX calls)
     // ============================================
     Route::prefix('/ajax/apis')->group(function () {
-        Route::get('/{api_type}/{api_id}', [App\Http\Controllers\Api\ApiController::class, 'apisShow'])
+        Route::get('/{api_id}', [App\Http\Controllers\Api\ApiController::class, 'apisShow'])
             ->name('api.show');
-        Route::get('/{api_type}/{api_id}/versions/latest', [App\Http\Controllers\Api\ApiController::class, 'ApiEditIndex'])
+        Route::get('/{api_id}/versions/latest', [App\Http\Controllers\Api\ApiController::class, 'ApiEditIndex'])
             ->name('api.edit.index');
-        Route::put('/{api_type}/{api_id}/code', [App\Http\Controllers\Api\ApiController::class, 'ApiEditUpdate'])
+        Route::put('/{api_id}/code', [App\Http\Controllers\Api\ApiController::class, 'ApiEditUpdate'])
             ->name('api.edit.update');
         // TO-DO add api_type parameter to the following routes
-        Route::get('/{api_type}/{api_id}/versions', [App\Http\Controllers\Api\ApiController::class, 'getApiVersions']);
-        Route::get('/{api_type}/{api_id}/versions/{version_id}', [App\Http\Controllers\Api\ApiController::class, 'getApiVersionDetails']);
-        Route::put('/{api_type}/{api_id}/publish', [App\Http\Controllers\Api\ApiController::class, 'publishApiVersion']);
+        Route::get('/{api_id}/versions', [App\Http\Controllers\Api\ApiController::class, 'getApiVersions']);
+        Route::get('/versions/{version_id}', [App\Http\Controllers\Api\ApiController::class, 'getApiVersionDetails']);
+        Route::put('/{api_id}/publish', [App\Http\Controllers\Api\ApiController::class, 'publishApiVersion']);
     });
 
-    Route::get('/apis/{api_type}/{api_id}/version/latest', [App\Http\Controllers\Api\ApiController::class, 'exportApiVersion'])
+    Route::get('/apis/{api_id}/version/latest', [App\Http\Controllers\Api\ApiController::class, 'exportApiVersion'])
         ->name('api.export.version');
 
     // ============================================
     // API Version Comparison
     // ============================================
 
-    Route::get('/apis/{api_type}/{api_id}/compare/{version_id}', function ($server_slug, $api_type, $api_id, $version_id) {
+    Route::get('/apis/{api_id}/compare/{version_id}', function ($server_slug, $api_id, $version_id) {
         return inertia('apiEdit/Compare', [
             'server_slug' => $server_slug,
             'api_id' => $api_id,
-            'api_type' => $api_type,
             'version_id' => $version_id
         ]);
     })->name('api.compare');
 
     // API Instance Edit Routes (Inertia pages for editing API Instances)
-    Route::prefix('/api_instances/{api_type}/{instance_id}')->group(function () {
+    Route::prefix('/api_instances/{instance_id}')->group(function () {
         // Main page route - renders the Inertia component
-        Route::get('/{tab?}', function ($server_slug, $api_type, $instance_id, $tab = 'main') {
+        Route::get('/{tab?}', function ($server_slug, $instance_id, $tab = 'main') {
             // Validate tab parameter
             $validTabs = ['main', 'resources', 'permissions', 'options'];
 
@@ -240,7 +243,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
 
             return Inertia::render('apiInstanceEdit/Layout', [
                 'server_slug' => $server_slug,
-                'api_type' => $api_type,
+                // 'api_type' => $api_type,
                 'instance_id' => $instance_id,
                 'activeTab' => $tab,
             ]);
@@ -252,13 +255,12 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
     // ============================================
 
     Route::prefix('/ajax/api_instances')->group(function () {
-        Route::get('/{api_type}/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditIndex'])
+        Route::get('/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditIndex'])
             ->name('api_instances.edit.index');
-        Route::put('/{api_type}/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditUpdate'])
+        Route::put('/{instance_id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'ApiInstancesEditUpdate'])
             ->name('api_instances.edit.update');
 
     });
 
 });
 
-require __DIR__.'/settings.php';

@@ -10,7 +10,7 @@ class ResourcesController extends BaseDjangoController{
     // ===========================================
     // Resources 
     // ===========================================
-    public function resourcesByTypeIndex(string $server_slug, string $api_type, $type): JsonResponse
+    public function resourcesByTypeIndex(string $server_slug, $type): JsonResponse
     {
         $endpoint = "resources/type/{$type}";
 
@@ -24,7 +24,7 @@ class ResourcesController extends BaseDjangoController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? `Unknown error occurred on {$api_type} side.`;
+            ?? `Unknown error occurred on {$server_slug} side.`;
 
         return response()->json([
             'error' => $errorMessage,
