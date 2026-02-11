@@ -38,10 +38,8 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
    
 
     Route::get('dashboard', function () {
-        if (auth()->check()) {
-            return Inertia::render('Dashboard');
-        }
-        return redirect()->route('oidc.redirect');
+        return Inertia::render('Dashboard');
+        // return redirect()->route('oidc.redirect');
     })->name('dashboard');
 
     Route::get('/apis', function () {
