@@ -122,6 +122,7 @@ const hermesBaseUrl = import.meta.env.VITE_HERMES_BASEURL
 
 const highlightQuery = ref<string>('')
 const highlightTarget = ref<string>('')
+const latestVersion = ref<any>(null)
 
 // Ref to access Functions component for validation checking
 const functionsComponentRef = ref<InstanceType<typeof Functions> | null>(null)
@@ -240,6 +241,7 @@ const fetchApiData = async () => {
             throw new Error(errorData.error || 'Failed to fetch API data')
         }
         const data = await response.json()
+        latestVersion.value = data;
         // console.log('Fetched API data:', apiData.value)
         apiData.value = normalizeApiData(data, serverApiType.value as 'python' | 'php')
         originalApiData.value = JSON.parse(JSON.stringify(apiData.value))
@@ -308,6 +310,11 @@ const fetchVersions = async () => {
         }
 
         versions.value = await response.json()
+       // If versions list doesnt have  any not stable version, insert the latest version to the versions list (for php)
+       if(latestVersion.value.stable == false &&!versions.value.some((version: any) => version.stable === false)) {
+            versions.value.push(latestVersion.value)
+            
+        }
     } catch (e: any) {
         versionsError.value = e.message || 'Error fetching versions'
         showError('Failed to fetch API versions. Please try again.', 'Error')
@@ -604,7 +611,8 @@ const fetchVersionDetails = async (versionId: number) => {
 
 const switchToVersion = async (version: any) => {
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/versions/${version.id}`, {
+
+        const response = await fetch(`/${props.server_slug}/ajax/apis/versions/${version.id}`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -1424,22 +1432,25 @@ onUnmounted(() => {
                                     {{ new Date(version.created_at).toLocaleDateString() }}
                                 </p>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <div class="flex items-center gap-2">
-                                    <button 
+                            <div class="flex items-center gap-2">
+                                <template v-if="version.id === apiData?.id">
+                                    <span class="px-3 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-md">Current</span>
+                                </template>
+                                <template v-else>
+                                    <button
                                         @click="openDiffModal(version)"
                                         class="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 rounded-md transition-colors"
                                     >
-                                        {{ index === versions.length - 1 ? 'View' : 'Compare' }}
+                                        {{ index === versions.length - 1 ? 'Switch' : 'Compare' }}
                                     </button>
-                                    <button 
+                                    <button
                                         v-if="version.stable && index !== versions.length - 1"
                                         @click="switchToVersion(version)"
                                         class="px-3 py-1 text-xs bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-200 dark:hover:bg-orange-800 rounded-md transition-colors"
                                     >
                                         Switch
                                     </button>
-                                </div>
+                                </template>
                             </div>
                         </div>
                     </div>

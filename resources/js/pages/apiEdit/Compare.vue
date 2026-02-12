@@ -381,7 +381,7 @@ const backToFileList = () => {
 
 // Go back to API edit
 const goBack = () => {
-    router.get(`/apis/${props.api_id}/${activeTab.value}`)
+    router.get(`/${props.server_slug}/apis/${props.api_id}/${activeTab.value}`)
 }
 
 // Resizing functions
