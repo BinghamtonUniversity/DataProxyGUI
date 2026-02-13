@@ -301,9 +301,7 @@ const fetchApis = async () => {
         }
         
         const data = await response.json();
-        
-        // console.log('Fetched APIs:', data);
-        
+                
         // Handle different response formats: array, object with numeric keys, or mixed
         let apiArray: Api[] = [];
         
