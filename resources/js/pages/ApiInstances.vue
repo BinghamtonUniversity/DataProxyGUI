@@ -511,27 +511,27 @@ const handleRowClick = (instance: ApiInstance, event: MouseEvent) => {
 
 
 
-const selectEnvironment = (env: Environment) => {
-  newApiInstanceForm.value.environment_id = env.id.toString()
-  dropdownOpen.environment = false
-}
+// const selectEnvironment = (env: Environment) => {
+//   newApiInstanceForm.value.environment_id = env.id.toString()
+//   dropdownOpen.environment = false
+// }
 
-const selectApi = (api: Api) => {
-  newApiInstanceForm.value.api_id = api.id.toString()
-  dropdownOpen.api = false
-}
+// const selectApi = (api: Api) => {
+//   newApiInstanceForm.value.api_id = api.id.toString()
+//   dropdownOpen.api = false
+// }
 
-const getSelectedEnvironmentName = () => {
-  if (!newApiInstanceForm.value.environment_id || !environments.value) return ''
-  const selected = environments.value.find(env => env.id.toString() === newApiInstanceForm.value.environment_id)
-  return selected ? `${selected.name} - ${selected.type}` : ''
-}
+// const getSelectedEnvironmentName = () => {
+//   if (!newApiInstanceForm.value.environment_id || !environments.value) return ''
+//   const selected = environments.value.find(env => env.id.toString() === newApiInstanceForm.value.environment_id)
+//   return selected ? `${selected.name} - ${selected.type}` : ''
+// }
 
-const getSelectedApiName = () => {
-  if (!newApiInstanceForm.value.api_id || !apis.value) return ''
-  const selected = apis.value.find(api => api.id.toString() === newApiInstanceForm.value.api_id)
-  return selected ? selected.name : ''
-}
+// const getSelectedApiName = () => {
+//   if (!newApiInstanceForm.value.api_id || !apis.value) return ''
+//   const selected = apis.value.find(api => api.id.toString() === newApiInstanceForm.value.api_id)
+//   return selected ? selected.name : ''
+// }
 
 // Close dropdowns when clicking outside
 const handleClickOutside = (event: Event) => {
