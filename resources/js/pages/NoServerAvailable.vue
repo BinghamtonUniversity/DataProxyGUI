@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 <template>
     <Head title="No Servers Available" />
 
-    <div class="flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+    <div class="flex items-center justify-center">
         <Card class="w-full max-w-md">
             <CardHeader class="text-center">
                 <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">

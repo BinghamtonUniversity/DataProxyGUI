@@ -190,7 +190,7 @@ const handleImportAction = (actionData: { type: string; action: string; formData
     if (actionData.type === 'save') {
         handleImportSubmit(actionData.formData);
     }
-    if (actionData.type === 'close') {
+    if (actionData.type === 'close' || actionData.type === 'cancel') {
         closeImportModal();
     }
 };

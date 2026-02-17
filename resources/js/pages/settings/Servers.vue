@@ -193,17 +193,25 @@ const handleServerFormAction = async (action: { type: string; action: string; fo
                 }
                 
                 const data = await response.json();
-                initialData.value.servers = data;
+                if (isEditing.value) {
+                    const server = initialData.value.servers.find((server: ProxyServer) => server.id === data.id);
+                    if (server) {
+                        Object.assign(server, data);
+                    }
+                } else {    
+                    initialData.value.servers.push(data as never);
+                }
                 success(isEditing.value ? 'Server updated successfully' : 'Server added successfully', 'Success');
+                
                 closeModal();
-                await getServers();
+                // await getServers();
             } catch (err: any) {
                 error(err.message || 'Failed to save server', 'Error');
             }
         } else {
             error('Please fix validation errors before saving', 'Validation Error');
         }
-    } else if (action.type === 'cancel') {
+    } else if (action.type === 'close' || action.type === 'cancel') {
         closeModal();
     }
 }
@@ -279,8 +287,8 @@ onMounted(() => {
                 :onClick="addServer"
             />
             <!-- grid of servers -->
-            <div class="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-4">
-            <div v-for="server in initialData.servers as ProxyServer[]" :key="server.id" class="mb-4">
+            <div class="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-4">
+            <div v-for="server in initialData.servers as ProxyServer[]" :key="server.id" class="mb-2">
                 <CardWidget
                     :customClass="currentServerSlug == server.slug ? 'border-green-600 dark:border-green-900/30 border-2' : ''"
                     :payload="server" 

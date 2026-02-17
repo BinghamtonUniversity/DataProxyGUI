@@ -37,7 +37,7 @@ const environmentsData = ref<any[]>([]);
 const formRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const argumentsFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const showArgumentsModal = ref<boolean>(false);
-
+const showReportModal = ref<boolean>(false);
 // Toaster
 const { success, error: showError, warning, info } = useToaster();
 
@@ -223,8 +223,19 @@ const scheduleSchema = computed(() => ({
             targetColor: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
         },
         {
-            name: "last_exec_cron",
+            name: "status",
             label: "Status",
+            type: "text",
+            placeholder: "Enter the status of the schedule",
+            value: "",
+            help: "status of the schedule",
+            info: "status of the schedule",
+            showColumn: true,
+            template: "Last executed: {{#formatRelative}}{{last_exec_start}}{{/formatRelative}}\nRan for {{#formatDuration}}{{last_exec_start}}|{{last_exec_stop}}{{/formatDuration}}",
+        },
+        {
+            name: "last_exec_cron",
+            label: "Last Exec Cron",
             type: "text",
             placeholder: "Enter the last exec cron of the schedule",
             value: "",
@@ -233,7 +244,7 @@ const scheduleSchema = computed(() => ({
             width: "12",
             offset: "0",
             required: true,
-            showColumn: true
+            showColumn: false,
         },
         {
             name: "last_exec_start",
@@ -246,7 +257,8 @@ const scheduleSchema = computed(() => ({
             width: "12",
             offset: "0",
             required: true,
-            showColumn: false
+            showColumn: false,
+
         },
         {
             name: "last_exec_stop",
@@ -259,7 +271,21 @@ const scheduleSchema = computed(() => ({
             width: "12",
             offset: "0",
             required: true,
-            showColumn: false
+            showColumn: false,
+ 
+        },
+        {
+            name: "last_response",
+            label: "Last Response",
+            type: "text",
+            placeholder: "Enter the last response of the schedule",
+            value: "",
+            help: "last response of the schedule",
+            info: "last response of the schedule",
+            width: "12",
+            offset: "0",
+            required: true,
+            showColumn: false,
         },
         {
             name: "created_at",
@@ -296,6 +322,50 @@ const scheduleSchema = computed(() => ({
     ]
 }));
 
+const reportFormConfig = computed(() => ({
+    label: 'Report',
+    description: '',
+    name: "report-schema",
+    files: false,
+    fields: [
+        {
+            name: "status",
+            label: "",
+            type: "output",
+            placeholder: "Enter the status of the report",
+            value: "",
+            help: "status of the report",
+            info: "status of the report",
+            template: "Last executed: {{#formatRelative}}{{last_exec_start}}{{/formatRelative}}\nRan for {{#formatDuration}}{{last_exec_start}}|{{last_exec_stop}}{{/formatDuration}}",
+       
+        },
+        {
+            name: "last_response",
+            label: "Last Results:",
+            type: "textarea",
+            placeholder: "Enter the id of the report",
+            value: "",
+
+            info: "last response of the report",
+            width: "12",
+            offset: "0",
+            edit: false,
+            isObject: true,
+
+        },
+        {
+            name: "next_runtimes",
+            label: "Scheduled to run:",
+            type: "textarea",
+            placeholder: "Enter the next runtimes of the report",
+            value: "",
+
+            info: "next runtimes of the report",
+            edit: false,
+            template: "{{next_runtimes}}"
+        }
+    ]
+}));
 // Form configuration for environments
 const formConfig = computed(() => ({
     label: 'Schedules',
@@ -845,8 +915,30 @@ const handleDataGridActionHandler = (action: { action: string; selectedRows: any
         case 'manual_run':
             handleManualRun(action.selectedData[0].id);
             break;
+        case 'view_report':
+            openReportModal(action.selectedData[0]);
+            break;
         case 'delete':
             handleDelete([action.selectedData[0].id]);
+            break;
+    }
+};
+
+const openReportModal = (row: any) => {
+    showReportModal.value = true;
+    editingRow.value = row;
+};
+const closeReportModal = () => {
+    showReportModal.value = false;
+    editingRow.value = null;
+};
+
+const handleReportFormActionHandler = (action: { type: string; action: string; formData: any }) => {
+    console.log('Report form action:', action);
+    switch (action.type) {
+        case 'close':
+        case 'cancel':
+            closeReportModal();
             break;
     }
 };
@@ -945,6 +1037,7 @@ onMounted(async () => {
                 :rowActionLabels="false"
                 :actions="[
                     { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
+                    { name: 'view_report', type: 'info', min: 1, max: 1, label: 'View Report', loc: 'left', icon: 'chart-bar' },
                     { name: 'manual_run', type: 'primary', min: 1, max: 1, label: 'Manual Run', loc: 'left', icon: 'play-circle' },
                     { name: 'arguments', type: 'info', min: 1, max: 1, label: 'Arguments', icon: 'cog', loc: 'right' },
                     { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
@@ -1015,7 +1108,25 @@ onMounted(async () => {
                     :actionHandler="handleArgumentsFormActionHandler"
                 />
             </AlertModal>
-            
+
+            <!-- Modal for Report -->
+            <AlertModal 
+                :isOpen="showReportModal"
+                :title="''"
+                @close="showReportModal = false"
+            >
+            <FormViewer
+                :formConfig="reportFormConfig"
+                :initialData="editingRow"
+                :cancelAction="'close'"
+                :validateOnSubmit="true"
+                :actionHandler="handleReportFormActionHandler"
+                :actions="[
+                    { type: 'close', action: 'close', label: 'Close', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+                ]"
+            />
+              
+            </AlertModal>
             <!-- Global Toaster -->
             <Toaster />
         </div>

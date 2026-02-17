@@ -117,6 +117,7 @@ const permissionSchema = computed(() => ({
 const handleFormAction = async (actionData: { type: string; action: string; formData: any }) => {
     switch (actionData.action) {
         case 'close':
+        case 'cancel':
             closeNewPermissionDialog()
             break
         case 'save':

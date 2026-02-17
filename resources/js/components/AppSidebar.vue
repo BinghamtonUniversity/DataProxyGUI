@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Users, Database, File, Calendar, History, Building2, Globe, ShieldCheckIcon, ShieldCheck, TestTube, CheckCircle } from 'lucide-vue-next';
+import { Folder, LayoutGrid, Database, File, Calendar, History, Building2, ShieldCheck, Users } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { useProxyServer } from '@/composables/useProxyServer';
 import NoServerAvailable from '@/pages/NoServerAvailable.vue';
@@ -66,55 +65,6 @@ const mainNavItems: NavItem[] = [
 
 ];
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Development',
-        href: '#',
-        icon: Folder,
-        children: [
-            {
-                title: 'Users',
-                href: '/users',
-                icon: Users,
-            },
-            // {
-            //     title: 'Unit Tests',
-            //     href: '/unit-tests',
-            //     icon: CheckCircle,
-            // },
-            {
-                title: 'DataGrid Example',
-                href: '/datagrid-example',
-                icon: LayoutGrid,
-            },
-            {
-                title: 'Types Example',
-                href: '/types-example',
-                icon: Folder,
-            },
-            {
-                title: 'FormViewer Example',
-                href: '/formviewer-example',
-                icon: BookOpen,
-            },
-            {
-                title: 'Formbuilder Example',
-                href: '/formbuilder-example',
-                icon: LayoutGrid,
-            },
-        ]
-    },
-    {
-        title: 'Github Repo',
-        href: 'https://github.com/BinghamtonUniversity/DataProxyGUI',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
 </script>
 
 <template>
@@ -138,7 +88,6 @@ const footerNavItems: NavItem[] = [
         </SidebarContent>
 
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

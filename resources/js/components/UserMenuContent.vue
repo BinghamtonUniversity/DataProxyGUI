@@ -1,11 +1,70 @@
 <script setup lang="ts">
 import UserInfo from '@/components/UserInfo.vue';
 import { DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import type { User } from '@/types';
+import type { User, NavItem } from '@/types';
 import { router } from '@inertiajs/vue3';
-import { LogOut, Settings, Server } from 'lucide-vue-next';
+import { LogOut, Settings, Server, BookOpen, Folder, LayoutGrid, Users, ChevronDown, ChevronRight } from 'lucide-vue-next';
 import { ref, onMounted, computed } from 'vue';
 import { useProxyServer } from '@/composables/useProxyServer';
+
+const footerNavItems: NavItem[] = [
+    {
+        title: 'Development',
+        href: '#',
+        icon: Folder,
+        children: [
+            {
+                title: 'DataGrid Example',
+                href: '/datagrid-example',
+                icon: LayoutGrid,
+            },
+            {
+                title: 'Types Example',
+                href: '/types-example',
+                icon: Folder,
+            },
+            {
+                title: 'FormViewer Example',
+                href: '/formviewer-example',
+                icon: BookOpen,
+            },
+            {
+                title: 'Formbuilder Example',
+                href: '/formbuilder-example',
+                icon: LayoutGrid,
+            },
+        ]
+    },
+    {
+        title: 'Github Repo',
+        href: 'https://github.com/BinghamtonUniversity/DataProxyGUI',
+        icon: Folder,
+    },
+    {
+        title: 'Documentation',
+        href: 'https://laravel.com/docs/starter-kits#vue',
+        icon: BookOpen,
+    },
+];
+
+const isExternalLink = (href: string) => href.startsWith('http');
+
+/** Resolve href: add proxy server slug prefix when there is an active server and link is internal. */
+const resolveHref = (href: string) => {
+    if (isExternalLink(href)) return href;
+    if (serverSlug.value) return buildUrl(href);
+    return href;
+};
+
+const expandedSections = ref<Set<string>>(new Set());
+const toggleSection = (title: string) => {
+    if (expandedSections.value.has(title)) {
+        expandedSections.value.delete(title);
+    } else {
+        expandedSections.value.add(title);
+    }
+    expandedSections.value = new Set(expandedSections.value);
+};
 
 
 interface Props {
@@ -102,6 +161,59 @@ onMounted(() => {
                 <Settings class="mr-2 h-4 w-4" />
                 Settings
             </button>
+        </DropdownMenuItem>
+    </DropdownMenuGroup>
+
+    <DropdownMenuSeparator />
+
+    <!-- Footer nav items (Development, Github, Documentation) -->
+    <DropdownMenuGroup v-for="item in footerNavItems" :key="item.title">
+        <template v-if="item.children?.length">
+            <DropdownMenuItem :as-child="true" @select.prevent="toggleSection(item.title)">
+                <button
+                    type="button"
+                    class="flex w-full cursor-pointer items-center px-2 py-1.5 text-left text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                >
+                    <component :is="item.icon" class="mr-2 h-4 w-4 shrink-0" />
+                    <span class="flex-1">{{ item.title }}</span>
+                    <ChevronDown
+                        v-if="expandedSections.has(item.title)"
+                        class="h-4 w-4 shrink-0"
+                    />
+                    <ChevronRight
+                        v-else
+                        class="h-4 w-4 shrink-0"
+                    />
+                </button>
+            </DropdownMenuItem>
+            <template v-if="expandedSections.has(item.title)">
+                <DropdownMenuItem
+                    v-for="child in item.children"
+                    :key="child.title"
+                    :as-child="true"
+                >
+                    <a
+                        :href="resolveHref(child.href)"
+                        class="flex w-full items-center pl-6 text-left text-sm"
+                        :target="isExternalLink(child.href) ? '_blank' : undefined"
+                        :rel="isExternalLink(child.href) ? 'noopener noreferrer' : undefined"
+                    >
+                        <component :is="child.icon" class="mr-2 h-4 w-4" />
+                        {{ child.title }}
+                    </a>
+                </DropdownMenuItem>
+            </template>
+        </template>
+        <DropdownMenuItem v-else :as-child="true">
+            <a
+                :href="resolveHref(item.href)"
+                class="flex w-full items-center text-left"
+                :target="isExternalLink(item.href) ? '_blank' : undefined"
+                :rel="isExternalLink(item.href) ? 'noopener noreferrer' : undefined"
+            >
+                <component :is="item.icon" class="mr-2 h-4 w-4" />
+                {{ item.title }}
+            </a>
         </DropdownMenuItem>
     </DropdownMenuGroup>
 

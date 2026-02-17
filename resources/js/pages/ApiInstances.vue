@@ -38,6 +38,7 @@ const api_instances = ref<ApiInstance[]>([])
 const environments = ref<Environment[]>([])
 const apis = ref<Api[]>([])
 const api_versions = ref<ApiData[]>([])
+const formRef = ref<InstanceType<typeof FormViewer> | null>(null)
 // Toaster
 const { success, error, warning, info } = useToaster();
 
@@ -64,6 +65,7 @@ const formConfig = {
       placeholder: "Route/Slug",
       value: "",
       required: true,
+      validate: [{ type: 'pattern', regex: '^[a-z0-9]+(?:[-_][a-z0-9]+)*$', message: 'Slug must contain only lowercase letters, numbers, and hyphens', conditions: true }]
       
     },
     {
@@ -74,19 +76,6 @@ const formConfig = {
       value: "",
       options: [],
       required: true,
-    },
-    {
-      name: 'api_type',
-      label: 'API Type',
-      type: 'select',
-      placeholder: 'API Type',
-      value: '',
-      options: [ { label: 'PHP', value: 'php' },
-                  { label: 'Python', value: 'python' }
-                ],
-      required: true,
-      edit: false
-  
     },
     {
       name: "api_id",
@@ -173,15 +162,6 @@ const apiInstancesSchema = {
             options: [],
             required: true,
             showColumn: true
-        },
-        {
-            name: "api_type",
-            label: "API Type",
-            type: "text",
-            placeholder: "API Type",
-            value: "",
-            help: "Type of the API",
-            info: "Type of the API",
         },
         {
             name: "api_version_id",
@@ -345,6 +325,7 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
     switch (actionData.type) {
       
         case 'close':
+        case 'cancel':
             closeNewApiInstanceDialog();
             break;
         case 'save':
@@ -358,6 +339,17 @@ const submitNewApiInstance = async ( formData: any) => {
   
   newApiInstanceLoading.value = true
   newApiInstanceError.value = ''
+  
+  if (formRef.value) {
+    const isValid = formRef.value.validateForm();
+    if (!isValid) {   
+      newApiInstanceError.value = 'Please fix validation errors before saving'
+      error(newApiInstanceError.value, 'Validation Error')
+      newApiInstanceLoading.value = false
+      return;
+    }
+  }
+
 
   // Trim and normalize route just in case
   const routeToCheck = formData.route.trim().toLowerCase()
@@ -651,7 +643,7 @@ const fetchAllData = async (mode: string = 'default') => {
     //             value: api.id,
     //         }));
     // }
-    formConfig.fields[4].options = apisData.map((api: any) => ({
+    formConfig.fields[3].options = apisData.map((api: any) => ({
         label: api.name  || `API ${api.id}`,
         value: api.id,
     }));
@@ -664,7 +656,7 @@ const fetchAllData = async (mode: string = 'default') => {
     }));
 
 
-    apiInstancesSchema.fields[6].options = apiVersionsData.map((apiVersion: any) => ({
+    apiInstancesSchema.fields[5].options = apiVersionsData.map((apiVersion: any) => ({
         
         label: apiVersion.stable == true ? apiVersion.summary : 'Latest/Working',
         value: apiVersion.id ,
@@ -682,13 +674,13 @@ const fetchAllData = async (mode: string = 'default') => {
         instance.api_type = api_type || 'php';
 
     });
-    apiInstancesSchema.fields[5].options = ['python', 'php'].map((api_type: any) => ({
-        label: api_type  || `API ${api_type}`,
-        value: api_type,
-        color: api_type === 'python' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-    })); 
+    // apiInstancesSchema.fields[5].options = ['python', 'php'].map((api_type: any) => ({
+    //     label: api_type  || `API ${api_type}`,
+    //     value: api_type,
+    //     color: api_type === 'python' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+    // })); 
 
-     apiInstancesSchema.fields[6]!.options!.unshift!({
+     apiInstancesSchema.fields[5]!.options!.unshift!({
          label: 'Latest/Working',
          value: -1,
          color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
@@ -800,6 +792,7 @@ const handleDataGridRowClick = (row: any) => {
         >
    
         <FormViewer 
+            ref="formRef"
             :formConfig="formConfig" 
             :initialData="newApiInstanceForm"
             :cancelAction="'close'"
