@@ -33,9 +33,9 @@ class ApiDevelopersController extends BaseDjangoController{
     /**
      * Create a new API developer assignment
      */
-    public function createApiDeveloper(Request $request, string $server_slug, string $api_id): JsonResponse
+    public function createApiDeveloper(Request $request, string $server_slug, string $api_id, string $user_id): JsonResponse
     {
-        $result = $this->makeBackendRequest('POST', "apis/{$api_id}/developers", $request->all(), [], $server_slug);
+        $result = $this->makeBackendRequest('POST', "apis/{$api_id}/developers/{$user_id}", $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data'], 201);
@@ -55,35 +55,11 @@ class ApiDevelopersController extends BaseDjangoController{
     }
 
     /**
-     * Update an API developer assignment
-     */
-    public function updateApiDeveloper(Request $request, string $server_slug, string $api_id, $id): JsonResponse
-    {
-        $result = $this->makeBackendRequest('PUT', "apis/{$api_id}/developers/{$id}", $request->all(), [], $server_slug);
-
-        if ($result['success']) {
-            return response()->json($result['data']);
-        }
-
-        if ($result['status'] === 403) {    
-            return response()->json([
-                'error' => 'Unauthorized'
-            ], 403);
-        }
-
-        return response()->json([
-            'error' => "Failed to update API developer assignment",
-            'details' => $result['data'],
-            'status' => $result['status']
-        ], $result['status']);
-    }
-
-    /**
      * Delete an API developer assignment
      */
-    public function deleteApiDeveloper(string $server_slug, string $api_id, $id): JsonResponse
+    public function deleteApiDeveloper(string $server_slug, string $api_id, string $user_id): JsonResponse
     {
-        $result = $this->makeBackendRequest('DELETE', "apis/{$api_id}/developers/{$id}", [], [], $server_slug);
+        $result = $this->makeBackendRequest('DELETE', "apis/{$api_id}/developers/{$user_id}", [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json([

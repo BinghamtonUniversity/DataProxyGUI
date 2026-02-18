@@ -152,9 +152,8 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
 
         // API Developer routes
         Route::get('/apis/{id}/developers', [App\Http\Controllers\Api\ApiDevelopersController::class, 'getApiDevelopers']);
-        Route::post('/apis/{id}/developers', [App\Http\Controllers\Api\ApiDevelopersController::class, 'createApiDeveloper']);
-        Route::put('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiDevelopersController::class, 'updateApiDeveloper']);
-        Route::delete('/apis/{api_id}/developers/{id}', [App\Http\Controllers\Api\ApiDevelopersController::class, 'deleteApiDeveloper']);
+        Route::post('/apis/{id}/developers/{user_id}', [App\Http\Controllers\Api\ApiDevelopersController::class, 'createApiDeveloper']);
+        Route::delete('/apis/{api_id}/developers/{user_id}', [App\Http\Controllers\Api\ApiDevelopersController::class, 'deleteApiDeveloper']);
     });
 
     // Resources
