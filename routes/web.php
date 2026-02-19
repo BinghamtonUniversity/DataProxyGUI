@@ -121,11 +121,11 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
         Route::delete('/api_instances/{id}', [App\Http\Controllers\Api\ApiInstancesController::class, 'apiInstancesDestroy']);
 
         //Schedulers
-        Route::get('/schedulers', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersIndex']);
-        Route::get('/schedulers/{id}/run', [App\Http\Controllers\Api\SchedulersController::class, 'manualRunScheduler']);
-        Route::post('/schedulers', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersStore']);
-        Route::put('/schedulers/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersUpdate']);
-        Route::delete('/schedulers/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersDestroy']);
+        Route::get('/scheduler', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersIndex']);
+        Route::get('/scheduler/{id}/run', [App\Http\Controllers\Api\SchedulersController::class, 'manualRunScheduler']);
+        Route::post('/scheduler', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersStore']);
+        Route::put('/scheduler/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersUpdate']);
+        Route::delete('/scheduler/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersDestroy']);
 
         //Activity Logs
         Route::get('/activity_log', [App\Http\Controllers\Api\ActivityLogsController::class, 'activityLogsIndex']);

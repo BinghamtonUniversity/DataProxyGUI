@@ -13,7 +13,7 @@ class SchedulersController extends BaseDjangoController{
     // ===========================================
     public function schedulersIndex(string $server_slug): JsonResponse
     {
-        $result = $this->makeBackendRequest('GET', 'schedulers', [], [], $server_slug);
+        $result = $this->makeBackendRequest('GET', 'scheduler', [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -31,7 +31,7 @@ class SchedulersController extends BaseDjangoController{
 
     public function schedulersStore(Request $request, $server_slug): JsonResponse
     {
-        $result = $this->makeBackendRequest('POST', 'schedulers', $request->all(), [], $server_slug);
+        $result = $this->makeBackendRequest('POST', 'scheduler', $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data'], 201);
@@ -46,7 +46,7 @@ class SchedulersController extends BaseDjangoController{
 
     public function schedulersUpdate(Request $request, string $server_slug, string $id): JsonResponse
     {
-        $result = $this->makeBackendRequest('PUT', "schedulers/{$id}", $request->all(), [], $server_slug);
+        $result = $this->makeBackendRequest('PUT', "scheduler/{$id}", $request->all(), [], $server_slug);
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -61,7 +61,7 @@ class SchedulersController extends BaseDjangoController{
 
     public function schedulersDestroy(string $server_slug, string $id): JsonResponse
     {
-        $result = $this->makeBackendRequest('DELETE', "schedulers/{$id}", [], [], $server_slug);
+        $result = $this->makeBackendRequest('DELETE', "scheduler/{$id}", [], [], $server_slug);
 
         if ($result['success']) {
             return response()->json([
@@ -77,7 +77,7 @@ class SchedulersController extends BaseDjangoController{
     }
     public function manualRunScheduler(string $server_slug, string $id): JsonResponse
     {
-        $result = $this->makeBackendRequest('GET', "schedulers/{$id}/run", [], [], $server_slug);
+        $result = $this->makeBackendRequest('GET', "scheduler/{$id}/run", [], [], $server_slug);
         if ($result['success']) {
             return response()->json([
                 'message' => "Scheduler run successfully"

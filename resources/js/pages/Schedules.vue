@@ -547,7 +547,7 @@ const fetchSchedules = async () => {
         loading.value = true;
         error.value = null;
         
-        const response = await fetch(`api/schedulers`, {
+        const response = await fetch(`api/scheduler`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
