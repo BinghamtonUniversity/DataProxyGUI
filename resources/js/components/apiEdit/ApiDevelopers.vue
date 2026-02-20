@@ -45,7 +45,7 @@ const dataGridConfig = {
     files: false,
     fields: [
         {
-            name: "api_developer_id",
+            name: "user_id",
             label: "ID",
             type: "text",
             placeholder: "Select a developer",
@@ -115,7 +115,7 @@ const formConfig = {
     files: false,
     fields: [
         {
-            name: "api_developer_id",
+            name: "user_id",
             label: "Developer",
             type: "select",
             placeholder: "Select a developer",
@@ -153,9 +153,7 @@ const cleanFormData = (formData: any) => {
             cleaned[key] = null;
         }
     });
-
-    cleaned.user_id = cleaned.api_developer_id;
-    
+    cleaned.api_id = props.api_id; // Ensure API ID is included in the payload
     return cleaned;
 };
 
@@ -166,7 +164,7 @@ const fetchAvailableUsers = async () => {
         // Filter users who are users
 
         // Get currently assigned user IDs
-        const assignedUserIds = apiDevelopers.value.map(dev => dev.api_developer_id);
+        const assignedUserIds = apiDevelopers.value.map(dev => dev.user_id);
         
         // Filter out users who are already assigned to this API
         const availableUsers = users.filter((dev: any) => !assignedUserIds.includes(dev.id));
@@ -212,20 +210,20 @@ const fetchAllUsers = async () => {
 };
 
 // Add developer names to the data for display
-const addDeveloperNames = async (data: any[]) => {
-    const developers = await fetchAllUsers();
+const addDeveloperNames = async (developers: any[]) => {
+    const users = await fetchAllUsers();
 
-    return data.map(item => {
+    return developers.map(item => {
         // Handle both field name formats from server
-        const developerId = item.api_developer_id || item.api_developer;
-        const developer = developers.find((dev: any) => dev.id == developerId);
+        const developerUserId = item.user_id || item.user
+        const developer = users.find((dev: any) => dev.id == developerUserId);
 
         const result = {
             ...item,
             // Ensure we have the correct field names for the DataGrid
-            api_developer_id: developerId, // Standardize to api_developer_id for DataGrid
+            user_id: developerUserId, 
             api_id: item.api_id || item.api,
-            developer_name: developer ? developer.name : `Developer ID: ${developerId}`,
+            developer_name: developer ? developer.name : `Developer ID: ${developerUserId}`,
             developer_mail: developer ? developer.email : '',
             developer_username: developer ? developer.username : ''
         };
@@ -291,7 +289,7 @@ const handleFormSubmit = async (formValues: any) => {
             // Create new API developer assignment via API
             const cleanedData = cleanFormData(formValues);
 
-            const response = await fetch(`/${props.server_slug}/api/apis/${props.api_id}/developers`, {
+            const response = await fetch(`/${props.server_slug}/api/apis/${props.api_id}/developers/${cleanedData.user_id}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -312,7 +310,6 @@ const handleFormSubmit = async (formValues: any) => {
             
             // Add developer name and add to local state
             const dataWithNames = await addDeveloperNames([newApiDeveloper]);
-
             apiDevelopers.value.push(dataWithNames[0]);
            
             // Refresh available developers for the dropdown
@@ -369,10 +366,11 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
 const handleDelete = async (selectedRowIds?: number[]) => {
     if (selectedRowIds && selectedRowIds.length > 0) {
         const developersToDelete = apiDevelopers.value.filter(dev => selectedRowIds.includes(dev.id));
+        
         try {
             // Delete API developer assignments via API
             for (const dev of developersToDelete) {
-                const response = await fetch(`/${props.server_slug}/api/apis/${props.api_id}/developers/${dev.api_developer_id}`, {
+                const response = await fetch(`/${props.server_slug}/api/apis/${props.api_id}/developers/${dev.user_id}`, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
