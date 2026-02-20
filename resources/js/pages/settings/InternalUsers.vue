@@ -289,20 +289,21 @@ function handleDataGridActionHandler(actionData: {
     selectedData: InternalUser[];
 }) {
     switch (actionData.action) {
-        case 'create':
-            openNewModal();
-            break;
+        // case 'create':
+        //     openNewModal();
+        //     break;
         case 'edit':
             openEditModal(actionData.selectedData[0]);
             break;
-        case 'delete':
-            if (actionData.selectedData[0]?.id === currentUserId.value) {
-                showError('You cannot delete your own account.', 'Error');
-                return;
-            }
-            handleDelete([actionData.selectedData[0].id]);
-            break;
+        // case 'delete':
+        //     if (actionData.selectedData[0]?.id === currentUserId.value) {
+        //         showError('You cannot delete your own account.', 'Error');
+        //         return;
+        //     }
+        //     handleDelete([actionData.selectedData[0].id]);
+        //     break;
         default:
+            warning(`Unknown action type: ${actionData.action}`, 'Error');
             break;
     }
 }
@@ -342,9 +343,9 @@ onMounted(() => {
                     :data="users"
                     theme="default"
                     :actions="[
-                        { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
+                       
                         { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
-                        { name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right' },
+                        
                     ]"
                     @action-handler="handleDataGridActionHandler"
                 />
