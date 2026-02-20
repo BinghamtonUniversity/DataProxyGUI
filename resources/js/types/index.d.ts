@@ -169,7 +169,7 @@ export interface ApiUser {
   created_at: string,
   environment_id: number,
   app_name: string,
-  app_secret: string,
+  api_secret: string,
   api_key: string,
   api_type?: string,
 }

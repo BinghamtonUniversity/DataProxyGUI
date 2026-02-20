@@ -67,6 +67,7 @@ const formConfig = {
             value: '',
             width: '12',
             offset: '0',
+            edit: false,
             required: true,
         },
         {
@@ -77,6 +78,7 @@ const formConfig = {
             value: '',
             width: '12',
             offset: '0',
+            edit: false,
             required: true,
         },
         {
@@ -88,6 +90,7 @@ const formConfig = {
             help: 'Unique identifier for the user',
             width: '12',
             offset: '0',
+            edit: false,
             required: false,
         },
         {

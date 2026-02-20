@@ -61,7 +61,7 @@ const formConfig = ref({
             required: true
         },
         {
-            name: "app_secret",
+            name: "api_secret",
             label: "Secret",
             type: "password",
             placeholder: "Enter the app secret",
@@ -118,7 +118,7 @@ const cleanFormData = (formData: any) => {
     delete cleaned.id; // Remove ID for new records
     delete cleaned.created_at; // Remove timestamp fields
     delete cleaned.updated_at;
-    delete cleaned.encrypted_app_secret; // Don't send encrypted secret
+    delete cleaned.encrypted_api_secret; // Don't send encrypted secret
     delete cleaned.api_type;
     
     // Convert checkbox fields to proper booleans
@@ -220,7 +220,7 @@ const openEditModal = (row?: any) => {
         editingRow.value = { 
             id: row.id,
             app_name: row.app_name,
-            app_secret: null,
+            api_secret: null,
             environment_id: row.environment_id,
             is_active: row.is_active
         };
@@ -259,7 +259,7 @@ const fetchDecryptedSecret = async (userId: number): Promise<string> => {
         }
         
         const data = await response.json();
-        return data.app_secret || 'No secret found';
+        return atob(data.api_secret) || 'No secret found';
         
     } catch (error) {
         console.error('Error fetching decrypted secret:', error);
