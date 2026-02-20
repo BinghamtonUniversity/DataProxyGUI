@@ -73,7 +73,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
 
     Route::get('/environments', function () {
         return Inertia::render('Environments');
-    })->name('environments');
+    })->name('environments')->middleware('server.admin');
 
     Route::get('/schedules', function () {
         return Inertia::render('Schedules');
@@ -81,7 +81,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
 
     Route::get('/activity_log', function () {
         return Inertia::render('ActivityLogs');
-    })->name('activity_log');
+    })->name('activity_log')->middleware('server.admin');
 
     Route::get('/api_accounts', function () {
         return Inertia::render('ApiAccounts');
@@ -89,7 +89,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
 
     Route::get('/users', function () {
         return Inertia::render('Users');
-    })->name('users');
+    })->name('users')->middleware('server.admin');
     
     // Route::get('/unit-tests', function () {
     //     return Inertia::render('development/UnitTests');
@@ -159,7 +159,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
     // Resources
     Route::get('/resources', function () {
         return Inertia::render('Resources');
-    })->name('resources');
+    })->name('resources')->middleware('server.admin');
 
 
     Route::prefix('ajax/resources')->group(function () {

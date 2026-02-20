@@ -24,6 +24,8 @@ export type AppPageProps<T extends Record<string, unknown> = Record<string, unkn
     auth: Auth;
     ziggy: Config & { location: string };
     sidebarOpen: boolean;
+    server_slug?: string | null;
+    isServerAdmin?: boolean;
 };
 
 export interface User {

@@ -3,15 +3,18 @@ import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { Folder, LayoutGrid, Database, File, Calendar, History, Building2, ShieldCheck, Users } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { useProxyServer } from '@/composables/useProxyServer';
 import NoServerAvailable from '@/pages/NoServerAvailable.vue';
 
 const { buildUrl, serverSlug } = useProxyServer();
+const page = usePage();
+const isServerAdmin = computed(() => (page.props.isServerAdmin as boolean) ?? false);
 
-const mainNavItems: NavItem[] = [
+const allNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: buildUrl('dashboard'),
@@ -51,19 +54,24 @@ const mainNavItems: NavItem[] = [
         title: 'Schedules',
         href: buildUrl('schedules'),
         icon: Calendar,
-    },{
+    },
+    {
         title: 'Activity Logs',
         href: buildUrl('activity_log'),
         icon: History,
     },
-
-    // {
-    //     title: 'Editor',
-    //     href: '/editor',
-    //     icon: BookOpen,
-    // },
-
 ];
+
+const mainNavItems = computed(() =>
+    isServerAdmin.value
+        ? allNavItems
+        : allNavItems.filter(
+              (item) => item.title !== 'Environments' 
+              && item.title !== 'Activity Logs' 
+              && item.title !== 'Resources' 
+              && item.title !== 'Users'
+          )
+);
 
 </script>
 
@@ -73,7 +81,7 @@ const mainNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="buildUrl('environments')">
+                        <Link :href="serverSlug ? `/${serverSlug}/dashboard` : '#'">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>

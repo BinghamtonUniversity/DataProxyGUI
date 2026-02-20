@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\ServerUserPolicyService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -39,6 +40,11 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
+        $serverSlug = $request->route('server_slug');
+        $isServerAdmin = $serverSlug
+            ? app(ServerUserPolicyService::class)->isAdminForServer($serverSlug)
+            : false;
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -46,7 +52,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
-            'server_slug' => $request->route('server_slug') ?? null,
+            'server_slug' => $serverSlug ?? null,
+            'isServerAdmin' => $isServerAdmin,
 
             'ziggy' => [
                 ...(new Ziggy)->toArray(),

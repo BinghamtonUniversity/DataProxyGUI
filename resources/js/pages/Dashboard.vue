@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/vue3';
-import { ref, onMounted } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import { ref, onMounted, computed } from 'vue';
 import { Database, Folder, Users, Building2, History, ArrowRight, Activity } from 'lucide-vue-next';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
@@ -41,6 +41,9 @@ const error = ref<string | null>(null);
 
 // Toaster
 const { error: showError } = useToaster();
+
+const page = usePage();
+const isServerAdmin = computed(() => (page.props.isServerAdmin as boolean) ?? false);
 
 // Get CSRF token from meta tag
 // const getCsrfToken = () => {
@@ -307,8 +310,9 @@ const navigateTo = (path: string) => {
                         </div>
                     </div>
 
-                    <!-- Environments Card -->
+                    <!-- Environments Card (admin only) -->
                     <div 
+                        v-if="isServerAdmin"
                         @click="navigateTo('/environments')"
                         class="relative overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-card p-6 cursor-pointer hover:bg-accent/50 transition-colors group"
                     >
@@ -340,7 +344,8 @@ const navigateTo = (path: string) => {
                                 <h2 class="text-xl font-semibold">Recent Activity</h2>
                             </div>
                             <button 
-                                @click="navigateTo('/activity_logs')"
+                                v-if="isServerAdmin"
+                                @click="navigateTo('/activity_log')"
                                 class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                             >
                                 View all
