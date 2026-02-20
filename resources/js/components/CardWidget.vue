@@ -155,8 +155,15 @@ const handleActionClick = async ( action: Action, payload: any ) => {
   border-radius: 0.5rem;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease-in-out;
-
 }
+.card-widget-container:hover {
+  background-color: rgb(241, 241, 241);
+  border-color: #374151;
+  box-shadow: 0 1px 2px 0 rgb(255, 255, 255, 0.05);
+  transition: all 0.2s ease-in-out;
+}
+
+
 .card-widget-container-clickable:hover {
   background-color: rgb(231, 231, 231);
   box-shadow: 0 1px 2px 0 rgb(255, 255, 255, 0.05);
@@ -164,12 +171,10 @@ const handleActionClick = async ( action: Action, payload: any ) => {
   cursor: pointer;
 }
 .dark .card-widget-container {
-  border-color: #374151;
   background-color: #1f2937;
   color: #e5e7eb;
   box-shadow: 0 1px 2px 0 rgb(255, 255, 255, 0.05);
   transition: all 0.2s ease-in-out;
-  cursor: pointer;
 }
 .dark .card-widget-container:hover {
   border-color: #374151;

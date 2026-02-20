@@ -33,6 +33,7 @@ export interface User {
     name: string;
     email: string;
     unique_id: string;
+    super_admin?: boolean;
     avatar?: string;
     email_verified_at: string | null;
     created_at: string;

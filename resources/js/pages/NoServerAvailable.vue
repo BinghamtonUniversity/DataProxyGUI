@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { Server, Settings, AlertCircle } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+const page = usePage();
+const isSuperAdmin = computed(() => (page.props.auth?.user as { super_admin?: boolean } | undefined)?.super_admin ?? false);
 </script>
 
 <template>
@@ -18,7 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
                 <CardDescription class="mt-2">
                     You need to configure/select at least one proxy server to continue.
                 </CardDescription>
-                <div class="flex flex-col gap-2">
+                <div v-if="isSuperAdmin" class="flex flex-col gap-2">
                     <Button as-child class="w-full">
                         <Link :href="route('servers')">
                             <Settings class="mr-2 h-4 w-4" />
@@ -26,6 +30,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
                         </Link>
                     </Button>
                 </div>
+                <p v-else class="mt-3 text-sm text-muted-foreground">
+                    Contact your administrator to configure proxy servers.
+                </p>
             </CardHeader>
         </Card>
     </div>

@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'proxy.server' => \App\Http\Middleware\SetProxyServer::class,
             'server.admin' => \App\Http\Middleware\EnsureServerAdmin::class,
+            'super.admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
         ]);
 
         $middleware->web(append: [

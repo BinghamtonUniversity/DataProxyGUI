@@ -24,6 +24,14 @@ Route::put('/api/proxy-servers/{id}', [App\Http\Controllers\ProxyServerControlle
 Route::delete('/api/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'destroy'])->middleware(['auth']);
 Route::put('/api/proxy-servers/bulk', [App\Http\Controllers\ProxyServerController::class, 'bulkUpdate'])->middleware(['auth']);
 
+// Internal (GUI) users – super admins only
+Route::middleware(['auth', 'super.admin'])->prefix('api')->group(function () {
+    Route::get('/internal-users', [App\Http\Controllers\Settings\InternalUsersController::class, 'index']);
+    Route::post('/internal-users', [App\Http\Controllers\Settings\InternalUsersController::class, 'store']);
+    Route::put('/internal-users/{id}', [App\Http\Controllers\Settings\InternalUsersController::class, 'update']);
+    Route::delete('/internal-users/{id}', [App\Http\Controllers\Settings\InternalUsersController::class, 'destroy']);
+});
+
 Route::middleware(['auth'])->group(function () {
     Route::post('/logout', [OidcController::class, 'logout'])->name('logout');
 });

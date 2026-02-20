@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { ref, onMounted } from 'vue';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { ref, onMounted, computed } from 'vue';
 import { ShieldX, LayoutGrid } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,11 +8,23 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { useProxyServer } from '@/composables/useProxyServer';
 
+const page = usePage();
 const { buildUrl, serverSlug } = useProxyServer();
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Access Denied', href: '#' },
-];
+const title = computed(
+    () =>
+        (page.props.title as string) ||
+        'Access denied'
+);
+const message = computed(
+    () =>
+        (page.props.message as string) ||
+        "You don't have permission to open this page. This area is only available to server administrators."
+);
+
+const breadcrumbs = computed<BreadcrumbItem[]>(() => [
+    { title: title.value, href: '#' },
+]);
 
 const mainRef = ref<HTMLElement | null>(null);
 
@@ -22,7 +34,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="Access Denied" />
+    <Head :title="title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <main
@@ -46,10 +58,10 @@ onMounted(() => {
                         <ShieldX class="h-8 w-8 text-amber-600 dark:text-amber-400" />
                     </div>
                     <CardTitle id="access-denied-heading" class="text-xl">
-                        Access denied
+                        {{ title }}
                     </CardTitle>
                     <CardDescription class="mt-2 text-base text-muted-foreground">
-                        You don’t have permission to open this page. This area is only available to server administrators.
+                        {{ message }}
                     </CardDescription>
                 </CardHeader>
                 <CardContent class="flex flex-col gap-3">

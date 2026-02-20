@@ -4,12 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { User, Palette, Server } from 'lucide-vue-next';
+import { User, Palette, Server, Users } from 'lucide-vue-next';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useProxyServer } from '@/composables/useProxyServer';
 import { computed } from 'vue';
 
 const { serverSlug } = useProxyServer();
+
+const page = usePage();
+const isSuperAdmin = computed(() => (page.props.auth?.user as { super_admin?: boolean } | undefined)?.super_admin ?? false);
 
 const sidebarNavItems = computed(() => {
     const baseItems: NavItem[] = [
@@ -23,16 +26,23 @@ const sidebarNavItems = computed(() => {
             href: serverSlug.value ? `/${serverSlug.value}/settings/appearance` : '/settings/appearance',
             icon: Palette,
         },
-        {
-            title: 'Servers',
-            href: serverSlug.value ? `/${serverSlug.value}/settings/servers` : '/settings/servers',
-            icon: Server,
-        },
+        ...(isSuperAdmin.value
+            ? [
+                  {
+                      title: 'Servers',
+                      href: serverSlug.value ? `/${serverSlug.value}/settings/servers` : '/settings/servers',
+                      icon: Server,
+                  },
+                  {
+                      title: 'Internal Users',
+                      href: serverSlug.value ? `/${serverSlug.value}/settings/users` : '/settings/users',
+                      icon: Users,
+                  },
+              ]
+            : []),
     ];
     return baseItems;
 });
-
-const page = usePage();
 
 const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.location).pathname : '';
 </script>

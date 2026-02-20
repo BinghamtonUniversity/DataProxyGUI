@@ -290,7 +290,7 @@ onMounted(() => {
             <div class="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-4">
             <div v-for="server in initialData.servers as ProxyServer[]" :key="server.id" class="mb-2">
                 <CardWidget
-                    :customClass="currentServerSlug == server.slug ? 'border-green-600 dark:border-green-900/30 border-2' : ''"
+                    :customClass="currentServerSlug == server.slug ? 'border-green-600 dark:border-green-600 border-2' : ''"
                     :payload="server" 
                     
                     :title="currentServerSlug == server.slug ? server.name + ' ( Current )' : server.name" 
