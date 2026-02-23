@@ -55,7 +55,7 @@ const user = page.props.auth.user as User;
 
         <SettingsLayout>
             <div class=" flex flex-col space-y-6 md:max-w-3xl">
-                <HeadingSmall title="Profile information" description="Update your avatar" />
+                <HeadingSmall title="Profile information" description="" />
 
                 <form class="space-y-6" >
                     <!-- Display name -->
