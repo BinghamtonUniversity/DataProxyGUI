@@ -7,7 +7,7 @@ import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
-import { type BreadcrumbItem, type Api, ApiUser } from '@/types';
+import { type BreadcrumbItem, type Api, ApiUser, User } from '@/types';
 import { getCsrfToken } from '@/lib/utils';
 import { useProxyServer } from '@/composables/useProxyServer';
 
@@ -29,7 +29,7 @@ const submitting = ref(false);
 
 // Data state
 const apis = ref<Api[]>([]);
-const apiUsers = ref<ApiUser[]>([]);
+const users = ref<any[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
@@ -255,7 +255,7 @@ const cleanFormData = (formData: any) => {
 };
 const fetchApiUsers = async () => {
     try {
-        const response = await fetch('api/api_users', {
+        const response = await fetch('api/users', {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -270,7 +270,7 @@ const fetchApiUsers = async () => {
             throw new Error(errorData.error || 'Failed to fetch API users')
         }
         const data = await response.json();
-        apiUsers.value = data;
+        users.value = data;
     } catch (err: any) {
         error.value = err.message || 'Failed to fetch API users';
         // showError('Failed to fetch API users. Please try again.', 'Error');
@@ -328,7 +328,7 @@ const fetchApis = async () => {
             api_type: api.api_type || 'php', // Default to 'php' if api_type is missing 
             created_at: api.created_at ? new Date(api.created_at).toLocaleDateString() : '',
             // Store original created_by_id for reference, but display app_name
-            created_by_id: (api.created_by_id ? apiUsers.value.find((user: ApiUser) => user.id === api.created_by_id)?.app_name : '') as any
+            created_by_id: (api.created_by_id ? users.value.find((user: User) => user.id === api.created_by_id)?.name : 'Unknown') as any
         })) as Api[];
         
     } catch (err: any) {
@@ -408,7 +408,7 @@ const handleFormSubmit = async (formValues: any) => {
                 ...newApi,
                 api_type: newApi.api_type || 'php',
                 created_at: newApi.created_at ? new Date(newApi.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
-                created_by_id: newApi.created_by ? apiUsers.value.find((user: ApiUser) => user.id === newApi.created_by)?.app_name : 'Unknown'
+                created_by_id: newApi.created_by ? users.value.find((user: User) => user.id === newApi.created_by)?.name : 'Unknown'
             });
             
             success('API created successfully!', 'API Created');
@@ -446,7 +446,7 @@ const handleFormSubmit = async (formValues: any) => {
                     ...updatedApi,
                     api_type: updatedApi.api_type || 'php',
                     created_at: updatedApi.created_at ? new Date(updatedApi.created_at).toLocaleDateString() : apis.value[index].created_at,
-                    created_by_id: updatedApi.created_by ? apiUsers.value.find((user: ApiUser) => user.id === updatedApi.created_by)?.app_name : 'Unknown'
+                    created_by_id: updatedApi.created_by ? users.value.find((user: User) => user.id === updatedApi.created_by)?.name : 'Unknown'
                 };           
             }
             
