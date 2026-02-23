@@ -96,8 +96,16 @@ const fetchProxyServers = async () => {
 };
 
 const selectServer = (slug: string) => {
-    // Redirect to the server's API page
-    router.visit(`/${slug}/apis`);
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    const currentSlug = serverSlug.value;
+    let newPath: string;
+    if (currentSlug && path.startsWith(`/${currentSlug}`)) {
+        const rest = path.slice(`/${currentSlug}`.length) || '';
+        newPath = `/${slug}${rest === '' || rest === '/' ? '/dashboard' : rest}`;
+    } else {
+        newPath = `/${slug}/dashboard`;
+    }
+    router.visit(newPath);
 };
 
 const handleSettings = () => {
