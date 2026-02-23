@@ -243,26 +243,30 @@ const closeSecretModal = () => {
 
 // Fetch decrypted secret from backend
 const fetchDecryptedSecret = async (userId: number): Promise<string> => {
+
     try {
-        const response = await fetch(`${apiBaseUrl}/api_users/${userId}/decrypted_secret`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            credentials: 'same-origin'
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+
+    const response = await fetch(`${apiBaseUrl}/api_users/${userId}/decrypted_secret`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken() || '',
+        },
+        credentials: 'same-origin'
+    });
+
+    if (!response.ok) {
+        if (response.status === 403) {
+            return 'Unauthorized';
         }
-        
-        const data = await response.json();
-        return atob(data.api_secret) || 'No secret found';
-        
-    } catch (error) {
-        console.error('Error fetching decrypted secret:', error);
+        throw new Error('Unauthorized to fetch decrypted secret');
+    }
+
+    const data = await response.json();
+    return atob(data.api_secret) || 'No secret found';
+    } catch (error: any) {
+       
         throw new Error('Failed to fetch decrypted secret');
     }
 };
@@ -271,10 +275,14 @@ const showUserSecret = async (user: any) => {
     if (user.id) {
         secretLoading.value = true;
         showSecretModal.value = true;
-        
+
         try {
             const decrypted = await fetchDecryptedSecret(user.id);
             decryptedSecret.value = decrypted;
+            if (decrypted === 'Unauthorized') {
+                closeSecretModal();
+                warning('You are not authorized to view this secret','Unauthorized');
+            }
         } catch (error) {
             console.error('Failed to fetch secret:', error);
             decryptedSecret.value = 'Failed to fetch secret';

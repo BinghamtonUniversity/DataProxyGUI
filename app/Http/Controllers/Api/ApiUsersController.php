@@ -111,7 +111,17 @@ class ApiUsersController extends BaseDjangoController{
     public function apiUsersDecryptedSecret(string $server_slug, string $id): JsonResponse
     {
         $result = $this->makeBackendRequest('GET', "api_users/{$id}/decrypted_secret", [], [], $server_slug);
-        return response()->json($result['data']);
+
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        if ($result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized',
+                'status' => 403,
+            ], 403);
+        }
 
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
