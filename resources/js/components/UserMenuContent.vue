@@ -3,9 +3,11 @@ import UserInfo from '@/components/UserInfo.vue';
 import { DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import type { User, NavItem } from '@/types';
 import { router } from '@inertiajs/vue3';
-import { LogOut, Settings, Server, BookOpen, Folder, LayoutGrid, Users, ChevronDown, ChevronRight } from 'lucide-vue-next';
+import { LogOut, Settings, Server, BookOpen, Folder, LayoutGrid, Users, ChevronDown, ChevronRight, UserX } from 'lucide-vue-next';
 import { ref, onMounted, computed } from 'vue';
 import { useProxyServer } from '@/composables/useProxyServer';
+import { usePage } from '@inertiajs/vue3';
+import { getCsrfToken } from '@/lib/utils';
 
 const footerNavItems: NavItem[] = [
     {
@@ -123,6 +125,29 @@ const handleLogout = () => {
     router.post(route('logout'));
 };
 
+const page = usePage();
+const isImpersonating = computed(() => (page.props.isImpersonating as boolean) ?? false);
+
+const leaveImpersonation = async () => {
+    try {
+        const response = await fetch('/api/internal-users/leave-impersonation', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin',
+        });
+        const data = await response.json().catch(() => ({}));
+        const redirect = (data as { redirect?: string }).redirect;
+        if (redirect) window.location.href = redirect;
+        else window.location.reload();
+    } catch {
+        window.location.reload();
+    }
+};
+
 defineProps<Props>();
 
 onMounted(() => {
@@ -164,6 +189,20 @@ onMounted(() => {
     </DropdownMenuGroup>
 
     <DropdownMenuSeparator v-if="proxyServers.length > 0" />
+
+    <DropdownMenuGroup v-if="isImpersonating">
+        <DropdownMenuItem :as-child="true">
+            <button
+                type="button"
+                class="flex w-full items-center text-left text-amber-600 dark:text-amber-400"
+                @click="leaveImpersonation"
+            >
+                <UserX class="mr-2 h-4 w-4" />
+                Leave impersonation
+            </button>
+        </DropdownMenuItem>
+    </DropdownMenuGroup>
+    <DropdownMenuSeparator v-if="isImpersonating" />
 
     <DropdownMenuGroup>
         <DropdownMenuItem :as-child="true">

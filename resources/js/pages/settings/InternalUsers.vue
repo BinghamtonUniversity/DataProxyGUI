@@ -19,6 +19,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const page = usePage();
 const currentUserId = computed(() => (page.props.auth?.user as { id?: number } | undefined)?.id ?? null);
+const isSuperAdmin = computed(() => (page.props.auth?.user as { super_admin?: boolean } | undefined)?.super_admin ?? false);
 
 const showModal = ref(false);
 const modalMode = ref<'new' | 'edit'>('new');
@@ -286,6 +287,60 @@ async function handleDelete(selectedRowIds?: number[]) {
     }
 }
 
+const gridActions = computed(() => {
+    const actions: Array<{ name: string; type: string; min: number; max: number; label: string; icon: string; loc: string }> = [
+        { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
+    ];
+    if (isSuperAdmin.value) {
+        actions.unshift({
+            name: 'impersonate',
+            type: 'warning',
+            min: 1,
+            max: 1,
+            label: 'Impersonate',
+            icon: 'user',
+            loc: 'left',
+        });
+    }
+    return actions;
+});
+
+async function impersonateUser(user: InternalUser) {
+    if (!isSuperAdmin.value) {
+        showError('Only super admins can impersonate.', 'Unauthorized');
+        return;
+    }
+    if (user.id === currentUserId.value) {
+        showError('You cannot impersonate yourself.', 'Error');
+        return;
+    }
+    try {
+        const response = await fetch(`${apiBaseUrl}/${user.id}/impersonate`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin',
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            showError((data as { message?: string }).message || 'Impersonation failed.', 'Error');
+            return;
+        }
+        const redirect = (data as { redirect?: string }).redirect;
+        if (redirect) {
+            window.location.href = redirect;
+        } else {
+            window.location.reload();
+        }
+    } catch (err) {
+        console.error('Impersonate error:', err);
+        showError('Failed to impersonate user.', 'Error');
+    }
+}
+
 function handleDataGridActionHandler(actionData: {
     action: string;
     selectedRows: unknown[];
@@ -297,6 +352,9 @@ function handleDataGridActionHandler(actionData: {
         //     break;
         case 'edit':
             openEditModal(actionData.selectedData[0]);
+            break;
+        case 'impersonate':
+            impersonateUser(actionData.selectedData[0]);
             break;
         // case 'delete':
         //     if (actionData.selectedData[0]?.id === currentUserId.value) {
@@ -345,11 +403,7 @@ onMounted(() => {
                     :schema="formConfig"
                     :data="users"
                     theme="default"
-                    :actions="[
-                       
-                        { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
-                        
-                    ]"
+                    :actions="gridActions"
                     @action-handler="handleDataGridActionHandler"
                 />
 

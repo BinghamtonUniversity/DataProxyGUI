@@ -54,6 +54,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'server_slug' => $serverSlug ?? null,
             'isServerAdmin' => $isServerAdmin,
+            'isImpersonating' => $request->session()->has('impersonator_id'),
 
             'ziggy' => [
                 ...(new Ziggy)->toArray(),

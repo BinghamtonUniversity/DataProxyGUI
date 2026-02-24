@@ -30,6 +30,10 @@ Route::middleware(['auth', 'super.admin'])->prefix('api')->group(function () {
     Route::post('/internal-users', [App\Http\Controllers\Settings\InternalUsersController::class, 'store']);
     Route::put('/internal-users/{id}', [App\Http\Controllers\Settings\InternalUsersController::class, 'update']);
     Route::delete('/internal-users/{id}', [App\Http\Controllers\Settings\InternalUsersController::class, 'destroy']);
+    Route::post('/internal-users/{id}/impersonate', [App\Http\Controllers\Settings\InternalUsersController::class, 'impersonate']);
+});
+Route::middleware(['auth'])->prefix('api')->group(function () {
+    Route::post('/internal-users/leave-impersonation', [App\Http\Controllers\Settings\InternalUsersController::class, 'leaveImpersonation']);
 });
 
 Route::middleware(['auth'])->group(function () {

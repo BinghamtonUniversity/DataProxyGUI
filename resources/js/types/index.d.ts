@@ -26,6 +26,7 @@ export type AppPageProps<T extends Record<string, unknown> = Record<string, unkn
     sidebarOpen: boolean;
     server_slug?: string | null;
     isServerAdmin?: boolean;
+    isImpersonating?: boolean;
 };
 
 export interface User {
