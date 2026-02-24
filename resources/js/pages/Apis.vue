@@ -137,7 +137,7 @@ const dataGridConfig = {
             parse: false
         },
         {
-            name: "created_by_id",
+            name: "user_id",
             label: "Created By",
             type: "text",
             placeholder: "",
@@ -322,13 +322,13 @@ const fetchApis = async () => {
             }
         }
         
+        
         // Format dates for display
-        apis.value = apiArray.map((api: Api) => ({
+        apis.value = apiArray.map((api: any) => ({
             ...api,
             api_type: api.api_type || 'php', // Default to 'php' if api_type is missing 
             created_at: api.created_at ? new Date(api.created_at).toLocaleDateString() : '',
-            // Store original created_by_id for reference, but display app_name
-            created_by_id: (api.created_by_id ? users.value.find((user: User) => user.id === api.created_by_id)?.name : 'Unknown') as any
+            user_id: (api.user_id ? users.value.find((user: User) => user.id === api.user_id)?.name : "Unknown" ) as any
         })) as Api[];
         
     } catch (err: any) {
@@ -408,7 +408,7 @@ const handleFormSubmit = async (formValues: any) => {
                 ...newApi,
                 api_type: newApi.api_type || 'php',
                 created_at: newApi.created_at ? new Date(newApi.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
-                created_by_id: newApi.created_by ? users.value.find((user: User) => user.id === newApi.created_by)?.name : 'Unknown'
+                user_id: newApi.user_id ? users.value.find((user: User) => user.id === newApi.user_id)?.name : "Unknown"
             });
             
             success('API created successfully!', 'API Created');
@@ -446,7 +446,7 @@ const handleFormSubmit = async (formValues: any) => {
                     ...updatedApi,
                     api_type: updatedApi.api_type || 'php',
                     created_at: updatedApi.created_at ? new Date(updatedApi.created_at).toLocaleDateString() : apis.value[index].created_at,
-                    created_by_id: updatedApi.created_by ? users.value.find((user: User) => user.id === updatedApi.created_by)?.name : 'Unknown'
+                    user_id: updatedApi.user_id ? users.value.find((user: User) => user.id === updatedApi.user_id)?.name : "Unknown"
                 };           
             }
             

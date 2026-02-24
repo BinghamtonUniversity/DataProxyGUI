@@ -113,7 +113,7 @@ export interface Api {
   user_id: number
   created_at: string
   updated_at: string
-  created_by_id: number
+  // created_by_id: number
   updated_by_id: number
   deleted_at: string | null
 }

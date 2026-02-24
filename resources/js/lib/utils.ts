@@ -139,7 +139,6 @@ export function mapPhpToApiInstance(php: any): ApiInstance {
       description: php.api.description,
       tags: php.api.tags,
       user_id: php.api.user_id,
-      created_by_id: php.api.user_id,
       updated_by_id: php.api.user_id,
       created_at: php.api.created_at,
       updated_at: php.api.updated_at,
