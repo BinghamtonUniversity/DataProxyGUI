@@ -101,7 +101,12 @@ const selectServer = (slug: string) => {
     let newPath: string;
     if (currentSlug && path.startsWith(`/${currentSlug}`)) {
         const rest = path.slice(`/${currentSlug}`.length) || '';
-        newPath = `/${slug}${rest === '' || rest === '/' ? '/dashboard' : rest}`;
+        const segments = rest.split('/').filter(Boolean);
+        // Strip server-specific resource IDs (e.g. /apis/6/routes → /apis) so indexes don't carry over
+        const idIndex = segments.findIndex((s) => /^\d+$/.test(s));
+        const baseSegments = idIndex >= 0 ? segments.slice(0, idIndex) : segments;
+        const basePath = baseSegments.length > 0 ? `/${baseSegments.join('/')}` : '/dashboard';
+        newPath = `/${slug}${basePath}`;
     } else {
         newPath = `/${slug}/dashboard`;
     }
