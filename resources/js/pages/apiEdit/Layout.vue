@@ -611,7 +611,6 @@ const fetchVersionDetails = async (versionId: number) => {
 }
 
 const switchToVersion = async (version: any) => {
-    debugger;
     try {
 
         const response = await fetch(`/${props.server_slug}/ajax/apis/versions/${version.id}`, {
@@ -635,7 +634,6 @@ const switchToVersion = async (version: any) => {
         originalApiData.value = JSON.parse(JSON.stringify(versionData))
         hasUnsavedChanges.value = true
         showVersionsModal.value = false
-        debugger;
         success(`Switched to version: ${version.summary || 'Latest/Working'}`, 'Version Switched')
         
     } catch (e: any) {
@@ -742,7 +740,6 @@ const publishApiVersion = async (formData: any) => {
 
         const publishedVersion = await response.json()
         latestVersion.value = publishedVersion;
-        debugger;
         success('API version published successfully!', 'Version Published')
         
         showPublishModal.value = false
@@ -904,11 +901,10 @@ const handleSave = async () => {
             content: func.name === 'Constructor' && func.content === '//__EMPTY__' ? '' : func.content
         }));
     }
-    // debugger;
+
     latestVersion.value = responseData;
     const normalizedData = normalizeApiData(responseData, serverApiType.value as 'python' | 'php')
     
-    debugger;
     updateApiData(normalizedData)
     // console.log("Original", originalApiData.value)
     originalApiData.value = JSON.parse(JSON.stringify(normalizedData))
