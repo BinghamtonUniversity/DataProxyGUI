@@ -468,6 +468,12 @@ class ApiController extends BaseDjangoController
             return response()->json($result['data']);
         }
 
+        if( $result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
+        }
+
         return response()->json([
             'error' => "Failed to fetch version details for API version {$version_id}",
         ], 500);

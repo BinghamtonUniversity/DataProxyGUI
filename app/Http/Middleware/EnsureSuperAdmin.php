@@ -21,11 +21,11 @@ class EnsureSuperAdmin
                 return Inertia::render('AccessDenied', [
                     'server_slug' => $request->route('server_slug'),
                     'title' => 'Access denied',
-                    'message' => 'Only super administrators can access this page.',
+                    'message' => 'Unauthorized',
                 ])->toResponse($request)->setStatusCode(403);
             }
 
-            abort(403, 'Only super administrators can access this page.');
+            abort(403, 'Unauthorized');
         }
 
         return $next($request);
