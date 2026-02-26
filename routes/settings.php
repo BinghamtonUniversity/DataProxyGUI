@@ -9,15 +9,6 @@ Route::get('/settings/no-servers-available', function () {
     })->name('no-servers-available');
 
 Route::middleware('auth')->group(function () {
-    // Route::redirect('{server_slug?}/settings', '/{server_slug?}/settings/profile');
-
-    // Route::get('/settings', function () {
-    //     return redirect('/settings/profile');
-    // });
-    
-    // Route::get('/{server_slug}/settings', function ($server_slug) {
-    //     return redirect("/{$server_slug}/settings/profile");
-    // });
 
     Route::get('/settings', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -26,11 +17,11 @@ Route::middleware('auth')->group(function () {
     })->name('appearance');
     Route::get('/settings/servers', function () {
         return Inertia::render('settings/Servers');
-    })->name('servers')->middleware('super.admin');
+    })->name('servers')->middleware('can:manage_users');
 
     Route::get('/settings/users', function () {
         return Inertia::render('settings/InternalUsers');
-    })->name('users')->middleware('super.admin');
+    })->name('users')->middleware('can:manage_users');;
 
     Route::get('/settings/no-servers-available', function () {
         return Inertia::render('NoServerAvailable');
@@ -38,7 +29,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/{server_slug?}/settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/{server_slug?}/settings/profile', [ProfileController::class, 'update'])->name('profile.update');
-//    Route::delete('{server_slug?}/settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/{server_slug?}/settings/appearance', function ($server_slug = null) {
         return Inertia::render('settings/Appearance', ['server_slug' => $server_slug]);
@@ -46,9 +36,9 @@ Route::middleware('auth')->group(function () {
     
     Route::get('/{server_slug?}/settings/servers', function ($server_slug = null) {
         return Inertia::render('settings/Servers', ['server_slug' => $server_slug]);
-    })->name('servers')->middleware('super.admin');
+    })->name('servers')->middleware('can:manage_users');
 
     Route::get('/{server_slug?}/settings/users', function ($server_slug = null) {
         return Inertia::render('settings/InternalUsers', ['server_slug' => $server_slug]);
-    })->name('users')->middleware('super.admin');
+    })->name('users')->middleware('can:manage_users');
 });

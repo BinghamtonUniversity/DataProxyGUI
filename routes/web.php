@@ -25,11 +25,13 @@ Route::delete('/api/proxy-servers/{id}', [App\Http\Controllers\ProxyServerContro
 Route::put('/api/proxy-servers/bulk', [App\Http\Controllers\ProxyServerController::class, 'bulkUpdate'])->middleware(['auth']);
 
 // Internal (GUI) users – super admins only
-Route::middleware(['auth', 'super.admin'])->prefix('api')->group(function () {
-    Route::get('/internal-users', [App\Http\Controllers\Settings\InternalUsersController::class, 'index']);
-    Route::post('/internal-users', [App\Http\Controllers\Settings\InternalUsersController::class, 'store']);
-    Route::put('/internal-users/{id}', [App\Http\Controllers\Settings\InternalUsersController::class, 'update']);
-    Route::delete('/internal-users/{id}', [App\Http\Controllers\Settings\InternalUsersController::class, 'destroy']);
+// We don't have granular permissions for internal users yet - so policy only checks for super_admin flag, which is also equivalent using the gate can:manage_users.
+// In the future, if we add more permissions, we can update the policy and gates accordingly.
+Route::middleware(['auth'])->prefix('api')->group(function () {
+    Route::get('/internal-users', [App\Http\Controllers\Settings\InternalUsersController::class, 'index'])->middleware('can:viewAny,App\Models\User');
+    Route::post('/internal-users', [App\Http\Controllers\Settings\InternalUsersController::class, 'store'])->middleware('can:create,App\Models\User');
+    Route::put('/internal-users/{id}', [App\Http\Controllers\Settings\InternalUsersController::class, 'update'])->middleware('can:update,App\Models\User');
+    Route::delete('/internal-users/{id}', [App\Http\Controllers\Settings\InternalUsersController::class, 'destroy'])->middleware('can:delete,App\Models\User');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -81,7 +83,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
 
     Route::get('/environments', function () {
         return Inertia::render('Environments');
-    })->name('environments')->middleware('server.admin');
+    })->name('environments')->middleware('can:server_admin,server_slug');
 
     Route::get('/schedules', function () {
         return Inertia::render('Schedules');
@@ -89,7 +91,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
 
     Route::get('/activity_log', function () {
         return Inertia::render('ActivityLogs');
-    })->name('activity_log')->middleware('server.admin');
+    })->name('activity_log')->middleware('can:server_admin,server_slug');
 
     Route::get('/api_accounts', function () {
         return Inertia::render('ApiAccounts');
@@ -97,7 +99,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
 
     Route::get('/users', function () {
         return Inertia::render('Users');
-    })->name('users')->middleware('server.admin');
+    })->name('users')->middleware('can:server_admin,server_slug');
     
     // Route::get('/unit-tests', function () {
     //     return Inertia::render('development/UnitTests');
@@ -110,6 +112,8 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
         $resources = ['environments', 'users'];
 
         foreach ($resources as $resource) {
+            # $ability = 'view' . ucfirst(rtrim($resource, 's')); ->middleware("can:{$ability}") // This will affect environments for api_instances 
+
             Route::get("/{$resource}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Index"]);
             Route::post("/{$resource}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Store"]);
             Route::put("/{$resource}/{id}", [App\Http\Controllers\Api\ApiController::class, "{$resource}Update"]);
@@ -167,7 +171,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
     // Resources
     Route::get('/resources', function () {
         return Inertia::render('Resources');
-    })->name('resources')->middleware('server.admin');
+    })->name('resources');
 
 
     Route::prefix('ajax/resources')->group(function () {

@@ -12,7 +12,8 @@ import { computed } from 'vue';
 const { serverSlug } = useProxyServer();
 
 const page = usePage();
-const isSuperAdmin = computed(() => (page.props.auth?.user as { super_admin?: boolean } | undefined)?.super_admin ?? false);
+
+const can = computed(() => page.props.can as { manage_users: boolean});
 
 const sidebarNavItems = computed(() => {
     const baseItems: NavItem[] = [
@@ -26,7 +27,7 @@ const sidebarNavItems = computed(() => {
             href: serverSlug.value ? `/${serverSlug.value}/settings/appearance` : '/settings/appearance',
             icon: Palette,
         },
-        ...(isSuperAdmin.value
+        ...(can.value.manage_users
             ? [
                   {
                       title: 'Servers',

@@ -8,6 +8,9 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
+use Illuminate\Auth\Access\AuthorizationException;
+use Inertia\Inertia;
+
 
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -20,9 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->alias([
-            'proxy.server' => \App\Http\Middleware\SetProxyServer::class,
-            'server.admin' => \App\Http\Middleware\EnsureServerAdmin::class,
-            'super.admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
+            'proxy.server' => \App\Http\Middleware\SetProxyServer::class
         ]);
 
         $middleware->web(append: [
@@ -71,6 +72,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 // For regular requests, redirect to login
                 return redirect()->route('oidc.redirect')
                     ->with('message', 'Your session has expired. Please log in again.');
+            }
+            // Authorization failures 
+            if ($e instanceof AuthorizationException) {
+                if ($request->inertia()) {
+                    return Inertia::render('AccessDenied', [
+                        'server_slug' => $request->route('server_slug'),
+                        'title' => 'Access denied',
+                        'message' => 'Unauthorized',
+                    ])->toResponse($request)->setStatusCode(403);
+                }
+
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'Unauthorized'], 403);
+                }
             }
         });
     })->create();

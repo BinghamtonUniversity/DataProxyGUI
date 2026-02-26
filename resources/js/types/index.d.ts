@@ -21,11 +21,11 @@ export interface NavItem {
 export type AppPageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
     name: string;
     quote: { message: string; author: string };
+    can: { manage_users: boolean, server_admin: boolean };
     auth: Auth;
     ziggy: Config & { location: string };
     sidebarOpen: boolean;
     server_slug?: string | null;
-    isServerAdmin?: boolean;
 };
 
 export interface User {
