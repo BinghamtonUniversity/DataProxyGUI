@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
-class ResourcesController extends BaseDjangoController{
+class ResourcesController extends BaseServerController{
     // ===========================================
     // Resources 
     // ===========================================

@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
-class ApiInstancesController extends BaseDjangoController{
+class ApiInstancesController extends BaseServerController{
 
     public function apiInstancesIndex(Request $request, string $server_slug): JsonResponse
     {

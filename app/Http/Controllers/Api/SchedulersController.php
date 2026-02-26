@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
-class SchedulersController extends BaseDjangoController{
+class SchedulersController extends BaseServerController{
     
     // ===========================================
     // Schedulers

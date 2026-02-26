@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\ProxyServerConfig;
 
-class BaseDjangoController extends Controller
+class BaseServerController extends Controller
 {
     protected function getProxyConfig(string $slug): ?ProxyServerConfig
     {
