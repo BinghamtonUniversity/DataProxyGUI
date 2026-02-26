@@ -7,6 +7,7 @@ import { Database, Folder, Users, Building2, History, ArrowRight, Activity } fro
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { getCsrfToken } from '@/lib/utils';
+import { useProxyServer } from '@/composables/useProxyServer';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -18,6 +19,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // API base URL
 const apiBaseUrl = 'api';
+
+const { buildUrl, serverSlug } = useProxyServer();
+
 
 // Statistics state with individual loading states
 const stats = ref({
@@ -230,7 +234,7 @@ onMounted(() => {
 
 // Navigate to page
 const navigateTo = (path: string) => {
-    router.visit(path);
+    router.visit(buildUrl(path));
 };
 </script>
 
