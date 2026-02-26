@@ -17,17 +17,18 @@ Route::prefix('oidc')->group(function () {
     Route::get('/callback', [OidcController::class, 'callback'])->name('oidc.callback');
 });
 
-// Returns JSON list of available proxy servers
-Route::get('/api/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'getServers'])->middleware(['auth']);
-Route::post('/api/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'store'])->middleware(['auth']);
-Route::put('/api/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'update'])->middleware(['auth']);
-Route::delete('/api/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'destroy'])->middleware(['auth']);
-Route::put('/api/proxy-servers/bulk', [App\Http\Controllers\ProxyServerController::class, 'bulkUpdate'])->middleware(['auth']);
 
-// Internal (GUI) users – super admins only
-// We don't have granular permissions for internal users yet - so policy only checks for super_admin flag, which is also equivalent using the gate can:manage_users.
-// In the future, if we add more permissions, we can update the policy and gates accordingly.
 Route::middleware(['auth'])->prefix('api')->group(function () {
+    // Returns JSON list of available proxy servers
+    Route::get('/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'getServers']);
+    Route::post('/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'store']);
+    Route::put('/proxy-servers/bulk', [App\Http\Controllers\ProxyServerController::class, 'bulkUpdate']);
+    Route::put('/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'update']);
+    Route::delete('/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'destroy']);
+
+    // Internal (GUI) users – super admins only
+    // We don't have granular permissions for internal users yet - so policy only checks for super_admin flag, which is also equivalent using the gate can:manage_users.
+    // In the future, if we add more permissions, we can update the policy and gates accordingly.
     Route::get('/internal-users', [App\Http\Controllers\Settings\InternalUsersController::class, 'index'])->middleware('can:viewAny,App\Models\User');
     Route::post('/internal-users', [App\Http\Controllers\Settings\InternalUsersController::class, 'store'])->middleware('can:create,App\Models\User');
     Route::put('/internal-users/{id}', [App\Http\Controllers\Settings\InternalUsersController::class, 'update'])->middleware('can:update,App\Models\User');
