@@ -19,11 +19,11 @@ class ApiInstancesController extends BaseServerController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred on Django side.';
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,
-            'django_status' => $result['status'],
+            'status' => $result['status'],
         ], 500);
     }
 
@@ -34,7 +34,7 @@ class ApiInstancesController extends BaseServerController{
         $requestData = $request->all();
         
         $result = $this->makeBackendRequest('POST', 'api_instances', $requestData, [], $server_slug);
-        // Log::info('Django request result', [
+        // Log::info('Request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
         //     'data' => $result['data']

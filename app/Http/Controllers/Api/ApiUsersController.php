@@ -32,7 +32,7 @@ class ApiUsersController extends BaseServerController{
         $requestData = $request->all();
         
         $result = $this->makeBackendRequest('POST', "api_users", $requestData, [], $server_slug);
-        // Log::info('Django request result', [
+        // Log::info('Request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
         //     'data' => $result['data']
@@ -41,7 +41,7 @@ class ApiUsersController extends BaseServerController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred on Django side.';
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         if ($result['success']) {
             return response()->json($result['data']);
@@ -63,7 +63,7 @@ class ApiUsersController extends BaseServerController{
         $requestData = $request->all();
         
         $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $server_slug);
-        // Log::info('Django request result', [
+        // Log::info('Request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
         //     'data' => $result['data']
@@ -76,7 +76,7 @@ class ApiUsersController extends BaseServerController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred on Django side.';
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,
@@ -99,7 +99,7 @@ class ApiUsersController extends BaseServerController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred on Django side.';
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,
@@ -126,7 +126,7 @@ class ApiUsersController extends BaseServerController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred on Django side.';
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,

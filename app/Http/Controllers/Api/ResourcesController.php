@@ -14,7 +14,6 @@ class ResourcesController extends BaseServerController{
     {
         $endpoint = "resources/type/{$type}";
 
-        // $result = $this->makeDjangoRequest('GET', $endpoint);
         $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
 
         if ($result['success']) {
@@ -37,7 +36,7 @@ class ResourcesController extends BaseServerController{
         $endpoint = "resources";
         // Log::info('Fetching all resources', ['endpoint' => $endpoint]);
         $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
-        // Log::info('Django request result', [
+        // Log::info('Request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
         //     'data' => $result['data']
@@ -50,7 +49,7 @@ class ResourcesController extends BaseServerController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred on Django side.';
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,
@@ -72,7 +71,7 @@ class ResourcesController extends BaseServerController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred';
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,
@@ -90,7 +89,7 @@ class ResourcesController extends BaseServerController{
         $requestData = $request->all();
         
         $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $server_slug);
-        // Log::info('Django request result', [
+        // Log::info('Request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
         //     'data' => $result['data']
@@ -100,11 +99,11 @@ class ResourcesController extends BaseServerController{
             return response()->json($result['data']);
         }
 
-        // Extract a meaningful error message from the Django response
+        // Extract a meaningful error message from the response
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred side.';
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,
@@ -126,7 +125,7 @@ class ResourcesController extends BaseServerController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred.';
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,
