@@ -510,7 +510,10 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
             closeModal();
             break;
         case 'save':
-            handleFormSubmit(actionData.formData);
+            // Prevent multiple submissions
+            if(!submitting.value) {
+                handleFormSubmit(actionData.formData);
+            }
             break;
         default:
             console.log('Unknown FormViewer action type:', actionData.type);

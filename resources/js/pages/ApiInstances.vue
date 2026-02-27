@@ -238,7 +238,6 @@ interface NewApiInstanceForm {
   api_type: string
 }
 
-//TO-DO: Should send route_user_map and resources as empty JSON 
 const newApiInstanceForm = ref<NewApiInstanceForm>({
   environment_id: '',
   api_id: '',
