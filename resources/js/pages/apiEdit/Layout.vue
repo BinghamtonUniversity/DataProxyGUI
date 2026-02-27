@@ -861,16 +861,28 @@ const handleSave = async () => {
     if (isVersionSwitch.value) {
         const confirmed = confirm('You have switched to a different version. Are you sure you want to save?')
         if (!confirmed) {
-            isVersionSwitch.value = false
+            return
+        }
+
+        isVersionSwitch.value = false
+        // TODO: Uncomment this when the backend is updated to handle this ???
+        // apiData.value.summary = null;
+        // apiData.value.description = null;
+        // apiData.value.stable = false;
+        // apiData.value.id = latestVersion.value.id;
+        apiData.value.updated_at = new Date().toISOString();
+
+
+    }
+    else{
+        // Skip save when there are no changes
+        const hasChanges = JSON.stringify(originalApiData.value) !== JSON.stringify(apiData.value)
+        if (!hasChanges) {
+            info('No changes detected to save.', 'Nothing to Save')
             return
         }
     }
-    // Skip save when there are no changes
-    const hasChanges = JSON.stringify(originalApiData.value) !== JSON.stringify(apiData.value)
-    if (!hasChanges) {
-        info('No changes detected to save.', 'Nothing to Save')
-        return
-    }
+
     
     const requestData = serverApiType.value === 'php' ? denormalizeToPhp(apiData.value): apiData.value
 
