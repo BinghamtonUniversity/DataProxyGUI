@@ -610,7 +610,23 @@ const fetchVersionDetails = async (versionId: number) => {
     }
 }
 
+// Helper to confirm discarding unsaved changes before switching versions
+const canSwitchVersion = () => {
+    if (hasUnsavedChanges.value) {
+        const confirmed = confirm(
+            'You have unsaved changes in this version. ' +
+            'If you switch versions now, these changes will be lost. ' +
+            'Do you want to continue without saving?'
+        )
+        return confirmed
+    }
+    return true
+}
+
 const switchToVersion = async (version: any) => {
+    if (!canSwitchVersion()) {
+        return
+    }
     try {
 
         const response = await fetch(`/${props.server_slug}/ajax/apis/versions/${version.id}`, {
@@ -642,6 +658,9 @@ const switchToVersion = async (version: any) => {
 }
 
 const switchToLatestVersion = async () => {
+    if (!canSwitchVersion()) {
+        return
+    }
     try {
         const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/versions/latest`, {
             method: 'GET',
