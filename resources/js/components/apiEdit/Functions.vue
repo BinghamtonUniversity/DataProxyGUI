@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed} from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
 import { Api, type ApiData, type ApiVersionFunction } from '@/types'
@@ -458,6 +458,49 @@ const highlightTextInEditor = (searchText: string) => {
     // Start trying after a short delay
     setTimeout(tryHighlight, 200)
 }
+
+// When API data (and its functions) change – e.g. after switching versions –
+// keep the editor in sync:
+// - If the previously selected function still exists (by name), re-select it
+//   so its new code is shown.
+// - If it no longer exists, clear the selection to close the editor.
+watch(
+  () => props.apiData?.version_views,
+  (newViews) => {
+    // No API data or no functions – close the editor
+    if (!newViews || newViews.length === 0) {
+      if (selectedFunction.value) {
+        selectedFunction.value = null
+        validationErrors.value = 0
+        validationWarnings.value = 0
+        if (props.onValidationError) {
+          props.onValidationError('functions', 0)
+        }
+      }
+      return
+    }
+
+    // If nothing is currently selected, nothing to sync
+    if (!selectedFunction.value) {
+      return
+    }
+
+    const existing = newViews.find(func => func.name === selectedFunction.value?.name)
+
+    if (existing) {
+      // Re-bind to the new function object so the editor shows updated code
+      selectedFunction.value = existing
+    } else {
+      // Function no longer exists in this version – close the editor
+      selectedFunction.value = null
+      validationErrors.value = 0
+      validationWarnings.value = 0
+      if (props.onValidationError) {
+        props.onValidationError('functions', 0)
+      }
+    }
+  }
+)
 
 // Add event listener for search results
 onMounted(() => {
