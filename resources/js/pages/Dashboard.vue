@@ -7,6 +7,7 @@ import { Database, Folder, Users, Building2, History, ArrowRight, Activity } fro
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { getCsrfToken } from '@/lib/utils';
+import { useProxyServer } from '@/composables/useProxyServer';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -18,6 +19,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // API base URL
 const apiBaseUrl = 'api';
+
+const { buildUrl, serverSlug } = useProxyServer();
+
 
 // Statistics state with individual loading states
 const stats = ref({
@@ -43,7 +47,9 @@ const error = ref<string | null>(null);
 const { error: showError } = useToaster();
 
 const page = usePage();
-const isServerAdmin = computed(() => (page.props.isServerAdmin as boolean) ?? false);
+const can = computed(() => page.props.can as { server_admin: boolean});
+
+// const isServerAdmin = computed(() => (page.props.isServerAdmin as boolean) ?? false);
 
 // Get CSRF token from meta tag
 // const getCsrfToken = () => {
@@ -228,7 +234,7 @@ onMounted(() => {
 
 // Navigate to page
 const navigateTo = (path: string) => {
-    router.visit(path);
+    router.visit(buildUrl(path));
 };
 </script>
 
@@ -312,7 +318,7 @@ const navigateTo = (path: string) => {
 
                     <!-- Environments Card (admin only) -->
                     <div 
-                        v-if="isServerAdmin"
+                        v-if="can.server_admin"
                         @click="navigateTo('/environments')"
                         class="relative overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-card p-6 cursor-pointer hover:bg-accent/50 transition-colors group"
                     >
@@ -336,7 +342,8 @@ const navigateTo = (path: string) => {
                 </div>
 
                 <!-- Recent Activity Section -->
-                <div class="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-card">
+                <div v-if="can.server_admin" 
+                    class="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-card">
                     <div class="p-6 border-b border-sidebar-border/70 dark:border-sidebar-border">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
@@ -344,7 +351,7 @@ const navigateTo = (path: string) => {
                                 <h2 class="text-xl font-semibold">Recent Activity</h2>
                             </div>
                             <button 
-                                v-if="isServerAdmin"
+                                v-if="can.server_admin"
                                 @click="navigateTo('/activity_log')"
                                 class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                             >

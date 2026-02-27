@@ -44,7 +44,7 @@ interface InternalUser {
 
 const formConfig = {
     label: 'Internal Users',
-    description: 'Manage GUI (internal) users. Only super admins can access this page.',
+    description: 'Manage GUI (internal) users',
     name: 'internal-users-form',
     files: false,
     fields: [

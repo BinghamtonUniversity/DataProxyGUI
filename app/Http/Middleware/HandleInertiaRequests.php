@@ -7,6 +7,8 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
+use Illuminate\Support\Facades\Gate;
+
 
 class HandleInertiaRequests extends Middleware
 {
@@ -41,9 +43,6 @@ class HandleInertiaRequests extends Middleware
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
         $serverSlug = $request->route('server_slug');
-        $isServerAdmin = $serverSlug
-            ? app(ServerUserPolicyService::class)->isAdminForServer($serverSlug)
-            : false;
 
         return [
             ...parent::share($request),
@@ -52,10 +51,11 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'can' => [
+                'manage_users' => Gate::check('viewAny', \App\Models\User::class),
+                'server_admin' => $serverSlug? app(ServerUserPolicyService::class)->isAdminForServer($serverSlug): false,
+            ],
             'server_slug' => $serverSlug ?? null,
-            'isServerAdmin' => $isServerAdmin,
-            'isImpersonating' => $request->session()->has('impersonator_id'),
-
             'ziggy' => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),

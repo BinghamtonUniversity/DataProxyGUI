@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class DocumentationController extends BaseDjangoController{
+class DocumentationController extends BaseServerController{
    
     public function apiDocs($server_slug,$api_instance_id)
     {

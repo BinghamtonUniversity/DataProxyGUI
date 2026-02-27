@@ -9,7 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class ApiController extends BaseDjangoController
+class ApiController extends BaseServerController
 {
     
     /**
@@ -277,7 +277,6 @@ class ApiController extends BaseDjangoController
 
         try {
             $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $server_slug);
-            //$result = $this->makeDjangoRequest('PUT', $endpoint, $requestData);
 
             Log::info('Request result', [
                 'success' => $result['success'],
@@ -289,7 +288,7 @@ class ApiController extends BaseDjangoController
                 return response()->json($result['data']);
             }
 
-            // Extract a meaningful error message from the Django response
+            // Extract a meaningful error message from the response
             $errorMessage = $result['data']['error']
                 ?? $result['data']['detail']
                 ?? $result['data']['message']
@@ -468,6 +467,12 @@ class ApiController extends BaseDjangoController
             return response()->json($result['data']);
         }
 
+        if( $result['status'] === 403) {
+            return response()->json([
+                'error' => 'Unauthorized'
+            ], 403);
+        }
+
         return response()->json([
             'error' => "Failed to fetch version details for API version {$version_id}",
         ], 500);
@@ -496,9 +501,8 @@ class ApiController extends BaseDjangoController
 
         $endpoint = "apis/{$api_id}/versions/latest";
         
-        // $result = $this->makeDjangoRequest('GET', $endpoint);
         $result = $this->makeBackendRequest('GET', $endpoint, [], [], $server_slug);
-        // Log::info('Django request result for export', [
+        // Log::info('Request result for export', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
         //     'data' => $result['data']

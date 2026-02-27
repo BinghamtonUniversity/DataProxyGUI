@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
-class SchedulersController extends BaseDjangoController{
+class SchedulersController extends BaseServerController{
     
     // ===========================================
     // Schedulers
@@ -21,7 +21,7 @@ class SchedulersController extends BaseDjangoController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred on Django side.';
+            ?? "Unknown error occurred on {$server_slug} side.";
         return response()->json([
             'error' => $errorMessage,
             'status' => $result['status'],

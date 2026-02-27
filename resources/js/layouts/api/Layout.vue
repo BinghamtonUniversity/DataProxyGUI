@@ -51,11 +51,6 @@ const loadingApiData = ref(true)
 const apiError = ref('')
 const apiBaseUrl = '/api'
 
-// // Get CSRF token from meta tag
-// const getCsrfToken = () => {
-//     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-//     return token;
-// }
 
 const fetchApiData = async () => {
     loadingApiData.value = true

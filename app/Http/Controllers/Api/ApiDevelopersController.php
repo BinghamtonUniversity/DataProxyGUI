@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
-class ApiDevelopersController extends BaseDjangoController{
+class ApiDevelopersController extends BaseServerController{
     /**
      * Get API developers for a specific API
      */

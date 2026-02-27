@@ -19,7 +19,7 @@ const title = computed(
 const message = computed(
     () =>
         (page.props.message as string) ||
-        "You don't have permission to open this page. This area is only available to server administrators."
+        "Unauthorized"
 );
 
 const breadcrumbs = computed<BreadcrumbItem[]>(() => [

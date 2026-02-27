@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
-class ApiInstancesController extends BaseDjangoController{
+class ApiInstancesController extends BaseServerController{
 
     public function apiInstancesIndex(Request $request, string $server_slug): JsonResponse
     {
@@ -19,11 +19,11 @@ class ApiInstancesController extends BaseDjangoController{
         $errorMessage = $result['data']['error']
             ?? $result['data']['detail']
             ?? $result['data']['message']
-            ?? 'Unknown error occurred on Django side.';
+            ?? "Unknown error occurred on {$server_slug} side.";
 
         return response()->json([
             'error' => $errorMessage,
-            'django_status' => $result['status'],
+            'status' => $result['status'],
         ], 500);
     }
 
@@ -34,7 +34,7 @@ class ApiInstancesController extends BaseDjangoController{
         $requestData = $request->all();
         
         $result = $this->makeBackendRequest('POST', 'api_instances', $requestData, [], $server_slug);
-        // Log::info('Django request result', [
+        // Log::info('Request result', [
         //     'success' => $result['success'],
         //     'status' => $result['status'],
         //     'data' => $result['data']

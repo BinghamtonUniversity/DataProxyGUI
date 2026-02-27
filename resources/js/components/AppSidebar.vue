@@ -12,7 +12,8 @@ import NoServerAvailable from '@/pages/NoServerAvailable.vue';
 
 const { buildUrl, serverSlug } = useProxyServer();
 const page = usePage();
-const isServerAdmin = computed(() => (page.props.isServerAdmin as boolean) ?? false);
+
+const can = computed(() => page.props.can as { server_admin: boolean});
 
 const allNavItems: NavItem[] = [
     {
@@ -63,7 +64,7 @@ const allNavItems: NavItem[] = [
 ];
 
 const mainNavItems = computed(() =>
-    isServerAdmin.value
+    can.value.server_admin
         ? allNavItems
         : allNavItems.filter(
               (item) => item.title !== 'Environments' 

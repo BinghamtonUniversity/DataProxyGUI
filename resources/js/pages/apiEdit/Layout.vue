@@ -116,9 +116,7 @@ const api = ref<Api | null>(null)
 const environment = ref<Environment[]>([])
 const loadingApiData = ref(true)
 const apiError = ref('')
-const apiBaseUrl = '/api'
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL 
-const hermesBaseUrl = import.meta.env.VITE_HERMES_BASEURL
+
 
 const highlightQuery = ref<string>('')
 const highlightTarget = ref<string>('')
@@ -310,10 +308,13 @@ const fetchVersions = async () => {
         }
 
         versions.value = await response.json()
+        // if there is no stable = 0 in versions, add latest version
+       
+        
        // If versions list doesnt have  any not stable version, insert the latest version to the versions list (for php)
-       if(latestVersion.value.stable == false &&!versions.value.some((version: any) => version.stable === false)) {
-            versions.value.push(latestVersion.value)
-            
+       // We might not have a latest version yet if there is no save yet
+        if (latestVersion.value && !versions.value.some((v: any) => v.id === latestVersion.value.id)) {
+            versions.value.unshift(latestVersion.value)  // unshift to put it at the top
         }
     } catch (e: any) {
         versionsError.value = e.message || 'Error fetching versions'
@@ -676,7 +677,7 @@ const openViewVersionModal = async (version: any) => {
 }
 
 const openDiffModal = async (version: any) => {
-    const isLatest = versions.value.length > 0 && version.id === versions.value[versions.value.length - 1].id
+    const isLatest = version.stable === false
     
     if (isLatest) {
         await switchToLatestVersion()
@@ -738,7 +739,9 @@ const publishApiVersion = async (formData: any) => {
         }
 
         const publishedVersion = await response.json()
+        latestVersion.value = publishedVersion;
         success('API version published successfully!', 'Version Published')
+        
         showPublishModal.value = false
         await fetchApiData()
         
@@ -898,13 +901,14 @@ const handleSave = async () => {
             content: func.name === 'Constructor' && func.content === '//__EMPTY__' ? '' : func.content
         }));
     }
-    // debugger;
+
+    latestVersion.value = responseData;
     const normalizedData = normalizeApiData(responseData, serverApiType.value as 'python' | 'php')
     
     updateApiData(normalizedData)
-    console.log("Orgiinal", originalApiData.value)
+    // console.log("Original", originalApiData.value)
     originalApiData.value = JSON.parse(JSON.stringify(normalizedData))
-    console.log("Original after save", originalApiData.value)
+    // console.log("Original after save", originalApiData.value)
     hasUnsavedChanges.value = false
 }
 
@@ -1411,7 +1415,7 @@ onUnmounted(() => {
                         class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
                         :class="{
                             'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800': version.stable,
-                            'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800': !version.stable && index === versions.length - 1
+                            'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800': !version.stable
                         }"
                     >
                         <div class="flex items-center justify-between">
@@ -1421,7 +1425,7 @@ onUnmounted(() => {
                                     <span v-if="version.stable" class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
                                         Stable
                                     </span>
-                                    <span v-else-if="index === versions.length - 1" class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
+                                    <span v-else-if="!version.stable" class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
                                         Latest
                                     </span>
                                 </h3>
@@ -1441,10 +1445,10 @@ onUnmounted(() => {
                                         @click="openDiffModal(version)"
                                         class="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 rounded-md transition-colors"
                                     >
-                                        {{ index === versions.length - 1 ? 'Switch' : 'Compare' }}
+                                        {{ !version.stable  ? 'Switch' : 'Compare' }}
                                     </button>
                                     <button
-                                        v-if="version.stable && index !== versions.length - 1"
+                                        v-if="version.stable"
                                         @click="switchToVersion(version)"
                                         class="px-3 py-1 text-xs bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-200 dark:hover:bg-orange-800 rounded-md transition-colors"
                                     >
