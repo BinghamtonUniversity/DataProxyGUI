@@ -130,7 +130,7 @@ const loadExample = (exampleType: 'user-profile' | 'product-form') => {
             <!-- Form Preview Section - Right Side -->
             <div class="w-1/2 space-y-4">
                 <h2 class="text-lg font-semibold">Form Preview</h2>
-                <div class="border rounded-lg p-6 bg-white h-96 overflow-y-auto">
+                <div class="border rounded-lg p-6 h-96 overflow-y-auto">
                     <FormViewer :formConfig="formConfig" />
                 </div>
             </div>

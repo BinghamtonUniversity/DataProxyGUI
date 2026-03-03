@@ -1,7 +1,7 @@
 <template>
   <div v-if="show" :class="{ 'checkbox-field-container': !inFieldset }">
-    <!-- Main Label (only show if there are no options) -->
-    <label v-if="label"  :for="fieldId" class="block text-sm font-medium text-gray-900 dark:text-white mb-3" :class="{ 'text-red-500': localError || (props.errors && props.errors.length > 0) }">
+    <!-- Commented out because it was causing accessibility issues -->
+    <!-- <label v-if="label"  :for="fieldId" class="block text-sm font-medium text-gray-900 dark:text-white mb-3" :class="{ 'text-red-500': localError || (props.errors && props.errors.length > 0) }">
       {{ label }}
       <span v-if="required" class="text-red-500 ml-1">*</span>
       <span
@@ -22,7 +22,7 @@
           {{ info }}
         </span>
       </span>
-    </label>
+    </label> -->
 
     <!-- Checkbox Input -->
     <div class="flex items-start space-x-3" :class="{ 'flex-col space-y-2': showColumn }">
@@ -30,7 +30,7 @@
         <input
           :id="fieldId"
           type="checkbox"
-          :aria-labelledby="props.ariaLabelledby || undefined"
+  
           :aria-label="checkboxAriaLabel"
           :checked="internalValue"
           :disabled="disabled || !edit"
@@ -174,7 +174,7 @@ const handleFocus = () => {
 };
 
 const checkboxAriaLabel = computed(() => {
-  if (props.ariaLabelledby) return undefined;
+  // if (props.ariaLabelledby) return undefined;
   if (props.ariaLabel) return props.ariaLabel;
   const visibleLabel = getCheckboxLabel();
   if (!visibleLabel) return props.label || props.name;
