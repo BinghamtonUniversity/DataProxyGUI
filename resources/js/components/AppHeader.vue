@@ -55,9 +55,9 @@ const rightNavItems: NavItem[] = [
 </script>
 
 <template>
-    <div>
+    <header>
         <div class="border-b border-sidebar-border/80">
-            <div class="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
+            <div class="mx-auto flex h-16 items-center px-4 md:max-w-7xl" role="banner">
                 <!-- Mobile Menu -->
                 <div class="lg:hidden">
                     <Sheet>
@@ -177,10 +177,10 @@ const rightNavItems: NavItem[] = [
             </div>
         </div>
 
-        <div v-if="props.breadcrumbs.length > 1" class="flex w-full border-b border-sidebar-border/70">
+        <nav v-if="props.breadcrumbs.length > 1" class="flex w-full border-b border-sidebar-border/70" aria-label="Breadcrumb">
             <div class="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </div>
-        </div>
-    </div>
+        </nav>
+    </header>
 </template>

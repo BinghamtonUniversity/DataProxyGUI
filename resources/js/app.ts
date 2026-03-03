@@ -49,13 +49,18 @@ initializeMonaco().then(() => {
         title: (title) => (title ? `${title} - ${appName}` : appName),
         resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
         setup({ el, App, props, plugin }) {
-            createApp({ render: () => h(App, props) })
+            const app = createApp({ render: () => h(App, props) })
                 .use(plugin)
                 .use(ZiggyVue)
                 .use(VueMonacoEditorPlugin)
                 .component('font-awesome-icon', FontAwesomeIcon)
                 // .component('Toaster', Toaster)
                 .mount(el);
+            
+            // Add role to the app container for accessibility
+            if (el && !el.getAttribute('role')) {
+                el.setAttribute('role', 'application');
+            }
         },
         progress: {
             color: '#4B5563',

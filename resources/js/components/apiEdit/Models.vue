@@ -843,7 +843,7 @@ onUnmounted(() => {
                         <DialogContent class="sm:max-w-3xl">
                           <form @submit="submitNewModel" class="space-y-6">
                             <DialogHeader>
-                              <DialogTitle aria-describedby="dialog-title">{{ isEditMode ? 'Edit Model' : 'Create New Model' }}</DialogTitle>
+                              <DialogTitle>{{ isEditMode ? 'Edit Model' : 'Create New Model' }}</DialogTitle>
                             </DialogHeader>
                             <div class="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-6">
                               <!-- Basic Model Info -->
