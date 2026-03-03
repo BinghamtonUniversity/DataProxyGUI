@@ -123,6 +123,7 @@
                 accept=".csv"
                 @change="handleFileUpload"
                 class="hidden"
+                aria-label="Upload CSV file"
               />
               <button
                 v-if="download"
@@ -205,15 +206,16 @@
         <thead>
           <tr>
             <th v-if="showCheckboxes" :class="[currentTheme.headerCell, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']">
+              <span class="sr-only">Select</span>
               <CheckboxField
                 :name="'select-all'"
                 :value="allSelected"
                 @update:value="toggleSelectAll($event)"
                 :required="false"
-              
+                :ariaLabel="'Select all rows'"
                 :options="[
-                  { label: 'None', value: 'false' },
-                  { label: 'All', value: 'true' }
+                  { label: '', value: 'false' },
+                  { label: '', value: 'true' }
                 ]"
               />
             </th>
@@ -239,7 +241,9 @@
                 </span>
               </div>
             </th>
-            <th v-if="rowActions.length > 0" :class="[currentTheme.headerCell, 'text-right']"></th>
+            <th v-if="rowActions.length > 0" :class="[currentTheme.headerCell, 'text-right']">
+              <span class="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -300,6 +304,7 @@
                 :edit="true"
                 :required="false"
                 :inFieldset="true"
+                :ariaLabel="'Select row ' + ((currentPage - 1) * pageSize + idx + 1)"
                 :options="[
                   { label: '', value: 'false' },
                   { label: '', value: 'true' }
@@ -461,7 +466,7 @@
     <div class="mt-10 px-8 py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-gray-50 dark:bg-gray-900 rounded-b-lg shadow-inner">
       <div class="flex items-center flex-wrap gap-4 text-base">
         <span class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full px-5 py-2 text-sm font-normal">{{ pageSummary }}</span>
-        <select v-model="pageSize" class="ml-2 px-4 py-2 pr-8 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-base text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500">
+        <select v-model="pageSize" aria-label="Results per page" class="ml-2 px-4 py-2 pr-8 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-base text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500">
           <option v-for="size in pageSizes" :key="size" :value="size">{{ size }}</option>
         </select>
         <span class="ml-2 text-gray-700 dark:text-gray-200">results per page</span>

@@ -30,6 +30,8 @@
         <input
           :id="fieldId"
           type="checkbox"
+          :aria-labelledby="props.ariaLabelledby || undefined"
+          :aria-label="checkboxAriaLabel"
           :checked="internalValue"
           :disabled="disabled || !edit"
           :required="required"
@@ -39,6 +41,7 @@
           @focus="handleFocus"
         />
         <label 
+          v-if="getCheckboxLabel()"
           :for="fieldId" 
           class="ml-3 text-sm text-gray-900 dark:text-white cursor-pointer leading-tight"
           :class="{ 'cursor-not-allowed opacity-50': disabled || !edit }"
@@ -78,6 +81,8 @@ const props = defineProps({
   autofocus: { type: Boolean, default: false },
   validate: { type: Array, default: () => [] },
   showColumn: { type: Boolean, default: false },
+  ariaLabelledby: { type: String, default: '' },
+  ariaLabel: { type: String, default: '' },
   options: { type: Array, default: () => [
     { label: 'false', value: 'false' },
     { label: 'true', value: 'true' }
@@ -167,6 +172,14 @@ const handleBlur = () => {
 const handleFocus = () => {
   emit('focus', internalValue.value);
 };
+
+const checkboxAriaLabel = computed(() => {
+  if (props.ariaLabelledby) return undefined;
+  if (props.ariaLabel) return props.ariaLabel;
+  const visibleLabel = getCheckboxLabel();
+  if (!visibleLabel) return props.label || props.name;
+  return undefined;
+});
 
 const getCheckboxLabel = () => {
   if (props.options && props.options.length >= 2) {
