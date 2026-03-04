@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 </script>
 
 <template>
-    <Head title="Welcome to New DataProxy">
+    <Head title="Welcome to Hermod">
         <link rel="preconnect" href="https://rsms.me/" />
         <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     </Head>
@@ -13,7 +14,7 @@ import { Head, Link } from '@inertiajs/vue3';
         <header class="relative z-10">
             <nav class="flex items-center justify-between p-6 lg:px-8">
                 <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">New DataProxy</h1>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Hermod</h1>
                 </div>
                 <!-- <div class="flex items-center space-x-4">
                     <a
@@ -36,16 +37,14 @@ import { Head, Link } from '@inertiajs/vue3';
                 <div class="text-center">
                     <!-- Logo/Icon -->
                     <div class="flex justify-center mb-8">
-                        <div class="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl">
-                            <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                            </svg>
+                        <div class="w-20 h-20 bg-sidebar-primary rounded-2xl flex items-center justify-center shadow-2xl">
+                            <AppLogoIcon class="size-10 fill-current text-white dark:text-black" />
                         </div>
                     </div>
 
                     <!-- Main Heading -->
                     <h1 class="text-5xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-6">
-                        New DataProxy
+                        Hermod
                     </h1>
                     
                     <!-- Subtitle -->
