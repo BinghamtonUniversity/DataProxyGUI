@@ -113,6 +113,7 @@ const formConfig = ref({
 // Clean form data for API submission
 const cleanFormData = (formData: any) => {
     const cleaned = { ...formData };
+    cleaned.app_secret = cleaned.api_secret || null; // Map api_secret to app_secret for backend
     
     // Remove server-managed fields that shouldn't be sent to API
     delete cleaned.id; // Remove ID for new records
@@ -120,6 +121,7 @@ const cleanFormData = (formData: any) => {
     delete cleaned.updated_at;
     delete cleaned.encrypted_api_secret; // Don't send encrypted secret
     delete cleaned.api_type;
+    delete cleaned.api_secret; // Remove api_secret as it's only used for form input, backend expects app_secret
     
     // Convert checkbox fields to proper booleans
     const booleanFields = ['is_active'];
@@ -337,7 +339,7 @@ const handleFormSubmit = async (formValues: any) => {
 
             const newUser = await response.json();
             // NOTE: API response include environment instead of environment_id
-            newUser.environment_id = newUser.environment;
+            // newUser.environment_id = newUser.environment;
             
             // Add to local state with server-provided data
             users.value.push(newUser);

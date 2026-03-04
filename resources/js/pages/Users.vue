@@ -66,30 +66,6 @@ const formConfig = {
             required: true
         },
         {
-            name: "username",
-            label: "Username",
-            type: "text",
-            placeholder: "Enter the username",
-            value: "",
-            help: "Username for login",
-            info: "Username for login",
-            width: "12",
-            offset: "0",
-            required: false
-        },
-        {
-            name: "email",
-            label: "Email",
-            type: "email",
-            placeholder: "Enter the email address",
-            value: "",
-            help: "Email address of the user",
-            info: "Email address of the user",
-            width: "12",
-            offset: "0",
-            required: false
-        },
-        {
             name: "admin",
             label: "Admin",
             type: "checkbox",
@@ -147,6 +123,7 @@ const cleanFormData = (formData: any) => {
     
     // Remove server-managed fields that shouldn't be sent to API
     delete cleaned.id; // Remove ID for new records
+
     
     // Convert checkbox fields to proper booleans
     const booleanFields = ['admin', 'active', 'developer'];
@@ -219,8 +196,6 @@ const openEditModal = (row?: any) => {
             id: row.id,
             unique_id: row.unique_id,
             name: row.name,
-            username: row.username,
-            email: row.email,
             admin: row.admin,
             active: row.active,
             developer: row.developer

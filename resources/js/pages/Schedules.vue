@@ -8,8 +8,12 @@ import AlertModal from '@/components/AlertModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted, computed } from 'vue';
-import { getCsrfToken } from '@/lib/utils';
+import { getCsrfToken, mapPhpToApiData } from '@/lib/utils';
+import { useProxyServer } from '@/composables/useProxyServer'
 
+
+
+const { serverSlug, serverApiType } = useProxyServer();
 
 // Use Laravel API routes instead of direct Django calls to avoid CORS
 const apiBaseUrl = 'api';
@@ -681,7 +685,7 @@ const handleFormSubmit = async (formValues: any) => {
     if (modalMode.value === 'new') {
         // Create new schedule via API
 
-        const response = await fetch(`${apiBaseUrl}/schedulers`, {
+        const response = await fetch(`${apiBaseUrl}/scheduler`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -708,7 +712,7 @@ const handleFormSubmit = async (formValues: any) => {
     } else if (modalMode.value === 'edit' && editingRow.value) {
         // Update existing schedule via API
 
-        const response = await fetch(`${apiBaseUrl}/schedulers/${editingRow.value.id}`, {
+        const response = await fetch(`${apiBaseUrl}/scheduler/${editingRow.value.id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -756,7 +760,7 @@ const handleDelete = async (selectedRowIds?: number[]) => {
     
     try {
         for (const id of selectedRowIds || []) {
-            const response = await fetch(`${apiBaseUrl}/schedulers/${id}`, {
+            const response = await fetch(`${apiBaseUrl}/scheduler/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Accept': 'application/json',
@@ -786,7 +790,7 @@ const fetchAPIVersion = async (api_instance : ApiInstance)=>{
     let response;
     try {
         if (api_instance.api_version_id === null) {
-         response = await fetch(`ajax/apis/${api_instance.api_type}/${api_instance.api_id}/versions/latest`, {
+         response = await fetch(`ajax/apis/${api_instance.api_id}/versions/latest`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -796,7 +800,7 @@ const fetchAPIVersion = async (api_instance : ApiInstance)=>{
             credentials: 'same-origin'
         });
     } else {
-         response = await fetch(`ajax/apis/${api_instance.api_type}/${api_instance.api_id}/versions/${api_instance.api_version_id}`, {
+         response = await fetch(`ajax/apis/versions/${api_instance.api_version_id}`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -810,6 +814,8 @@ const fetchAPIVersion = async (api_instance : ApiInstance)=>{
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
+       
+        // debugger
         return data;
     } catch (err: any) {
         console.error('Error fetching latest version:', err);
@@ -850,7 +856,7 @@ const handleArgumentsFormSubmit = async (formData: any) => {
     }
  
     try {
-        const response = await fetch(`${apiBaseUrl}/schedulers/${editingRow.value.id}`, {
+        const response = await fetch(`${apiBaseUrl}/scheduler/${editingRow.value.id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -887,8 +893,10 @@ const handleFormDataChange = async (data: any, field: string) => {
     if (field === 'api_instance_id') {
         loadingRoutes.value = true;
         if (data.api_instance_id) {
-            const apiVersion = await fetchAPIVersion(apiInstances.value.find(instance => instance.id === data.api_instance_id));
-            
+            let apiVersion = await fetchAPIVersion(apiInstances.value.find(instance => instance.id === data.api_instance_id));
+            if(serverApiType.value === 'php') {
+                apiVersion = mapPhpToApiData(apiVersion);
+            }
             formConfig.value.fields[4].options = apiVersion.version_urls.map((route: any) => ({
                 label: `${route.path}`,
                 value: route.path
@@ -944,7 +952,7 @@ const handleReportFormActionHandler = (action: { type: string; action: string; f
 };
 
 const handleManualRun = async (id: number) => {
-    const response = await fetch(`${apiBaseUrl}/schedulers/${id}/run`, {
+    const response = await fetch(`${apiBaseUrl}/scheduler/${id}/run`, {
         method: 'GET',
         headers: {
             'Accept': 'application/json',
