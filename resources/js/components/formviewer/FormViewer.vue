@@ -72,12 +72,15 @@
         :key="action.type"
         @click="handleAction(action)"
         type="button"
-        :class="getActionClasses(action)"
+        :class="[getActionClasses(action), { 'opacity-60 cursor-not-allowed': isSubmitting }]"
         :disabled="action.disabled || isSubmitting"
       >
-        <font-awesome-icon v-if="action.icon" :icon="action.icon" class="w-4 h-4 mr-2" />
-        <span v-if="isSubmitting">Submitting...</span>
-        <span v-else v-html="action.label"></span>
+        <svg v-if="isSubmitting" class="animate-spin -ml-0.5 mr-2 h-4 w-4 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <font-awesome-icon v-else-if="action.icon" :icon="action.icon" class="w-4 h-4 mr-2" />
+        <span v-html="action.label"></span>
       </button>
     </div>
 
@@ -198,6 +201,10 @@ const props = defineProps({
   validateOnSubmit: {
     type: Boolean,
     default: false
+  },
+  isSubmitting: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -205,8 +212,10 @@ const emit = defineEmits(['update:modelValue', 'change', 'submit', 'reset', 'val
 
 const formData = ref({});
 const validationErrors = ref([]);
-const isSubmitting = ref(false);
+const internalSubmitting = ref(false);
 const fieldErrors = ref({}); // Track errors for individual fields
+
+const isSubmitting = computed(() => internalSubmitting.value || props.isSubmitting);
 
 
 // Check if form data is initialized
@@ -222,7 +231,7 @@ const defaultActions = computed(() => [
     action: 'save',
     label: 'Submit',
     modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors',
-    disabled: isSubmitting.value
+    disabled: false
   },
   {
     type: 'cancel',
@@ -238,7 +247,7 @@ const mergedActions = computed(() => {
     // Use custom actions, but ensure they have proper structure
     return props.actions.map(action => ({
       ...action,
-      disabled: action.disabled || (action.type === 'save' && isSubmitting.value)
+      disabled: action.disabled || isSubmitting.value
     }));
   }
   
@@ -598,7 +607,7 @@ const handleAction = async (action) => {
 
 // Enhanced submit form with toastr support
 const submitForm = async () => {
-  isSubmitting.value = true;
+  internalSubmitting.value = true;
 
   try {
     const isValid = validateForm();
@@ -633,7 +642,7 @@ const submitForm = async () => {
       window.showToast('Error submitting form: ' + error.message, 'error');
     }
   } finally {
-    isSubmitting.value = false;
+    internalSubmitting.value = false;
   }
 };
 
