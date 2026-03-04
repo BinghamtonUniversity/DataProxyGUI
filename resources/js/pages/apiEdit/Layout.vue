@@ -248,7 +248,7 @@ const fetchApiData = async () => {
         if(serverApiType.value === 'php' && apiData.value.version_views.length === 0){
             apiData.value.version_views.push({
                 name: 'Constructor',
-                content: '//__EMPTY__',
+                content: ''
             })
         }
         
@@ -926,13 +926,6 @@ const handleSave = async () => {
     }
     success('API data saved successfully!', 'API Data Saved')
     const responseData = await response.json()
-
-    if (serverApiType.value === 'php' && responseData.functions) {
-        responseData.functions = responseData.functions.map((func: { name: string; content: string }) => ({
-            ...func,
-            content: func.name === 'Constructor' && func.content === '//__EMPTY__' ? '' : func.content
-        }));
-    }
 
     latestVersion.value = responseData;
     const normalizedData = normalizeApiData(responseData, serverApiType.value as 'python' | 'php')

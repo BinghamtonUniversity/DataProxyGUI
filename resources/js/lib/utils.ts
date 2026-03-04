@@ -87,14 +87,7 @@ export function denormalizeToPhp(api: ApiData): any {
     stable: api.stable ? 1 : 0,
 
     files: api.version_files,
-    functions: api.version_views
-    .map((func) => ({
-      name: func.name,
-      // Use placeholder for empty strings only for Constructor function
-      content: func.name === 'Constructor' && typeof func.content === 'string' && func.content === '' 
-        ? '//__EMPTY__' 
-        : func.content,
-    })),
+    functions: api.version_views,
     routes: api.version_urls.map((item) => ({ 
       description: item.description,
       path: item.path, 
