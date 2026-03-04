@@ -243,7 +243,7 @@ const fetchApiData = async () => {
         // console.log('Fetched API data:', apiData.value)
         apiData.value = normalizeApiData(data, serverApiType.value as 'python' | 'php')
         originalApiData.value = JSON.parse(JSON.stringify(apiData.value))
-
+        // debugger;
 
         if(serverApiType.value === 'php' && apiData.value.version_views.length === 0){
             apiData.value.version_views.push({
@@ -906,6 +906,7 @@ const handleSave = async () => {
     const requestData = serverApiType.value === 'php' ? denormalizeToPhp(apiData.value): apiData.value
 
     const { created_at, created_by, ...cleanedData } = requestData; //omit these fields
+    cleanedData.updated_at = new Date().toISOString();
 
     // debugger;
     const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/code`, {
