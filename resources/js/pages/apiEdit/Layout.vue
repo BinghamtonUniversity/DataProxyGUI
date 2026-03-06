@@ -837,7 +837,7 @@ const handleApiDataImport = (formData: any) => {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
         }
 
-        importedData.updated_at = new Date().toISOString()
+
         const normalizedData = normalizeApiData(importedData, serverApiType.value as 'python' | 'php')
 
         updateApiData(normalizedData)
@@ -890,6 +890,7 @@ const handleSave = async () => {
         // apiData.value.stable = false;
         // apiData.value.id = latestVersion.value.id;
         apiData.value.updated_at = new Date().toISOString();
+        
 
 
     }
@@ -906,9 +907,8 @@ const handleSave = async () => {
     const requestData = serverApiType.value === 'php' ? denormalizeToPhp(apiData.value): apiData.value
 
     const { created_at, created_by, ...cleanedData } = requestData; //omit these fields
-    cleanedData.updated_at = new Date().toISOString();
 
-    // debugger;
+
     const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/code`, {
         method: 'PUT',
         headers: {
@@ -938,9 +938,7 @@ const handleSave = async () => {
     const normalizedData = normalizeApiData(responseData, serverApiType.value as 'python' | 'php')
     
     updateApiData(normalizedData)
-    // console.log("Original", originalApiData.value)
     originalApiData.value = JSON.parse(JSON.stringify(normalizedData))
-    // console.log("Original after save", originalApiData.value)
     hasUnsavedChanges.value = false
 }
 
