@@ -37,8 +37,8 @@ import AppLogoIcon from '@/components/AppLogoIcon.vue';
                 <div class="text-center">
                     <!-- Logo/Icon -->
                     <div class="flex justify-center mb-8">
-                        <div class="w-20 h-20 bg-sidebar-primary rounded-2xl flex items-center justify-center shadow-2xl">
-                            <AppLogoIcon class="size-10 fill-current text-white dark:text-black" />
+                        <div class="w-20 h-20 bg-white dark:bg-black text-black dark:text-white rounded-2xl flex items-center justify-center shadow-2xl">
+                            <AppLogoIcon class="size-10" />
                         </div>
                     </div>
 
