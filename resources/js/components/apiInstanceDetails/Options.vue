@@ -31,7 +31,7 @@ const formConfig = computed(() => {
     description: '',
     name: "options",
     files: false,
-    fields: [...props.apiInstanceData?.api_version?.options.fields || []]
+    fields: [...props.apiInstanceData?.api_version?.options?.fields || []]
 }
 
 });
@@ -40,47 +40,6 @@ const initialData = computed(() => {
 
     return props.apiInstanceData?.options || []
 })
-
-// const handleSave = async (data: any) => {
-
-    
-//     if (!props.apiInstanceData) return
-
-//     const requestData = {
-//     id: props.apiInstanceData.id,
-//     name: props.apiInstanceData.name,
-//     route: props.apiInstanceData.route, 
-//     route_user_map: props.apiInstanceData.route_user_map,
-//     resources: props.apiInstanceData.resources, 
-//     options: data,
-//     public: props.apiInstanceData.public,
-//     api_id: props.apiInstanceData.api.id,
-//     api_version_id: props.apiInstanceData.api_version_id,
-//     environment_id: props.apiInstanceData.environment.id
-//   }
-
-
-//   const response = await fetch(`/ajax/api_instances/${props.instance_id}`, {
-//         method: 'PUT',
-//         headers: {
-//             'Content-Type': 'application/json',
-//             'Accept': 'application/json',
-//             'X-CSRF-TOKEN': getCsrfToken() || '',
-//         },
-//         body: JSON.stringify(requestData)
-//     })
-
-//     if (!response.ok) {
-//         const errorData = await response.json().catch(() => ({}))
-//         showError(errorData.message || `HTTP error! status: ${response.status}`)
-//         throw new Error(errorData.message || `HTTP error! status: ${response.status}`)  
-        
-//     }
-
-//   const responseData = await response.json()
-//   props.updateApiInstanceData(responseData)
-//   success('Options saved successfully!')   
-// }
 
 
 const handleFormDataUpdate = (data: ApiInstanceOptions) => {

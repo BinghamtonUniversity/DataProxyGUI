@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { type BreadcrumbItem, type User } from '@/types';
+import { Head, router, usePage} from '@inertiajs/vue3';
 import { ref, onMounted, computed } from 'vue';
 import { Database, Folder, Users, Building2, History, ArrowRight, Activity } from 'lucide-vue-next';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { getCsrfToken } from '@/lib/utils';
 import { useProxyServer } from '@/composables/useProxyServer';
+
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -48,6 +49,7 @@ const { error: showError } = useToaster();
 
 const page = usePage();
 const can = computed(() => page.props.can as { server_admin: boolean});
+const user = page.props.auth.user as User;
 
 // const isServerAdmin = computed(() => (page.props.isServerAdmin as boolean) ?? false);
 
@@ -206,9 +208,12 @@ const fetchRecentActivityLogs = async () => {
         }
 
         const data = await response.json();
+        // Only include logs that are ralated to the current server
+        const mydata = data.filter((log: any) => log.user_id === user?.id);
+    
         // Get the 10 most recent logs
         recentActivityLogs.value = Array.isArray(data) 
-            ? data.slice(0, 10).sort((a: any, b: any) => {
+            ? mydata.slice(0, 10).sort((a: any, b: any) => {
                 const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
                 const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
                 return timeB - timeA; // Most recent first
