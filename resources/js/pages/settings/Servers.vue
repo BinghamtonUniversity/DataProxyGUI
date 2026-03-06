@@ -292,7 +292,8 @@ onMounted(() => {
                 <CardWidget
                     :customClass="currentServerSlug == server.slug ? 'border-green-600 dark:border-green-600 border-2' : ''"
                     :payload="server" 
-                    
+                    :clickable="true"
+                    :onClick="() => makeCurrent(server.slug)"
                     :title="currentServerSlug == server.slug ? server.name + ' ( Current )' : server.name" 
                     :subtitle="'Slug: ' + server.slug" 
                     :footerText="'Server: ' + server.server" 
@@ -330,7 +331,7 @@ onMounted(() => {
                         },
                         
                     ]"
-                    :clickable="false"
+                  
                     :actionHandler="handleServerAction"
                 >
                     <!-- Content goes here between the opening and closing tags -->
