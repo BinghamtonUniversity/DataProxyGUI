@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('proxyserver_config', function (Blueprint $table) {
+        Schema::create('proxyservers', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('slug')->unique();
             $table->string('server');
+            $table->string('type')->nullable();
             $table->text('password');
+            $table->text('encrypted_password')->nullable();
             $table->string('username');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
@@ -29,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('proxyserver_config');
+        Schema::dropIfExists('proxyservers');
     }
 };

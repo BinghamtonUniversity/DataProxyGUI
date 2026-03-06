@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('unique_id')->unique()->nullable();
             $table->string('name');
             $table->string('email')->unique();
+            $table->boolean('super_admin')->default(false);
             $table->timestamp('email_verified_at')->nullable();
 
             $table->rememberToken();
