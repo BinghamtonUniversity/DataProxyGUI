@@ -562,7 +562,9 @@ const submitNewResource = async (formData: any) => {
   }
 }
 
-const handleDeleteResource = async (resource: Resource) => {
+const handleDeleteResource = async (resource: Resource, index: number) => {
+ 
+
   if (!confirm(`Are you sure you want to delete Resource "${resource.name}"? This action cannot be undone.`)) {
     return
   }
@@ -579,9 +581,9 @@ const handleDeleteResource = async (resource: Resource) => {
       error('Failed to delete Resource', 'Error')
       throw new Error('Failed to delete Resource')
     }
-    
+
+    resources.value.splice(index, 1);
     success(`Resource "${resource.name}" deleted successfully`, 'Resource Deleted')
-    await fetchResources()
   } catch (err: any) {
     error(err.message || 'Error deleting Resource', 'Error')
   }
@@ -674,13 +676,13 @@ const fetchAllData = async () => {
 }
 
 // DataGrid action handlers
-const handleDataGridAction = (actionData: { type: string; payload: any }) => {
+const handleDataGridAction = (actionData: { type: string; payload: any, index: number }) => {
   switch (actionData.type) {
     case 'single-edit':
       openEditResourceDialog(actionData.payload)
       break
     case 'single-delete':
-      handleDeleteResource(actionData.payload)
+      handleDeleteResource(actionData.payload, actionData.index)
       break
     case 'view':
       openEditResourceDialog(actionData.payload)
@@ -690,13 +692,13 @@ const handleDataGridAction = (actionData: { type: string; payload: any }) => {
   }
 }
 
-const handleDataGridCustomAction = (actionData: { action: string; selectedRows: any[]; selectedData: any[] }) => {
+const handleDataGridCustomAction = (actionData: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
   switch (actionData.action) {
     case 'create':
       openNewResourceDialog()
       break
     case 'delete':
-      handleDeleteResource(actionData.selectedData[0])
+      handleDeleteResource(actionData.selectedData[0], actionData.selectedIndex[0])
       break
     default:
       info(`Please implement the ${actionData.action} function`, 'Action Not Implemented')
