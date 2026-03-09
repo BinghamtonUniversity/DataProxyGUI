@@ -144,8 +144,6 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
 }
 
 const handleDataGridRowClick = (row: any, index: number) => {
-  console.log('row', row)
-  console.log('index', index)
   openEditResourceDialog(row, index)
 }
 

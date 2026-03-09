@@ -436,7 +436,7 @@ const handleDataGridActionHandler = (actionData: { action: string; selectedRows:
             openNewModal();
             break;
         case 'delete':
-            console.log('Delete action data:', actionData.selectedData[0].id);
+            // console.log('Delete action data:', actionData.selectedData[0].id);
             handleDelete([actionData.selectedData[0].id]);
             break;
     }

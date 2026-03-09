@@ -229,7 +229,7 @@ const handleRequiredParamsFormAction = async (actionData: { type: string; action
       // Validate form before submitting
       if (requiredParamsFormViewer.value) {
         const isValid = requiredParamsFormViewer.value.validateForm();
-        debugger;
+        // debugger;
         if (!isValid) {
           // Validation failed - errors are already displayed by FormViewer
           return

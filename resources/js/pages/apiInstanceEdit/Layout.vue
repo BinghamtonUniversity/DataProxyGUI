@@ -267,7 +267,7 @@ const updateInstanceVersion = async (version: any) => {
 
         const updatedInstance = await response.json()
         success('API version updated successfully!', 'Version Updated')
-        debugger;
+        // debugger;
         
         // Close modal and refresh data
         showVersionModal.value = false
