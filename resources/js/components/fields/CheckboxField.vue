@@ -1,7 +1,7 @@
 <template>
   <div v-if="show" :class="{ 'checkbox-field-container': !inFieldset }">
     <!-- Commented out because it was causing accessibility issues -->
-    <!-- <label v-if="label"  :for="fieldId" class="block text-sm font-medium text-gray-900 dark:text-white mb-3" :class="{ 'text-red-500': localError || (props.errors && props.errors.length > 0) }">
+    <label v-if="label"  class="block text-sm font-medium text-gray-900 dark:text-white mb-3" :class="{ 'text-red-500': localError || (props.errors && props.errors.length > 0) }">
       {{ label }}
       <span v-if="required" class="text-red-500 ml-1">*</span>
       <span
@@ -22,7 +22,7 @@
           {{ info }}
         </span>
       </span>
-    </label> -->
+    </label>
 
     <!-- Checkbox Input -->
     <div class="flex items-start space-x-3" :class="{ 'flex-col space-y-2': showColumn }">
