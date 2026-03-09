@@ -26,6 +26,7 @@ const showModal = ref(false);
 const modalMode = ref<'new' | 'edit'>('new');
 const editingRow = ref<any>(null);
 const submitting = ref(false);
+const apiFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
 
 // Data state
 const apis = ref<Api[]>([]);
@@ -370,6 +371,15 @@ const closeModal = () => {
 };
 
 const handleFormSubmit = async (formValues: any) => {
+    if (!apiFormRef.value) {
+        warning('Form is not ready. Please try again.', 'Validation Error');
+        return;
+    }
+    const isValid = apiFormRef.value?.validateForm();
+    if (!isValid) {
+        warning('Please fix validation errors before saving.', 'Validation Error');
+        return;
+    }
     try {
         submitting.value = true;
         
@@ -381,7 +391,7 @@ const handleFormSubmit = async (formValues: any) => {
             if (cleanedData.api_type === 'php' && cleanedData.name && cleanedData.name.includes(' ')) {
                 throw new Error('API name cannot contain spaces. Please use underscores or hyphens instead.');
             }
-``
+
             const response = await fetch(`api/apis`, {
                 method: 'POST',
                 headers: {
@@ -648,6 +658,7 @@ onMounted(() => {
                     @close="closeModal"
                 >
                     <FormViewer 
+                        ref="apiFormRef"
                         :formConfig="formConfig" 
                         :initialData="editingRow"
                         :cancelAction="'close'"
