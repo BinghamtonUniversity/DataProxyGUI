@@ -28,6 +28,7 @@ const submitting = ref(false);
 
 // Data state
 const environments = ref<any[]>([]);
+const environmentFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
@@ -36,9 +37,9 @@ const { success, error: showError, warning, info } = useToaster();
 
 // Form configuration for environments
 const formConfig = {
-    label: '',
+    label: 'Environment Form',
     description: '',
-    name: "my-form",
+    name: "environment_form",
     files: false,
     fields: [
         {
@@ -245,8 +246,19 @@ const closeModal = () => {
 };
 
 const handleFormSubmit = async (formValues: any) => {
+    if (!environmentFormRef.value) {
+        warning('Form is not ready. Please try again.', 'Validation Error');
+        return;
+    }
+    const isValid = environmentFormRef.value?.validateForm();
+    if (!isValid) {
+        warning('Please fix validation errors before saving.', 'Validation Error');
+        return;
+    }
     try {
         submitting.value = true;
+
+
         
         if (modalMode.value === 'new') {
             // Create new environment via API
@@ -449,6 +461,7 @@ onMounted(() => {
                 @close="closeModal"
             >
             <FormViewer 
+                      ref="environmentFormRef"
                       :formConfig="formConfig" 
                       :initialData="editingRow"
                       :cancelAction="'close'"
