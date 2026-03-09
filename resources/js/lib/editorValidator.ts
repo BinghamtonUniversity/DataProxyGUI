@@ -492,7 +492,6 @@ export function validateCode(
           break
         }
       }
-      
 
       // Improved semicolon check
       // A statement needs a semicolon if:
@@ -502,20 +501,24 @@ export function validateCode(
       // 4. It's not inside parentheses (method calls can span multiple lines)
       // 5. It's not a modifier/declaration keyword
       // 6. Current line doesn't start with -> (it's a continuation)
-      const startsWithMethodChain = trimmed.startsWith('->')
-      const endsWithMethodChain = trimmed.endsWith('->')
-      const endsWithContinuation = trimmed.endsWith(',') || trimmed.endsWith('(') || trimmed.endsWith('[')
-      const isControlStructure = trimmed.match(/^(if|else|elseif|while|for|foreach|function|class|switch|case|default|do|try|catch|finally)\b/)
-      const isModifier = trimmed.match(/^(public|private|protected|static|abstract|final|const|namespace|use|interface|trait|extends|implements)\s/)
-      const isPhpTag = trimmed.startsWith('<?php') || trimmed.startsWith('<?') || trimmed.startsWith('?>')
-      const isArrayStart = trimmed.endsWith('[') || trimmed.match(/^\s*[\]\[]/)
+
+      // Strip inline // comments before checking line endings
+      const trimmedWithoutComment = trimmed.replace(/\s*\/\/.*$/, '').trimEnd()
+
+      const startsWithMethodChain = trimmedWithoutComment.startsWith('->')
+      const endsWithMethodChain = trimmedWithoutComment.endsWith('->')
+      const endsWithContinuation = trimmedWithoutComment.endsWith(',') || trimmedWithoutComment.endsWith('(') || trimmedWithoutComment.endsWith('[')
+      const isControlStructure = trimmedWithoutComment.match(/^(if|else|elseif|while|for|foreach|function|class|switch|case|default|do|try|catch|finally)\b/)
+      const isModifier = trimmedWithoutComment.match(/^(public|private|protected|static|abstract|final|const|namespace|use|interface|trait|extends|implements)\s/)
+      const isPhpTag = trimmedWithoutComment.startsWith('<?php') || trimmedWithoutComment.startsWith('<?') || trimmedWithoutComment.startsWith('?>')
+      const isArrayStart = trimmedWithoutComment.endsWith('[') || trimmedWithoutComment.match(/^\s*[\]\[]/)
       
       if (
-        trimmed.length > 0 &&
-        !trimmed.endsWith(';') &&
-        !trimmed.endsWith('{') &&
-        !trimmed.endsWith('}') &&
-        !trimmed.endsWith(':') &&
+        trimmedWithoutComment.length > 0 &&
+        !trimmedWithoutComment.endsWith(';') &&
+        !trimmedWithoutComment.endsWith('{') &&
+        !trimmedWithoutComment.endsWith('}') &&
+        !trimmedWithoutComment.endsWith(':') &&
         !startsWithMethodChain && // Line is a continuation from previous
         !endsWithMethodChain && // Line continues to next
         !nextLineStartsWithArrow && // Next line is a continuation
@@ -534,7 +537,7 @@ export function validateCode(
           endLineNumber: i + 1,
           endColumn: line.length + 1,
           message: 'Missing semicolon (;) at end of statement',
-          severity: 4, // Warning
+          severity: 8, // Error
         })
       }
 
@@ -631,4 +634,3 @@ export function validateCode(
     warnings,
   }
 }
-

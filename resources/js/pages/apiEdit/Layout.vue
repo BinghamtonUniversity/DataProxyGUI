@@ -929,8 +929,9 @@ const handleSave = async () => {
 
     latestVersion.value = responseData;
     const normalizedData = normalizeApiData(responseData, serverApiType.value as 'python' | 'php')
-    
+    // debugger;
     updateApiData(normalizedData)
+    // debugger;
     originalApiData.value = JSON.parse(JSON.stringify(normalizedData))
     hasUnsavedChanges.value = false
 }

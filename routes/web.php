@@ -221,7 +221,6 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
             ->name('api.edit.index');
         Route::put('/{api_id}/code', [App\Http\Controllers\Api\ApiController::class, 'ApiEditUpdate'])
             ->name('api.edit.update');
-        // TO-DO add api_type parameter to the following routes
         Route::get('/{api_id}/versions', [App\Http\Controllers\Api\ApiController::class, 'getApiVersions']);
         Route::get('/versions/{version_id}', [App\Http\Controllers\Api\ApiController::class, 'getApiVersionDetails']);
         Route::put('/{api_id}/publish', [App\Http\Controllers\Api\ApiController::class, 'publishApiVersion']);
