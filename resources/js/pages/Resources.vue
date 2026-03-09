@@ -22,6 +22,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const resources = ref<Resource[]>([])
 const environments = ref<Environment[]>([])
 const loading = ref(true)
+const resourceFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
 
 // Toaster
 const { success, error, warning, info } = useToaster()
@@ -50,7 +51,7 @@ const environmentTypes = computed(() => {
 
 // Form configuration for FormViewer
 const formConfig = ref({
-  label: '',
+  label: 'Resource Form',
   description: '',
   name: "resources-form",
   files: false,
@@ -441,6 +442,15 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
 }
 
 const submitNewResource = async (formData: any) => {
+  if (!resourceFormRef.value) {
+    warning('Form is not ready. Please try again.', 'Validation Error');
+    return;
+  }
+  const isValid = resourceFormRef.value?.validateForm();
+  if (!isValid) {
+    warning('Please fix validation errors before saving.', 'Validation Error');
+    return;
+  }
   newResourceLoading.value = true
   newResourceError.value = ''
 
@@ -757,6 +767,7 @@ onMounted(() => {
         @close="closeNewResourceDialog"
       >
         <FormViewer 
+          ref="resourceFormRef"
           :formConfig="formConfig" 
           :initialData="newResourceForm"
           :cancelAction="'close'"
