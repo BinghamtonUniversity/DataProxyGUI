@@ -174,12 +174,11 @@ const handleCreateNewView = async () => {
             name,
             content: ``,
         }
-        // console.log("before creating function", props.apiData)
+
         const updatedApiData = {
             ...props.apiData,
             version_views: [...props.apiData.version_views, newFunction]
         }
-        // console.log("after creating function", updatedApiData)
         // Update the local state through parent
         props.updateApiData(updatedApiData)
         

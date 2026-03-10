@@ -331,7 +331,7 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
             submitNewApiInstance(actionData.formData);
             break;
         default:
-            console.log('Unknown FormViewer action type:', actionData.type);
+            warning('Unknown FormViewer action type:', actionData.type);
     }
 };
 const submitNewApiInstance = async ( formData: any) => {
@@ -707,7 +707,7 @@ onUnmounted(() => {
 // DataGrid action handlers
 const handleDataGridAction = (actionData: { type: string; payload: any }) => {
  
-  // console.log('DataGrid action data:', actionData); 
+
   switch (actionData.type) {
     case 'single-edit':
       openEditApiInstanceDialog(actionData.payload);
@@ -719,7 +719,7 @@ const handleDataGridAction = (actionData: { type: string; payload: any }) => {
       router.visit(`/api_instances/${actionData.payload.id}/main`);
       break;
     default:
-      console.log('Unknown action type:', actionData.type);
+      warning('Unknown action type:', actionData.type);
   }
 };
 
@@ -739,9 +739,6 @@ const handleDataGridCustomAction = (actionData: { action: string; selectedRows: 
 };
 
 const handleDataGridRowClick = (row: any) => {
-  // console.log('API Type:', api_type); 
-  // $api_type = row.api.api_type;
-  // debugger;
   router.visit(`api_instances/${row.id}/main`);
 };
 </script>

@@ -28,7 +28,6 @@ interface Props {
 }
 
 const { serverSlug, serverApiType } = useProxyServer();
-// console.log('in Layout Server slug prop:', serverApiType.value);
 
 
 const props = defineProps<Props>()
@@ -239,11 +238,10 @@ const fetchApiData = async () => {
             throw new Error(errorData.error || 'Failed to fetch API data')
         }
         const data = await response.json()
-        latestVersion.value = data;
-        // console.log('Fetched API data:', apiData.value)
+        latestVersion.value = data; 
         apiData.value = normalizeApiData(data, serverApiType.value as 'python' | 'php')
         originalApiData.value = JSON.parse(JSON.stringify(apiData.value))
-        // debugger;
+
 
         if(serverApiType.value === 'php' && apiData.value.version_views.length === 0){
             apiData.value.version_views.push({
@@ -278,8 +276,6 @@ watch(apiData, (newVal, oldVal) => {
 
 
 const updateApiData = (updatedApiData: ApiData) => {
-    // apiData.value = normalizeApiData(updatedApiData, props.api_type as 'python' | 'php')
-    // console.log("Updating data", updatedApiData)
     apiData.value = updatedApiData
 }
 
@@ -805,7 +801,7 @@ const handleDevelopersAction = (action: string) => {
             openPublishModal()
             break
         default:
-            console.log('Unknown action:', action)
+            warning('Unknown action:', action)
     }
 }
 
@@ -842,7 +838,6 @@ const handleApiDataImport = (formData: any) => {
         let normalizedData = normalizeApiData(importedData, serverApiType.value as 'python' | 'php')
         // New Import Modifications
         normalizedData.updated_at = "";
-        normalizedData.created_at = apiData.value?.created_at || normalizedData.created_at;
         normalizedData.created_by = apiData.value?.created_by || normalizedData.created_by;
         normalizedData.updated_by = apiData.value?.updated_by || normalizedData.updated_by;
         normalizedData.force = true;
