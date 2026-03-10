@@ -80,7 +80,8 @@ class SchedulersController extends BaseServerController{
         $result = $this->makeBackendRequest('GET', "scheduler/{$id}/run", [], [], $server_slug);
         if ($result['success']) {
             return response()->json([
-                'message' => "Scheduler run successfully"
+                'data' => $result['data'],
+                'status' => $result['status']
             ]);
         }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { ApiInstance, type BreadcrumbItem } from '@/types';
+import { ApiData, ApiInstance, type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
@@ -8,7 +8,7 @@ import AlertModal from '@/components/AlertModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted, computed } from 'vue';
-import { getCsrfToken, mapPhpToApiData } from '@/lib/utils';
+import { getCsrfToken, mapDjangoToApiData, mapPhpToApiData } from '@/lib/utils';
 import { useProxyServer } from '@/composables/useProxyServer'
 
 
@@ -24,7 +24,11 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/schedules',
     },
 ];
-
+function normalizeApiData(payload: any, backend: 'python' | 'php'): ApiData {
+  return backend === 'python'
+    ? mapDjangoToApiData(payload)
+    : mapPhpToApiData(payload);
+}
 // Modal state
 const showModal = ref(false);
 const modalMode = ref<'new' | 'edit'>('new');
@@ -610,6 +614,7 @@ const fetchApiInstances = async () => {
         
         const data = await response.json();
         apiInstances.value = data;
+
         
         formConfig.value.fields[3].options = apiInstances.value.map(instance => ({
             label: `${instance.name} (${environmentsData.value.find((environment: any) => environment.id === instance.environment_id)?.name || 'Unknown Environment'})`,
@@ -648,8 +653,9 @@ const openEditModal = async (row?: any) => {
             // Don't include created_at, updated_at as they're server-managed
         };
         const apiVersion = await fetchAPIVersion(apiInstances.value.find(instance => instance.id === editingRow.value.api_instance_id));
- 
-        formConfig.value.fields[4].options = apiVersion.version_urls.map((route: any) => ({
+        const normalizedApiVersion = normalizeApiData(apiVersion, serverApiType.value as 'python' | 'php');
+        
+        formConfig.value.fields[4].options = normalizedApiVersion.version_urls.map((route: any) => ({
                 label: `${route.path}`,
                 value: route.path
         }));
@@ -958,11 +964,13 @@ const handleManualRun = async (id: number) => {
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        showError(errorData.message || `HTTP error! status: ${response.status}`, 'Error');
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        showError(errorData.details.error || `HTTP error! status: ${response.status}`, 'Error');
+        throw new Error(errorData.details.error || `HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
     success('Scheduler run successfully', 'Success');
+    schedules.value.find((schedule: any) => schedule.id === id)!=data.data;
+
 };
 
 
