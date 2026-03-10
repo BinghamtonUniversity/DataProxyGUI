@@ -836,10 +836,17 @@ const handleApiDataImport = (formData: any) => {
         if (missingFields.length > 0) {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
         }
+        
 
 
-        const normalizedData = normalizeApiData(importedData, serverApiType.value as 'python' | 'php')
-
+        let normalizedData = normalizeApiData(importedData, serverApiType.value as 'python' | 'php')
+        // New Import Modifications
+        normalizedData.updated_at = "";
+        normalizedData.created_at = apiData.value?.created_at || normalizedData.created_at;
+        normalizedData.created_by = apiData.value?.created_by || normalizedData.created_by;
+        normalizedData.updated_by = apiData.value?.updated_by || normalizedData.updated_by;
+        normalizedData.force = true;
+        
         updateApiData(normalizedData)
         hasUnsavedChanges.value = true
         closeApiDataImportModal()
