@@ -131,7 +131,7 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
       break;
 
     default:
-      console.log('Unknown FormViewer action type:', actionData.type);
+      warning('Unknown FormViewer action type:', actionData.type);
   }
 }
 

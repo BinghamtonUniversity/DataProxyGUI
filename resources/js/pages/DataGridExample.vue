@@ -59,7 +59,7 @@ const formData = ref([
 
 // Custom action functions
 const viewUser = (user: any) => {
-    console.log('View user:', user);
+    success('View user:', user);
     // Implement view user logic
 };
 
@@ -111,7 +111,7 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
             closeModal();
             break;
         default:
-            console.log('Unknown FormViewer action type:', actionData.type);
+            warning('Unknown FormViewer action type:', actionData.type);
     }
 };
 const handleFormSubmit = (formValues: any) => {

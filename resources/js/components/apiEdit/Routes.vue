@@ -229,7 +229,6 @@ const handleRequiredParamsFormAction = async (actionData: { type: string; action
       // Validate form before submitting
       if (requiredParamsFormViewer.value) {
         const isValid = requiredParamsFormViewer.value.validateForm();
-        debugger;
         if (!isValid) {
           // Validation failed - errors are already displayed by FormViewer
           return
@@ -293,7 +292,7 @@ const handleRouteFormAction = async (actionData: { type: string; action: string;
       submitNewRoute(newRouteForm.value)
       break;
     default:
-      console.log('Unknown action type:', actionData.action);
+      warning('Unknown action type:', actionData.action);
       break;
   }
 }
@@ -547,7 +546,7 @@ const handleDataGridActionHandler = (actionData: { action: string; selectedRows:
             openOptionalParamsDialog(actionData.selectedData[0], actionData.selectedIndex[0]);
             break;
         default:
-            console.log('Unknown action type:', actionData.action);
+            warning('Unknown action type:', actionData.action);
             break;
     }
 };
@@ -569,7 +568,7 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
             openOptionalParamsDialog(actionData.payload, actionData.index);
             break;
         default:
-            console.log('Unknown action type:', actionData.type);
+            warning('Unknown action type:', actionData.type);
     }
 };
 
