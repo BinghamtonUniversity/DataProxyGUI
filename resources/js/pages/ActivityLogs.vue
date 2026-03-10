@@ -143,21 +143,21 @@ const activityLogsSchema = {
 // Format timestamp for display
 const formatTimestamp = (timestamp: string | null | undefined) => {
     if (!timestamp || timestamp === null || timestamp === undefined) {
-        console.log('formatTimestamp: No timestamp provided:', timestamp);
+        warning('formatTimestamp: No timestamp provided:', timestamp || '');
         return '';
     }
     
     try {
         const date = new Date(timestamp);
         if (isNaN(date.getTime())) {
-            console.log('formatTimestamp: Invalid date:', timestamp);
+            warning('formatTimestamp: Invalid date:', timestamp);
             return '';
         }
         const formatted = date.toLocaleString();
        
         return formatted;
-    } catch (error) {
-        console.log('formatTimestamp: Error formatting timestamp:', timestamp, error);
+    } catch (error: any) {
+        warning('formatTimestamp: Error formatting timestamp:',  error.message || '');
         return timestamp;
     }
 };

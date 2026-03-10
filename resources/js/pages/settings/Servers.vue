@@ -144,7 +144,7 @@ const handleFormAction = (action: { type: string; action: string; formData: any 
             }
             break;
         default:
-            console.log('Unknown action type:', action.type);
+            warning('Unknown action type:', action.type);
     }
 }
 
@@ -232,7 +232,7 @@ const handleServerAction = async (action: { type: string; action: string; payloa
             break;
         default:
             error('Unknown action type:', action.type);
-            console.log('Unknown action type:', action.type);
+            warning('Unknown action type:', action.type);
     }
 }
 

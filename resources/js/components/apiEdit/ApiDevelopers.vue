@@ -361,7 +361,7 @@ const handleAction = (actionData: { type: string; payload: any }) => {
 
             break;
         default:
-            console.log('Unknown action type:', actionData.type);
+            warning('Unknown action type:', actionData.type);
     }
 };
 
@@ -378,7 +378,7 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
             handleFormSubmit(actionData.formData);
             break;
         default:
-            console.log('Unknown FormViewer action type:', actionData.type);
+            warning('Unknown FormViewer action type:', actionData.type);
     }
 };
 
@@ -436,7 +436,6 @@ const handleDataGridActionHandler = (actionData: { action: string; selectedRows:
             openNewModal();
             break;
         case 'delete':
-            // console.log('Delete action data:', actionData.selectedData[0].id);
             handleDelete([actionData.selectedData[0].id]);
             break;
     }

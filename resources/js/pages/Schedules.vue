@@ -501,21 +501,20 @@ const formConfig = computed(() => ({
 // Format timestamp for display
 const formatTimestamp = (timestamp: string | null | undefined) => {
     if (!timestamp || timestamp === null || timestamp === undefined) {
-        console.log('formatTimestamp: No timestamp provided:', timestamp);
+        warning('formatTimestamp: No timestamp provided:', timestamp || '');
         return '';
     }
     
     try {
         const date = new Date(timestamp);
         if (isNaN(date.getTime())) {
-            console.log('formatTimestamp: Invalid date:', timestamp);
+            warning('formatTimestamp: Invalid date:', timestamp || '');
             return '';
         }
         const formatted = date.toLocaleString();
-        // console.log('formatTimestamp: Successfully formatted:', timestamp, '->', formatted);
         return formatted;
-    } catch (error) {
-        console.log('formatTimestamp: Error formatting timestamp:', timestamp, error);
+    } catch (error: any) {
+        warning('formatTimestamp: Error formatting timestamp:', error.message || ''); 
         return timestamp;
     }
 };
@@ -814,8 +813,7 @@ const fetchAPIVersion = async (api_instance : ApiInstance)=>{
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-       
-        // debugger
+
         return data;
     } catch (err: any) {
         console.error('Error fetching latest version:', err);
@@ -823,7 +821,7 @@ const fetchAPIVersion = async (api_instance : ApiInstance)=>{
 }
 
 const handleArgumentsFormActionHandler = async (action: { type: string; action: string; formData: any }) => {
-    // console.log('Arguments form action:', action);
+
     switch (action.type) {
         case 'close':
         case 'cancel':
@@ -833,7 +831,7 @@ const handleArgumentsFormActionHandler = async (action: { type: string; action: 
             await handleArgumentsFormSubmit(action.formData);
             break;
         default:
-            console.log('Unknown arguments form action type:', action.type);
+            warning('Unknown arguments form action type:', action.type);
     }
 };
 
@@ -847,7 +845,7 @@ const handleArgumentsFormSubmit = async (formData: any) => {
         warning('Please fix validation errors before saving.', 'Validation Error');
         return;
     }
-    debugger;
+
     for (const arg of formData.args) {
         if (!arg.name || !arg.value) {
             warning('Please fill in all fields.', 'Validation Error');
@@ -909,7 +907,6 @@ const handleFormDataChange = async (data: any, field: string) => {
 };
 
 const handleDataGridActionHandler = (action: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
-    // console.log('DataGrid action:', action);
     switch (action.action) {
         case 'create':
             openNewModal();
@@ -942,7 +939,6 @@ const closeReportModal = () => {
 };
 
 const handleReportFormActionHandler = (action: { type: string; action: string; formData: any }) => {
-    // console.log('Report form action:', action);
     switch (action.type) {
         case 'close':
         case 'cancel':
@@ -976,7 +972,6 @@ const openArgumentsModal = (row: any) => {
 };
 
 const handleDataGridRowActionHandler = (action: { type: string; payload: any }) => {
-    // console.log('DataGrid row action:', action);
     switch (action.type) {
         case 'single-edit':
             openEditModal(action.payload    );
@@ -1000,7 +995,6 @@ const handleDataGridRowClick = (row: any) => {
 };
 
 const handleFormActionHandler = (action: { type: string; action: string; formData: any }) => {
-    // console.log('Form action:', action);
     switch (action.type) {
         case 'save':
             handleFormSubmit(action.formData);

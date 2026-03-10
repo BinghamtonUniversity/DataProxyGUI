@@ -437,7 +437,7 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
       submitNewResource(actionData.formData)
       break
     default:
-      console.log('Unknown FormViewer action type:', actionData.type)
+      warning('Unknown FormViewer action type:', actionData.type)
   }
 }
 
@@ -481,20 +481,6 @@ const submitNewResource = async (formData: any) => {
       ? { ...formData, id: editingResourceId.value }
       : { ...formData }
 
-    // const requestData = {
-    //   name: body.name,
-    //   type: body.type,
-    //   resource_type: body.resource_type,
-    //   config: {
-    //     user: body.user,
-    //     pass: body.pass,
-    //     tns: body.tns,
-    //     name: body.db_name,
-    //     server: body.server,
-    //     value: body.resource_type === 'value' ? body.value : body.secret_value
-    //   }
-    // }
-    // console.log('Submitting Resource:', requestData)
 
     let config: Record<string, any> = {}
 
@@ -539,8 +525,6 @@ const submitNewResource = async (formData: any) => {
       resource_type: body.resource_type,
       config
     }
-
-    // console.log('Submitting Resource:', requestData)
 
     const response = await fetch(url, {
       method: request_method,
@@ -698,7 +682,7 @@ const handleDataGridAction = (actionData: { type: string; payload: any, index: n
       openEditResourceDialog(actionData.payload)
       break
     default:
-      console.log('Unknown action type:', actionData.type)
+      warning('Unknown action type:', actionData.type)
   }
 }
 

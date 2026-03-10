@@ -472,7 +472,6 @@ const handleFormSubmit = async (formValues: any) => {
 };
 
 const handleDataGridActionHandler = (actionData: { action: string; selectedRows: any[]; selectedData: any[], selectedIndex: any[] }) => {
-    // console.log('DataGrid action data:', actionData);
     switch (actionData.action) {
         case 'create':
             openNewModal();
@@ -500,14 +499,11 @@ const handleAction = (actionData: any) => {
             openEditModal(actionData.payload);
             break;
         default:
-            console.log('Unknown action type:', actionData.type);
+            warning('Unknown action type:', actionData.type);
     }
 };
 
 const handleRowClick = (row: any) => {
-    // console.log('Row clicked:', row);
-    const apiType = row.api_type;
-    // debugger;
     router.visit(`apis/${row.id}/routes`);
 };
 

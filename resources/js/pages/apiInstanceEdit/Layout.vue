@@ -173,11 +173,7 @@ watch(apiInstanceData, (newVal) => {
     if (originalApiInstanceData.value && newVal) {
         // Compare to detect changes
         hasUnsavedChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalApiInstanceData.value)
-        // if(hasUnsavedChanges.value){
-        //     console.log('Unsaved changes detected')
-        //     console.log('Original:', originalApiInstanceData.value)
-        //     console.log('Current:', newVal)
-        // }
+
     }
 }, { deep: true })
 
@@ -188,7 +184,7 @@ const updateApiInstanceData = (updatedApiInstanceData: Partial<ApiInstance>) => 
         ...apiInstanceData.value, 
         ...updatedApiInstanceData,
     } as ApiInstance
-    // debugger;
+
 }
 
 const refreshApiInstanceData = () => {
@@ -266,9 +262,7 @@ const updateInstanceVersion = async (version: any) => {
         }
 
         const updatedInstance = await response.json()
-        success('API version updated successfully!', 'Version Updated')
-        // debugger;
-        
+        success('API version updated successfully!', 'Version Updated')       
         // Close modal and refresh data
         showVersionModal.value = false
         await fetchAllData()
@@ -403,7 +397,6 @@ const handleSave = async() => {
     }
     success('API Instance data saved successfully!')
     const responseData = await response.json()
-    // console.log('Saved API Instance data:', responseData)
     
     // Merge response with preserved nested objects
     apiInstanceData.value = {
