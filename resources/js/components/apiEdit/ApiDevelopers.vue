@@ -188,7 +188,7 @@ const fetchAvailableUsers = async () => {
         
         // Update form config options for the dropdown
         formConfig.fields[0].options = availableUsers.map((dev: any) => ({
-            label: `${dev.name} (${dev.username || dev.email})`,
+            label: `${dev.name}`,
             value: dev.id
         }));
         
