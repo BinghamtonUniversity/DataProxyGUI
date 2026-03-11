@@ -25,7 +25,7 @@ const showModal = ref(false);
 const modalMode = ref<'new' | 'edit'>('new');
 const editingRow = ref<any>(null);
 const submitting = ref(false);
-
+const userFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
 // Data state
 const users = ref<any[]>([]);
 const loading = ref(true);
@@ -51,7 +51,16 @@ const formConfig = {
             info: "Unique identifier for the user",
             width: "12",
             offset: "0",
-            required: true
+            required: true,
+            validate: [
+                {
+                type: "length",
+                min: 10,
+                max: 10,
+                conditions: true
+                }
+            ]
+
         },
         {
             name: "name",
@@ -213,6 +222,15 @@ const closeModal = () => {
 };
 
 const handleFormSubmit = async (formValues: any) => {
+    if (!userFormRef.value) {
+        warning('Form is not ready. Please try again.', 'Validation Error');
+        return;
+    }
+    const isValid = userFormRef.value?.validateForm();
+    if (!isValid) {
+        warning('Please fix validation errors before saving.', 'Validation Error');
+        return;
+    }
     try {
         submitting.value = true;
         
@@ -432,6 +450,7 @@ onMounted(() => {
                 @close="closeModal"
             >
                 <FormViewer 
+                    ref="userFormRef"
                     :formConfig="formConfig" 
                     :initialData="editingRow"
                     :cancelAction="'close'"
