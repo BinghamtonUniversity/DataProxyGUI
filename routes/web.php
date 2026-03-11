@@ -21,10 +21,10 @@ Route::prefix('oidc')->group(function () {
 Route::middleware(['auth'])->prefix('api')->group(function () {
     // Returns JSON list of available proxy servers
     Route::get('/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'getServers']);
-    Route::post('/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'store']);
-    Route::put('/proxy-servers/bulk', [App\Http\Controllers\ProxyServerController::class, 'bulkUpdate']);
-    Route::put('/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'update']);
-    Route::delete('/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'destroy']);
+    Route::post('/proxy-servers', [App\Http\Controllers\ProxyServerController::class, 'store'])->middleware('can:manage_users');
+    Route::put('/proxy-servers/bulk', [App\Http\Controllers\ProxyServerController::class, 'bulkUpdate'])->middleware('can:manage_users');
+    Route::put('/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'update'])->middleware('can:manage_users');
+    Route::delete('/proxy-servers/{id}', [App\Http\Controllers\ProxyServerController::class, 'destroy'])->middleware('can:manage_users');
 
     // Internal (GUI) users – super admins only
     // We don't have granular permissions for internal users yet - so policy only checks for super_admin flag, which is also equivalent using the gate can:manage_users.
@@ -33,6 +33,9 @@ Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::post('/internal-users', [App\Http\Controllers\Settings\InternalUsersController::class, 'store'])->middleware('can:create,App\Models\User');
     Route::put('/internal-users/{id}', [App\Http\Controllers\Settings\InternalUsersController::class, 'update'])->middleware('can:update,App\Models\User');
     Route::delete('/internal-users/{id}', [App\Http\Controllers\Settings\InternalUsersController::class, 'destroy'])->middleware('can:delete,App\Models\User');
+
+    Route::post('/internal-users/{id}/impersonate', [App\Http\Controllers\Settings\InternalUsersController::class, 'impersonate'])->middleware('can:manage_users');
+    Route::post('/internal-users/leave-impersonation', [App\Http\Controllers\Settings\InternalUsersController::class, 'leaveImpersonation']);
 });
 
 Route::middleware(['auth'])->group(function () {

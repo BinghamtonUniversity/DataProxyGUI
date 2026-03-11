@@ -140,6 +140,7 @@ const leaveImpersonation = async () => {
                 'X-CSRF-TOKEN': getCsrfToken() || '',
             },
             credentials: 'same-origin',
+            body: JSON.stringify({ server_slug: serverSlug.value }),
         });
         const data = await response.json().catch(() => ({}));
         const redirect = (data as { redirect?: string }).redirect;

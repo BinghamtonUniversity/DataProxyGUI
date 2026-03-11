@@ -10,8 +10,10 @@ import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted, computed } from 'vue';
 import { getCsrfToken } from '@/lib/utils';
+import { useProxyServer } from '@/composables/useProxyServer';
 
 const apiBaseUrl = '/api/internal-users';
+const { serverSlug } = useProxyServer();
 
 const breadcrumbItems: BreadcrumbItem[] = [
     { title: 'Internal Users', href: '/settings/users' },
@@ -323,6 +325,7 @@ async function impersonateUser(user: InternalUser) {
                 'X-CSRF-TOKEN': getCsrfToken() || '',
             },
             credentials: 'same-origin',
+            body: JSON.stringify({ server_slug: serverSlug.value }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {

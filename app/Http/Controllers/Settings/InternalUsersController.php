@@ -102,7 +102,10 @@ class InternalUsersController extends Controller
         $request->session()->put('impersonator_id', $currentUser->id);
         Auth::login($targetUser, true);
 
-        $redirectUrl = url('/settings/profile');
+        $serverSlug = $request->input('server_slug');
+        $redirectUrl = $serverSlug
+            ? url('/' . $serverSlug . '/settings/profile')
+            : url('/settings/profile');
 
         if ($request->expectsJson() || $request->header('X-Inertia')) {
             return response()->json(['redirect' => $redirectUrl]);
@@ -116,9 +119,13 @@ class InternalUsersController extends Controller
      */
     public function leaveImpersonation(Request $request): JsonResponse|RedirectResponse
     {
+        $serverSlug = $request->input('server_slug');
+        $redirectUrl = $serverSlug
+            ? url('/' . $serverSlug . '/settings/users')
+            : url('/settings/users');
+
         $impersonatorId = $request->session()->get('impersonator_id');
         if (!$impersonatorId) {
-            $redirectUrl = url('/settings/users');
             if ($request->expectsJson() || $request->header('X-Inertia')) {
                 return response()->json(['redirect' => $redirectUrl]);
             }
@@ -131,7 +138,6 @@ class InternalUsersController extends Controller
             Auth::login($originalUser, true);
         }
 
-        $redirectUrl = url('/settings/users');
         if ($request->expectsJson() || $request->header('X-Inertia')) {
             return response()->json(['redirect' => $redirectUrl]);
         }

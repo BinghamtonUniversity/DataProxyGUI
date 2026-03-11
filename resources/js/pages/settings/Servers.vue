@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { type BreadcrumbItem, type ProxyServer } from '@/types';    
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
@@ -14,6 +14,9 @@ import { useProxyServer } from '@/composables/useProxyServer';
 const { buildUrl, serverSlug } = useProxyServer();
 const { success, error, warning, info } = useToaster();
 const isLoading = ref(false);
+
+const page = usePage();
+const canManage = computed(() => (page.props.can as { manage_users?: boolean })?.manage_users ?? false);
 interface Props {
     server_slug?: string;
 }
@@ -282,6 +285,7 @@ onMounted(() => {
             </div>
             <!-- // For each server display a card widget with the server name, slug, server URL, username, password, and active status -->
             <ButtonWidget 
+                v-if="canManage"
                 :label="'Add Server'"
                 :icon="Plus"
                 :onClick="addServer"
@@ -300,13 +304,13 @@ onMounted(() => {
                     :footerIcon="Server"
                     :actions="currentServerSlug == server.slug ? 
                     
-                    [{
+                    (canManage ? [{
                             type: 'edit',
                             action: 'edit',
                             icon: Pencil,
                             iconClass: 'text-blue-600 hover:bg-blue-50 dark:text-white-400 dark:hover:bg-white-900/20',
                             label: 'Edit',
-                        }]
+                        }] : [])
                          : [
                         {
                             type: 'make_current', 
@@ -315,6 +319,7 @@ onMounted(() => {
                             iconClass: 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20', 
                             label: 'Make Current'
                         },
+                        ...(canManage ? [
                         {
                             type: 'edit',
                             action: 'edit',
@@ -328,7 +333,7 @@ onMounted(() => {
                             icon: Trash,
                             iconClass: 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20',
                             label: 'Delete',
-                        },
+                        }] : []),
                         
                     ]"
                   

@@ -27,13 +27,13 @@ const sidebarNavItems = computed(() => {
             href: serverSlug.value ? `/${serverSlug.value}/settings/appearance` : '/settings/appearance',
             icon: Palette,
         },
+        {
+            title: 'Servers',
+            href: serverSlug.value ? `/${serverSlug.value}/settings/servers` : '/settings/servers',
+            icon: Server,
+        },
         ...(can.value.manage_users
             ? [
-                  {
-                      title: 'Servers',
-                      href: serverSlug.value ? `/${serverSlug.value}/settings/servers` : '/settings/servers',
-                      icon: Server,
-                  },
                   {
                       title: 'Internal Users',
                       href: serverSlug.value ? `/${serverSlug.value}/settings/users` : '/settings/users',
