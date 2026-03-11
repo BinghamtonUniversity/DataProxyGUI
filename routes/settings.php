@@ -6,7 +6,7 @@ use Inertia\Inertia;
 
 Route::get('/settings/no-servers-available', function () {
         return Inertia::render('NoServersAvailable');
-    })->name('no-servers-available');
+    });
 
 Route::middleware('auth')->group(function () {
 
@@ -14,7 +14,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings/profile', [ProfileController::class, 'edit']);
     Route::get('/settings/appearance', function () {
         return Inertia::render('settings/Appearance');
-    })->name('appearance');
+    });
     Route::get('/settings/servers', function () {
         return Inertia::render('settings/Servers');
     })->name('servers')->middleware('can:manage_users');
