@@ -401,11 +401,20 @@ export function validateCode(
       }
 
       // Track characters with proper string and comment handling
+      // Strip inline // comments first to prevent apostrophes in comments
+      // from confusing the string state tracker (e.g. "it's" in a // comment)
+      let lineForTracking = line
+      if (!inMultiLineString && !inMultiLineComment) {
+        const inlineCommentIdx = line.indexOf('//')
+        if (inlineCommentIdx !== -1) {
+          lineForTracking = line.substring(0, inlineCommentIdx)
+        }
+      }
       let escaped = false
 
-      for (let j = 0; j < line.length; j++) {
-        const ch = line[j]
-        const nextCh = j + 1 < line.length ? line[j + 1] : ''
+      for (let j = 0; j < lineForTracking.length; j++) {
+        const ch = lineForTracking[j]
+        const nextCh = j + 1 < lineForTracking.length ? lineForTracking[j + 1] : ''
 
         // Handle multi-line comment start
         if (!inMultiLineString && !inMultiLineComment && ch === '/' && nextCh === '*') {
@@ -493,6 +502,17 @@ export function validateCode(
         }
       }
 
+      // Check if next non-empty line starts with ? or : (ternary continuation)
+      let nextLineStartsTernary = false
+      for (let j = i + 1; j < lines.length; j++) {
+        const nextTrimmedForTernary = lines[j].trim()
+        if (!nextTrimmedForTernary || nextTrimmedForTernary.startsWith('//') || nextTrimmedForTernary.startsWith('#')) {
+          continue
+        }
+        nextLineStartsTernary = nextTrimmedForTernary.startsWith('?') || nextTrimmedForTernary.startsWith(':')
+        break
+      }
+
       // Improved semicolon check
       // A statement needs a semicolon if:
       // 1. It doesn't end with {, }, ;, :, or ,
@@ -507,6 +527,8 @@ export function validateCode(
 
       const startsWithMethodChain = trimmedWithoutComment.startsWith('->')
       const endsWithMethodChain = trimmedWithoutComment.endsWith('->')
+      // Ternary: line starts with ? or : (is a continuation), or next line does
+      const startsWithTernary = trimmedWithoutComment.startsWith('?') || trimmedWithoutComment.startsWith(':')
       const endsWithContinuation = trimmedWithoutComment.endsWith(',') || trimmedWithoutComment.endsWith('(') || trimmedWithoutComment.endsWith('[')
       const isControlStructure = trimmedWithoutComment.match(/^(if|else|elseif|while|for|foreach|function|class|switch|case|default|do|try|catch|finally)\b/)
       const isModifier = trimmedWithoutComment.match(/^(public|private|protected|static|abstract|final|const|namespace|use|interface|trait|extends|implements)\s/)
@@ -520,8 +542,10 @@ export function validateCode(
         !trimmedWithoutComment.endsWith('}') &&
         !trimmedWithoutComment.endsWith(':') &&
         !startsWithMethodChain && // Line is a continuation from previous
+        !startsWithTernary && // Line is a ternary ? or : continuation
         !endsWithMethodChain && // Line continues to next
-        !nextLineStartsWithArrow && // Next line is a continuation
+        !nextLineStartsWithArrow && // Next line is a method chain continuation
+        !nextLineStartsTernary && // Next line is a ternary continuation
         !endsWithContinuation &&
         !isControlStructure &&
         !isModifier &&

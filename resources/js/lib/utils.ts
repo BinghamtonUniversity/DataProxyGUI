@@ -103,6 +103,7 @@ export function denormalizeToPhp(api: ApiData): any {
     user_id: api.updated_by,
     created_at: api.created_at,
     updated_at: api.updated_at, //Update before sending to backend
+    ...(api.force !== undefined && api.force !== null && { force: api.force }),
   };
 }
 
