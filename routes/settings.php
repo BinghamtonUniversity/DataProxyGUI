@@ -21,7 +21,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/settings/users', function () {
         return Inertia::render('settings/InternalUsers');
-    })->name('users')->middleware('can:manage_users');;
+    })->name('internal_users')->middleware('can:manage_users');;
 
     Route::get('/settings/no-servers-available', function () {
         return Inertia::render('NoServerAvailable');
@@ -40,5 +40,5 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/{server_slug?}/settings/users', function ($server_slug = null) {
         return Inertia::render('settings/InternalUsers', ['server_slug' => $server_slug]);
-    })->name('slug.users')->middleware('can:manage_users');
+    })->name('slug.internal_users')->middleware('can:manage_users');
 });
