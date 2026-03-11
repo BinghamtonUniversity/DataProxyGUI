@@ -116,9 +116,11 @@ const selectServer = (slug: string) => {
 };
 
 const handleSettings = () => {
-    // Use the route helper with optional server parameter
-    const params = currentServer.value ? { server_slug: currentServer.value } : {};
-    router.visit(route('profile.edit', params));
+    if (currentServer.value == null) {
+        router.visit(`/settings/servers`);
+        return;
+    }
+    router.visit(`/${currentServer.value}/settings/profile`);
 };
 
 const handleLogout = () => {
