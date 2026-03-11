@@ -553,6 +553,9 @@ const fetchApiInstances = async () => {
    
     // Set api_version_id to -1 if it is null
     api_instances.value.forEach((instance: any) => {
+        if (instance.slug != null) {
+            instance.route = instance.slug
+        }
         if(instance.api_version_id === null) {
             instance.api_version_id = -1
         }
@@ -610,10 +613,23 @@ const fetchAllData = async (mode: string = 'default') => {
     ])
 
     api_instances.value = apiInstancesData
-    environments.value = environmentsData
-    apis.value = apisData
-    api_versions.value = apiVersionsData
-   
+    environments.value = environmentsData;
+    apis.value = apisData;
+    api_versions.value = apiVersionsData;
+
+
+    api_instances.value.forEach((instance: any) => {
+        if (instance.slug != null) {
+            instance.route = instance.slug
+        }
+        if(instance.api_version_id === null) {
+            instance.api_version_id = -1
+        }
+        let api_type = apis.value.find((api: any) => api.id === instance.api_id)?.api_type;
+       
+        instance.api_type = api_type || 'php';
+    });
+    
     apiInstancesSchema.fields[3].options = environmentsData.map((env: any) => ({
         label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
         value: env.id,

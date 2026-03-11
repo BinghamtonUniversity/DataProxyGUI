@@ -150,6 +150,22 @@ const dataGridConfig = {
             required: false,
             show: true,
             edit: false,
+            parse: false,
+            showColumn: false
+        },
+        {
+            name: "user_name",
+            label: "Created By",
+            type: "text",
+            placeholder: "",
+            value: "",
+            help: "Creator user ID",
+            info: "User who created the API",
+            width: "12",
+            offset: "0",
+            required: false,
+            show: true,
+            edit: false,
             parse: false
         }
     ]
@@ -329,7 +345,8 @@ const fetchApis = async () => {
             ...api,
             api_type: api.api_type || 'php', // Default to 'php' if api_type is missing 
             created_at: api.created_at ? new Date(api.created_at).toLocaleDateString() : '',
-            user_id: (api.user_id ? users.value.find((user: User) => user.id === api.user_id)?.name : "Unknown" ) as any
+            user_id: api.user_id,
+            user_name: (api.user_id ? users.value.find((user: User) => user.id === api.user_id)?.name : "Unknown" ) as any
         })) as Api[];
         
     } catch (err: any) {
@@ -418,11 +435,14 @@ const handleFormSubmit = async (formValues: any) => {
                 ...newApi,
                 api_type: newApi.api_type || 'php',
                 created_at: newApi.created_at ? new Date(newApi.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
-                user_id: newApi.user_id ? users.value.find((user: User) => user.id === newApi.user_id)?.name : "Unknown"
+                user_name: newApi.user_id ? users.value.find((user: User) => user.id === newApi.user_id)?.name : "Unknown",
+                user_id: newApi.user_id
+
             });
             
             success('API created successfully!', 'API Created');
         } else {
+
             // Update existing API
             const cleanedData = cleanFormData(formValues);
              // Check if name contains spaces
@@ -456,7 +476,9 @@ const handleFormSubmit = async (formValues: any) => {
                     ...updatedApi,
                     api_type: updatedApi.api_type || 'php',
                     created_at: updatedApi.created_at ? new Date(updatedApi.created_at).toLocaleDateString() : apis.value[index].created_at,
-                    user_id: updatedApi.user_id ? users.value.find((user: User) => user.id === updatedApi.user_id)?.name : "Unknown"
+                    user_name: updatedApi.user_id ? users.value.find((user: User) => user.id === updatedApi.user_id)?.name : "Unknown",
+                    user_id: updatedApi.user_id
+
                 };           
             }
             
@@ -522,7 +544,7 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
             }
             break;
         default:
-            console.log('Unknown FormViewer action type:', actionData.type);
+            warning('Unknown FormViewer action type:', actionData.type);
     }
 };
 

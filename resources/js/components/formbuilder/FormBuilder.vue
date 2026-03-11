@@ -1197,7 +1197,7 @@ function handlePreviewAction(action) {
       break;
     default:
       alert('Unknown action type:', action.type);
-      console.log('Unknown action type:', action.type);
+      warning('Unknown action type:', action.type);
   }
 }
 
