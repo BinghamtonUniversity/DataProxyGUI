@@ -10,8 +10,8 @@ Route::get('/settings/no-servers-available', function () {
 
 Route::middleware('auth')->group(function () {
 
-    Route::get('/settings', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::get('/settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/settings', [ProfileController::class, 'edit']);
+    Route::get('/settings/profile', [ProfileController::class, 'edit']);
     Route::get('/settings/appearance', function () {
         return Inertia::render('settings/Appearance');
     })->name('appearance');
