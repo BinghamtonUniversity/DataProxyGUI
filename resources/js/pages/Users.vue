@@ -55,8 +55,8 @@ const formConfig = {
             validate: [
                 {
                 type: "length",
-                min: 10,
-                max: 10,
+                min: 9,
+                max: 11,
                 conditions: true
                 }
             ]
