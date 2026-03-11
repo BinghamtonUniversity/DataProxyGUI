@@ -923,6 +923,11 @@ const handleSave = async () => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
+        //version conflict error
+        if (response.status === 409) {
+            showError('API version already exists. Please use a different version name.', '409: Version Conflict')
+            return
+        }
         showError(errorData.message || `HTTP error! status: ${response.status}`)
         return
     }
