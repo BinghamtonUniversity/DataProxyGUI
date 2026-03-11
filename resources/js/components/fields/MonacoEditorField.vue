@@ -280,12 +280,14 @@ const isReadOnly = ref(props.readOnly);
 // Editor state
 const editor = shallowRef(null);
 const selectedLanguage = ref(props.language);
-const selectedTheme = ref(props.theme);
+const isDark = ref(document.documentElement.classList.contains('dark'));
+const selectedTheme = ref(isDark.value ? 'vs-dark' : 'vs');
 const fontSize = ref(props.fontSize);
 const wordWrap = ref(props.wordWrap);
 const showMinimap = ref(props.showMinimap);
 const lineCount = ref(0);
 const characterCount = ref(0);
+let themeObserver = null;
 
 // Supported languages
 const supportedLanguages = ref([
@@ -466,6 +468,19 @@ onMounted(() => {
   if (props.autofocus && editor.value) {
     editor.value.focus();
   }
+
+  themeObserver = new MutationObserver(() => {
+    const dark = document.documentElement.classList.contains('dark');
+    if (dark !== isDark.value) {
+      isDark.value = dark;
+      selectedTheme.value = dark ? 'vs-dark' : 'vs';
+    }
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+});
+
+onUnmounted(() => {
+  themeObserver?.disconnect();
 });
 </script>
 
