@@ -969,7 +969,8 @@ const handleManualRun = async (id: number) => {
     }
     const data = await response.json();
     success('Scheduler run successfully', 'Success');
-    schedules.value.find((schedule: any) => schedule.id === id)!=data.data;
+ 
+    schedules.value.find((schedule: any) => schedule.id === id)!.last_response=JSON.stringify(data.data);
 
 };
 
