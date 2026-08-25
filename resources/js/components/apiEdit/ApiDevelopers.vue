@@ -90,36 +90,6 @@ const dataGridConfig = {
             show: true,
             edit: false,
             parse: false
-        },
-        {
-            name: "developer_mail",
-            label: "Email",
-            type: "text",
-            placeholder: "Developer email",
-            value: "",
-            help: "Email of the assigned developer",
-            info: "Developer email address",
-            width: "12",
-            offset: "0",
-            required: false,
-            show: true,
-            edit: false,
-            parse: false
-        },
-        {
-            name: "developer_username",
-            label: "Username",
-            type: "text",
-            placeholder: "Developer username",
-            value: "",
-            help: "Username of the assigned developer",
-            info: "Developer username",
-            width: "12",
-            offset: "0",
-            required: false,
-            show: true,
-            edit: false,
-            parse: false
         }
     ]
 };
@@ -241,8 +211,6 @@ const addDeveloperNames = async (developers: any[]) => {
             user_id: developerUserId, 
             api_id: item.api_id || item.api,
             developer_name: developer ? developer.name : `Developer ID: ${developerUserId}`,
-            developer_mail: developer ? developer.email : '',
-            developer_username: developer ? developer.username : '',
             unique_id: developer ? developer.unique_id : ''
         };
 
