@@ -362,7 +362,7 @@ const directToInstanceRoute = (instance: any) => {
     let domain = environment.value.find((env: Environment) => env.id === instance.environment_id)?.domain
     const baseDomain = domain?.split('/').slice(0, 3).join('/')
     // TODO https or http?
-    instanceUrl = `http://${baseDomain}/${instance.route}`
+    instanceUrl = `http://${baseDomain}/${instance.slug}`
     window.open(instanceUrl, '_blank')
 }
 
