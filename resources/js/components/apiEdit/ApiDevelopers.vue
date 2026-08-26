@@ -90,36 +90,6 @@ const dataGridConfig = {
             show: true,
             edit: false,
             parse: false
-        },
-        {
-            name: "developer_mail",
-            label: "Email",
-            type: "text",
-            placeholder: "Developer email",
-            value: "",
-            help: "Email of the assigned developer",
-            info: "Developer email address",
-            width: "12",
-            offset: "0",
-            required: false,
-            show: true,
-            edit: false,
-            parse: false
-        },
-        {
-            name: "developer_username",
-            label: "Username",
-            type: "text",
-            placeholder: "Developer username",
-            value: "",
-            help: "Username of the assigned developer",
-            info: "Developer username",
-            width: "12",
-            offset: "0",
-            required: false,
-            show: true,
-            edit: false,
-            parse: false
         }
     ]
 };
@@ -132,18 +102,18 @@ const formConfig = {
     files: false,
     fields: [
         {
-            name: "user_id",
-            label: "Developer",
-            type: "select",
-            placeholder: "Select a developer",
-            value: "",
-            help: "Choose a developer to assign to this API",
+            name: "user_ids",
+            label: "Developers",
+            type: "combobox",
+            placeholder: "Select developers",
+            value: [],
+            help: "Choose one or more developers to assign to this API",
             info: "Select from available users with developer role",
             width: "12",
             offset: "0",
             required: true,
             options: [], // Will be populated with available developers
-            multiple: false,
+            multiple: true,
             show: true,
             edit: true,
             parse: true
@@ -172,6 +142,16 @@ const cleanFormData = (formData: any) => {
     });
     cleaned.api_id = props.api_id; // Ensure API ID is included in the payload
     return cleaned;
+};
+
+const normalizeUserIds = (value: any): any[] => {
+    if (Array.isArray(value)) {
+        return value.filter((id) => id !== null && id !== undefined && id !== '');
+    }
+    if (value === null || value === undefined || value === '') {
+        return [];
+    }
+    return [value];
 };
 
 // Fetch available users (users with developer role)
@@ -241,8 +221,6 @@ const addDeveloperNames = async (developers: any[]) => {
             user_id: developerUserId, 
             api_id: item.api_id || item.api,
             developer_name: developer ? developer.name : `Developer ID: ${developerUserId}`,
-            developer_mail: developer ? developer.email : '',
-            developer_username: developer ? developer.username : '',
             unique_id: developer ? developer.unique_id : ''
         };
 
@@ -304,36 +282,61 @@ const handleFormSubmit = async (formValues: any) => {
         submitting.value = true;
         
         if (modalMode.value === 'new') {
-            // Create new API developer assignment via API
             const cleanedData = cleanFormData(formValues);
+            const userIds = normalizeUserIds(cleanedData.user_ids);
 
-            const response = await fetch(`/${props.server_slug}/api/apis/${props.api_id}/developers/${cleanedData.user_id}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken() || '',
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify(cleanedData)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
+            if (userIds.length === 0) {
+                warning('Please select at least one developer to assign.', 'Selection Required');
+                return;
             }
 
-            const newApiDeveloper = await response.json();
+            const createdDevelopers: any[] = [];
+            const errors: string[] = [];
 
-            
-            // Add developer name and add to local state
-            const dataWithNames = await addDeveloperNames([newApiDeveloper]);
-            apiDevelopers.value.push(dataWithNames[0]);
-           
-            // Refresh available developers for the dropdown
-            await fetchAvailableUsers();
-            
-            success(`Developer assigned to API successfully!`, 'Developer Assigned');
+            for (const userId of userIds) {
+                const payload = {
+                    user_id: userId,
+                    api_id: props.api_id,
+                };
+
+                const response = await fetch(`/${props.server_slug}/api/apis/${props.api_id}/developers/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken() || '',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    errors.push(errorData.message || errorData.error || `Failed to assign developer ${userId}`);
+                    continue;
+                }
+
+                const newApiDeveloper = await response.json();
+                createdDevelopers.push(newApiDeveloper);
+            }
+
+            if (createdDevelopers.length > 0) {
+                const dataWithNames = await addDeveloperNames(createdDevelopers);
+                apiDevelopers.value.push(...dataWithNames);
+                await fetchAvailableUsers();
+            }
+
+            if (errors.length > 0 && createdDevelopers.length === 0) {
+                throw new Error(errors[0]);
+            }
+
+            if (errors.length > 0) {
+                warning(`${createdDevelopers.length} assigned, ${errors.length} failed.`, 'Partial Success');
+            } else if (createdDevelopers.length === 1) {
+                success(`Developer assigned to API successfully!`, 'Developer Assigned');
+            } else {
+                success(`${createdDevelopers.length} developers assigned to API successfully!`, 'Developers Assigned');
+            }
         }
         closeModal();
     } catch (err: any) {
@@ -521,7 +524,7 @@ onMounted(() => {
             <!-- Modal for New API Developer -->
             <AlertModal 
                 :isOpen="showModal"
-                title="Assign Developer to API"
+                title="Assign Developers to API"
                 @close="closeModal"
             >
                 <FormViewer 

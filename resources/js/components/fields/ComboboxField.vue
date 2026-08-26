@@ -25,7 +25,7 @@
     </label>
 
     <!-- Combobox Container -->
-    <div class="relative">
+    <div ref="containerRef" class="relative">
       <!-- Input Field -->
       <div class="relative">
         <input
@@ -53,7 +53,7 @@
           type="button"
           class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           :class="{ 'cursor-not-allowed': disabled || !edit }"
-          @click="toggleDropdown"
+          @mousedown.prevent="toggleDropdown"
           :disabled="disabled || !edit"
         >
           <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': isOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,12 +74,15 @@
           <div
             v-for="(subOption, subIdx) in option.type === 'optgroup' ? option.options : [option]"
             :key="subOption.value"
-            class="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
-            :class="{ 'bg-blue-50 dark:bg-blue-900/20': highlightedIndex === (option.type === 'optgroup' ? (idx + '-' + subIdx) : idx) }"
-            @click="selectOption(subOption)"
+            class="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white flex items-center justify-between gap-2"
+            :class="{
+              'bg-blue-50 dark:bg-blue-900/20': highlightedIndex === (option.type === 'optgroup' ? (idx + '-' + subIdx) : idx) || isSelected(subOption.value)
+            }"
+            @mousedown.prevent="selectOption(subOption)"
             @mouseenter="highlightedIndex = option.type === 'optgroup' ? (idx + '-' + subIdx) : idx"
           >
-            {{ subOption.label }}
+            <span>{{ subOption.label }}</span>
+            <span v-if="isMultiple && isSelected(subOption.value)" class="text-blue-600 dark:text-blue-400 text-xs">✓</span>
           </div>
         </template>
       </div>
@@ -95,6 +98,28 @@
       </div>
     </div>
 
+    <!-- Selected Values Display (for multiple selection) -->
+    <div v-if="isMultiple && Array.isArray(internalValue) && internalValue.length > 0" class="mt-2">
+      <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Selected:</div>
+      <div class="flex flex-wrap gap-1">
+        <span
+          v-for="selectedValue in internalValue"
+          :key="selectedValue"
+          class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-md"
+        >
+          {{ getOptionLabel(selectedValue) }}
+          <button
+            type="button"
+            class="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+            :disabled="disabled || !edit"
+            @click="removeValue(selectedValue)"
+          >
+            ×
+          </button>
+        </span>
+      </div>
+    </div>
+
     <!-- Help Text -->
     <div v-if="help" class="mt-2 text-xs text-gray-600 dark:text-gray-400" v-html="help"></div>
     
@@ -106,6 +131,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { validateField } from './validation.js';
+import { isMultipleFlag } from './functions.js';
 
 // Props
 const props = defineProps({
@@ -123,7 +149,7 @@ const props = defineProps({
     default: ''
   },
   value: {
-    type: [String, Number],
+    type: [String, Number, Array],
     default: ''
   },
   placeholder: {
@@ -166,6 +192,10 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  multiple: {
+    type: [Boolean, String],
+    default: false
+  },
   errors: {
     type: Array,
     default: () => []
@@ -175,14 +205,18 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['update:value', 'validation-error', 'validation-success', 'blur', 'focus']);
 
+const isMultiple = computed(() => isMultipleFlag(props.multiple));
+
 // Reactive state
-const internalValue = ref(props.value || '');
+const internalValue = ref(isMultiple.value ? (Array.isArray(props.value) ? [...props.value] : []) : (props.value || ''));
 const searchValue = ref('');
 const isOpen = ref(false);
 const highlightedIndex = ref(-1);
 const localError = ref('');
 const showInfo = ref(false);
 const inputRef = ref(null);
+const containerRef = ref(null);
+const blurTimeout = ref(null);
 
 // Computed properties
 const processedOptions = computed(() => {
@@ -273,15 +307,36 @@ const displayValue = computed(() => {
   // If we have a search value, show it
   if (searchValue.value !== '') {
     return searchValue.value;
-  } 
-  return '';
+  }
+  if (isMultiple.value) {
+    return '';
+  }
+  const flat = flattenedOptions.value;
+  const current = flat.find(opt => opt.value === internalValue.value);
+  return current ? current.label : (internalValue.value || '');
 });
+
+const valuesEqual = (a, b) => String(a) === String(b);
+
+const isSelected = (value) => {
+  if (isMultiple.value) {
+    return Array.isArray(internalValue.value) && internalValue.value.some(v => valuesEqual(v, value));
+  }
+  return valuesEqual(internalValue.value, value);
+};
+
+const getOptionLabel = (value) => {
+  const flat = flattenedOptions.value;
+  const match = flat.find(opt => valuesEqual(opt.value, value));
+  return match ? match.label : value;
+};
 
 // Methods
 const validate = () => {
   const errors = validateField(internalValue.value, {
     ...props,
-    type: 'combobox'
+    type: 'combobox',
+    multiple: isMultiple.value
   });
 
   localError.value = errors[0] || '';
@@ -303,6 +358,13 @@ const validate = () => {
   return errors.length === 0;
 };
 
+const clearBlurTimeout = () => {
+  if (blurTimeout.value) {
+    clearTimeout(blurTimeout.value);
+    blurTimeout.value = null;
+  }
+};
+
 const handleInput = (event) => {
   const value = event.target.value;
   searchValue.value = value;
@@ -311,12 +373,18 @@ const handleInput = (event) => {
 };
 
 const handleFocus = () => {
+  clearBlurTimeout();
   isOpen.value = true;
   emit('focus', internalValue.value);
 };
 
 const handleBlur = () => {
-  setTimeout(() => {
+  clearBlurTimeout();
+  blurTimeout.value = setTimeout(() => {
+    // Keep open if focus moved to another element inside the combobox
+    if (containerRef.value?.contains(document.activeElement)) {
+      return;
+    }
     isOpen.value = false;
     highlightedIndex.value = -1;
     if (searchValue.value !== '') {
@@ -324,12 +392,17 @@ const handleBlur = () => {
       const flat = flattenedOptions.value;
       const match = flat.find(opt => opt.label === searchValue.value || opt.value === searchValue.value);
       if (match) {
-        internalValue.value = match.value;
-        emit('update:value', internalValue.value);
-      } else {
+        if (isMultiple.value) {
+          selectOption(match);
+        } else {
+          internalValue.value = match.value;
+          emit('update:value', internalValue.value);
+        }
+      } else if (!isMultiple.value) {
         internalValue.value = searchValue.value;
         emit('update:value', internalValue.value);
       }
+      searchValue.value = '';
     }
     validate();
     emit('blur', internalValue.value);
@@ -375,7 +448,7 @@ const handleKeydown = (event) => {
         const match = flatFiltered.find(opt => opt.label === searchValue.value || opt.value === searchValue.value);
         if (match) {
           selectOption(match);
-        } else {
+        } else if (!isMultiple.value) {
           internalValue.value = searchValue.value;
           emit('update:value', internalValue.value);
           isOpen.value = false;
@@ -392,6 +465,25 @@ const handleKeydown = (event) => {
 };
 
 const selectOption = (option) => {
+  clearBlurTimeout();
+
+  if (isMultiple.value) {
+    const current = Array.isArray(internalValue.value) ? [...internalValue.value] : [];
+    const existingIndex = current.findIndex(v => valuesEqual(v, option.value));
+    if (existingIndex >= 0) {
+      current.splice(existingIndex, 1);
+    } else {
+      current.push(option.value);
+    }
+    internalValue.value = current;
+    searchValue.value = '';
+    highlightedIndex.value = -1;
+    // Keep dropdown open for multi-select without stealing focus back
+    emit('update:value', internalValue.value);
+    validate();
+    return;
+  }
+
   internalValue.value = option.value;
   searchValue.value = option.label;
   isOpen.value = false;
@@ -400,12 +492,23 @@ const selectOption = (option) => {
   validate();
 };
 
+const removeValue = (value) => {
+  if (!isMultiple.value || props.disabled || !props.edit) return;
+  const current = Array.isArray(internalValue.value) ? [...internalValue.value] : [];
+  internalValue.value = current.filter(v => !valuesEqual(v, value));
+  emit('update:value', internalValue.value);
+  validate();
+};
+
 const toggleDropdown = () => {
   if (props.disabled || !props.edit) return;
-  
+
+  clearBlurTimeout();
   isOpen.value = !isOpen.value;
+  highlightedIndex.value = -1;
+
+  // Only focus when opening so the user can type to filter
   if (isOpen.value) {
-    highlightedIndex.value = -1;
     nextTick(() => {
       inputRef.value?.focus();
     });
@@ -414,6 +517,10 @@ const toggleDropdown = () => {
 
 // Watchers
 watch(() => props.value, (newValue) => {
+  if (isMultiple.value) {
+    internalValue.value = Array.isArray(newValue) ? [...newValue] : [];
+    return;
+  }
   internalValue.value = newValue || '';
   // Set searchValue to label of current value
   const flat = flattenedOptions.value;
@@ -433,7 +540,11 @@ onMounted(() => {
     });
   }
   
-  if (internalValue.value !== '' && internalValue.value !== null && internalValue.value !== undefined) {
+  const hasValue = isMultiple.value
+    ? Array.isArray(internalValue.value) && internalValue.value.length > 0
+    : (internalValue.value !== '' && internalValue.value !== null && internalValue.value !== undefined);
+
+  if (hasValue) {
     validate();
   }
 });

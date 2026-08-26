@@ -215,8 +215,10 @@ const rules = {
   },
   select: (value, config) => {
     if (config && config.type === 'select') {
+      const isMultiple = config.multiple === true || config.multiple === 'true';
+
       if (config.required) {
-        if (config.multiple) {
+        if (isMultiple) {
           // For multiple selection, check if array is empty
           if (!Array.isArray(value) || value.length === 0) {
             return 'Please select at least one option.';
@@ -230,7 +232,7 @@ const rules = {
       }
       
       // Validate that selected values exist in options (including optgroups)
-      if (value && config.options && config.options.length > 0) {
+      if (value !== undefined && value !== null && value !== '' && config.options && config.options.length > 0) {
         // Extract all valid values from options and optgroups
         const validValues = [];
         
@@ -260,14 +262,14 @@ const rules = {
           }
         }
         // Validate selected values exist in options
-        if (config.multiple && Array.isArray(value)) {
+        if (isMultiple && Array.isArray(value)) {
           for (const selectedValue of value) {
             if (!validValues.includes(selectedValue.toString())) {
               return 'Invalid option value selected.';
             }
           }
         }
-        else if (!config.multiple && !validValues.includes(value.toString())) {
+        else if (!isMultiple && !validValues.includes(value.toString())) {
           return 'Invalid option selected.';
         }
       }
@@ -332,15 +334,31 @@ const rules = {
   },
   combobox: (value, config) => {
     if (config && config.type === 'combobox') {
-      if (config.required && (!value || value === "")) {
-        return 'This field is required.';
+      const isMultiple = config.multiple === true || config.multiple === 'true';
+
+      if (config.required) {
+        if (isMultiple) {
+          if (!Array.isArray(value) || value.length === 0) {
+            return 'Please select at least one option.';
+          }
+        } else if (value === undefined || value === null || value === '') {
+          return 'This field is required.';
+        }
       }
       
       // If custom values are not allowed, check if value is in options
-      if (!config.allowCustom && value && value !== '') {
+      if (!config.allowCustom && value !== undefined && value !== null && value !== '') {
         const validValues = getValidValuesFromOptions(config.options);
-        if (validValues.length > 0 && !validValues.includes(value)) {
-          return 'Please select a valid option from the list.';
+        if (validValues.length > 0) {
+          if (isMultiple && Array.isArray(value)) {
+            for (const selectedValue of value) {
+              if (!validValues.includes(selectedValue) && !validValues.includes(String(selectedValue))) {
+                return 'Please select a valid option from the list.';
+              }
+            }
+          } else if (!isMultiple && !validValues.includes(value) && !validValues.includes(String(value))) {
+            return 'Please select a valid option from the list.';
+          }
         }
       }
     }

@@ -111,6 +111,7 @@
 import { ref, watch, onMounted, computed, nextTick } from 'vue';
 import { shouldShowField, shouldEditField, shouldParseField, resolveFieldProperties } from '../fields/conditionalLogic.js';
 import { validateField } from '../fields/validation.js';
+import { isMultipleFlag } from '../fields/functions.js';
 import {
   TextField,
   TextAreaField,
@@ -300,7 +301,7 @@ const getSafeFieldValue = (field) => {
   }
 
   // Handle arrays/multiple-selection (unless field is explicitly object-display)
-  if (!field.isObject && (field.array || field.multiple)) {
+  if (!field.isObject && (field.array || isMultipleFlag(field.multiple))) {
     return Array.isArray(fieldValue) ? fieldValue : [];
   }
 
@@ -699,7 +700,7 @@ const initializeFormData = () => {
       }
 
     } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {
-      if (field.multiple) {
+      if (isMultipleFlag(field.multiple)) {
         newData[field.name] = [];
       } else {
         // Check initialData first, then fall back to field.value
@@ -713,7 +714,7 @@ const initializeFormData = () => {
         if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
           return false;
         } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {
-          return field.multiple ? [] : (field.value || '');
+          return isMultipleFlag(field.multiple) ? [] : (field.value || '');
         } else {
           return '';
         }
