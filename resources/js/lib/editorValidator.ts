@@ -383,44 +383,43 @@ export function validateCode(
     let inMultiLineString = false
     let multiLineStringChar = ''
     let multiLineStringStart = -1
-    
+
     // Track multi-line comment state
     let inMultiLineComment = false
     let multiLineCommentStart = -1
+    // let prevStatementEnded = false
+
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
       const trimmed = line.trim()
-      
       // Skip empty lines
       if (!trimmed) continue
 
-      // Check for PHP open tag
       if (trimmed.includes('<?php') || trimmed.includes('<?')) {
         hasOpenTag = true
       }
 
-      // Track characters with proper string and comment handling
-      // Strip inline // comments first to prevent apostrophes in comments
-      // from confusing the string state tracker (e.g. "it's" in a // comment)
-      let lineForTracking = line
-      if (!inMultiLineString && !inMultiLineComment) {
-        const inlineCommentIdx = line.indexOf('//')
-        if (inlineCommentIdx !== -1) {
-          lineForTracking = line.substring(0, inlineCommentIdx)
-        }
-      }
       let escaped = false
+      // Index where a *real* // line comment begins (outside strings/comments), or -1
+      let lineCommentIdx = -1
 
-      for (let j = 0; j < lineForTracking.length; j++) {
-        const ch = lineForTracking[j]
-        const nextCh = j + 1 < lineForTracking.length ? lineForTracking[j + 1] : ''
+      for (let j = 0; j < line.length; j++) {
+        const ch = line[j]
+        const nextCh = j + 1 < line.length ? line[j + 1] : ''
+
+        // Only treat // as a comment start if we're not inside a string
+        // or block comment at this point in the scan
+        if (!inMultiLineString && !inMultiLineComment && ch === '/' && nextCh === '/') {
+          lineCommentIdx = j
+          break
+        }
 
         // Handle multi-line comment start
         if (!inMultiLineString && !inMultiLineComment && ch === '/' && nextCh === '*') {
           inMultiLineComment = true
           multiLineCommentStart = i
-          j++ // Skip the *
+          j++
           continue
         }
 
@@ -428,14 +427,11 @@ export function validateCode(
         if (inMultiLineComment && ch === '*' && nextCh === '/') {
           inMultiLineComment = false
           multiLineCommentStart = -1
-          j++ // Skip the /
+          j++
           continue
         }
 
-        // Skip processing if in multi-line comment
-        if (inMultiLineComment) {
-          continue
-        }
+        if (inMultiLineComment) continue
 
         // Handle string detection
         if ((ch === '"' || ch === "'") && !escaped) {
@@ -482,20 +478,13 @@ export function validateCode(
       let nextLineStartsWithArrow = false
       for (let j = i + 1; j < lines.length; j++) {
         const nextTrimmed = lines[j].trim()
-        // Skip empty lines and comments
         if (!nextTrimmed || nextTrimmed.startsWith('//') || nextTrimmed.startsWith('#')) {
           continue
         }
-        // Check if it's inside a multi-line comment at this position
-        // We need to track comment state for lookahead
         let tempInComment = inMultiLineComment
-        if (nextTrimmed.startsWith('/*')) {
-          tempInComment = true
-        }
-        if (nextTrimmed.endsWith('*/')) {
-          tempInComment = false
-        }
-        
+        if (nextTrimmed.startsWith('/*')) tempInComment = true
+        if (nextTrimmed.endsWith('*/')) tempInComment = false
+
         if (!tempInComment) {
           nextLineStartsWithArrow = nextTrimmed.startsWith('->')
           break
@@ -513,46 +502,49 @@ export function validateCode(
         break
       }
 
-      // Improved semicolon check
-      // A statement needs a semicolon if:
-      // 1. It doesn't end with {, }, ;, :, or ,
-      // 2. It's not a control structure keyword
-      // 3. It's not a method chain (ends with -> OR next line starts with ->)
-      // 4. It's not inside parentheses (method calls can span multiple lines)
-      // 5. It's not a modifier/declaration keyword
-      // 6. Current line doesn't start with -> (it's a continuation)
+      // Use the string/comment-aware comment index instead of a blind regex
+      const trimmedWithoutComment = (
+        lineCommentIdx !== -1 ? line.substring(0, lineCommentIdx) : line
+      ).trim()
 
-      // Strip inline // comments before checking line endings
-      const trimmedWithoutComment = trimmed.replace(/\s*\/\/.*$/, '').trimEnd()
+      // if (trimmedWithoutComment.startsWith('->') && prevStatementEnded) {
+      //   markers.push({
+      //     startLineNumber: i + 1,
+      //     startColumn: 1,
+      //     endLineNumber: i + 1,
+      //     endColumn: line.length + 1,
+      //     message: 'Unexpected "->": the previous statement was already terminated with a semicolon',
+      //     severity: 8,
+      //   })
+      // }
 
-      const startsWithMethodChain = trimmedWithoutComment.startsWith('->')
+      // const startsWithMethodChain = trimmedWithoutComment.startsWith('->')
       const endsWithMethodChain = trimmedWithoutComment.endsWith('->')
-      // Ternary: line starts with ? or : (is a continuation), or next line does
       const startsWithTernary = trimmedWithoutComment.startsWith('?') || trimmedWithoutComment.startsWith(':')
-      const endsWithContinuation = trimmedWithoutComment.endsWith(',') || trimmedWithoutComment.endsWith('(') || trimmedWithoutComment.endsWith('[')
+      const endsWithContinuation = trimmedWithoutComment.endsWith(',') || trimmedWithoutComment.endsWith('(') || trimmedWithoutComment.endsWith('[') || trimmedWithoutComment.endsWith('.')
       const isControlStructure = trimmedWithoutComment.match(/^(if|else|elseif|while|for|foreach|function|class|switch|case|default|do|try|catch|finally)\b/)
       const isModifier = trimmedWithoutComment.match(/^(public|private|protected|static|abstract|final|const|namespace|use|interface|trait|extends|implements)\s/)
       const isPhpTag = trimmedWithoutComment.startsWith('<?php') || trimmedWithoutComment.startsWith('<?') || trimmedWithoutComment.startsWith('?>')
-      const isArrayStart = trimmedWithoutComment.endsWith('[') || trimmedWithoutComment.match(/^\s*[\]\[]/)
-      
+      const isArrayStart = trimmedWithoutComment.endsWith('[')
+
       if (
         trimmedWithoutComment.length > 0 &&
         !trimmedWithoutComment.endsWith(';') &&
         !trimmedWithoutComment.endsWith('{') &&
         !trimmedWithoutComment.endsWith('}') &&
         !trimmedWithoutComment.endsWith(':') &&
-        !startsWithMethodChain && // Line is a continuation from previous
-        !startsWithTernary && // Line is a ternary ? or : continuation
-        !endsWithMethodChain && // Line continues to next
-        !nextLineStartsWithArrow && // Next line is a method chain continuation
-        !nextLineStartsTernary && // Next line is a ternary continuation
+        // !startsWithMethodChain &&
+        !startsWithTernary &&
+        !endsWithMethodChain &&
+        !nextLineStartsWithArrow &&
+        !nextLineStartsTernary &&
         !endsWithContinuation &&
         !isControlStructure &&
         !isModifier &&
         !isPhpTag &&
         !isArrayStart &&
-        openParens === 0 && // Not inside a function call
-        openBrackets === 0 && // Not inside an array
+        openParens === 0 &&
+        openBrackets === 0 &&
         hasOpenTag
       ) {
         markers.push({
@@ -561,11 +553,10 @@ export function validateCode(
           endLineNumber: i + 1,
           endColumn: line.length + 1,
           message: 'Missing semicolon (;) at end of statement',
-          severity: 8, // Error
+          severity: 8, //Error
         })
       }
 
-      // Check for variable syntax
       if (trimmed.match(/\$\d/)) {
         markers.push({
           startLineNumber: i + 1,
@@ -576,6 +567,9 @@ export function validateCode(
           severity: 8,
         })
       }
+      // if (openParens === 0 && openBrackets === 0) {
+      //   prevStatementEnded = trimmedWithoutComment.endsWith(';')
+      // }
     }
 
     // Check for unterminated multi-line string
@@ -646,6 +640,7 @@ export function validateCode(
         severity: 8,
       })
     }
+    
   }
 
   // Calculate error and warning counts
