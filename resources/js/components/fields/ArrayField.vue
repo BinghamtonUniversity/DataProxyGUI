@@ -126,6 +126,7 @@ import CheckboxField from './CheckboxField.vue';
 import SwitchField from './SwitchField.vue';
 import FieldsetField from './FieldsetField.vue';
 import OutputField from './OutputField.vue';
+import { isMultipleFlag } from './functions.js';
 
 const props = defineProps({
   field: {
@@ -225,7 +226,7 @@ const getDefaultValue = () => {
   } else if ([
     'select', 'radio', 'combobox', 'range'
   ].includes(fieldType)) {
-    return props.field.multiple ? [] : '';
+    return isMultipleFlag(props.field.multiple) ? [] : '';
   } else {
     return '';
   }
