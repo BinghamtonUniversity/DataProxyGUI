@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem, ApiData, Api } from '@/types'
@@ -14,27 +14,33 @@ import Functions from '@/components/apiEdit/Functions.vue'
 import Models from '@/components/apiEdit/Models.vue'
 import Options from '@/components/apiEdit/Options.vue'
 import Files from '@/components/apiEdit/Files.vue'
-import { mapDjangoToApiData, mapPhpToApiData, getCsrfToken } from '@/lib/utils'
+import { mapDjangoToApiData, mapPhpToApiData, denormalizeToPhp, getCsrfToken } from '@/lib/utils'
 import { useProxyServer } from '@/composables/useProxyServer'
+import { useToaster } from '@/composables/useToaster'
+import Toaster from '@/components/toaster/Toaster.vue'
 
 
 
 interface Props {
     server_slug: string
-    api: Api
+    api?: Api
     api_id: string
     version_id: string
 }
 
 const props = defineProps<Props>()
 const { serverApiType } = useProxyServer();
+const { success, error: showError, info } = useToaster()
 
 
 // Data fetching logic
+const api = ref<Api | null>(null)
 const currentApiData = ref<ApiData | null>(null)
 const selectedApiData = ref<ApiData | null>(null)
+const originalApiData = ref<ApiData | null>(null)
 const loading = ref(true)
 const error = ref('')
+const isSaving = ref(false)
 
 // Resizable panels
 const leftPanelWidth = ref(50)
@@ -71,6 +77,16 @@ function normalizeApiData(payload: any, backend: 'python' | 'php'): ApiData {
     ? mapDjangoToApiData(payload)
     : mapPhpToApiData(payload);
 }
+const fetchApi = async () => {
+    try {
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}`)
+        if (!response.ok) throw new Error('Failed to fetch API')
+        api.value = await response.json()
+    } catch (e: any) {
+        error.value = e.message || 'Error fetching API'
+    }
+}
+
 const fetchCurrentVersion = async () => {
     try {
         const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/versions/latest`)
@@ -78,6 +94,7 @@ const fetchCurrentVersion = async () => {
         const data = await response.json()
         const versionData =normalizeApiData(data, serverApiType.value as 'python' | 'php')
         currentApiData.value = versionData
+        originalApiData.value = JSON.parse(JSON.stringify(versionData))
     } catch (e: any) {
         error.value = e.message || 'Error fetching current version'
     }
@@ -100,6 +117,7 @@ const fetchAllData = async () => {
     error.value = ''
     try {
         await Promise.all([
+            fetchApi(),
             fetchCurrentVersion(),
             fetchSelectedVersion()
         ])
@@ -176,7 +194,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 const currentComponentProps = computed(() => ({
     api_id: props.api_id,
     api_type: serverApiType.value as 'python' | 'php',
-    api: props.api,
+    api: api.value,
     apiData: currentApiData.value,
     loadingApiData: loading.value,
     apiError: error.value,
@@ -220,7 +238,7 @@ const currentComponentProps = computed(() => ({
 const selectedComponentProps = computed(() => ({
     api_id: props.api_id,
     api_type: serverApiType.value as 'python' | 'php',
-    api: props.api,
+    api: api.value,
     apiData: selectedApiData.value,
     loadingApiData: loading.value,
     apiError: error.value,
@@ -384,6 +402,63 @@ const goBack = () => {
     router.get(`/${props.server_slug}/apis/${props.api_id}/${activeTab.value}`)
 }
 
+const handleSave = async () => {
+    if (!currentApiData.value) {
+        showError('No API data found to save.')
+        return
+    }
+
+    const hasChanges = JSON.stringify(originalApiData.value) !== JSON.stringify(currentApiData.value)
+    if (!hasChanges) {
+        info('No changes detected to save.', 'Nothing to Save')
+        return
+    }
+
+    if (isSaving.value) return
+    isSaving.value = true
+
+    try {
+        const requestData = serverApiType.value === 'php'
+            ? denormalizeToPhp(currentApiData.value)
+            : currentApiData.value
+
+        const { created_at, created_by, ...cleanedData } = requestData as any
+
+        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/code`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            body: JSON.stringify(cleanedData),
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            if (response.status === 409) {
+                showError('API version already exists. Please use a different version name.', '409: Version Conflict')
+                return
+            }
+            showError(errorData.message || `HTTP error! status: ${response.status}`)
+            return
+        }
+
+        const responseData = await response.json()
+        const normalizedData = normalizeApiData(responseData, serverApiType.value as 'python' | 'php')
+        currentApiData.value = normalizedData
+        originalApiData.value = JSON.parse(JSON.stringify(normalizedData))
+        triggerUpdate()
+        success('API data saved successfully!', 'API Data Saved')
+    } catch (e: any) {
+        showError(e.message || 'Failed to save API data.', 'Save Error')
+    } finally {
+        isSaving.value = false
+    }
+}
+
+let keydownHandler: ((event: KeyboardEvent) => void) | null = null
+
 // Resizing functions
 const startResize = (e: MouseEvent) => {
     isResizing.value = true
@@ -459,19 +534,25 @@ watch(activeTab, () => {
     setTimeout(addReadOnlyListeners, 100)
 })
 
-// Watch for changes in current API data to trigger updates
-watch(currentApiData, (newData) => {
-    if (newData) {
-        // Force reactivity update
-        currentApiData.value = { ...newData }
-    }
-}, { deep: true })
-
 // Fetch data on mount
 onMounted(() => {
     fetchAllData()
     // Add read-only listeners after component mounts
     setTimeout(addReadOnlyListeners, 100)
+
+    keydownHandler = (event: KeyboardEvent) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+            event.preventDefault()
+            handleSave()
+        }
+    }
+    document.addEventListener('keydown', keydownHandler)
+})
+
+onUnmounted(() => {
+    if (keydownHandler) {
+        document.removeEventListener('keydown', keydownHandler)
+    }
 })
 </script>
 
@@ -479,6 +560,7 @@ onMounted(() => {
     <Head title="API Version Comparison" />
     
     <AppLayout :breadcrumbs="breadcrumbItems">
+        <Toaster />
         <div class="h-screen flex flex-col">
             <!-- Header -->
             <div class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-4">
@@ -551,7 +633,7 @@ onMounted(() => {
                                         <div class="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                                             <div class="flex items-center gap-2">
                                                 <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                                                <span>Selected (Historical)</span>
+                                                <span>Selected</span>
                                             </div>
                                             <div class="flex items-center gap-2">
                                                 <div class="w-3 h-3 bg-green-400 rounded-full"></div>
@@ -755,7 +837,7 @@ onMounted(() => {
 
                 <!-- Normal Comparison View for Other Tabs -->
                 <div v-else-if="!shouldShowJsonComparison" class="flex-1 flex overflow-hidden">
-                <!-- Left Panel - Selected Version (Historical) -->
+                <!-- Left Panel - Selected Version -->
                 <div 
                     class="overflow-hidden selected-version-panel"
                     :style="{ width: leftPanelWidth + '%' }"
@@ -763,10 +845,22 @@ onMounted(() => {
                     <div class="h-full flex flex-col">
                         <!-- Selected Version Header -->
                         <div class="bg-yellow-50 dark:bg-yellow-900/20 p-3 border-b border-gray-200 dark:border-gray-700">
-                            <h3 class="font-medium text-yellow-900 dark:text-yellow-100">Selected Version (Historical)</h3>
-                            <p class="text-sm text-yellow-700 dark:text-yellow-300">
-                                {{ selectedApiData?.summary || 'Historical Version' }}
-                            </p>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <h3 class="font-medium text-yellow-900 dark:text-yellow-100">Selected Version</h3>
+                                    <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                                        {{ selectedApiData?.summary || 'Selected Version' }}
+                                    </p>
+                                </div>
+                                <div class="shrink-0 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-3 py-2 rounded-lg shadow-sm text-sm font-medium">
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                        </svg>
+                                        View only
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- Selected Version Content -->
@@ -776,24 +870,10 @@ onMounted(() => {
                             
                             <div class="opacity-75 pointer-events-none select-none">
                                 <component
-                                    
-                                 
                                     :is="activeComponent"
                                     :key="`selected-${activeTab}`"
                                     v-bind="selectedComponentProps"
                                 />
-                            </div>
-                            
-                            <!-- Read-only notice -->
-                            <div class="absolute bottom-4 left-4 z-20">
-                                <div class="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-3 py-2 rounded-lg shadow-lg text-sm font-medium">
-                                    <div class="flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                                        </svg>
-                                        Historical version - view only
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
