@@ -32,6 +32,38 @@ const props = defineProps<Props>()
 const { serverApiType } = useProxyServer();
 const { success, error: showError, info } = useToaster()
 
+const compareDebugEnabled = () =>
+    import.meta.env.DEV ||
+    new URLSearchParams(window.location.search).has('compare_debug') ||
+    localStorage.getItem('compare_debug') === '1'
+
+const compareMountTime = performance.now()
+const compareLog = (step: string, data?: Record<string, unknown>) => {
+    if (!compareDebugEnabled()) return
+    console.log(`[Compare +${(performance.now() - compareMountTime).toFixed(0)}ms] ${step}`, data ?? '')
+}
+
+const getVersionPayloadStats = (payload: any) => ({
+    routes: payload?.routes?.length ?? payload?.version_urls?.length ?? 0,
+    functions: payload?.functions?.length ?? payload?.version_views?.length ?? 0,
+    files: payload?.files?.length ?? payload?.version_files?.length ?? 0,
+    resources: payload?.resources?.length ?? 0,
+})
+
+const getApiDataStats = (data: ApiData | null) => ({
+    routes: data?.version_urls?.length ?? 0,
+    functions: data?.version_views?.length ?? 0,
+    files: data?.version_files?.length ?? 0,
+    resources: data?.resources?.length ?? 0,
+})
+
+compareLog('setup', {
+    api_id: props.api_id,
+    version_id: props.version_id,
+    server_slug: props.server_slug,
+    serverApiType: serverApiType.value,
+    debugEnabled: compareDebugEnabled(),
+})
 
 // Data fetching logic
 const api = ref<Api | null>(null)
@@ -78,41 +110,101 @@ function normalizeApiData(payload: any, backend: 'python' | 'php'): ApiData {
     : mapPhpToApiData(payload);
 }
 const fetchApi = async () => {
+    const url = `/${props.server_slug}/ajax/apis/${props.api_id}`
+    compareLog('fetch:api:start', { url })
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}`)
+        const response = await fetch(url)
+        compareLog('fetch:api:response', {
+            url,
+            status: response.status,
+            ok: response.ok,
+            contentLength: response.headers.get('content-length'),
+        })
         if (!response.ok) throw new Error('Failed to fetch API')
-        api.value = await response.json()
+        const jsonStart = performance.now()
+        const data = await response.json()
+        compareLog('fetch:api:jsonParsed', {
+            durationMs: Math.round(performance.now() - jsonStart),
+        })
+        api.value = data
+        compareLog('fetch:api:done')
     } catch (e: any) {
+        compareLog('fetch:api:error', { message: e.message })
         error.value = e.message || 'Error fetching API'
     }
 }
 
 const fetchCurrentVersion = async () => {
+    const url = `/${props.server_slug}/ajax/apis/${props.api_id}/versions/latest`
+    compareLog('fetch:current:start', { url })
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/versions/latest`)
+        const response = await fetch(url)
+        compareLog('fetch:current:response', {
+            url,
+            status: response.status,
+            ok: response.ok,
+            contentLength: response.headers.get('content-length'),
+        })
         if (!response.ok) throw new Error('Failed to fetch current version')
+        const jsonStart = performance.now()
         const data = await response.json()
-        const versionData =normalizeApiData(data, serverApiType.value as 'python' | 'php')
+        compareLog('fetch:current:jsonParsed', {
+            durationMs: Math.round(performance.now() - jsonStart),
+            ...getVersionPayloadStats(data),
+        })
+        const normalizeStart = performance.now()
+        const versionData = normalizeApiData(data, serverApiType.value as 'python' | 'php')
+        compareLog('fetch:current:normalized', {
+            durationMs: Math.round(performance.now() - normalizeStart),
+            ...getApiDataStats(versionData),
+        })
+        const cloneStart = performance.now()
         currentApiData.value = versionData
         originalApiData.value = JSON.parse(JSON.stringify(versionData))
+        compareLog('fetch:current:cloned', {
+            durationMs: Math.round(performance.now() - cloneStart),
+        })
+        compareLog('fetch:current:done')
     } catch (e: any) {
+        compareLog('fetch:current:error', { message: e.message })
         error.value = e.message || 'Error fetching current version'
     }
 }
 
 const fetchSelectedVersion = async () => {
+    const url = `/${props.server_slug}/ajax/apis/versions/${props.version_id}`
+    compareLog('fetch:selected:start', { url })
     try {
-        const response = await fetch(`/${props.server_slug}/ajax/apis/versions/${props.version_id}`)
+        const response = await fetch(url)
+        compareLog('fetch:selected:response', {
+            url,
+            status: response.status,
+            ok: response.ok,
+            contentLength: response.headers.get('content-length'),
+        })
         if (!response.ok) throw new Error('Failed to fetch selected version')
+        const jsonStart = performance.now()
         const data = await response.json()
-        const versionData =normalizeApiData(data, serverApiType.value as 'python' | 'php')
+        compareLog('fetch:selected:jsonParsed', {
+            durationMs: Math.round(performance.now() - jsonStart),
+            ...getVersionPayloadStats(data),
+        })
+        const normalizeStart = performance.now()
+        const versionData = normalizeApiData(data, serverApiType.value as 'python' | 'php')
+        compareLog('fetch:selected:normalized', {
+            durationMs: Math.round(performance.now() - normalizeStart),
+            ...getApiDataStats(versionData),
+        })
         selectedApiData.value = versionData
+        compareLog('fetch:selected:done')
     } catch (e: any) {
+        compareLog('fetch:selected:error', { message: e.message })
         error.value = e.message || 'Error fetching selected version'
     }
 }
 
 const fetchAllData = async () => {
+    compareLog('fetchAllData:start')
     loading.value = true
     error.value = ''
     try {
@@ -121,10 +213,19 @@ const fetchAllData = async () => {
             fetchCurrentVersion(),
             fetchSelectedVersion()
         ])
+        compareLog('fetchAllData:allSettled')
     } catch (e: any) {
+        compareLog('fetchAllData:error', { message: e.message })
         error.value = e.message || 'Error fetching version data'
     } finally {
         loading.value = false
+        compareLog('fetchAllData:finally', {
+            loading: loading.value,
+            hasApi: !!api.value,
+            hasCurrent: !!currentApiData.value,
+            hasSelected: !!selectedApiData.value,
+            error: error.value || null,
+        })
     }
 }
 
@@ -534,8 +635,52 @@ watch(activeTab, () => {
     setTimeout(addReadOnlyListeners, 100)
 })
 
+watch(loading, (isLoading) => {
+    compareLog('loading:changed', { loading: isLoading, error: error.value || null })
+})
+
+watch(error, (err) => {
+    compareLog('error:changed', { error: err || null, loading: loading.value })
+})
+
+watch([currentApiData, selectedApiData], () => {
+    compareLog('dataReady', {
+        hasCurrent: !!currentApiData.value,
+        hasSelected: !!selectedApiData.value,
+        current: getApiDataStats(currentApiData.value),
+        selected: getApiDataStats(selectedApiData.value),
+    })
+})
+
+const forceUpdateWindowStart = ref(performance.now())
+const forceUpdateWindowCount = ref(0)
+watch(forceUpdate, (n) => {
+    compareLog('forceUpdate', { n })
+    forceUpdateWindowCount.value++
+    const elapsed = performance.now() - forceUpdateWindowStart.value
+    if (elapsed > 1000) {
+        forceUpdateWindowStart.value = performance.now()
+        forceUpdateWindowCount.value = 1
+        return
+    }
+    if (forceUpdateWindowCount.value > 5) {
+        console.warn(`[Compare +${(performance.now() - compareMountTime).toFixed(0)}ms] forceUpdate:rapid`, { count: forceUpdateWindowCount.value, elapsedMs: Math.round(elapsed) })
+    }
+})
+
+watch([loading, error], ([isLoading, err]) => {
+    if (!isLoading && !err) {
+        compareLog('render:comparisonContent', {
+            activeTab: activeTab.value,
+            current: getApiDataStats(currentApiData.value),
+            selected: getApiDataStats(selectedApiData.value),
+        })
+    }
+})
+
 // Fetch data on mount
 onMounted(() => {
+    compareLog('mount')
     fetchAllData()
     // Add read-only listeners after component mounts
     setTimeout(addReadOnlyListeners, 100)
@@ -550,6 +695,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    compareLog('unmount')
     if (keydownHandler) {
         document.removeEventListener('keydown', keydownHandler)
     }
