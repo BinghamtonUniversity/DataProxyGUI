@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
 import { Api, type ApiData, type ApiVersionFunction } from '@/types'
@@ -42,6 +42,7 @@ const isSaving = ref(false)
 const saveError = ref<string | null>(null)
 const saveSuccess = ref(false)
 const editorRef = ref<any>(null)
+const editorContainerRef = ref<HTMLElement | null>(null)
 const validationErrors = ref<number>(0)
 const validationWarnings = ref<number>(0)
 
@@ -64,6 +65,13 @@ const currentFunctionCode = computed(() => {
     return selectedFunction.value?.content ?? ''
 })
 
+// New: central selection handler that also scrolls to the top of the editor
+const selectFunction = (item: ApiVersionFunction) => {
+    selectedFunction.value = item
+    nextTick(() => {
+        editorContainerRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+}
 
 // Check if current function has unsaved changes
 // const hasUnsavedChanges = computed(() => {
@@ -334,6 +342,7 @@ const handleSearchResult = (event: CustomEvent) => {
             selectedFunction.value = functionToSelect
             // Scroll to the function in the list
             setTimeout(() => {
+                editorContainerRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 const functionButton = document.querySelector(`[data-function-name="${name}"]`)
                 if (functionButton) {
                     functionButton.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -627,7 +636,7 @@ defineExpose({
                                         'relative',
                                         selectedFunction?.name === item.name ? 'bg-accent' : ''
                                     ]" 
-                                    @click="selectedFunction = item"             
+                                    @click="selectFunction(item)"             
                                 >
                                     {{ item.name }}
                                     <!-- Unsaved changes indicator -->
@@ -663,7 +672,7 @@ defineExpose({
                     </aside>
 
                     <!-- Editor Area -->
-                    <div class="flex-1 min-w-0">
+                    <div class="flex-1 min-w-0" ref="editorContainerRef">
                         <!-- Code Editor -->
                         <Editor 
                             ref="editorRef"
