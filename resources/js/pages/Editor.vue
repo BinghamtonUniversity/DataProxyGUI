@@ -4,6 +4,7 @@ import { ref, shallowRef, watch, toRaw, onMounted,  onBeforeUnmount } from 'vue'
 import { Button } from '@/components/ui/button'
 import { getStoredAppearance } from '@/composables/useAppearance'
 import { validateCode as validateCodeLogic } from '@/lib/editorValidator'
+import { createPhpWorker } from '@/lib/createPhpWorker'
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Editor', href: '/editor' },
@@ -23,6 +24,39 @@ const emit = defineEmits<{
   'update:code': [code: string]
   validate: [markers: any[]]
 }>()
+
+
+let phpWorker: Worker | null = null
+let requestCounter = 0
+let latestRequestId = 0
+
+function getPhpWorker(): Worker {
+  if (!phpWorker) {
+    phpWorker = createPhpWorker()
+    phpWorker.onmessage = (e: MessageEvent) => {
+      console.log('Received from PHP worker:', e.data)
+      const { requestId, markers } = e.data
+      if (requestId !== latestRequestId) return
+      if (!editor.value) return
+      const model = editor.value.getModel()
+      if (!model) return
+      window.monaco.editor.setModelMarkers(model, 'php-validation', markers)
+      validationErrors.value = markers.filter((m: any) => m.severity === 8).length
+      validationWarnings.value = markers.filter((m: any) => m.severity === 4).length
+      emit('validate', markers)
+    }
+    phpWorker.onerror = (err) => {
+      console.error('PHP validation worker error:', err)
+    }
+  }
+  return phpWorker
+}
+
+function validatePhpRemote(code: string) {
+  const worker = getPhpWorker()
+  latestRequestId = ++requestCounter
+  worker.postMessage({ code, requestId: latestRequestId })
+}
 
 const language = ref(props.language)
 
@@ -162,24 +196,23 @@ function handleMount(editorInstance: any, monaco: any) {
     setTimeout(() => validateCode(editorInstance, monaco), 100)
   }
 }
+
 const validateCode = (editorInstance: any, monaco: any) => {
   const model = editorInstance.getModel()
   if (!model) return
 
   const code = model.getValue()
-  const language = props.language || 'python'
 
-  // Use the validator from separate file
-  const result = validateCodeLogic(code, language as 'python' | 'php', model)
+  if (props.language === 'php') {
+    validatePhpRemote(code) // async, worker posts markers back
+    return
+  }
 
-  // Apply markers to Monaco editor
+  // Python stays on existing local logic for now
+  const result = validateCodeLogic(code, 'python', model)
   monaco.editor.setModelMarkers(model, 'advanced-validation', result.markers)
-
-  // Update validation counters
   validationErrors.value = result.errors
   validationWarnings.value = result.warnings
-
-  // Emit validation event
   emit('validate', result.markers)
 }
 
@@ -209,6 +242,7 @@ onMounted(() => {
   }
 })
 onBeforeUnmount(() => {
+  phpWorker?.terminate()
   if(mediaQueryList){
     mediaQueryList.removeEventListener("change", handleEditorTheme)
   }
