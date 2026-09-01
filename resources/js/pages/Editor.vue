@@ -34,7 +34,7 @@ function getPhpWorker(): Worker {
   if (!phpWorker) {
     phpWorker = createPhpWorker()
     phpWorker.onmessage = (e: MessageEvent) => {
-      console.log('Received from PHP worker:', e.data)
+      // console.log('Received from PHP worker:', e.data)
       const { requestId, markers } = e.data
       if (requestId !== latestRequestId) return
       if (!editor.value) return

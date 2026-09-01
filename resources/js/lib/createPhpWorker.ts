@@ -27,7 +27,7 @@ self.onmessage = (e) => {
 
   try {
     const ast = parser.parseCode(codeToParse, 'editor.php');
-    console.log('PHP worker parsed, errors:', ast && ast.errors); // debug log, safely inside scope
+    // console.log('PHP worker parsed, errors:', ast && ast.errors); // debug log, safely inside scope
 
     if (ast && ast.errors && ast.errors.length) {
       ast.errors.forEach((err) => {
