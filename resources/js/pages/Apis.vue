@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
@@ -155,11 +155,11 @@ const dataGridConfig = {
         },
         {
             name: "user_name",
-            label: "Created By",
+            label: "Lead Developer",
             type: "text",
             placeholder: "",
             value: "",
-            help: "Creator user ID",
+            help: "Lead developer name",
             info: "User who created the API",
             width: "12",
             offset: "0",
@@ -172,7 +172,7 @@ const dataGridConfig = {
 };
 
 // Form configuration for modal
-const formConfig = {
+const formConfig = computed(() => ({
     label: 'API',
     description: 'Create or edit an API.',
     name: "api-form",
@@ -229,6 +229,26 @@ const formConfig = {
             parse: true
         },
         {
+            name: "user_id",
+            label: "Lead Developer",
+            type: "select",
+            placeholder: "Select lead developer",
+            value: "",
+            help: "Primary developer responsible for this API",
+            info: "User assigned as lead developer for this API",
+            width: "12",
+            offset: "0",
+            required: false,
+            options: users.value.map((user: any) => ({
+                label: user.name,
+                value: user.id
+            })),
+            multiple: false,
+            show: true,
+            edit: true,
+            parse: true
+        },
+        {
             name: "tags",
             label: "Tags",
             type: "text",
@@ -244,7 +264,7 @@ const formConfig = {
             parse: true
         }
     ]
-};
+}));
 
 
 // Clean form data for API submission
