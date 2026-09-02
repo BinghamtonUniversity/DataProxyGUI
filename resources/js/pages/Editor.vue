@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button'
 import { getStoredAppearance } from '@/composables/useAppearance'
 import { validateCode as validateCodeLogic } from '@/lib/editorValidator'
 import { createPhpWorker } from '@/lib/createPhpWorker'
+import { createPythonWorker } from '@/lib/createPythonWorker'
+import { checkPythonForbiddenUsage } from '@/lib/pythonPolicyCheck'
+
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Editor', href: '/editor' },
@@ -29,6 +32,10 @@ const emit = defineEmits<{
 let phpWorker: Worker | null = null
 let requestCounter = 0
 let latestRequestId = 0
+
+let pythonWorker: Worker | null = null
+let pyRequestCounter = 0
+let latestPyRequestId = 0
 
 function getPhpWorker(): Worker {
   if (!phpWorker) {
@@ -56,6 +63,38 @@ function validatePhpRemote(code: string) {
   const worker = getPhpWorker()
   latestRequestId = ++requestCounter
   worker.postMessage({ code, requestId: latestRequestId })
+}
+
+function getPythonWorker(): Worker {
+  if (!pythonWorker) {
+    pythonWorker = createPythonWorker()
+    pythonWorker.onmessage = (e: MessageEvent) => {
+      const { requestId, markers: syntaxMarkers } = e.data
+      if (requestId !== latestPyRequestId) return
+      if (!editor.value) return
+      const model = editor.value.getModel()
+      if (!model) return
+
+      const code = model.getValue()
+      const policyMarkers = checkPythonForbiddenUsage(code)
+      const allMarkers = [...syntaxMarkers, ...policyMarkers]
+
+      window.monaco.editor.setModelMarkers(model, 'python-validation', allMarkers)
+      validationErrors.value = allMarkers.filter((m: any) => m.severity === 8).length
+      validationWarnings.value = allMarkers.filter((m: any) => m.severity === 4).length
+      emit('validate', allMarkers)
+    }
+    pythonWorker.onerror = (err) => {
+      console.error('Python validation worker error:', err)
+    }
+  }
+  return pythonWorker
+}
+
+function validatePythonRemote(code: string) {
+  const worker = getPythonWorker()
+  latestPyRequestId = ++pyRequestCounter
+  worker.postMessage({ code, requestId: latestPyRequestId })
 }
 
 const language = ref(props.language)
@@ -208,12 +247,17 @@ const validateCode = (editorInstance: any, monaco: any) => {
     return
   }
 
-  // Python stays on existing local logic for now
-  const result = validateCodeLogic(code, 'python', model)
-  monaco.editor.setModelMarkers(model, 'advanced-validation', result.markers)
-  validationErrors.value = result.errors
-  validationWarnings.value = result.warnings
-  emit('validate', result.markers)
+  if (props.language === 'python') {
+    validatePythonRemote(code)
+    return
+  }
+
+  // Python backup - local regex logic 
+  // const result = validateCodeLogic(code, 'python', model)
+  // monaco.editor.setModelMarkers(model, 'advanced-validation', result.markers)
+  // validationErrors.value = result.errors
+  // validationWarnings.value = result.warnings
+  // emit('validate', result.markers)
 }
 
 const handleValidate = (markers: any[]) => {
@@ -243,6 +287,8 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   phpWorker?.terminate()
+  pythonWorker?.terminate()
+
   if(mediaQueryList){
     mediaQueryList.removeEventListener("change", handleEditorTheme)
   }
