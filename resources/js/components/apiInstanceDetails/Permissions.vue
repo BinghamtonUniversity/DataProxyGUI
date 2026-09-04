@@ -92,9 +92,30 @@ const formConfig = computed(() => ({
                 value: user.id.toString()
             })) || [], required: true },
         { name: 'verb', label: 'HTTP Method (Verb)', type: 'select', options: ['ALL','GET', 'POST', 'PUT', 'DELETE', 'PATCH'], required: true },
-        { name: 'route', label: 'Route', type: 'select', options: [{label:"*",value:"*"},...props.apiInstanceData?.api_version?.version_urls.map(permission => ({label:permission.path,value:permission.path})) || []], required: true }
+        { name: 'route', label: 'Route', type: 'select', options: [
+                { label: "*", value: "*" },
+                ...groupRoutePaths(props.apiInstanceData?.api_version?.version_urls || [])
+                    .map(path => ({ label: path, value: path }))
+            ], required: true }
     ]
 }))
+
+function groupRoutePaths(versionUrls: { path: string }[]): string[] {
+    const groups = new Map<string, Set<string>>()
+
+    for (const { path } of versionUrls) {
+        const segments = path.split('/').filter(Boolean)
+        const key = segments.length ? `/${segments[0]}` : path
+
+        if (!groups.has(key)) groups.set(key, new Set())
+        groups.get(key)!.add(path)
+    }
+
+    return Array.from(groups.entries()).map(([key, paths]) =>
+        paths.size > 1 ? `${key}*` : [...paths][0]
+    )
+}
+
 const permissionSchema = computed(() => ({
     label: 'Permissions',
     description: 'A list of permissions with their information.',
