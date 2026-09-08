@@ -276,6 +276,8 @@ const cleanFormData = (formData: any) => {
         delete cleaned.id;
     }
     
+    delete cleaned.user_name;
+
     // Remove empty strings and convert to null if needed
     Object.keys(cleaned).forEach(key => {
         if (cleaned[key] === '') {
