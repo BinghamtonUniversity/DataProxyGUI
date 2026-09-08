@@ -231,7 +231,7 @@ const formConfig = computed(() => ({
         {
             name: "user_id",
             label: "Lead Developer",
-            type: "select",
+            type: "combobox",
             placeholder: "Select lead developer",
             value: "",
             help: "Primary developer responsible for this API",
