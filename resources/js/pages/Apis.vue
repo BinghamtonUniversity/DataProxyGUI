@@ -231,7 +231,7 @@ const formConfig = computed(() => ({
         {
             name: "user_id",
             label: "Lead Developer",
-            type: "select",
+            type: "combobox",
             placeholder: "Select lead developer",
             value: "",
             help: "Primary developer responsible for this API",
@@ -276,6 +276,8 @@ const cleanFormData = (formData: any) => {
         delete cleaned.id;
     }
     
+    delete cleaned.user_name;
+
     // Remove empty strings and convert to null if needed
     Object.keys(cleaned).forEach(key => {
         if (cleaned[key] === '') {
