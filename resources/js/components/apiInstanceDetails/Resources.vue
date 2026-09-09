@@ -61,7 +61,7 @@ const resourcesFormConfig = computed(() => ({
         {
           name: 'resource',
           label: 'Resource',
-          type: 'select',
+          type: 'combobox',
           required: false,
           width: '6',
           offset: '0',
