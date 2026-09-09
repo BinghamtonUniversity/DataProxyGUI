@@ -327,7 +327,9 @@ const visitInstance = () => {
         return
     }
     const baseDomain = domain.split('/').slice(0, 3).join('/')
-    // TODO https or http?
+    const path = apiInstanceData.value.api_type === 'php'
+            ? apiInstanceData.value.slug
+            : apiInstanceData.value.route
     instanceUrl = `http://${baseDomain}/${apiInstanceData.value.route}`
     
     window.open(instanceUrl, '_blank')
