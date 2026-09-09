@@ -80,7 +80,7 @@ const formConfig = {
     {
       name: "api_id",
       label: "API",
-      type: "select",
+      type: "combobox",
       placeholder: "API",
       value: "",
       options: [],

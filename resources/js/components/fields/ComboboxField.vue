@@ -273,9 +273,35 @@ const flattenedOptions = computed(() => {
   return flat;
 });
 
+const EMPTY_OPTIONS_LIMIT = 10;
+
+const limitOptions = (options, limit) => {
+  const result = [];
+  let remaining = limit;
+
+  for (const option of options) {
+    if (remaining <= 0) break;
+
+    if (option.type === 'optgroup') {
+      const limitedGroupOptions = (option.options || []).slice(0, remaining);
+      if (limitedGroupOptions.length === 0) continue;
+      result.push({
+        ...option,
+        options: limitedGroupOptions
+      });
+      remaining -= limitedGroupOptions.length;
+    } else {
+      result.push(option);
+      remaining -= 1;
+    }
+  }
+
+  return result;
+};
+
 const filteredOptions = computed(() => {
   if (!searchValue.value) {
-    return processedOptions.value;
+    return limitOptions(processedOptions.value, EMPTY_OPTIONS_LIMIT);
   }
   const search = searchValue.value.toLowerCase();
   // Filter flattened options
@@ -303,7 +329,13 @@ const filteredOptions = computed(() => {
   return result;
 });
 
+const valuesEqual = (a, b) => String(a) === String(b);
+
 const displayValue = computed(() => {
+  // While open, always show the editable search text (including empty)
+  if (isOpen.value) {
+    return searchValue.value;
+  }
   // If we have a search value, show it
   if (searchValue.value !== '') {
     return searchValue.value;
@@ -312,11 +344,19 @@ const displayValue = computed(() => {
     return '';
   }
   const flat = flattenedOptions.value;
-  const current = flat.find(opt => opt.value === internalValue.value);
+  const current = flat.find(opt => valuesEqual(opt.value, internalValue.value));
   return current ? current.label : (internalValue.value || '');
 });
 
-const valuesEqual = (a, b) => String(a) === String(b);
+const syncSearchFromValue = () => {
+  if (isMultiple.value) {
+    searchValue.value = '';
+    return;
+  }
+  const flat = flattenedOptions.value;
+  const current = flat.find(opt => valuesEqual(opt.value, internalValue.value));
+  searchValue.value = current ? current.label : (internalValue.value || '');
+};
 
 const isSelected = (value) => {
   if (isMultiple.value) {
@@ -370,10 +410,17 @@ const handleInput = (event) => {
   searchValue.value = value;
   isOpen.value = true;
   highlightedIndex.value = -1;
+
+  // Full clear deselects for single-select
+  if (!isMultiple.value && value === '') {
+    internalValue.value = '';
+    emit('update:value', '');
+  }
 };
 
 const handleFocus = () => {
   clearBlurTimeout();
+  syncSearchFromValue();
   isOpen.value = true;
   emit('focus', internalValue.value);
 };
@@ -403,6 +450,10 @@ const handleBlur = () => {
         emit('update:value', internalValue.value);
       }
       searchValue.value = '';
+    } else if (!isMultiple.value) {
+      // Empty search clears selection
+      internalValue.value = '';
+      emit('update:value', '');
     }
     validate();
     emit('blur', internalValue.value);
@@ -413,6 +464,7 @@ const handleKeydown = (event) => {
   if (!isOpen.value) {
     if (event.key === 'ArrowDown' || event.key === 'Enter') {
       event.preventDefault();
+      syncSearchFromValue();
       isOpen.value = true;
       highlightedIndex.value = 0;
     }
@@ -509,6 +561,7 @@ const toggleDropdown = () => {
 
   // Only focus when opening so the user can type to filter
   if (isOpen.value) {
+    syncSearchFromValue();
     nextTick(() => {
       inputRef.value?.focus();
     });

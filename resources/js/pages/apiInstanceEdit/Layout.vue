@@ -375,6 +375,12 @@ const handleSave = async() => {
         api_version_id: originalApiInstanceData.value?.api_version_id,
         environment_id: originalApiInstanceData.value?.environment?.id
     }
+
+    const emptyResources = requestData.resources?.every((r: any) => !r.name && !r.resource)
+    if (emptyResources) {
+        warning('All resources must be configured before saving.', 'Validation Error')
+        return
+    }
    
     const hasChanges = JSON.stringify(originalRequestData) !== JSON.stringify(requestData)
     if (!hasChanges) {
