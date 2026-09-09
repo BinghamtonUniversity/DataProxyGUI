@@ -194,24 +194,44 @@ const arrayConfig = computed(() => {
   return props.field.array || {};
 });
 
-const minItems = computed(() => arrayConfig.value.min || 0);
+const minItems = computed(() => {
+  const raw = arrayConfig.value.min;
+  if (raw === undefined || raw === null || raw === '') return 0;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? Math.max(parsed, 0) : 0;
+});
 const maxItems = computed(() => arrayConfig.value.max || 10);
 const addConfig = computed(() => arrayConfig.value.add || {});
 const duplicateConfig = computed(() => arrayConfig.value.duplicate || {});
 const removeConfig = computed(() => arrayConfig.value.remove || {});
 
+const isFieldRequired = () => {
+  const required = props.field.required;
+  if (required === undefined) return false;
+  if (typeof required === 'boolean') return required;
+  if (required === 'true') return true;
+  if (required === 'false') return false;
+  return !!required;
+};
+
 // Initialize array values
 const initializeArray = () => {
+  const optionalEmptyDefault = !isFieldRequired() && minItems.value === 0;
+
   if (Array.isArray(props.value)) {
     arrayValues.value = [...props.value];
   } else {
-    // Initialize with minimum items or default
-    const initialCount = Math.max(minItems.value, 0); // Start with 0 if no min requirement
+    // Optional + min 0: start empty so the Add button is the default UI
+    const initialCount = optionalEmptyDefault
+      ? 0
+      : Math.max(minItems.value, isFieldRequired() ? 1 : 0);
     arrayValues.value = Array(initialCount).fill('').map(() => getDefaultValue());
   }
-  // Ensure we have at least minItems
-  while (arrayValues.value.length < minItems.value) {
-    arrayValues.value.push(getDefaultValue());
+  // Ensure we have at least minItems (skip padding for optional min 0)
+  if (!optionalEmptyDefault) {
+    while (arrayValues.value.length < minItems.value) {
+      arrayValues.value.push(getDefaultValue());
+    }
   }
   emit('update:value', arrayValues.value);
 };
@@ -327,7 +347,7 @@ const getItemLabel = (index) => {
 };
 
 const getAddLabel = () => {
-  return duplicateConfig.value.label || `Add ${props.field.label || 'Item'}`;
+  return addConfig.value.label || `Add ${props.field.label || 'Item'}`;
 };
 
 const getDuplicateLabel = () => {
