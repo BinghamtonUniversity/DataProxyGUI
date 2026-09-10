@@ -85,22 +85,32 @@ const formConfig = ref({
             required: true,
             options: [] // Will be populated with available environments
         },
-        {
-            name: "is_active",
-            label: "Active",
-            type: "checkbox",
-            placeholder: "",
-            value: true,
-            help: "Whether the API user is active",
-            info: "Whether the API user is currently active",
-            width: "12",
-            offset: "0",
-            options: [
-                { label: 'false', value: false, color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' },
-                { label: 'true', value: true, color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' }
-            ],
-            required: false
+        { 
+            name: 'ips', 
+            label: 'IPs', 
+            type: 'text',
+            help: "Use the following fields to limit requests to one or more IP Addresses, or part (substring) of an IP Address. (Leave blank to allow from any IP)",
+            array: {min: 0, max: 10},
+            value: null,
+            required: false,
+            showColumn: true
         }
+        // {
+        //     name: "is_active",
+        //     label: "Active",
+        //     type: "checkbox",
+        //     placeholder: "",
+        //     value: true,
+        //     help: "Whether the API user is active",
+        //     info: "Whether the API user is currently active",
+        //     width: "12",
+        //     offset: "0",
+        //     options: [
+        //         { label: 'false', value: false, color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' },
+        //         { label: 'true', value: true, color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' }
+        //     ],
+        //     required: false
+        // }
     ]
 });
 
@@ -124,13 +134,21 @@ const cleanFormData = (formData: any) => {
     delete cleaned.api_secret; // Remove api_secret as it's only used for form input, backend expects app_secret
     
     // Convert checkbox fields to proper booleans
-    const booleanFields = ['is_active'];
-    booleanFields.forEach(field => {
-        if (cleaned[field] !== undefined && cleaned[field] !== null) {
-            // Convert string 'true'/'false' or actual boolean to boolean
-            cleaned[field] = cleaned[field] === true || cleaned[field] === 'true' || cleaned[field] === 1;
+    // const booleanFields = ['is_active'];
+    // booleanFields.forEach(field => {
+    //     if (cleaned[field] !== undefined && cleaned[field] !== null) {
+    //         // Convert string 'true'/'false' or actual boolean to boolean
+    //         cleaned[field] = cleaned[field] === true || cleaned[field] === 'true' || cleaned[field] === 1;
+    //     }
+    // });
+     if (Array.isArray(cleaned.ips)) {
+        cleaned.ips = cleaned.ips.filter((ip: string) => ip && ip.trim() !== '');
+        if (cleaned.ips.length === 0) {
+            delete cleaned.ips;
         }
-    });
+    } else if (!cleaned.ips) {
+        delete cleaned.ips;
+    }
     
     // Remove empty strings and convert to null if needed
     Object.keys(cleaned).forEach(key => {
@@ -224,7 +242,8 @@ const openEditModal = (row?: any) => {
             app_name: row.app_name,
             api_secret: null,
             environment_id: row.environment_id,
-            is_active: row.is_active
+            ips: row.ips || [],
+            // is_active: row.is_active
         };
     
         showModal.value = true;
