@@ -327,10 +327,8 @@ const visitInstance = () => {
         return
     }
     const baseDomain = domain.split('/').slice(0, 3).join('/')
-    const path = apiInstanceData.value.api_type === 'php'
-            ? apiInstanceData.value.slug
-            : apiInstanceData.value.route
-    instanceUrl = `http://${baseDomain}/${apiInstanceData.value.route}`
+    const path = apiInstanceData.value.route ? apiInstanceData.value.route : apiInstanceData.value.slug
+    instanceUrl = `http://${baseDomain}/${path}`
     
     window.open(instanceUrl, '_blank')
 }
@@ -376,7 +374,7 @@ const handleSave = async() => {
         environment_id: originalApiInstanceData.value?.environment?.id
     }
 
-    const emptyResources = requestData.resources?.every((r: any) => !r.name && !r.resource)
+    const emptyResources = requestData.resources?.length !== 0 && requestData.resources?.every((r: any) => !r.name && !r.resource)
     if (emptyResources) {
         warning('All resources must be configured before saving.', 'Validation Error')
         return
