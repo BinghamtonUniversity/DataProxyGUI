@@ -23,7 +23,9 @@
                 {{ formName }}
               </button>
               <template v-for="(item, index) in navigationPath" :key="index">
-                <div class="flex items-center gap-1 pl-2">
+                <div
+                  class="flex items-center gap-1"
+                  :style="{ paddingLeft: `${(index + 1) * 0.75}rem` }">
                   <svg class="w-3 h-3 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                   </svg>
