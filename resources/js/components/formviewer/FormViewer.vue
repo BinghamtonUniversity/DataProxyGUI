@@ -655,6 +655,30 @@ const resetForm = () => {
   initializeFormData();
 };
 
+const isFieldRequired = (field) => {
+  if (field.required === undefined) return false;
+  if (typeof field.required === 'boolean') return field.required;
+  if (field.required === 'true') return true;
+  if (field.required === 'false') return false;
+  return !!field.required;
+};
+
+// Resolve initial array length: optional + min 0 → []; missing min → 1; required + min 0 → 1
+const getArrayInitialCount = (field) => {
+  const rawMin = field.array?.min;
+  const hasExplicitMin = rawMin !== undefined && rawMin !== null && rawMin !== '';
+  const minItems = hasExplicitMin ? Number(rawMin) : 1;
+  const required = isFieldRequired(field);
+
+  if (!required && minItems === 0) {
+    return 0;
+  }
+  if (required && minItems === 0) {
+    return 1;
+  }
+  return Number.isFinite(minItems) ? Math.max(minItems, 0) : 1;
+};
+
 // Initialize form data
 const initializeFormData = () => {
 
@@ -669,8 +693,8 @@ const initializeFormData = () => {
     if (field.type === 'fieldset') {
       // If fieldset has array attribute, initialize as array
       if (field.array) {
-        const minItems = field.array.min || 1;
-        newData[field.name] = Array(minItems).fill({});
+        const minItems = getArrayInitialCount(field);
+        newData[field.name] = minItems === 0 ? [] : Array(minItems).fill({});
       } else {
         newData[field.name] = {};
       }
@@ -709,8 +733,8 @@ const initializeFormData = () => {
           : (field.value || '');
       }
     } else if (field.array) {
-      const minItems = field.array.min || 1;
-      newData[field.name] = Array(minItems).fill('').map(() => {
+      const minItems = getArrayInitialCount(field);
+      newData[field.name] = minItems === 0 ? [] : Array(minItems).fill('').map(() => {
         if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
           return false;
         } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {

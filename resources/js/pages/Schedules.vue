@@ -367,13 +367,98 @@ const reportFormConfig = computed(() => ({
             type: "textarea",
             placeholder: "Enter the next runtimes of the report",
             value: "",
-
             info: "next runtimes of the report",
             edit: false,
-            template: "{{next_runtimes}}"
+            rows: 5,
         }
     ]
 }));
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+const formatAbsoluteDateTime = (timestamp: string | number | Date) => {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+        return String(timestamp);
+    }
+    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+};
+
+const formatFutureRelative = (timestamp: string | number | Date) => {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+        return String(timestamp);
+    }
+    const sec = Math.floor((date.getTime() - Date.now()) / 1000);
+    if (sec <= 0) {
+        return 'now';
+    }
+    if (sec < 60) {
+        return `in ${sec} second${sec === 1 ? '' : 's'}`;
+    }
+    if (sec < 3600) {
+        const minutes = Math.floor(sec / 60);
+        return `in ${minutes} minute${minutes === 1 ? '' : 's'}`;
+    }
+    if (sec < 86400) {
+        const hours = Math.floor(sec / 3600);
+        return `in ${hours} hour${hours === 1 ? '' : 's'}`;
+    }
+    const days = Math.floor(sec / 86400);
+    if (days < 7) {
+        return `in ${days} day${days === 1 ? '' : 's'}`;
+    }
+    if (days < 30) {
+        const weeks = Math.floor(days / 7);
+        return `in ${weeks} week${weeks === 1 ? '' : 's'}`;
+    }
+    if (days < 365) {
+        const months = Math.floor(days / 30);
+        return `in ${months} month${months === 1 ? '' : 's'}`;
+    }
+    const years = Math.floor(days / 365);
+    return `in ${years} year${years === 1 ? '' : 's'}`;
+};
+
+const formatNextRuntimes = (runtimes: unknown): string => {
+    if (runtimes === undefined || runtimes === null || runtimes === '') {
+        return '';
+    }
+
+    let list: unknown[] = [];
+    if (Array.isArray(runtimes)) {
+        list = runtimes;
+    } else if (typeof runtimes === 'string') {
+        const trimmed = runtimes.trim();
+        if (!trimmed) {
+            return '';
+        }
+        try {
+            const parsed = JSON.parse(trimmed);
+            list = Array.isArray(parsed) ? parsed : [trimmed];
+        } catch {
+            list = trimmed.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+        }
+    } else {
+        list = [runtimes];
+    }
+
+    return list
+        .filter((ts) => ts !== undefined && ts !== null && String(ts).trim() !== '')
+        .map((ts) => `${formatFutureRelative(ts as string | number | Date)} (${formatAbsoluteDateTime(ts as string | number | Date)})`)
+        .join('\n');
+};
+
+const reportInitialData = computed(() => {
+    if (!editingRow.value) {
+        return null;
+    }
+    return {
+        ...editingRow.value,
+        next_runtimes: formatNextRuntimes(editingRow.value.next_runtimes),
+    };
+});
+
 // Form configuration for environments
 const formConfig = computed(() => ({
     label: 'Schedules',
@@ -734,7 +819,7 @@ const handleFormSubmit = async (formValues: any) => {
         }
 
         const updatedSchedule = await response.json();
-        updatedSchedule.api_instance_id = updatedSchedule.api_instance != null ? Number(updatedSchedule.api_instance) : updatedSchedule.api_instance_id!=null ? Number(updatedSchedule.api_instance_id) : null;
+        updatedSchedule.api_instance_id = updatedSchedule.api_instance_id!=null ? Number(updatedSchedule.api_instance_id) : null;
 
 
 
@@ -875,7 +960,7 @@ const handleArgumentsFormSubmit = async (formData: any) => {
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
         const updatedSchedule = await response.json();
-        updatedSchedule.api_instance_id = updatedSchedule.api_instance != null ? Number(updatedSchedule.api_instance) : updatedSchedule.api_instance_id!=null ? Number(updatedSchedule.api_instance_id) : null;
+        updatedSchedule.api_instance_id =  updatedSchedule.api_instance_id!=null ? Number(updatedSchedule.api_instance_id) : null;
 
         
         const index = schedules.value.findIndex((schedule: any) => schedule.id === editingRow.value.id);
@@ -1128,7 +1213,7 @@ onMounted(async () => {
             >
             <FormViewer
                 :formConfig="reportFormConfig"
-                :initialData="editingRow"
+                :initialData="reportInitialData"
                 :cancelAction="'close'"
                 :validateOnSubmit="true"
                 :actionHandler="handleReportFormActionHandler"

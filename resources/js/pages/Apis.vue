@@ -363,13 +363,16 @@ const fetchApis = async () => {
         
         
         // Format dates for display
-        apis.value = apiArray.map((api: any) => ({
-            ...api,
-            api_type: api.api_type || 'php', // Default to 'php' if api_type is missing 
-            created_at: api.created_at ? new Date(api.created_at).toLocaleDateString() : '',
-            user_id: api.user_id,
-            user_name: (api.user_id ? users.value.find((user: User) => user.id === api.user_id)?.name : "Unknown" ) as any
-        })) as Api[];
+        apis.value = apiArray.map((api: any) => {
+            const resolvedUserId = api.user_id ?? api.user;
+            return {
+                ...api,
+                api_type: api.api_type || 'php', // Default to 'php' if api_type is missing 
+                created_at: api.created_at ? new Date(api.created_at).toLocaleDateString() : '',
+                user_id: resolvedUserId,
+                user_name: (resolvedUserId ? users.value.find((user: User) => user.id === resolvedUserId)?.name : "Unknown" ) as any
+            };
+        }) as Api[];
         
     } catch (err: any) {
         error.value = err.message || 'Failed to fetch APIs';
@@ -453,12 +456,13 @@ const handleFormSubmit = async (formValues: any) => {
 
             // Format and add to local state
             // TO-DO: created_by_id mapping for php??
+            const resolvedUserId = newApi.user_id ?? newApi.user;
             apis.value.push({
                 ...newApi,
                 api_type: newApi.api_type || 'php',
                 created_at: newApi.created_at ? new Date(newApi.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
-                user_name: newApi.user_id ? users.value.find((user: User) => user.id === newApi.user_id)?.name : "Unknown",
-                user_id: newApi.user_id
+                user_name: resolvedUserId ? users.value.find((user: User) => user.id === resolvedUserId)?.name : "Unknown",
+                user_id: resolvedUserId
 
             });
             
@@ -494,12 +498,13 @@ const handleFormSubmit = async (formValues: any) => {
             // Update local state
             const index = apis.value.findIndex(api => api.id === editingRow.value.id);
             if (index !== -1) {
+                const resolvedUserId = updatedApi.user_id ?? updatedApi.user;
                 apis.value[index] = {
                     ...updatedApi,
                     api_type: updatedApi.api_type || 'php',
                     created_at: updatedApi.created_at ? new Date(updatedApi.created_at).toLocaleDateString() : apis.value[index].created_at,
-                    user_name: updatedApi.user_id ? users.value.find((user: User) => user.id === updatedApi.user_id)?.name : "Unknown",
-                    user_id: updatedApi.user_id
+                    user_name: resolvedUserId ? users.value.find((user: User) => user.id === resolvedUserId)?.name : "Unknown",
+                    user_id: resolvedUserId
 
                 };           
             }

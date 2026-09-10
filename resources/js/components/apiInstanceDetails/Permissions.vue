@@ -87,7 +87,7 @@ const formConfig = computed(() => ({
     label: 'New Permission',
     description: 'Create a new permission',
     fields: [
-        { name: 'api_user', label: 'User', type: 'select', options: props.apiUsers?.map((user: ApiUser) => ({
+        { name: 'api_user', label: 'User', type: 'combobox', options: props.apiUsers?.map((user: ApiUser) => ({
                 label: user.app_name,
                 value: user.id.toString()
             })) || [], required: true },
