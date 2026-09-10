@@ -564,9 +564,9 @@ defineExpose({
             <template v-else-if="apiData?.version_views">
                 <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
                     <!-- Function List Sidebar -->
-                   <aside class="max-w-xs lg:w-50 lg:min-w-50 lg:flex-shrink-0">
+                   <aside class="max-w-xs lg:w-50 lg:min-w-50 lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)]">
                         <!-- New View Button -->
-                        <div class="mb-4">
+                        <div class="mb-4 shrink-0">
                             <Dialog v-model:open="isNewViewDialogOpen" @update:open="resetNewViewDialog">
                                 <DialogTrigger as-child>
                                     <Button variant="outline" class="w-full text-xs">
@@ -618,7 +618,7 @@ defineExpose({
                         </div>
 
                         <!-- Function List -->
-                        <nav class="flex flex-col space-y-1">
+                        <nav class="flex flex-col space-y-1 overflow-y-auto min-h-0 flex-1">
                             <div
                                 v-for="item in apiData.version_views"
                                 :key="item.name"
