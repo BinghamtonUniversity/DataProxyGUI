@@ -2,7 +2,7 @@
 <template>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
 
-  <div :class="formbuilderTheme.container">
+  <div ref="formBuilderRootRef" :class="formbuilderTheme.container">
     <!-- <div :class="formbuilderTheme.headerContainer">
       <h1 :class="formbuilderTheme.header">FormBuilder</h1>
       <p :class="formbuilderTheme.subheader">Drag field types above the canvas. Reorder fields. Configure field properties.</p>
@@ -219,10 +219,13 @@
           </div>
         </div>
       </div>
-      <!-- Right: Field Configuration Sidebar -->
-      <div class="w-[420px] shrink-0">
+      <!-- Right: Field Configuration Sidebar (floats while page scrolls) -->
+      <div ref="configColumnRef" class="w-[420px] shrink-0 self-start">
         <!-- Field Configuration -->
-        <div :class="formbuilderTheme.configPanel">
+        <div
+          ref="configPanelRef"
+          :class="[formbuilderTheme.configPanel, 'z-30 overflow-y-auto bg-white dark:bg-gray-800']"
+          :style="configPanelStyle">
           <!-- Action Buttons -->
           <div class="flex gap-2 mb-4 justify-end px-4 py-4">
             <button
@@ -1022,7 +1025,7 @@
 
 <script setup>
 
-import { ref, computed, watch, nextTick, onMounted } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 
 // Define props
 const props = defineProps({
@@ -2564,6 +2567,79 @@ function emitFormDataUpdate() {
   });
 }
 
+// Floating Field Configuration panel (fixed — sticky is broken by app overflow-x-hidden)
+const CONFIG_PANEL_TOP_OFFSET = 16;
+const formBuilderRootRef = ref(null);
+const configColumnRef = ref(null);
+const configPanelRef = ref(null);
+const configPanelStyle = ref({
+  position: 'fixed',
+  top: `${CONFIG_PANEL_TOP_OFFSET}px`,
+  left: '0px',
+  width: '420px',
+  maxHeight: 'calc(100vh - 2rem)',
+});
+
+const updateConfigPanelPosition = () => {
+  const columnEl = configColumnRef.value;
+  const panelEl = configPanelRef.value;
+  const rootEl = formBuilderRootRef.value;
+  if (!columnEl || !panelEl || !rootEl) {
+    return;
+  }
+
+  const columnRect = columnEl.getBoundingClientRect();
+  const rootRect = rootEl.getBoundingClientRect();
+  const panelHeight = panelEl.offsetHeight;
+  const maxHeight = window.innerHeight - CONFIG_PANEL_TOP_OFFSET * 2;
+  const effectivePanelHeight = Math.min(panelHeight, maxHeight);
+
+  let top = CONFIG_PANEL_TOP_OFFSET;
+
+  // Before sticky engages: follow the column's natural top
+  if (columnRect.top > CONFIG_PANEL_TOP_OFFSET) {
+    top = columnRect.top;
+  }
+
+  // Clamp so the panel does not float past the bottom of FormBuilder
+  const maxTop = rootRect.bottom - effectivePanelHeight - CONFIG_PANEL_TOP_OFFSET;
+  if (top > maxTop) {
+    top = Math.max(maxTop, rootRect.top);
+  }
+
+  configPanelStyle.value = {
+    position: 'fixed',
+    top: `${top}px`,
+    left: `${columnRect.left}px`,
+    width: `${columnRect.width}px`,
+    maxHeight: 'calc(100vh - 2rem)',
+  };
+};
+
+let configPanelResizeObserver = null;
+
+const bindConfigPanelFloating = () => {
+  updateConfigPanelPosition();
+  window.addEventListener('scroll', updateConfigPanelPosition, true);
+  window.addEventListener('resize', updateConfigPanelPosition);
+
+  if (typeof ResizeObserver !== 'undefined' && configPanelRef.value) {
+    configPanelResizeObserver = new ResizeObserver(() => {
+      updateConfigPanelPosition();
+    });
+    configPanelResizeObserver.observe(configPanelRef.value);
+  }
+};
+
+const unbindConfigPanelFloating = () => {
+  window.removeEventListener('scroll', updateConfigPanelPosition, true);
+  window.removeEventListener('resize', updateConfigPanelPosition);
+  if (configPanelResizeObserver) {
+    configPanelResizeObserver.disconnect();
+    configPanelResizeObserver = null;
+  }
+};
+
 // Watch for changes in formName and fields to emit updates
 watch([formName, fields], () => {
   emitFormDataUpdate();
@@ -2592,6 +2668,14 @@ onMounted(() => {
   if (props.formData.name) {
     formName.value = props.formData.name;
   }
+
+  nextTick(() => {
+    bindConfigPanelFloating();
+  });
+});
+
+onUnmounted(() => {
+  unbindConfigPanelFloating();
 });
 
 
