@@ -1,6 +1,8 @@
-# DataProxyGUI
+# BITS Proxy (Binghamton ITS Proxy)
 
-This is a modern web application designed to integrate with GrapheneAPIGateway and BUDjangoProxy. It is built using Laravel 12, Inertia.js, and Vue.js.
+BITS Proxy is a modern web application for integrating with GrapheneAPIGateway and BUDjangoProxy. It is built using Laravel 12, Inertia.js, and Vue.js.
+
+Repository folder name remains DataProxyGUI.
 
 ## Prerequisites
 
@@ -25,7 +27,7 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-Update your `.env` file with your database credentials.
+Update your `.env` file with your database credentials. Set `APP_NAME="BITS Proxy"` (already the default in `.env.example`).
 
 ### 3. Run Migrations
 
@@ -56,4 +58,3 @@ npm run build        # Build assets for production
 
 - **Backend:** Laravel 12
 - **Frontend:** Vue.js with Inertia.js
-

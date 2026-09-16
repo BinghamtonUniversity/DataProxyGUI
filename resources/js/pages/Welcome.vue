@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 </script>
 
 <template>
-    <Head title="Welcome to Hermod">
+    <Head title="Welcome to BITS Proxy">
         <link rel="preconnect" href="https://rsms.me/" />
         <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     </Head>
@@ -14,19 +14,8 @@ import AppLogoIcon from '@/components/AppLogoIcon.vue';
         <header class="relative z-10">
             <nav class="flex items-center justify-between p-6 lg:px-8">
                 <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Hermod</h1>
+                    <AppLogoIcon variant="mark" class="size-12 object-contain" />
                 </div>
-                <!-- <div class="flex items-center space-x-4">
-                    <a
-                        :href="route('oidc.redirect')"
-                        class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-lg hover:shadow-xl"
-                    >
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Access Dashboard
-                    </a>
-                </div> -->
             </nav>
         </header>
 
@@ -35,17 +24,21 @@ import AppLogoIcon from '@/components/AppLogoIcon.vue';
             <!-- Hero Section -->
             <div class="max-w-7xl mx-auto px-6 lg:px-8 py-20">
                 <div class="text-center">
-                    <!-- Logo/Icon -->
+                    <!-- Logo -->
                     <div class="flex justify-center mb-8">
-                        <div class="w-20 h-20 bg-white dark:bg-black text-black dark:text-white rounded-2xl flex items-center justify-center shadow-2xl">
-                            <AppLogoIcon class="size-10" />
+                        <div class="rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-950">
+                            <AppLogoIcon variant="full" class="h-28 w-auto max-w-[280px] object-contain" />
                         </div>
                     </div>
 
                     <!-- Main Heading -->
-                    <h1 class="text-5xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-6">
-                        Hermod
+                    <h1 class="text-5xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-3">
+                        BITS Proxy
                     </h1>
+
+                    <p class="text-lg lg:text-xl font-semibold tracking-wide text-gray-700 dark:text-gray-300 mb-6">
+                        Binghamton ITS Proxy
+                    </p>
                     
                     <!-- Subtitle -->
                     <p class="text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
