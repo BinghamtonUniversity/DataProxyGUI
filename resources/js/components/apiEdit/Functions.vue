@@ -657,7 +657,7 @@ defineExpose({
                                                 ></span> -->
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="right">
+                                    <TooltipContent side="left">
                                         {{ item.name }}
                                     </TooltipContent>
                                 </Tooltip>
