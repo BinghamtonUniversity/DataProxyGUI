@@ -12,6 +12,12 @@ import {
   DialogFooter,
   DialogClose
 } from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
@@ -538,174 +544,183 @@ defineExpose({
 </style>
 
 <template>
-    <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
-        <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
-            
-            <!-- Loading State -->
-            <template v-if="loadingApiData">
-                <div class="flex items-center justify-center h-32">
-                    <div class="text-center">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-                        <p class="mt-2">Loading functions...</p>
-                    </div>
-                </div>
-            </template>
-
-            <!-- Error State -->
-            <template v-else-if="apiError">
-                <div class="flex items-center justify-center h-32">
-                    <div class="text-center text-red-600">
-                        <p>Error loading functions: {{ apiError }}</p>
-                    </div>
-                </div>
-            </template>
-
-            <!-- Functions Content -->
-            <template v-else-if="apiData?.version_views">
-                <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
-                    <!-- Function List Sidebar -->
-                   <aside class="max-w-xs lg:w-50 lg:min-w-50 lg:flex-shrink-0">
-                        <!-- New View Button -->
-                        <div class="mb-4">
-                            <Dialog v-model:open="isNewViewDialogOpen" @update:open="resetNewViewDialog">
-                                <DialogTrigger as-child>
-                                    <Button variant="outline" class="w-full text-xs">
-                                        + New View
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent class="sm:max-w-md">
-                                    <DialogHeader>
-                                        <DialogTitle>{{ isEditingView ? 'Edit Function Name' : 'Create New Function' }}</DialogTitle>
-                                    </DialogHeader>
-                                    <div class="space-y-4">
-                                        <div class="space-y-2">
-                                            <Label for="function-name">Function Name</Label>
-                                            <Input
-                                                id="function-name"
-                                                v-model="newViewName"
-                                                placeholder="Enter function name"
-                                                :disabled="isCreatingView"
-                                                @keyup.enter="isEditingView ? handleUpdateFunctionName() : handleCreateNewView()"
-                                            />
-                                        </div>
-                                        
-                                        <div v-if="createViewError" class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-                                            {{ createViewError }}
-                                        </div>
-                                        
-                                        <div class="flex justify-end space-x-2">
-                                            <Button 
-                                                variant="outline" 
-                                                @click="isNewViewDialogOpen = false"
-                                                :disabled="isCreatingView"
-                                            >
-                                                Cancel
-                                            </Button>
-                                            <Button 
-                                                @click=" isEditingView? handleUpdateFunctionName() : handleCreateNewView()"
-                                                :disabled="!newViewName.trim() || isCreatingView"
-                                            >
-                                                <div v-if="isCreatingView" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                                {{ isCreatingView 
-                                                    ? (isEditingView ? 'Updating...' : 'Creating...') 
-                                                    : (isEditingView ? 'Update' : 'Create') 
-                                                }}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
+    <TooltipProvider :delay-duration="300">
+        <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
+            <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
+                
+                <!-- Loading State -->
+                <template v-if="loadingApiData">
+                    <div class="flex items-center justify-center h-32">
+                        <div class="text-center">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
+                            <p class="mt-2">Loading functions...</p>
                         </div>
+                    </div>
+                </template>
 
-                        <!-- Function List -->
-                        <nav class="flex flex-col space-y-1">
-                            <div
-                                v-for="item in apiData.version_views"
-                                :key="item.name"
-                                class="flex items-center gap-1 group"
-                            >
-                                <Button
-                                    :data-function-name="item.name"
-                                    variant="ghost"
-                                    :class="[
-                                        'justify-start', 
-                                        'px-3', 
-                                        'py-1', 
-                                        'flex-1',
-                                        'text-xs',
-                                        'relative',
-                                        selectedFunction?.name === item.name ? 'bg-accent' : ''
-                                    ]" 
-                                    @click="selectFunction(item)"             
-                                >
-                                    {{ item.name }}
-                                    <!-- Unsaved changes indicator -->
-                                    <!-- <span 
-                                        v-if="unsavedEditsCache.has(item.name)" 
-                                        class="ml-2 h-2 w-2 rounded-full bg-orange-500"
-                                        title="Unsaved changes"
-                                    ></span> -->
-                                </Button>
-                                <template v-if ="item.name !== 'Constructor'">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        @click.stop="editFunctionName(item)"
-                                        class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
-                                    >
-                                        <Pencil :size="1" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        @click.stop="handleDeleteFunction(item)"
-                                        class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
-                                    >
-                                        <Trash2 :size="1" />
-                                    </Button>
-                                   
-                                </template>
-                                
-                                
+                <!-- Error State -->
+                <template v-else-if="apiError">
+                    <div class="flex items-center justify-center h-32">
+                        <div class="text-center text-red-600">
+                            <p>Error loading functions: {{ apiError }}</p>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Functions Content -->
+                <template v-else-if="apiData?.version_views">
+                    <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
+                        <!-- Function List Sidebar -->
+                    <aside class="max-w-xs lg:w-50 lg:min-w-50 lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)]">
+                            <!-- New View Button -->
+                            <div class="mb-4 shrink-0">
+                                <Dialog v-model:open="isNewViewDialogOpen" @update:open="resetNewViewDialog">
+                                    <DialogTrigger as-child>
+                                        <Button variant="outline" class="w-full text-xs">
+                                            + New View
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent class="sm:max-w-md">
+                                        <DialogHeader>
+                                            <DialogTitle>{{ isEditingView ? 'Edit Function Name' : 'Create New Function' }}</DialogTitle>
+                                        </DialogHeader>
+                                        <div class="space-y-4">
+                                            <div class="space-y-2">
+                                                <Label for="function-name">Function Name</Label>
+                                                <Input
+                                                    id="function-name"
+                                                    v-model="newViewName"
+                                                    placeholder="Enter function name"
+                                                    :disabled="isCreatingView"
+                                                    @keyup.enter="isEditingView ? handleUpdateFunctionName() : handleCreateNewView()"
+                                                />
+                                            </div>
+                                            
+                                            <div v-if="createViewError" class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+                                                {{ createViewError }}
+                                            </div>
+                                            
+                                            <div class="flex justify-end space-x-2">
+                                                <Button 
+                                                    variant="outline" 
+                                                    @click="isNewViewDialogOpen = false"
+                                                    :disabled="isCreatingView"
+                                                >
+                                                    Cancel
+                                                </Button>
+                                                <Button 
+                                                    @click=" isEditingView? handleUpdateFunctionName() : handleCreateNewView()"
+                                                    :disabled="!newViewName.trim() || isCreatingView"
+                                                >
+                                                    <div v-if="isCreatingView" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                                    {{ isCreatingView 
+                                                        ? (isEditingView ? 'Updating...' : 'Creating...') 
+                                                        : (isEditingView ? 'Update' : 'Create') 
+                                                    }}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
                             </div>
-                        </nav>
-                    </aside>
 
-                    <!-- Editor Area -->
-                    <div class="flex-1 min-w-0" ref="editorContainerRef">
-                        <!-- Code Editor -->
-                        <Editor 
-                            ref="editorRef"
-                            v-if="selectedFunction"
-                            :key="selectedFunction.name"
-                            :code="currentFunctionCode" 
-                            :language="props?.api_type === 'python' || props?.api_type === 'php' ? props?.api_type : 'php'"
-                            :is-saving="isSaving"
-                            :saveError="saveError??''"
-                            :saveSuccess="saveSuccess"
+                            <!-- Function List -->
+                            <nav class="flex flex-col space-y-1 overflow-y-auto min-h-0 flex-1">
+                                <div
+                                    v-for="item in apiData.version_views"
+                                    :key="item.name"
+                                    class="flex items-center gap-1 group"
+                                >
+                                <Tooltip>
+                                    <TooltipTrigger as-child>
+                                        <Button
+                                            :data-function-name="item.name"
+                                            variant="ghost"
+                                            :class="[
+                                                'justify-start', 
+                                                'px-3', 
+                                                'py-1', 
+                                                'flex-1',
+                                                'text-xs',
+                                                'truncate',
+                                                'min-w-0',
+                                                selectedFunction?.name === item.name ? 'bg-accent' : ''
+                                            ]" 
+                                            @click="selectFunction(item)"             
+                                            >
+                                                {{ item.name }}
+                                                <!-- Unsaved changes indicator -->
+                                                <!-- <span 
+                                                    v-if="unsavedEditsCache.has(item.name)" 
+                                                    class="ml-2 h-2 w-2 rounded-full bg-orange-500"
+                                                    title="Unsaved changes"
+                                                ></span> -->
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">
+                                        {{ item.name }}
+                                    </TooltipContent>
+                                </Tooltip>
+                                    <template v-if ="item.name !== 'Constructor'">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click.stop="editFunctionName(item)"
+                                            class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                                        >
+                                            <Pencil :size="1" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click.stop="handleDeleteFunction(item)"
+                                            class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
+                                        >
+                                            <Trash2 :size="1" />
+                                        </Button>
+                                    
+                                    </template>
+                                    
+                                    
+                                </div>
+                            </nav>
+                        </aside>
 
-                            @save="handleSave"
-                            @update:code="handleUpdateCode"
-                            @validate="handleValidation"
-                        />
-                        
-                        <!-- No Function Selected State -->
-                        <div v-else class="text-muted-foreground text-sm p-4 text-center">
-                            Select a function to view its code.
+                        <!-- Editor Area -->
+                        <div class="flex-1 min-w-0" ref="editorContainerRef">
+                            <!-- Code Editor -->
+                            <Editor 
+                                ref="editorRef"
+                                v-if="selectedFunction"
+                                :key="selectedFunction.name"
+                                :code="currentFunctionCode" 
+                                :language="props?.api_type === 'python' || props?.api_type === 'php' ? props?.api_type : 'php'"
+                                :is-saving="isSaving"
+                                :saveError="saveError??''"
+                                :saveSuccess="saveSuccess"
+
+                                @save="handleSave"
+                                @update:code="handleUpdateCode"
+                                @validate="handleValidation"
+                            />
+                            
+                            <!-- No Function Selected State -->
+                            <div v-else class="text-muted-foreground text-sm p-4 text-center">
+                                Select a function to view its code.
+                            </div>
                         </div>
                     </div>
-                </div>
-            </template>
+                </template>
 
-            <!-- No Functions Available State -->
-            <template v-else>
-                <div class="flex items-center justify-center h-32">
-                    <div class="text-center">
-                        <p>No functions available for this API version.</p>
+                <!-- No Functions Available State -->
+                <template v-else>
+                    <div class="flex items-center justify-center h-32">
+                        <div class="text-center">
+                            <p>No functions available for this API version.</p>
+                        </div>
                     </div>
-                </div>
-            </template>
+                </template>
+            </div>
         </div>
-    </div>
- 
+    </TooltipProvider>
 </template>

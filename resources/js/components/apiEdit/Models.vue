@@ -17,6 +17,12 @@ import {
   DialogFooter,
   DialogClose
 } from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip'
 import { Label } from '@/components/ui/label'
 import Editor from '@/pages/Editor.vue'
 import DataGrid from '@/components/datagrid/DataGrid.vue'
@@ -99,6 +105,9 @@ const createMethodError = ref<string | null>(null)
 //Edit method name state
 const methodBeingEdited = ref<{name: string, params: string[], content:string }| null>(null)
 const isEditingMethod = ref(false)
+
+const leftCollapsed = ref(false)
+const rightCollapsed = ref(false)
 
 const openNewModelDialog = () => {
   newModelForm.value = {
@@ -830,143 +839,159 @@ onUnmounted(() => {
             <template v-else-if="apiData?.version_models">
               <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
                     <!-- Models List Sidebar (Left) -->
-                  <aside class="max-w-xs lg:w-48 lg:min-w-48 lg:flex-shrink-0">
-                    <div class="mb-4">
-                      <!-- Model Dialog -->
-                      <Dialog v-model:open="newModelDialogOpen">
-                        <DialogTrigger as-child>
-                          <Button class="ml-4 text-green-600 text-xs" variant="outline" @click="openNewModelDialog">
-                            <Plus class="mr-2 h-4 w-4" />
-                            New Model
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent class="sm:max-w-3xl">
-                          <form @submit="submitNewModel" class="space-y-6">
-                            <DialogHeader>
-                              <DialogTitle>{{ isEditMode ? 'Edit Model' : 'Create New Model' }}</DialogTitle>
-                            </DialogHeader>
-                            <div class="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-6">
-                              <!-- Basic Model Info -->
-                              <div class="grid grid-cols-4 items-center gap-4">
-                                <Label for="new-model-name" class="text-right">Name</Label>
-                                <Input id="new-model-name" v-model="newModelForm.name" required placeholder="Model name" class="col-span-3" />
-                              </div>
-                              <div class="grid grid-cols-4 items-center gap-4">
-                                <Label for="new-model-inheritance" class="text-right">Inheritance</Label>
-                                <Input id="new-model-inheritance" v-model="newModelForm.inheritance" required placeholder="models.Model" class="col-span-3" />
-                              </div>
-                              
-                              <!-- Meta Properties Section -->
-                              <div class="flex flex-col gap-4 border-t pt-4">
-                                <h3 class="text-lg font-medium">Meta Properties</h3>
-                                <div v-if="newModelForm.class_meta.length > 0" class="space-y-3">
-                                  <div class="grid grid-cols-9 items-center gap-2">
-                                    <Label class="col-span-4 text-sm font-semibold">Name</Label>
-                                    <Label class="col-span-4 text-sm font-semibold">Value</Label>
-                                  </div>
-                                  <div v-for="(meta, index) in newModelForm.class_meta" :key="index" class="grid grid-cols-9 items-center gap-2">
-                                    <Input 
-                                      v-model="meta.name" 
-                                      placeholder="Name" 
-                                      class="col-span-3"
-                                      required
-                                    />
-                                    <Input 
-                                      v-model="meta.value" 
-                                      placeholder="Value" 
-                                      class="col-span-4"
-                                      required
-                                    />
-                                    <Button 
-                                      type="button" 
-                                      variant="destructive" 
-                                      size="sm"
-                                      @click="removeNewModelMetaProperty(index)"
-                                      class="col-span-1"
-                                    >
-                                      ×
-                                    </Button>
-                                  </div>
+                  <aside :class="['max-w-xs lg:flex-shrink-0 transition-all', leftCollapsed ? 'lg:w-10' : 'lg:w-48 lg:min-w-48']">
+                    <Button variant="ghost" size="sm" class="mb-2 w-full justify-center" @click="leftCollapsed = !leftCollapsed">
+                      <ChevronDown :class="['h-4 w-4 transition-transform', leftCollapsed ? 'rotate-90' : '-rotate-90']" />
+                    </Button>
+                    <div v-show="!leftCollapsed">
+                      <div class="mb-4">
+                        <!-- Model Dialog -->
+                        <Dialog v-model:open="newModelDialogOpen">
+                          <DialogTrigger as-child>
+                            <Button class="ml-4 text-green-600 text-xs" variant="outline" @click="openNewModelDialog">
+                              <Plus class="mr-2 h-4 w-4" />
+                              New Model
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent class="sm:max-w-3xl">
+                            <form @submit="submitNewModel" class="space-y-6">
+                              <DialogHeader>
+                                <DialogTitle>{{ isEditMode ? 'Edit Model' : 'Create New Model' }}</DialogTitle>
+                              </DialogHeader>
+                              <div class="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-6">
+                                <!-- Basic Model Info -->
+                                <div class="grid grid-cols-4 items-center gap-4">
+                                  <Label for="new-model-name" class="text-right">Name</Label>
+                                  <Input id="new-model-name" v-model="newModelForm.name" required placeholder="Model name" class="col-span-3" />
                                 </div>
-                                <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
-                                  No meta properties defined.
+                                <div class="grid grid-cols-4 items-center gap-4">
+                                  <Label for="new-model-inheritance" class="text-right">Inheritance</Label>
+                                  <Input id="new-model-inheritance" v-model="newModelForm.inheritance" required placeholder="models.Model" class="col-span-3" />
                                 </div>
-                                <Button 
-                                  type="button" 
-                                  variant="outline" 
-                                  size="sm"
-                                  @click="addNewModelMetaProperty"
-                                  class="self-start"
+                                
+                                <!-- Meta Properties Section -->
+                                <div class="flex flex-col gap-4 border-t pt-4">
+                                  <h3 class="text-lg font-medium">Meta Properties</h3>
+                                  <div v-if="newModelForm.class_meta.length > 0" class="space-y-3">
+                                    <div class="grid grid-cols-9 items-center gap-2">
+                                      <Label class="col-span-4 text-sm font-semibold">Name</Label>
+                                      <Label class="col-span-4 text-sm font-semibold">Value</Label>
+                                    </div>
+                                    <div v-for="(meta, index) in newModelForm.class_meta" :key="index" class="grid grid-cols-9 items-center gap-2">
+                                      <Input 
+                                        v-model="meta.name" 
+                                        placeholder="Name" 
+                                        class="col-span-3"
+                                        required
+                                      />
+                                      <Input 
+                                        v-model="meta.value" 
+                                        placeholder="Value" 
+                                        class="col-span-4"
+                                        required
+                                      />
+                                      <Button 
+                                        type="button" 
+                                        variant="destructive" 
+                                        size="sm"
+                                        @click="removeNewModelMetaProperty(index)"
+                                        class="col-span-1"
+                                      >
+                                        ×
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
+                                    No meta properties defined.
+                                  </div>
+                                  <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    size="sm"
+                                    @click="addNewModelMetaProperty"
+                                    class="self-start"
+                                  >
+                                    + Add Meta Property
+                                  </Button>
+                                </div>
+
+                              </div> 
+                                
+                              <!-- Error Display -->
+                              <div v-if="newModelError" class="text-red-600 text-sm">
+                                {{ newModelError }}
+                              </div>
+
+                              <DialogFooter class="gap-2">
+                                <DialogClose as-child>
+                                  <Button variant="secondary" type="button" @click="closeNewModelDialog" :disabled="newModelLoading">
+                                    Cancel
+                                  </Button>
+                                </DialogClose>
+                                <Button type="submit" variant="default" :disabled="newModelLoading">
+                                  <span v-if="newModelLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
+                                  <span v-else>{{ isEditMode ? 'Save Changes' : 'Create Model' }}</span>
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>       
+                      </div>
+                        <nav class="flex flex-col space-y-1">
+                          <div
+                              v-for="(item,index) in apiData.version_models"
+                              :key="item.name"
+                              class="flex items-center gap-1 group"
+                          >
+                            <TooltipProvider :delay-duration="300">
+                              <Tooltip>
+                                <TooltipTrigger as-child>
+                                  <Button
+                                    :data-model-name="item.name"
+                                    variant="ghost"
+                                    :class="[
+                                        'justify-start', 
+                                        'px-3', 
+                                        'py-1', 
+                                        'flex-1',
+                                        'text-xs',
+                                        'truncate',
+                                        'min-w-0',
+                                        selectedModel?.name === item.name ? 'bg-accent' : ''
+                                    ]" 
+                                    @click="
+                                      selectedModel = item;
+                                      selectSection('properties');
+                                    "             
                                 >
-                                  + Add Meta Property
+                                    {{ item.name }}
                                 </Button>
-                              </div>
-
-                            </div> 
-                              
-                            <!-- Error Display -->
-                            <div v-if="newModelError" class="text-red-600 text-sm">
-                              {{ newModelError }}
-                            </div>
-
-                            <DialogFooter class="gap-2">
-                              <DialogClose as-child>
-                                <Button variant="secondary" type="button" @click="closeNewModelDialog" :disabled="newModelLoading">
-                                  Cancel
-                                </Button>
-                              </DialogClose>
-                              <Button type="submit" variant="default" :disabled="newModelLoading">
-                                <span v-if="newModelLoading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
-                                <span v-else>{{ isEditMode ? 'Save Changes' : 'Create Model' }}</span>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                  {{ item.name }}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                              <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  @click.stop="openEditModelDialog(item, index)"
+                                  class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                              >
+                                  <Pencil :size="1" />
                               </Button>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      </Dialog>       
-                    </div>
-                      <nav class="flex flex-col space-y-1">
-                        <div
-                            v-for="(item,index) in apiData.version_models"
-                            :key="item.name"
-                            class="flex items-center gap-1 group"
-                        >
-                            <Button
-                                :data-model-name="item.name"
-                                variant="ghost"
-                                :class="[
-                                    'justify-start', 
-                                    'px-3', 
-                                    'py-1', 
-                                    'flex-1',
-                                    'text-xs',
-                                    selectedModel?.name === item.name ? 'bg-accent' : ''
-                                ]" 
-                                @click="
-                                  selectedModel = item;
-                                  selectSection('properties');
-                                "             
-                            >
-                                {{ item.name }}
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                @click.stop="openEditModelDialog(item, index)"
-                                class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
-                            >
-                                <Pencil :size="1" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                @click.stop="handleDelete(item)"
-                                class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
-                            >
-                                <Trash2 :size="1" />
-                            </Button>
-                            
-                        </div>
-                    </nav>
+                              <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  @click.stop="handleDelete(item)"
+                                  class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
+                              >
+                                  <Trash2 :size="1" />
+                              </Button>
+                              
+                          </div>
+                      </nav>
+                     </div>
                   </aside>
 
                   <!-- Main Content Area (Center) -->
@@ -1038,158 +1063,164 @@ onUnmounted(() => {
                   </div>
 
                   <!-- Content & Methods Sidebar (Right) -->
-                  <aside class="max-w-xs lg:w-48 lg:min-w-48 lg:flex-shrink-0" v-if="selectedModel">
+                  <aside :class="['max-w-xs lg:flex-shrink-0 transition-all', rightCollapsed ? 'lg:w-10' : 'lg:w-48 lg:min-w-48']" v-if="selectedModel">
+                    <Button variant="ghost" size="sm" class="mb-2 w-full justify-center" @click="rightCollapsed = !rightCollapsed">
+                      <ChevronDown :class="['h-4 w-4 transition-transform', rightCollapsed ? '-rotate-90' : 'rotate-90']" />
+                    </Button>
                     <!-- New Method Button -->
-                    <div class="mb-4">
-                      <Dialog v-model:open="isNewMethodDialogOpen" @update:open="resetNewMethodDialog" @escapeKeyDown.prevent>
-                        <DialogTrigger as-child>
-                          <Button variant="outline" class="w-full text-xs">
-                            + Add Class Method
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent class="sm:max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>{{ isEditingMethod ? 'Edit Method Name' : 'Create New Class Method' }}</DialogTitle>
-                          </DialogHeader>
-                          <div class="space-y-4">
-                            <div class="space-y-2">
-                              <Label for="method-name">Method Name</Label>
-                              <Input
-                                id="method-name"
-                                v-model="newMethod.name"
-                                placeholder="Enter method name"
-                                :disabled="isCreatingMethod"
-                              />
-                              <Label for="method-params">Method Parameters</Label>
-                              <!-- <Input
-                                id="method-params"
-                                v-model="newMethod.params"
-                                placeholder="Enter parameters comma-separated (e.g. param1, param2)"
-                                :disabled="isCreatingMethod"
-                              /> -->
-                              <div class="flex flex-col gap-4 border-t pt-4">
-                                <h3 class="text-lg font-medium">Method Parameters</h3>
-                                <div v-if="newMethod.params.length > 0" class="space-y-3">
-                                  <div class="grid grid-cols-9 items-center gap-2">
-                                    <Label class="col-span-4 text-sm font-semibold">Param</Label>
+                    <div v-show="!rightCollapsed">
+                      <div class="mb-4">
+                        <Dialog v-model:open="isNewMethodDialogOpen" @update:open="resetNewMethodDialog" @escapeKeyDown.prevent>
+                          <DialogTrigger as-child>
+                            <Button variant="outline" class="w-full text-xs">
+                              + Add Class Method
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent class="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>{{ isEditingMethod ? 'Edit Method Name' : 'Create New Class Method' }}</DialogTitle>
+                            </DialogHeader>
+                            <div class="space-y-4">
+                              <div class="space-y-2">
+                                <Label for="method-name">Method Name</Label>
+                                <Input
+                                  id="method-name"
+                                  v-model="newMethod.name"
+                                  placeholder="Enter method name"
+                                  :disabled="isCreatingMethod"
+                                />
+                                <Label for="method-params">Method Parameters</Label>
+                                <!-- <Input
+                                  id="method-params"
+                                  v-model="newMethod.params"
+                                  placeholder="Enter parameters comma-separated (e.g. param1, param2)"
+                                  :disabled="isCreatingMethod"
+                                /> -->
+                                <div class="flex flex-col gap-4 border-t pt-4">
+                                  <h3 class="text-lg font-medium">Method Parameters</h3>
+                                  <div v-if="newMethod.params.length > 0" class="space-y-3">
+                                    <div class="grid grid-cols-9 items-center gap-2">
+                                      <Label class="col-span-4 text-sm font-semibold">Param</Label>
+                                    </div>
+                                    <div v-for="(param, index) in newMethod.params" :key="index" class="grid grid-cols-9 items-center gap-2">
+                                      <Input 
+                                        v-model="newMethod.params[index]" 
+                                        placeholder="Param" 
+                                        class="col-span-3"
+                                        required
+                                      />
+                                      <Button 
+                                        type="button" 
+                                        variant="destructive" 
+                                        size="sm"
+                                        @click="removeMethodParam(index)"
+                                        class="col-span-1"
+                                      >
+                                        ×
+                                      </Button>
+                                    </div>
                                   </div>
-                                  <div v-for="(param, index) in newMethod.params" :key="index" class="grid grid-cols-9 items-center gap-2">
-                                    <Input 
-                                      v-model="newMethod.params[index]" 
-                                      placeholder="Param" 
-                                      class="col-span-3"
-                                      required
-                                    />
-                                    <Button 
-                                      type="button" 
-                                      variant="destructive" 
-                                      size="sm"
-                                      @click="removeMethodParam(index)"
-                                      class="col-span-1"
-                                    >
-                                      ×
-                                    </Button>
+                                  <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
+                                    No parameters defined.
                                   </div>
+                                  <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    size="sm"
+                                    @click="addMethodParam"
+                                    class="self-start"
+                                  >
+                                    <Plus>Add</Plus> 
+                                  </Button>
                                 </div>
-                                <div v-else class="text-sm text-gray-500 px-3 py-2 border rounded-md bg-gray-50 dark:bg-gray-800">
-                                  No parameters defined.
-                                </div>
+
+                                
+                              </div>
+                              
+                              <div v-if="createMethodError" class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+                                {{ createMethodError }}
+                              </div>
+                              
+                              <div class="flex justify-end space-x-2">
                                 <Button 
-                                  type="button" 
                                   variant="outline" 
-                                  size="sm"
-                                  @click="addMethodParam"
-                                  class="self-start"
+                                  @click="isNewMethodDialogOpen = false"
+                                  :disabled="isCreatingMethod"
                                 >
-                                  <Plus>Add</Plus> 
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  @click="isEditingMethod ? handleUpdateMethodName() : handleCreateNewMethod()"
+                                  :disabled="!newMethod.name.trim() || isCreatingMethod"
+                                >
+                                  <div v-if="isCreatingMethod" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  {{ isCreatingMethod 
+                                    ? (isEditingMethod ? 'Updating...' : 'Creating...') 
+                                    : (isEditingMethod ? 'Update' : 'Create') 
+                                  }}
                                 </Button>
                               </div>
-
-                              
                             </div>
-                            
-                            <div v-if="createMethodError" class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-                              {{ createMethodError }}
-                            </div>
-                            
-                            <div class="flex justify-end space-x-2">
-                              <Button 
-                                variant="outline" 
-                                @click="isNewMethodDialogOpen = false"
-                                :disabled="isCreatingMethod"
-                              >
-                                Cancel
-                              </Button>
-                              <Button 
-                                @click="isEditingMethod ? handleUpdateMethodName() : handleCreateNewMethod()"
-                                :disabled="!newMethod.name.trim() || isCreatingMethod"
-                              >
-                                <div v-if="isCreatingMethod" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                {{ isCreatingMethod 
-                                  ? (isEditingMethod ? 'Updating...' : 'Creating...') 
-                                  : (isEditingMethod ? 'Update' : 'Create') 
-                                }}
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-
-                    <!-- Content and Methods list Section -->
-                    <nav class="flex flex-col space-y-1">
-                      <Button
-                        variant="ghost"
-                        :class="[
-                          'justify-start px-3 py-2 text-xs',
-                          selectedSection === 'content' ? 'bg-accent' : ''
-                        ]"
-                        @click="selectSection('content')"
-                      >
-                        Model Content
-                      </Button>
-                      
-                      <!-- Class Methods -->
-                      <div v-if="selectedModel?.class_methods && selectedModel.class_methods.length > 0">
-                        <div class="px-3 py-2 text-xs font-semibold text-muted-foreground">
-                          Class Methods
-                        </div>
-                        <div
-                          v-for="(method, index) in selectedModel.class_methods"
-                          :key="method.name"
-                          class="flex items-center gap-1 group"
-                        >
-                          <Button
-                            variant="ghost"
-                            :class="[
-                              'justify-start px-3 py-1 flex-1 text-xs',
-                              typeof selectedSection === 'object' && 
-                              selectedSection?.type === 'method' && 
-                              selectedSection?.index === index ? 'bg-accent' : ''
-                            ]"
-                            @click="selectSection({ type: 'method', index })"
-                          >
-                            {{ method.name || `Method ${index + 1}` }} {{ method.params ? `(${method.params.join(',')})` : '()' }}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            @click.stop="editMethodName(method)"
-                            class="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
-                          >
-                            <Pencil :size="1" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            @click.stop="handleDeleteMethod(method)"
-                            class="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
-                          >
-                            <Trash2 :size="1" />
-                          </Button>
-                        </div>
+                          </DialogContent>
+                        </Dialog>
                       </div>
-                    </nav>
+
+                      <!-- Content and Methods list Section -->
+                      <nav class="flex flex-col space-y-1">
+                        <Button
+                          variant="ghost"
+                          :class="[
+                            'justify-start px-3 py-2 text-xs',
+                            selectedSection === 'content' ? 'bg-accent' : ''
+                          ]"
+                          @click="selectSection('content')"
+                        >
+                          Model Content
+                        </Button>
+                        
+                        <!-- Class Methods -->
+                        <div v-if="selectedModel?.class_methods && selectedModel.class_methods.length > 0">
+                          <div class="px-3 py-2 text-xs font-semibold text-muted-foreground">
+                            Class Methods
+                          </div>
+                          <div
+                            v-for="(method, index) in selectedModel.class_methods"
+                            :key="method.name"
+                            class="flex items-center gap-1 group"
+                          >
+                            <Button
+                              variant="ghost"
+                              :title="method.name"
+                              :class="[
+                                'justify-start px-3 py-1 flex-1 text-xs truncate min-w-0',
+                                typeof selectedSection === 'object' && 
+                                selectedSection?.type === 'method' && 
+                                selectedSection?.index === index ? 'bg-accent' : ''
+                              ]"
+                              @click="selectSection({ type: 'method', index })"
+                            >
+                              {{ method.name || `Method ${index + 1}` }} {{ method.params ? `(${method.params.join(',')})` : '()' }}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              @click.stop="editMethodName(method)"
+                              class="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                            >
+                              <Pencil :size="1" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              @click.stop="handleDeleteMethod(method)"
+                              class="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
+                            >
+                              <Trash2 :size="1" />
+                            </Button>
+                          </div>
+                        </div>
+                      </nav>
+                    </div>
                   </aside>
               </div>
             </template>

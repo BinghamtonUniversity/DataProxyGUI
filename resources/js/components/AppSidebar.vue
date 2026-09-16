@@ -81,7 +81,7 @@ const mainNavItems = computed(() =>
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" as-child>
+                    <SidebarMenuButton size="lg" class="h-14! group-data-[collapsible=icon]:size-8!" as-child>
                         <Link :href="serverSlug ? `/${serverSlug}/dashboard` : '#'">
                             <AppLogo />
                         </Link>

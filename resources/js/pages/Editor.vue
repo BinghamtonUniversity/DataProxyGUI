@@ -30,6 +30,7 @@ const emit = defineEmits<{
 
 
 let phpWorker: Worker | null = null
+let phpWorkerPromise: Promise<Worker> | null = null
 let requestCounter = 0
 let latestRequestId = 0
 
@@ -37,30 +38,33 @@ let pythonWorker: Worker | null = null
 let pyRequestCounter = 0
 let latestPyRequestId = 0
 
-function getPhpWorker(): Worker {
-  if (!phpWorker) {
-    phpWorker = createPhpWorker()
-    phpWorker.onmessage = (e: MessageEvent) => {
-      // console.log('Received from PHP worker:', e.data)
-      const { requestId, markers } = e.data
-      if (requestId !== latestRequestId) return
-      if (!editor.value) return
-      const model = editor.value.getModel()
-      if (!model) return
-      window.monaco.editor.setModelMarkers(model, 'php-validation', markers)
-      validationErrors.value = markers.filter((m: any) => m.severity === 8).length
-      validationWarnings.value = markers.filter((m: any) => m.severity === 4).length
-      emit('validate', markers)
-    }
-    phpWorker.onerror = (err) => {
-      console.error('PHP validation worker error:', err)
-    }
+async function getPhpWorker(): Promise<Worker> {
+  if (phpWorker) return phpWorker
+  if (!phpWorkerPromise) {
+    phpWorkerPromise = createPhpWorker().then((worker) => {
+      phpWorker = worker
+      worker.onmessage = (e: MessageEvent) => {
+        const { requestId, markers } = e.data
+        if (requestId !== latestRequestId) return
+        if (!editor.value) return
+        const model = editor.value.getModel()
+        if (!model) return
+        window.monaco.editor.setModelMarkers(model, 'php-validation', markers)
+        validationErrors.value = markers.filter((m: any) => m.severity === 8).length
+        validationWarnings.value = markers.filter((m: any) => m.severity === 4).length
+        emit('validate', markers)
+      }
+      worker.onerror = (err) => {
+        console.error('PHP validation worker error:', err)
+      }
+      return worker
+    })
   }
-  return phpWorker
+  return phpWorkerPromise
 }
 
-function validatePhpRemote(code: string) {
-  const worker = getPhpWorker()
+async function validatePhpRemote(code: string) {
+  const worker = await getPhpWorker()
   latestRequestId = ++requestCounter
   worker.postMessage({ code, requestId: latestRequestId })
 }
@@ -143,29 +147,66 @@ watch(() => props.language, (val) => {
 })
 
 // Track changes to show unsaved status
+// watch(code, (newCode) => {
+//   // hasUnsavedChanges.value = newCode !== props.code
+//   // For PHP, ensure prefix is maintained in editor
+//   if (props.language === 'php' && !newCode.trim().startsWith('<?php')) {
+//     // Re-add prefix if it was removed
+//     const prefixedCode = '<?php\n' + newCode
+//     code.value = prefixedCode
+//     // Update editor if mounted
+//     if (editor.value) {
+//       const position = editor.value.getPosition()
+//       editor.value.setValue(prefixedCode)
+//       if (position) {
+//         editor.value.setPosition({
+//           lineNumber: position.lineNumber + 1,
+//           column: position.column
+//         })
+//       }
+//     }
+//     // Emit without prefix
+//     emit('update:code', stripPhpPrefix(prefixedCode))
+//     return
+//   }
+//   // Strip <?php prefix before emitting
+//   emit('update:code', stripPhpPrefix(newCode))
+// })
+
 watch(code, (newCode) => {
-  // hasUnsavedChanges.value = newCode !== props.code
-  // For PHP, ensure prefix is maintained in editor
   if (props.language === 'php' && !newCode.trim().startsWith('<?php')) {
-    // Re-add prefix if it was removed
     const prefixedCode = '<?php\n' + newCode
-    code.value = prefixedCode
-    // Update editor if mounted
+    // code.value = prefixedCode
+
     if (editor.value) {
-      const position = editor.value.getPosition()
-      editor.value.setValue(prefixedCode)
-      if (position) {
-        editor.value.setPosition({
-          lineNumber: position.lineNumber + 1,
-          column: position.column
-        })
+      const model = editor.value.getModel()
+      if (model) {
+        const position = editor.value.getPosition()
+
+        // Insert '<?php\n' at the very start as a tracked, undoable edit
+        model.pushEditOperations(
+          [],
+          [
+            {
+              range: new window.monaco.Range(1, 1, 1, 1),
+              text: '<?php\n',
+            },
+          ],
+          () => null
+        )
+
+        if (position) {
+          editor.value.setPosition({
+            lineNumber: position.lineNumber + 1,
+            column: position.column,
+          })
+        }
       }
     }
-    // Emit without prefix
+
     emit('update:code', stripPhpPrefix(prefixedCode))
     return
   }
-  // Strip <?php prefix before emitting
   emit('update:code', stripPhpPrefix(newCode))
 })
 
