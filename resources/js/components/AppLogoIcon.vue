@@ -17,14 +17,35 @@ const props = withDefaults(defineProps<Props>(), {
     alt: 'BITS Proxy',
 });
 
-const src = computed(() =>
+const lightSrc = computed(() =>
     props.variant === 'full' ? '/images/bits-logo-full.png' : '/images/bits-logo-mark.png',
 );
+
+const darkSrc = computed(() =>
+    props.variant === 'full' ? '/images/bits-logo-full.png' : '/images/bits-logo-mark-dark.png',
+);
+
+const useDarkMark = computed(() => props.variant === 'mark');
 </script>
 
 <template>
+    <template v-if="useDarkMark">
+        <img
+            :src="lightSrc"
+            :alt="alt"
+            :class="[className, 'dark:hidden']"
+            v-bind="$attrs"
+        />
+        <img
+            :src="darkSrc"
+            :alt="alt"
+            :class="[className, 'hidden dark:block']"
+            v-bind="$attrs"
+        />
+    </template>
     <img
-        :src="src"
+        v-else
+        :src="lightSrc"
         :alt="alt"
         :class="className"
         v-bind="$attrs"

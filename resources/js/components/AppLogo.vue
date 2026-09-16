@@ -4,7 +4,7 @@ import AppLogoIcon from '@/components/AppLogoIcon.vue';
 
 <template>
     <div
-        class="flex aspect-square size-12 shrink-0 items-center justify-center overflow-hidden group-data-[collapsible=icon]:size-8"
+        class="flex aspect-square size-12 shrink-0 items-center justify-center overflow-visible group-data-[collapsible=icon]:size-8"
     >
         <AppLogoIcon
             variant="mark"
