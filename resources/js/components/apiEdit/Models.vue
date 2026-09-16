@@ -17,6 +17,12 @@ import {
   DialogFooter,
   DialogClose
 } from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip'
 import { Label } from '@/components/ui/label'
 import Editor from '@/pages/Editor.vue'
 import DataGrid from '@/components/datagrid/DataGrid.vue'
@@ -937,26 +943,35 @@ onUnmounted(() => {
                               :key="item.name"
                               class="flex items-center gap-1 group"
                           >
-                              <Button
-                                  :data-model-name="item.name"
-                                  variant="ghost"
-                                  :class="[
-                                      'justify-start', 
-                                      'px-3', 
-                                      'py-1', 
-                                      'flex-1',
-                                      'text-xs',
-                                      'truncate',
-                                      'min-w-0',
-                                      selectedModel?.name === item.name ? 'bg-accent' : ''
-                                  ]" 
-                                  @click="
-                                    selectedModel = item;
-                                    selectSection('properties');
-                                  "             
-                              >
+                            <TooltipProvider :delay-duration="300">
+                              <Tooltip>
+                                <TooltipTrigger as-child>
+                                  <Button
+                                    :data-model-name="item.name"
+                                    variant="ghost"
+                                    :class="[
+                                        'justify-start', 
+                                        'px-3', 
+                                        'py-1', 
+                                        'flex-1',
+                                        'text-xs',
+                                        'truncate',
+                                        'min-w-0',
+                                        selectedModel?.name === item.name ? 'bg-accent' : ''
+                                    ]" 
+                                    @click="
+                                      selectedModel = item;
+                                      selectSection('properties');
+                                    "             
+                                >
+                                    {{ item.name }}
+                                </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
                                   {{ item.name }}
-                              </Button>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                               <Button
                                   variant="ghost"
                                   size="sm"
