@@ -24,11 +24,9 @@ import AppLogoIcon from '@/components/AppLogoIcon.vue';
             <!-- Hero Section -->
             <div class="max-w-7xl mx-auto px-6 lg:px-8 py-20">
                 <div class="text-center">
-                    <!-- Logo -->
+                    <!-- Logo mark (light/dark) -->
                     <div class="flex justify-center mb-8">
-                        <div class="rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-950">
-                            <AppLogoIcon variant="full" class="h-28 w-auto max-w-[280px] object-contain" />
-                        </div>
+                        <AppLogoIcon variant="mark" class="size-28 object-contain sm:size-32" />
                     </div>
 
                     <!-- Main Heading -->
