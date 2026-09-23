@@ -3,12 +3,12 @@
     <!-- Label -->
     <label v-if="label" :for="fieldId" class="block text-sm font-medium text-gray-900 dark:text-white mb-2" :class="{ 'text-red-500': localError }">
       {{ label }}
-      <span v-if="required" class="text-red-500 ml-1">*</span>
+      <span v-if="required === true || required === 'true'" class="text-red-500 ml-1">*</span>
       <span
         v-if="info"
         class="relative cursor-pointer ml-1"
-        @mouseenter="showInfo = true"
-        @mouseleave="showInfo = false"
+        @mouseenter="showInfo = true || showInfo === 'true'"
+        @mouseleave="showInfo = false || showInfo === 'false'"
       >
         <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 inline" fill="currentColor" viewBox="0 0 20 20">
           <circle cx="10" cy="10" r="9" fill="currentColor"/>
@@ -25,7 +25,7 @@
     </label>
 
     <!-- Input Field -->
-    <div class="flex items-stretch w-full">
+    <div class="flex items-stretch w-full" c>
       <!-- Pre (prefix) -->
       <span 
         v-if="pre"
@@ -126,7 +126,7 @@ const props = defineProps({
   },
   
   // Input properties
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   show:  { type: [Boolean,String,Array], default: true },
   edit:  { type: [Boolean,String,Array], default: true },
   parse:  { type: [Boolean,String,Array], default: true },
@@ -218,13 +218,14 @@ const { handleChange, handleBlur, handleFocus, handleInput } = createEventHandle
 const containerClass = computed(() => getFieldContainerClass(props, props.inFieldset));
 
 const inputClass = computed(() => [
+  'bg-white dark:bg-gray-900',
   'w-full px-3 py-2 text-sm border rounded-md transition-colors duration-200',
-  'bg-white dark:!bg-gray-800 text-gray-900 dark:!text-white',
+  'dark:!bg-gray-800 text-gray-900 dark:!text-white',
   'border-gray-300 dark:!border-gray-600',
   'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
   'placeholder-gray-500 dark:placeholder-gray-400',
   // Disabled states
-  !props.edit ? 'cursor-not-allowed bg-gray-100 dark:!bg-gray-700 text-gray-500 dark:!text-gray-400' : 'hover:border-gray-400 dark:hover:border-gray-500',
+  !props.edit ? 'cursor-not-allowed bg-gray-100 dark:!bg-gray-700 text-gray-500 dark:!text-gray-400 border-gray-200 dark:!border-gray-600 opacity-75' : 'hover:border-gray-400 dark:hover:border-gray-500',
   // Error states
   (localError.value || (props.errors && props.errors.length > 0)) ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : '',
   // Readonly states

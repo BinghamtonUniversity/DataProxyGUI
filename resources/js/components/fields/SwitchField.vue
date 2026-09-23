@@ -46,7 +46,7 @@
            @focus="handleFocus"
          >
            <span
-             class="inline-block h-5 w-5 transform rounded-full bg-white transition-all duration-200 ease-in-out shadow-md border border-gray-200"
+             class="inline-block h-5 w-5 transform rounded-full transition-all duration-200 ease-in-out shadow-md border border-gray-200"
              :class="internalValue ? 'translate-x-6' : 'translate-x-1'"
            ></span>
          </button>
@@ -79,7 +79,7 @@ const props = defineProps({
   fieldId: { type: String, default: () => `field_${Math.random().toString(36).substr(2, 9)}` },
   label: { type: String, default: '' },
   value: { type: [Boolean, String], default: "false" },
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
   edit:  { type: [Boolean,String,Array], default: true },
@@ -100,7 +100,17 @@ const props = defineProps({
 
 const emit = defineEmits(['update:value', 'validation-error', 'validation-success', 'blur', 'focus']);
 
-const internalValue = ref(props.value == props.options[1].value ? true : false);
+const internalValue = ref(
+  (() => {
+    if (props.options && props.options.length >= 2) {
+      const result = (props.value == props.options[1].value);
+      return result;
+    } else {
+      const result = (props.value === true || props.value === 'true');
+      return result;
+    }
+  })()
+);
 const localError = ref('');
 const showInfo = ref(false);
 
@@ -117,8 +127,14 @@ const validate = () => {
 
 const handleToggle = () => {
 
-  internalValue.value = !internalValue.value ? true : false;
-  var updatedValue = internalValue.value ? props.options[1].value : props.options[0].value;
+  internalValue.value = !internalValue.value;
+  let updatedValue;
+    if (props.options && props.options.length >= 2) {
+      updatedValue = internalValue.value ? props.options[1].value : props.options[0].value;
+    } else {
+      // Fallback to boolean values if options are not properly defined
+      updatedValue = internalValue.value;
+    }
   emit('update:value', updatedValue);
   validate();
 };
@@ -142,7 +158,11 @@ const getSwitchLabel = () => {
 };
 
 watch(() => props.value, (newValue) => {
-  internalValue.value = Boolean(newValue);
+  if (props.options && props.options.length >= 2) {
+    internalValue.value = (newValue == props.options[1].value);
+  } else {
+    internalValue.value = (newValue === true || newValue === 'true');
+  }
 }, { immediate: true });
 
 watch(() => props.validate, () => {

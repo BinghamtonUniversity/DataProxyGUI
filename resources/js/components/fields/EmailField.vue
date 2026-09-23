@@ -30,7 +30,7 @@
       <span 
         class="inline-flex items-center justify-center px-3 border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm font-normal rounded-l-md min-w-[44px]"
       >
-        <i class="fa-solid fa-envelope text-base"></i>
+        <FontAwesomeIcon :icon="faEnvelope" class="text-base" />
       </span>
       
       <!-- Main Input -->
@@ -47,7 +47,7 @@
         :autocomplete="autocomplete"
         :autofocus="autofocus"
         :name="name"
-        class="flex-1 min-w-0 py-2 px-3 text-sm border bg-white dark:!bg-gray-800 text-gray-900 dark:!text-white transition-colors duration-200"
+        class="flex-1 min-w-0 py-2 px-3 text-sm border dark:!bg-gray-800 text-gray-900 dark:!text-white transition-colors duration-200"
         :class="[
           // Border classes
           'border-l-0',
@@ -89,6 +89,8 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { validateField } from './validation.js';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
 
 // Props
 const props = defineProps({
@@ -130,7 +132,7 @@ const props = defineProps({
   show:  { type: [Boolean,String,Array], default: true },
   edit:  { type: [Boolean,String,Array], default: true },
   parse:  { type: [Boolean,String,Array], default: true },
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   
   // Validation
   limit: {
@@ -239,6 +241,14 @@ onMounted(() => {
     }
   }
 });
+</script>
+
+<script>
+export default {
+  components: {
+    FontAwesomeIcon
+  }
+}
 </script>
 
 <style scoped>

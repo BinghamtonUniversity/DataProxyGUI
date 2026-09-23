@@ -69,31 +69,32 @@ function getValidValuesFromOptions(options) {
 // Built-in validation rules
 const rules = {
   required: (value, config) => {
-    if (config.required && (value === undefined || value === null || value === '')) {
+
+    if (config &&  config.required && (value === undefined || value === null || value === '')) {
       return 'This field is required.';
     }
     return null;
   },
   minLength: (value, config) => {
-    if (config.minLength && value && value.length < config.minLength) {
+    if (config && config.minLength && value && value.length < config.minLength) {
       return `Minimum length is ${config.minLength}.`;
     }
     return null;
   },
   maxLength: (value, config) => {
-    if (config.maxLength && value && value.length > config.maxLength) {
+    if (config && config.maxLength && value && value.length > config.maxLength) {
       return `Maximum length is ${config.maxLength}.`;
     }
     return null;
   },
   pattern: (value, config) => {
-    if (config.pattern && value && !(new RegExp(config.pattern).test(value))) {
+    if (config && config.pattern && value && !(new RegExp(config.pattern).test(value))) {
       return 'Invalid format.';
     }
     return null;
   },
   email: (value, config) => {
-    if (config.type === 'email') {
+    if (config && config.type === 'email') {
       if (config.required && (!value || value.trim() === '')) {
         return 'Email address is required.';
       }
@@ -104,7 +105,7 @@ const rules = {
     return null;
   },
   phone: (value, config) => {
-    if (config.type === 'tel') {
+    if (config && config.type === 'tel') {
       if (config.required && (!value || value.trim() === '')) {
         return 'Phone number is required.';
       }
@@ -115,7 +116,7 @@ const rules = {
     return null;
   },
   url: (value, config) => {
-    if (config.type === 'url') {
+    if (config && config.type === 'url') {
       if (config.required && (!value || value.trim() === '')) {
         return 'URL is required.';
       }
@@ -130,7 +131,7 @@ const rules = {
     return null;
   },
   number: (value, config) => {
-    if (config.type === 'number') {
+    if (config && config.type === 'number') {
       if (config.required && (value === undefined || value === null || value === '')) {
         return 'Number is required.';
       }
@@ -154,7 +155,7 @@ const rules = {
     return null;
   },
   currency: (value, config) => {
-    if (config.type === 'currency') {
+    if (config && config.type === 'currency') {
       if (config.required && (value === undefined || value === null || value === '')) {
         return 'Amount is required.';
       }
@@ -189,7 +190,7 @@ const rules = {
     return null;
   },
   color: (value, config) => {
-    if (config.type === 'color') {
+    if (config && config.type === 'color') {
       if (config.required && (value === undefined || value === null || value === '')) {
         return 'Color is required.';
       }
@@ -203,7 +204,7 @@ const rules = {
     return null;
   },
   hidden: (value, config) => {
-    if (config.type === 'hidden') {
+    if (config && config.type === 'hidden') {
       if (config.required && (value === undefined || value === null || value === '')) {
         return 'Hidden field is required.';
       }
@@ -213,9 +214,11 @@ const rules = {
     return null;
   },
   select: (value, config) => {
-    if (config.type === 'select') {
+    if (config && config.type === 'select') {
+      const isMultiple = config.multiple === true || config.multiple === 'true';
+
       if (config.required) {
-        if (config.multiple) {
+        if (isMultiple) {
           // For multiple selection, check if array is empty
           if (!Array.isArray(value) || value.length === 0) {
             return 'Please select at least one option.';
@@ -229,7 +232,7 @@ const rules = {
       }
       
       // Validate that selected values exist in options (including optgroups)
-      if (value && config.options && config.options.length > 0) {
+      if (value !== undefined && value !== null && value !== '' && config.options && config.options.length > 0) {
         // Extract all valid values from options and optgroups
         const validValues = [];
         
@@ -238,9 +241,9 @@ const rules = {
             // Handle optgroup format with existing options
             for (const subOption of option.options) {
               if (typeof subOption === 'string' || typeof subOption === 'boolean' || typeof subOption === 'number') {
-                validValues.push(subOption);
+                validValues.push(subOption.toString());
               } else if (subOption && subOption.value !== undefined) {
-                validValues.push(subOption.value);
+                validValues.push(subOption.value.toString());
               }
             }
           } else if (option.type === 'optgroup' && (option.min !== undefined || option.max !== undefined)) {
@@ -252,21 +255,21 @@ const rules = {
             }
           } else if (typeof option === 'string' || typeof option === 'boolean'  || typeof option === 'number') {
             // Handle string options
-            validValues.push(option);
+            validValues.push(option.toString());
           } else if (option && option.value !== undefined) {
             // Handle object options
-            validValues.push(option.value);
+            validValues.push(option.value.toString());
           }
         }
-        
         // Validate selected values exist in options
-        if (config.multiple && Array.isArray(value)) {
+        if (isMultiple && Array.isArray(value)) {
           for (const selectedValue of value) {
-            if (!validValues.includes(selectedValue)) {
-              return 'Invalid option selected.';
+            if (!validValues.includes(selectedValue.toString())) {
+              return 'Invalid option value selected.';
             }
           }
-        } else if (!config.multiple && !validValues.includes(value)) {
+        }
+        else if (!isMultiple && !validValues.includes(value.toString())) {
           return 'Invalid option selected.';
         }
       }
@@ -274,7 +277,7 @@ const rules = {
     return null;
   },
   date: (value, config) => {
-    if (config.type === 'date') {
+    if (config && config.type === 'date') {
       if (config.required && (!value || value.trim() === '')) {
         return 'Date is required.';
       }
@@ -330,29 +333,45 @@ const rules = {
     return null;
   },
   combobox: (value, config) => {
-    if (config.type === 'combobox') {
-      if (config.required && (!value || value.trim() === '')) {
-        return 'This field is required.';
+    if (config && config.type === 'combobox') {
+      const isMultiple = config.multiple === true || config.multiple === 'true';
+
+      if (config.required) {
+        if (isMultiple) {
+          if (!Array.isArray(value) || value.length === 0) {
+            return 'Please select at least one option.';
+          }
+        } else if (value === undefined || value === null || value === '') {
+          return 'This field is required.';
+        }
       }
       
       // If custom values are not allowed, check if value is in options
-      if (!config.allowCustom && value && value.trim() !== '') {
+      if (!config.allowCustom && value !== undefined && value !== null && value !== '') {
         const validValues = getValidValuesFromOptions(config.options);
-        if (validValues.length > 0 && !validValues.includes(value)) {
-          return 'Please select a valid option from the list.';
+        if (validValues.length > 0) {
+          if (isMultiple && Array.isArray(value)) {
+            for (const selectedValue of value) {
+              if (!validValues.includes(selectedValue) && !validValues.includes(String(selectedValue))) {
+                return 'Please select a valid option from the list.';
+              }
+            }
+          } else if (!isMultiple && !validValues.includes(value) && !validValues.includes(String(value))) {
+            return 'Please select a valid option from the list.';
+          }
         }
       }
     }
     return null;
   },
   custom: (value, config) => {
-    if (typeof config.customValidation === 'function') {
+    if (config && typeof config.customValidation === 'function') {
       return config.customValidation(value, config);
     }
     return null;
   },
   range: (value, config) => {
-    if (config.type === 'range') {
+    if (config && config.type === 'range') {
       if (config.required && (value === undefined || value === null || value === '')) {
         return 'This field is required.';
       }
@@ -375,7 +394,7 @@ const rules = {
     return null;
   },
   checkbox: (value, config) => {
-    if (config.type === 'checkbox') {
+    if (config && config.type === 'checkbox') {
 
       if (config.required && (value === undefined || value === null || value  == false ) ) {
         return 'This checkbox is required.';
@@ -384,7 +403,7 @@ const rules = {
     return null;
   },
   switch: (value, config) => {
-    if (config.type === 'switch') {
+    if (config && config.type === 'switch') {
       if (config.required && (value === undefined || value === null ) && value !== config.options?.[1]?.value) {
         return 'This switch is required.';
       }
@@ -396,7 +415,7 @@ const rules = {
 // Custom validation rules from config.validate
 function runCustomValidations(value, config, matchValues = {}) {
   const errors = [];
-  if (Array.isArray(config.validate)) {
+  if (config && Array.isArray(config.validate)) {
     for (const rule of config.validate) {
       if (!rule.conditions) continue;
       switch (rule.type) {
@@ -455,15 +474,220 @@ function runCustomValidations(value, config, matchValues = {}) {
   return errors;
 }
 
+// Check if a fieldset item is empty (all fields are empty/undefined)
+function isFieldsetEmpty(value, fields) {
+  if (!value || typeof value !== 'object') return true;
+  if (!fields || !Array.isArray(fields)) return false;
+  
+  // Check if all fields are empty
+  return fields.every(field => {
+    if (!field || !field.name) return true;
+    const fieldValue = value[field.name];
+    // Consider field empty if undefined, null, empty string, or empty array
+    return fieldValue === undefined || 
+           fieldValue === null || 
+           fieldValue === '' || 
+           (Array.isArray(fieldValue) && fieldValue.length === 0);
+  });
+}
+
+// Recursively validate nested fields in a fieldset
+function validateFieldset(value, config, matchValues = {}) {
+  const errors = [];
+  
+  // If fieldset is required but value is empty
+  if (config.required) {
+    if (!value || (typeof value === 'object' && Object.keys(value).length === 0)) {
+      errors.push('This section is required.');
+      return errors; // Return early if required fieldset is empty
+    }
+  }
+  
+  // Validate nested fields if fieldset has fields array
+  if (config.fields && Array.isArray(config.fields) && value && typeof value === 'object') {
+    config.fields.forEach(field => {
+      if (field && field.name) {
+        const fieldValue = value[field.name];
+        const fieldConfig = {
+          type: field.type || 'text',
+          minLength: field.minLength,
+          maxLength: field.maxLength,
+          pattern: field.pattern,
+          min: field.min,
+          max: field.max,
+          ...field,
+          // Explicitly set required after spread to ensure correct value
+          // Convert string "false" to boolean false, undefined to false
+          required: (() => {
+            if (field.required === undefined) return false;
+            if (typeof field.required === 'boolean') return field.required;
+            if (field.required === 'true' || field.required === true) return true;
+            if (field.required === 'false' || field.required === false) return false;
+            // For conditional logic (string 'conditional' or arrays), pass through as-is
+            return field.required;
+          })()
+        };
+        
+        // Validate the nested field
+        const fieldErrors = validateField(fieldValue, fieldConfig, value);
+        if (fieldErrors.length > 0) {
+          // Prefix error with field name for clarity
+          fieldErrors.forEach(error => {
+            errors.push(`${field.label || field.name}: ${error}`);
+          });
+        }
+      }
+    });
+  }
+  
+  return errors;
+}
+
+// Validate array fields (arrays of simple values or arrays of fieldsets)
+function validateArray(value, config, matchValues = {}) {
+
+  
+  const errors = [];
+  
+  // If value is not an array, check if it's required
+  if (!Array.isArray(value)) {
+    if (config.required && (value === undefined || value === null || value === '')) {
+      errors.push('This field is required.');
+    }
+    // If not required or value is not empty, return no errors (it's optional)
+    return errors;
+  }
+  
+  // Check min/max array length
+  const arrayConfig = config.array || {};
+  const minItems = arrayConfig.min;
+  const maxItems = arrayConfig.max;
+  
+  // Check array length constraints
+  if (maxItems !== undefined && value.length > maxItems) {
+    errors.push(`Maximum ${maxItems} item(s) allowed.`);
+  }
+  
+  // If array is required and empty
+  if (config.required && value.length === 0) {
+    errors.push('At least one item is required.');
+    return errors; // Return early if required array is empty
+  }
+  
+  // Validate each item in the array
+  // Track if we have at least one non-empty item (for minItems requirement)
+  let hasNonEmptyItem = false;
+  let nonEmptyItemCount = 0;
+  
+  value.forEach((item, index) => {
+    if (config.fields && Array.isArray(config.fields)) {
+      // Array of fieldsets - check if item is empty first
+      const isEmpty = isFieldsetEmpty(item, config.fields);
+      
+      if (!isEmpty) {
+        hasNonEmptyItem = true;
+        nonEmptyItemCount++;
+        // Only validate non-empty items
+        // Don't pass the array's required flag to individual fieldset items
+        const fieldsetConfig = { 
+          ...config, 
+          fields: config.fields,
+          required: false, // Individual items in an array are not required (the array itself is)
+          type: 'fieldset'
+        };
+        const fieldsetErrors = validateFieldset(item, fieldsetConfig, matchValues);
+        if (fieldsetErrors.length > 0) {
+          fieldsetErrors.forEach(error => {
+            errors.push(`Item ${index + 1}: ${error}`);
+          });
+        }
+      }
+      // Skip validation for empty items - they're allowed as placeholders
+    } else {
+      // Array of simple values - check if item has data first
+      const isEmpty = item === undefined || item === null || item === '' || 
+                      (Array.isArray(item) && item.length === 0);
+      
+      if (!isEmpty) {
+        hasNonEmptyItem = true;
+        nonEmptyItemCount++;
+      }
+      
+      // Validate each item (even empty ones for format validation)
+      // Don't pass the array's required flag to individual items
+      const itemConfig = {
+        type: config.type || 'text',
+        required: false, // Individual items in an array are not required (the array itself is)
+        minLength: config.minLength,
+        maxLength: config.maxLength,
+        pattern: config.pattern,
+        min: config.min,
+        max: config.max,
+        ...config
+      };
+      // Remove the array-specific config from item validation
+      delete itemConfig.array;
+      delete itemConfig.required; // Already set to false above
+      const itemErrors = validateField(item, itemConfig, matchValues);
+      if (itemErrors.length > 0) {
+        itemErrors.forEach(error => {
+          errors.push(`Item ${index + 1}: ${error}`);
+        });
+      }
+    }
+  });
+  
+  // Check minItems requirement - need at least minItems non-empty items
+  if (minItems !== undefined && minItems > 0) {
+    if (nonEmptyItemCount < minItems) {
+      if (nonEmptyItemCount === 0 && value.length > 0) {
+        // We have items but they're all empty
+        errors.push(`At least ${minItems} item(s) with data are required.`);
+      } else {
+        // We don't have enough non-empty items
+        errors.push(`At least ${minItems} item(s) with data are required.`);
+      }
+    }
+  }
+  return errors;
+}
+
 // Main validation function
 export function validateField(value, config, matchValues = {}) {
   const errors = [];
+  
+  // Handle array validation FIRST (for fieldsets with array attribute or regular arrays)
+  // A fieldset with array attribute should be treated as an array, not a fieldset
+  if (config.array || (config.type === 'fieldset' && config.array)) {
+    const arrayErrors = validateArray(value, config, matchValues);
+    errors.push(...arrayErrors);
+    // Return early for arrays - don't run other rules
+    return errors;
+  }
+  
+  // Handle regular fieldset validation (fieldset without array attribute)
+  if (config.type === 'fieldset') {
+    const fieldsetErrors = validateFieldset(value, config, matchValues);
+    errors.push(...fieldsetErrors);
+    // Don't run other rules for fieldsets, as we've handled it above
+    return errors;
+  }
+  
+  // Handle array validation for non-fieldset types
+  if (Array.isArray(value) && config.type && config.type !== 'fieldset') {
+    const arrayErrors = validateArray(value, config, matchValues);
+    errors.push(...arrayErrors);
+    // Continue with other validations for array items if needed
+  }
+  
   // Built-in rules
   for (const ruleName in rules) {
     const error = rules[ruleName](value, config);
     if (error) errors.push(error);
   }
+  
   // Custom rules
   errors.push(...runCustomValidations(value, config, matchValues));
+
   return errors;
 } 

@@ -39,11 +39,22 @@
           :class="getFieldLayoutClasses(field)"
           class="field-item"
         >
+          <!-- ArrayField for fields with array attribute -->
+          <ArrayField
+            v-if="field.array"
+            :field="field"
+            :value="internalValue[field.name] || []"
+            :disabled="disabled || field.disabled"
+            :edit="edit && shouldEditField(field, combinedData)"
+            @update:value="(value) => handleChildFieldChange(field.name, value)"
+            @validation-error="(data) => handleChildValidationError(field.name, data)"
+            @validation-success="(data) => handleChildValidationSuccess(field.name, data)"
+          />
+          <!-- Regular field component -->
           <component
-            v-if="getFieldComponent(field.type, field)"
+            v-else-if="getFieldComponent(field.type, field)"
             :is="getFieldComponent(field.type, field)"
             v-bind="field.type === 'output' ? { field } : 
-                   (field.type === 'fieldset' && field.array) ? { field } :
                    field.type === 'fieldset' ? {
                      ...field,
                      show: shouldShowField(field, combinedData),
@@ -51,13 +62,20 @@
                      formData: combinedData
                    } : {
                      ...field,
-                     required: typeof field.required === 'boolean' ? field.required : true,
+                     required: (() => {
+                       if (field.required === undefined) return false;
+                       if (typeof field.required === 'boolean') return field.required;
+                       if (field.required === 'true' || field.required === true) return true;
+                       if (field.required === 'false' || field.required === false) return false;
+                       // For conditional logic (string 'conditional' or arrays), pass through as-is
+                       return field.required;
+                     })(),
                      disabled: typeof field.disabled === 'boolean' ? field.disabled : false,
                      show: shouldShowField(field, combinedData),
                      edit: shouldEditField(field, combinedData),
                      inFieldset: true
                    }"
-            :value="field.array ? (internalValue[field.name] || []) : (internalValue[field.name] || field.value || '')"
+            :value="internalValue[field.name] || field.value || ''"
             :disabled="disabled || field.disabled"
             :edit="edit && shouldEditField(field, formData)"
             @update:value="(value) => handleChildFieldChange(field.name, value)"
@@ -112,7 +130,7 @@ const props = defineProps({
   fieldId: { type: String, default: () => `fieldset_${Math.random().toString(36).substr(2, 9)}` },
   label: { type: String, default: '' },
   value: { type: [Object, Array], default: () => ({}) },
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
   edit:  { type: [Boolean,String,Array], default: true },
@@ -169,6 +187,7 @@ const getFieldComponent = (fieldType, field = null) => {
     case 'switch': return SwitchField;
     case 'output': return OutputField;
     case 'fieldset': return FieldsetField;
+    case 'array': return ArrayField;
     default: return null;
   }
 };
@@ -283,7 +302,8 @@ onMounted(() => {
   padding: 0 !important;
   margin: 0 !important;
   box-shadow: none !important;
-  outline: none !important;
+  outline: none !important; 
+
 }
 
 /* Fieldset specific styles */
@@ -307,6 +327,11 @@ onMounted(() => {
 
 .fieldset-content {
   margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(114, 114, 114);
+  padding: 1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
 /* Ensure proper spacing between field items */

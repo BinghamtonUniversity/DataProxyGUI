@@ -7,34 +7,64 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
 import { install as VueMonacoEditorPlugin, loader } from '@guolao/vue-monaco-editor';
+import { FontAwesomeIcon } from './lib/fontawesome';
+import Toaster from './components/toaster/Toaster.vue';
+const appName = import.meta.env.VITE_APP_NAME || 'BITS Proxy';
+const isDev = import.meta.env.DEV;
 
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
-// loader.config({
-//   paths: {
-//     vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs'
-//   }
-// });
+// Wrap Monaco initialization in async function
+async function initializeMonaco() {
+    if (isDev) {
+        // Development: Use CDN to avoid CORS/rebuild issues
+        loader.config({
+            paths: {
+                vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs'
+            }
+        });
+    } else {
+        // Production: Use npm package with local workers
+        const monaco = await import('monaco-editor');
+        const editorWorker = await import('monaco-editor/esm/vs/editor/editor.worker?worker');
+        const jsonWorker = await import('monaco-editor/esm/vs/language/json/json.worker?worker');
 
-createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
-    resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
-    setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
-            .use(plugin)
-            .use(ZiggyVue)
-            .use(VueMonacoEditorPlugin, {
-                paths: {
-                    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs'
+        self.MonacoEnvironment = {
+            getWorker(_, label) {
+                if (label === "json") {
+                    return new jsonWorker.default();
                 }
-                })
-            .mount(el);
-    },
-    progress: {
-        color: '#4B5563',
-    },
-});
+                return new editorWorker.default();
+            }
+        };
 
-// This will set light / dark mode on page load...
-initializeTheme();
+        loader.config({ monaco: monaco.default });
+    }
+}
+
+// Initialize Monaco and then create the app
+initializeMonaco().then(() => {
+    createInertiaApp({
+        title: (title) => (title ? `${title} - ${appName}` : appName),
+        resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
+        setup({ el, App, props, plugin }) {
+            const app = createApp({ render: () => h(App, props) })
+                .use(plugin)
+                .use(ZiggyVue)
+                .use(VueMonacoEditorPlugin)
+                .component('font-awesome-icon', FontAwesomeIcon)
+                // .component('Toaster', Toaster)
+                .mount(el);
+            
+            // Add role to the app container for accessibility
+            if (el && !el.getAttribute('role')) {
+                el.setAttribute('role', 'application');
+            }
+        },
+        progress: {
+            color: '#4B5563',
+        },
+    });
+
+    initializeTheme();
+});

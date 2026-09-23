@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { type NavItem, ApiData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
+import { getCsrfToken } from '@/lib/utils';
 
 // Getting it from web.php parameter
 interface Props {
@@ -48,14 +49,22 @@ const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.locati
 const apiData = ref<ApiData | null>(null)
 const loadingApiData = ref(true)
 const apiError = ref('')
-const djangoBaseUrl = import.meta.env.VITE_DJANGO_BASEURL
+const apiBaseUrl = '/api'
 
 
 const fetchApiData = async () => {
     loadingApiData.value = true
     apiError.value = ''
     try {
-        const response = await fetch(`${djangoBaseUrl}/api/apis/${props.api_id}/versions/latest`)
+        const response = await fetch(`${apiBaseUrl}/apis/${props.api_id}/versions/latest`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin'
+        })
         if (!response.ok) throw new Error('Failed to fetch API data')
         apiData.value = await response.json()
     } catch (e: any) {
@@ -66,13 +75,21 @@ const fetchApiData = async () => {
     }
 }
 
+const updateApiData = (updatedApiData: ApiData) => {
+    apiData.value = updatedApiData
+}
+
+const refreshApiData = () => {
+    fetchApiData()
+}
+
 onMounted(fetchApiData)
 
 </script>
 
 <template>
     <div class="px-4 py-6">
-        <Heading title="API" description="Manage your API settings" />
+        <Heading :title="`API - ${props.api_id}`" description="Manage your API settings" />
 
         <div class="flex flex-col space-y-8">
         <!-- Tab navigation at the top -->
@@ -99,11 +116,11 @@ onMounted(fetchApiData)
                     :apiData="apiData"
                     :loadingApiData="loadingApiData"
                     :apiError="apiError"
+                    :updateApiData="updateApiData"
+                    :refreshApiData="refreshApiData"
                 />
             </section>
         </div>
     </div>
-
-        
     </div>
 </template>

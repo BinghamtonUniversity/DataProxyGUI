@@ -24,52 +24,103 @@
       </span>
     </label>
 
-    <!-- Input Field -->
-    <div v-if="!inFieldset" class="flex items-stretch w-full">
-      <!-- Pre (icon) -->
-      <span 
-        class="inline-flex items-center justify-center px-3 border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm font-normal rounded-l-md min-w-[44px]"
+    <!-- Multiple: custom dropdown (Combobox-like) -->
+    <div v-if="isMultiple" ref="containerRef" class="relative w-full">
+      <button
+        :id="fieldId"
+        type="button"
+        class="w-full py-2 px-3 pr-10 text-sm text-left border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+        :class="[
+          !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 opacity-75' : 'hover:border-gray-400 dark:hover:border-gray-500',
+          localError || (props.errors && props.errors.length > 0) ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : ''
+        ]"
+        :disabled="!edit"
+        :autofocus="autofocus"
+        @mousedown.prevent="toggleDropdown"
+        @keydown="handleMultiKeydown"
+        @blur="handleMultiBlur"
+        @focus="handleFocus"
       >
-        <i class="fa-solid fa-chevron-down text-base"></i>
-      </span>
-      
-      <!-- Main Select -->
+        <span :class="multiTriggerLabelClass">{{ multiTriggerLabel }}</span>
+        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 pointer-events-none">
+          <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': isOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </span>
+      </button>
+
+      <div
+        v-if="isOpen"
+        class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+      >
+        <template v-for="(option, idx) in processedOptions" :key="option.value || option.group || idx">
+          <div
+            v-if="option.group && option.group.trim() !== ''"
+            class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600"
+          >
+            {{ option.group }}
+          </div>
+
+          <template v-if="option.group !== undefined">
+            <div
+              v-for="(subOption, subIdx) in option.options"
+              :key="subOption.value || subOption.label || subIdx"
+              class="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white flex items-center justify-between gap-2"
+              :class="{
+                'bg-blue-50 dark:bg-blue-900/20': isOptionSelected(subOption.value || subOption.label),
+                'opacity-50 cursor-not-allowed': subOption.disabled || !edit
+              }"
+              @mousedown.prevent="!subOption.disabled && edit && toggleOption(subOption.value || subOption.label)"
+            >
+              <span>{{ subOption.label }}</span>
+              <span v-if="isOptionSelected(subOption.value || subOption.label)" class="text-blue-600 dark:text-blue-400 text-xs">✓</span>
+            </div>
+          </template>
+
+          <div
+            v-else
+            class="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white flex items-center justify-between gap-2"
+            :class="{
+              'bg-blue-50 dark:bg-blue-900/20': isOptionSelected(option.value),
+              'opacity-50 cursor-not-allowed': option.disabled || !edit
+            }"
+            @mousedown.prevent="!option.disabled && edit && toggleOption(option.value)"
+          >
+            <span>{{ option.label }}</span>
+            <span v-if="isOptionSelected(option.value)" class="text-blue-600 dark:text-blue-400 text-xs">✓</span>
+          </div>
+        </template>
+
+        <div v-if="processedOptions.length === 0" class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+          No options available.
+        </div>
+      </div>
+    </div>
+
+    <!-- Single: native select (non-fieldset) -->
+    <div v-else-if="!inFieldset" class="flex items-stretch w-full">
       <select
         :id="fieldId"
         v-model="internalValue"
         :required="required"
         :disabled="!edit"
-        :multiple="multiple"
-        :size="multiple ? (size || 4) : undefined"
         :autocomplete="autocomplete"
         :autofocus="autofocus"
         :name="name"
-        class="flex-1 min-w-0 py-2 px-3 text-sm border bg-white dark:!bg-gray-800 text-gray-900 dark:!text-white transition-colors duration-200"
+        class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md"
         :class="[
-          // Border classes
-          'border-l-0',
-          'border-t border-b border-gray-300 dark:!border-gray-600',
-          // Border radius classes
-          'rounded-r-md',
-          // Focus states
           'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
-          // Disabled states
-          !edit ? 'cursor-not-allowed bg-gray-100 dark:!bg-gray-700 text-gray-500 dark:!text-gray-400' : 'hover:border-gray-400 dark:hover:border-gray-500',
-          // Error states
-          (localError || (props.errors && props.errors.length > 0)) ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : '',
-          // Readonly states
-          !edit ? 'bg-gray-100 dark:!bg-gray-700' : ''
+          !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 opacity-75' : 'hover:border-gray-400 dark:hover:border-gray-500',
+          localError ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : ''
         ]"
         @change="handleChange"
         @blur="handleBlur"
         @focus="handleFocus"
       >
-        <!-- Placeholder option -->
-        <option v-if="!multiple && placeholder" value="" disabled class="text-gray-500">
+        <option v-if="shouldShowPlaceholder" value="" disabled class="text-gray-500">
           {{ placeholder }}
         </option>
-        
-        <!-- Option groups -->
+
         <template v-for="option in processedOptions" :key="option.value || option.group">
           <optgroup v-if="option.group && option.group.trim() !== ''" :label="option.group">
             <option
@@ -77,31 +128,26 @@
               :key="subOption.value || subOption.label"
               :value="subOption.value || subOption.label"
               :disabled="subOption.disabled"
-              :selected="isOptionSelected(subOption.value || subOption.label)"
             >
               {{ subOption.label }}
             </option>
           </optgroup>
-          
-          <!-- Options from optgroup with empty label - render directly -->
+
           <template v-else-if="option.group !== undefined && option.group.trim() === ''">
             <option
               v-for="subOption in option.options"
               :key="subOption.value || subOption.label"
               :value="subOption.value || subOption.label"
               :disabled="subOption.disabled"
-              :selected="isOptionSelected(subOption.value || subOption.label)"
             >
               {{ subOption.label }}
             </option>
           </template>
-          
-          <!-- Regular options -->
+
           <option
             v-else
             :value="option.value"
             :disabled="option.disabled"
-            :selected="isOptionSelected(option.value)"
           >
             {{ option.label }}
           </option>
@@ -109,37 +155,30 @@
       </select>
     </div>
 
-    <!-- Plain Select for Fieldset -->
+    <!-- Single: native select (fieldset) -->
     <select
       v-else
       :id="fieldId"
       v-model="internalValue"
       :required="required"
       :disabled="!edit"
-      :multiple="multiple"
-      :size="multiple ? (size || 4) : undefined"
       :autocomplete="autocomplete"
       :autofocus="autofocus"
       :name="name"
-      class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md"
+      class="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 rounded-md"
       :class="[
-        // Focus states
         'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
-        // Disabled states
-        !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : 'hover:border-gray-400 dark:hover:border-gray-500',
-        // Error states
+        !edit ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 opacity-75' : 'hover:border-gray-400 dark:hover:border-gray-500',
         localError ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : ''
       ]"
       @change="handleChange"
       @blur="handleBlur"
       @focus="handleFocus"
     >
-      <!-- Placeholder option -->
-      <option v-if="!multiple && placeholder" value="" disabled class="text-gray-500">
+      <option v-if="shouldShowPlaceholder" value="" disabled class="text-gray-500">
         {{ placeholder }}
       </option>
-      
-      <!-- Option groups -->
+
       <template v-for="option in processedOptions" :key="option.value || option.group">
         <optgroup v-if="option.group && option.group.trim() !== ''" :label="option.group">
           <option
@@ -147,32 +186,27 @@
             :key="subOption.value || subOption.label"
             :value="subOption.value || subOption.label"
             :disabled="subOption.disabled"
-            :selected="isOptionSelected(subOption.value || subOption.label)"
           >
             {{ subOption.label }}
           </option>
         </optgroup>
-        
-        <!-- Options from optgroup with empty label - render directly -->
+
         <template v-else-if="option.group !== undefined && option.group.trim() === ''">
           <option
             v-for="subOption in option.options"
             :key="subOption.value || subOption.label"
             :value="subOption.value || subOption.label"
             :disabled="subOption.disabled"
-            :selected="isOptionSelected(subOption.value || subOption.label)"
           >
             {{ subOption.label }}
           </option>
         </template>
-        
-        <!-- Regular options -->
+
         <option
           v-else
           :key="option.value"
           :value="option.value"
           :disabled="option.disabled"
-          :selected="isOptionSelected(option.value)"
         >
           {{ option.label }}
         </option>
@@ -188,7 +222,7 @@
     </div>
     
     <!-- Selected Values Display (for multiple selection) -->
-    <div v-if="multiple && internalValue && internalValue.length > 0" class="mt-2">
+    <div v-if="isMultiple && Array.isArray(internalValue) && internalValue.length > 0" class="mt-2">
       <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Selected:</div>
       <div v-if="showColumn" class="grid grid-cols-1 gap-1">
         <span
@@ -201,8 +235,9 @@
             @click="removeValue(value)"
             class="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
             type="button"
+            :disabled="!edit"
           >
-            <i class="fa-solid fa-times text-xs"></i>
+            <FontAwesomeIcon :icon="faTimes" class="text-xs" />
           </button>
         </span>
       </div>
@@ -217,8 +252,9 @@
             @click="removeValue(value)"
             class="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
             type="button"
+            :disabled="!edit"
           >
-            <i class="fa-solid fa-times text-xs"></i>
+            <FontAwesomeIcon :icon="faTimes" class="text-xs" />
           </button>
         </span>
       </div>
@@ -229,10 +265,11 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { validateField } from './validation.js';
+import { isMultipleFlag } from './functions.js';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faTimes } from '@fortawesome/free-solid-svg-icons';
 
-// Props
 const props = defineProps({
-  // Field identification
   name: {
     type: String,
     required: true
@@ -253,7 +290,7 @@ const props = defineProps({
     type: String,
     default: 'Select an option...'
   },
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   disabled: {
     type: Boolean,
     default: false
@@ -290,7 +327,7 @@ const props = defineProps({
     default: () => []
   },
   multiple: {
-    type: Boolean,
+    type: [Boolean, String],
     default: false
   },
   size: {
@@ -311,24 +348,47 @@ const props = defineProps({
   }
 });
 
-// Emits
 const emit = defineEmits(['update:value', 'validation-error', 'validation-success', 'blur', 'focus']);
 
-// Reactive state
-const internalValue = ref(props.multiple ? (props.value || []) : (props.value || ''));
+const isMultiple = computed(() => isMultipleFlag(props.multiple));
+
+const internalValue = ref(
+  isMultiple.value
+    ? (Array.isArray(props.value) ? [...props.value] : [])
+    : (props.value || '')
+);
 const localError = ref('');
 const showInfo = ref(false);
+const isOpen = ref(false);
+const containerRef = ref(null);
+const blurTimeout = ref(null);
 
-// Computed properties
-const isDisabled = computed(() => {
-  return props.disabled || !props.edit;
+const shouldShowPlaceholder = computed(() => {
+  return !isMultiple.value && 
+         props.placeholder && 
+         (internalValue.value === undefined || internalValue.value === null || internalValue.value === '');
 });
+
+const multiTriggerLabel = computed(() => {
+  if (!Array.isArray(internalValue.value) || internalValue.value.length === 0) {
+    return props.placeholder || 'Select options...';
+  }
+  if (internalValue.value.length === 1) {
+    return getOptionLabel(internalValue.value[0]);
+  }
+  return `${internalValue.value.length} selected`;
+});
+
+const multiTriggerLabelClass = computed(() => {
+  const empty = !Array.isArray(internalValue.value) || internalValue.value.length === 0;
+  return empty ? 'text-gray-500 dark:text-gray-400' : '';
+});
+
+const valuesEqual = (a, b) => String(a) === String(b);
 
 const processedOptions = computed(() => {
   return props.options.map(option => {
-    // Handle optgroup format
     if (option.type === 'optgroup') {
-      // If optgroup has min/max but no options, generate numeric options
       if ((option.min !== undefined || option.max !== undefined) && (!option.options || option.options.length === 0)) {
         const min = option.min || 0;
         const max = option.max || 10;
@@ -349,7 +409,6 @@ const processedOptions = computed(() => {
         };
       }
       
-      // Regular optgroup with options
       return {
         group: option.label || option.group || '',
         options: option.options || [],
@@ -358,20 +417,16 @@ const processedOptions = computed(() => {
       };
     }
 
-    // Handle string options
     if (typeof option === 'string') {
       return { label: option, value: option };
     } 
 
-    // Handle boolean options
     if (typeof option === 'boolean') {
       return { label: option ? 'true' : 'false', value: option ? true : false };
     }
-    // Handle number options
     if (typeof option === 'number') {
       return { label: option.toString(), value: option.toString() };
     }
-    // Handle object options
     if (typeof option === 'object') {
       return option;
     }
@@ -380,16 +435,22 @@ const processedOptions = computed(() => {
   });
 });
 
-// Methods
+const clearBlurTimeout = () => {
+  if (blurTimeout.value) {
+    clearTimeout(blurTimeout.value);
+    blurTimeout.value = null;
+  }
+};
+
 const validate = () => {
   const errors = validateField(internalValue.value, {
     ...props,
-    type: 'select'
+    type: 'select',
+    multiple: isMultiple.value
   });
 
   localError.value = errors[0] || '';
 
-  // Emit validation events
   if (errors.length > 0) {
     emit('validation-error', {
       field: props.name,
@@ -407,28 +468,24 @@ const validate = () => {
 };
 
 const validateOptgroupConstraints = () => {
-  if (!props.multiple || !Array.isArray(internalValue.value)) {
+  if (!isMultiple.value || !Array.isArray(internalValue.value)) {
     return null;
   }
 
   for (const option of processedOptions.value) {
     if (option.group && (option.min !== undefined || option.max !== undefined)) {
-      // Get all values from this optgroup
       const optgroupValues = option.options.map(opt => 
         typeof opt === 'string' ? opt : opt.value
       );
       
-      // Count how many selected values are from this optgroup
       const selectedFromGroup = internalValue.value.filter(value => 
-        optgroupValues.includes(value)
+        optgroupValues.some(v => valuesEqual(v, value))
       ).length;
 
-      // Check min constraint
       if (option.min !== undefined && selectedFromGroup < option.min) {
         return `Please select at least ${option.min} option(s) from "${option.group}".`;
       }
 
-      // Check max constraint
       if (option.max !== undefined && selectedFromGroup > option.max) {
         return `Please select no more than ${option.max} option(s) from "${option.group}".`;
       }
@@ -438,50 +495,9 @@ const validateOptgroupConstraints = () => {
   return null;
 };
 
-const isOptionSelected = (value) => {
-  if (props.multiple) {
-    return Array.isArray(internalValue.value) && internalValue.value.includes(value);
-  }
-  return internalValue.value === value;
-};
-
-const getOptionLabel = (value) => {
-  // Search through all options including optgroups
-  for (const option of processedOptions.value) {
-    if (option.group) {
-      // Search in optgroup
-      const found = option.options.find(opt => opt.value === value);
-      if (found) return found.label;
-    } else {
-      // Search in regular options
-      if (option.value === value) return option.label;
-    }
-  }
-  return value;
-};
-
-const removeValue = (value) => {
-  if (props.multiple && Array.isArray(internalValue.value)) {
-    const newValue = internalValue.value.filter(v => v !== value);
-    internalValue.value = newValue;
-    emit('update:value', newValue);
-    validate();
-  }
-};
-
-const handleChange = (event) => {
-  if (props.multiple) {
-    // Handle multiple selection
-    const selectedOptions = Array.from(event.target.selectedOptions).map(option => option.value);
-    internalValue.value = selectedOptions;
-  } else {
-    // Handle single selection
-    internalValue.value = event.target.value;
-  }
-  
+const emitValueWithValidation = () => {
   emit('update:value', internalValue.value);
-  
-  // Validate optgroup constraints
+
   const constraintError = validateOptgroupConstraints();
   if (constraintError) {
     localError.value = constraintError;
@@ -495,22 +511,105 @@ const handleChange = (event) => {
   }
 };
 
+const isOptionSelected = (value) => {
+  if (isMultiple.value) {
+    return Array.isArray(internalValue.value) && internalValue.value.some(v => valuesEqual(v, value));
+  }
+  return valuesEqual(internalValue.value, value);
+};
+
+const getOptionLabel = (value) => {
+  for (const option of processedOptions.value) {
+    if (option.group !== undefined) {
+      const found = option.options.find(opt => valuesEqual(opt.value, value) || valuesEqual(opt.label, value));
+      if (found) return found.label;
+    } else if (valuesEqual(option.value, value)) {
+      return option.label;
+    }
+  }
+  return value;
+};
+
+const removeValue = (value) => {
+  if (!isMultiple.value || !props.edit || !Array.isArray(internalValue.value)) return;
+  internalValue.value = internalValue.value.filter(v => !valuesEqual(v, value));
+  emitValueWithValidation();
+};
+
+const toggleOption = (value) => {
+  if (!isMultiple.value || !props.edit) return;
+  clearBlurTimeout();
+
+  const current = Array.isArray(internalValue.value) ? [...internalValue.value] : [];
+  const existingIndex = current.findIndex(v => valuesEqual(v, value));
+  if (existingIndex >= 0) {
+    current.splice(existingIndex, 1);
+  } else {
+    current.push(value);
+  }
+  internalValue.value = current;
+  // Keep dropdown open for multi-select
+  emitValueWithValidation();
+};
+
+const toggleDropdown = () => {
+  if (!props.edit) return;
+  clearBlurTimeout();
+  isOpen.value = !isOpen.value;
+};
+
+const handleMultiKeydown = (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    isOpen.value = false;
+  } else if (event.key === 'Enter' || event.key === 'ArrowDown' || event.key === ' ') {
+    event.preventDefault();
+    isOpen.value = true;
+  }
+};
+
+const handleMultiBlur = () => {
+  clearBlurTimeout();
+  blurTimeout.value = setTimeout(() => {
+    if (containerRef.value?.contains(document.activeElement)) {
+      return;
+    }
+    isOpen.value = false;
+    validate();
+    emit('blur', internalValue.value);
+  }, 150);
+};
+
+const handleChange = (event) => {
+  if (isMultiple.value) {
+    const selectedOptions = Array.from(event.target.selectedOptions).map(option => option.value);
+    internalValue.value = selectedOptions;
+  } else {
+    internalValue.value = event.target.value;
+  }
+  
+  emitValueWithValidation();
+};
+
 const handleBlur = () => {
   validate();
   emit('blur', internalValue.value);
 };
 
 const handleFocus = () => {
+  clearBlurTimeout();
   emit('focus', internalValue.value);
 };
 
-// Watchers
 watch(() => props.value, (newValue) => {
-  if (props.multiple) {
-    internalValue.value = Array.isArray(newValue) ? newValue : [];
+  if (isMultiple.value) {
+    internalValue.value = Array.isArray(newValue) ? [...newValue] : [];
   } else {
-    // If newValue is undefined, null, or empty string, default to false
-    internalValue.value = (newValue === undefined || newValue === null || newValue === '') ? false : newValue;
+    if (newValue !== undefined && newValue !== null && newValue !== '') {
+      internalValue.value = newValue;
+    } else {
+      internalValue.value = '';
+    }
   }
 }, { immediate: true });
 
@@ -518,12 +617,35 @@ watch(() => props.validate, () => {
   validate();
 }, { deep: true });
 
-// Lifecycle
 onMounted(() => {
+  if (isMultiple.value) {
+    if (Array.isArray(props.value) && props.value.length > 0) {
+      internalValue.value = [...props.value];
+      validate();
+    } else {
+      internalValue.value = [];
+    }
+    return;
+  }
+
+  if (props.value !== undefined && props.value !== null && props.value !== '') {
+    internalValue.value = props.value;
+  } else {
+    internalValue.value = '';
+  }
+
   if (internalValue.value !== '' && internalValue.value !== null && internalValue.value !== undefined) {
     validate();
   }
 });
+</script>
+
+<script>
+export default {
+  components: {
+    FontAwesomeIcon
+  }
+}
 </script>
 
 <style scoped>
@@ -622,4 +744,4 @@ select option[disabled] {
 .dark .text-blue-600 {
   color: rgb(147 197 253) !important; /* blue-400 */
 }
-</style> 
+</style>

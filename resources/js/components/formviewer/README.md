@@ -152,7 +152,6 @@ const customActions = [
 ];
 
 const handleCustomAction = (action) => {
-  console.log('Custom action:', action);
   // Handle custom action logic
 };
 </script>

@@ -16,7 +16,7 @@
         <div 
           v-for="(field, index) in formConfig.fields.filter(field => field && typeof field === 'object' && field.name)" 
           :key="field?.name || index" 
-          v-show="shouldShowField(field, debugFormData || {})"
+          v-show="shouldShowField(field, { ...formData })"
           :class="[
             getFieldLayoutClasses(field),
             'field-wrapper',
@@ -29,7 +29,7 @@
             :field="field"
             :value="formData[field.name] || []"
             :disabled="disabled || field.disabled"
-            :edit="edit && shouldEditField(field, formData)"
+            :edit="edit && shouldEditField(field, { ...formData })"
             @update:value="(value) => handleFieldChange(field.name, value)"
             @validation-error="(data) => handleValidationError(field.name, data)"
             @validation-success="(data) => handleValidationSuccess(field.name, data)"
@@ -39,16 +39,16 @@
             :is="getFieldComponent(field.type)"
             v-bind="field.type === 'fieldset' ? {
               ...field,
-              show: shouldShowField(field, debugFormData || {}),
-              edit: shouldEditField(field, debugFormData || {}),
-              formData: debugFormData || {}
-            } : field.type === 'output' ? { field } : {
+              show: shouldShowField(field, { ...formData }),
+              edit: shouldEditField(field, { ...formData }),
+              formData: { ...formData }
+            } : field.type === 'output' ? { field, context: { ...formData } } : {
               ...field,
               errors: fieldErrors[field.name] || []
             }"
             :value="getSafeFieldValue(field)"
             :disabled="disabled || field.disabled"
-            :edit="edit && shouldEditField(field, formData.value || {})"
+            :edit="edit && shouldEditField(field, { ...formData })"
             @update:value="(value) => handleFieldChange(field.name, value)"
             @validation-error="(data) => handleValidationError(field.name, data)"
             @validation-success="(data) => handleValidationSuccess(field.name, data)"
@@ -72,11 +72,15 @@
         :key="action.type"
         @click="handleAction(action)"
         type="button"
-        :class="action.modifiers"
+        :class="[getActionClasses(action), { 'opacity-60 cursor-not-allowed': isSubmitting }]"
         :disabled="action.disabled || isSubmitting"
       >
-        <span v-if="action.type === 'save' && isSubmitting">Submitting...</span>
-        <span v-else v-html="action.label"></span>
+        <svg v-if="isSubmitting" class="animate-spin -ml-0.5 mr-2 h-4 w-4 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <font-awesome-icon v-else-if="action.icon" :icon="action.icon" class="w-4 h-4 mr-2" />
+        <span v-html="action.label"></span>
       </button>
     </div>
 
@@ -106,26 +110,32 @@
 <script setup>
 import { ref, watch, onMounted, computed, nextTick } from 'vue';
 import { shouldShowField, shouldEditField, shouldParseField, resolveFieldProperties } from '../fields/conditionalLogic.js';
-import TextField from '../fields/TextField.vue';
-import TextAreaField from '../fields/TextAreaField.vue';
-import TelField from '../fields/TelField.vue';
-import EmailField from '../fields/EmailField.vue';
-import PasswordField from '../fields/PasswordField.vue';
-import URLField from '../fields/URLField.vue';
-import DateField from '../fields/DateField.vue';
-import NumberField from '../fields/NumberField.vue';
-import CurrencyField from '../fields/CurrencyField.vue';
-import ColorField from '../fields/ColorField.vue';
-import HiddenField from '../fields/HiddenField.vue';
-import SelectField from '../fields/SelectField.vue';
-import RadioField from '../fields/RadioField.vue';
-import ComboboxField from '../fields/ComboboxField.vue';
-import RangeField from '../fields/RangeField.vue';
-import CheckboxField from '../fields/CheckboxField.vue';
-import SwitchField from '../fields/SwitchField.vue';
-import FieldsetField from '../fields/FieldsetField.vue';
-import ArrayField from '../fields/ArrayField.vue';
-import OutputField from '../fields/OutputField.vue';
+import { validateField } from '../fields/validation.js';
+import { isMultipleFlag } from '../fields/functions.js';
+import {
+  TextField,
+  TextAreaField,
+  TelField,
+  EmailField,
+  PasswordField,
+  URLField,
+  DateField,
+  NumberField,
+  CurrencyField,
+  ColorField,
+  HiddenField,
+  SelectField,
+  RadioField,
+  ComboboxField,
+  RangeField,
+  CheckboxField,
+  SwitchField,
+  FieldsetField,
+  ArrayField,
+  OutputField,
+  CronField,
+  MonacoEditorField
+} from '../fields';
 
 const props = defineProps({
   formConfig: {
@@ -161,33 +171,57 @@ const props = defineProps({
     default: 'Submit'
   },
   // Custom actions to override defaults
+  // Format: [{ type: 'save', action: 'save', label: 'Save', modifiers: 'btn btn-success' }]
+  // If custom actions are provided, they will replace the default Submit/Cancel buttons
   actions: {
     type: Array,
-    default: () => []
+    default: () => [],
+    validator: (actions) => {
+      return actions.every(action => {
+        return action && typeof action === 'object' && action.type && action.action && action.label;
+      });
+    }
+  },
+  actionHandler: {
+    type: Function,
+    default: null
   },
   // Whether to show default actions when no custom actions are provided
   showDefaultActions: {
     type: Boolean,
-    default: true
+    default: null
+  },
+  // Custom cancel action - can be 'reset', 'close', or a custom function
+  cancelAction: {
+    type: String,
+    default: 'reset',
+    validator: (value) => ['reset', 'close'].includes(value)
+  },
+  // Whether to automatically validate before calling actionHandler for 'save' actions
+  // When true, validation will run automatically and actionHandler will only be called if validation passes
+  validateOnSubmit: {
+    type: Boolean,
+    default: false
+  },
+  isSubmitting: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['update:modelValue', 'submit', 'reset', 'validation-error', 'validation-success', 'action']);
+const emit = defineEmits(['update:modelValue', 'change', 'submit', 'reset', 'validation-error', 'validation-success', 'action', 'customAction', 'actionHandler']);
 
 const formData = ref({});
 const validationErrors = ref([]);
-const isSubmitting = ref(false);
+const internalSubmitting = ref(false);
 const fieldErrors = ref({}); // Track errors for individual fields
 
-// Debug computed property to see what's in formData
-const debugFormData = computed(() => {
-  return formData.value;
-});
+const isSubmitting = computed(() => internalSubmitting.value || props.isSubmitting);
+
 
 // Check if form data is initialized
 const isFormDataInitialized = computed(() => {
   const result = Object.keys(formData.value).length > 0 || (props.formConfig && props.formConfig.fields && props.formConfig.fields.length === 0);
-  console.log(`isFormDataInitialized: ${result}, formData keys: ${Object.keys(formData.value).length}, fields length: ${props.formConfig?.fields?.length || 0}`);
   return result;
 });
 
@@ -198,11 +232,11 @@ const defaultActions = computed(() => [
     action: 'save',
     label: 'Submit',
     modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors',
-    disabled: isSubmitting.value
+    disabled: false
   },
   {
     type: 'cancel',
-    action: 'cancel',
+    action: props.cancelAction,
     label: 'Cancel',
     modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors'
   }
@@ -211,7 +245,11 @@ const defaultActions = computed(() => [
 // Merge default and custom actions
 const mergedActions = computed(() => {
   if (props.actions && props.actions.length > 0) {
-    return props.actions;
+    // Use custom actions, but ensure they have proper structure
+    return props.actions.map(action => ({
+      ...action,
+      disabled: action.disabled || isSubmitting.value
+    }));
   }
   
   if (props.showDefaultActions) {
@@ -229,7 +267,7 @@ const shouldShowActions = computed(() => {
 // Debug array condition
 const debugArrayCondition = (field) => {
   const condition = field.array || (field.type === 'fieldset' && field.array);
-  console.log(`Array condition for ${field.name}: field.array=${!!field.array}, field.type=${field.type}, condition=${condition}`);
+
   return condition;
 };
 
@@ -250,12 +288,36 @@ const getSafeFieldValue = (field) => {
 
   // Handle booleans
   if (field.type === 'checkbox' || field.type === 'switch') {
-    return typeof fieldValue === 'boolean' ? fieldValue : false;
+    // For checkbox fields, preserve string values if they exist
+    if (typeof fieldValue === 'string') {
+      return fieldValue;
+    }
+    // For boolean values, return as-is
+    if (typeof fieldValue === 'boolean') {
+      return fieldValue;
+    }
+    // Default to false for undefined/null values
+    return false;
   }
 
-  // Handle arrays/multiple-selection
-  if (field.array || field.multiple) {
+  // Handle arrays/multiple-selection (unless field is explicitly object-display)
+  if (!field.isObject && (field.array || isMultipleFlag(field.multiple))) {
     return Array.isArray(fieldValue) ? fieldValue : [];
+  }
+
+  // field.isObject: display object/array as JSON string (e.g. textarea with last_response)
+  if (field.isObject && typeof fieldValue === 'object' && fieldValue !== null) {
+    return JSON.stringify(fieldValue, null, 2);
+  }
+
+  // When value is a plain object (e.g. from API) for text/textarea/output:
+  // use valueKey to show one property, or stringify for display
+  if (typeof fieldValue === 'object' && fieldValue !== null && !Array.isArray(fieldValue)) {
+    if (field.valueKey && typeof field.valueKey === 'string') {
+      const v = fieldValue[field.valueKey];
+      return v !== undefined && v !== null ? String(v) : (field.defaultValue ?? '');
+    }
+    return JSON.stringify(fieldValue, null, 2);
   }
 
   // Handle all other types (text, number, etc.)
@@ -299,36 +361,35 @@ const getFieldComponent = (fieldType) => {
     case 'switch': return SwitchField;
     case 'fieldset': return FieldsetField;
     case 'output': return OutputField;
+    case 'cron': return CronField;
+    case 'monaco': return MonacoEditorField;
+    case 'monaco-editor': return MonacoEditorField;
+    case 'code': return MonacoEditorField;
     default: return null;
   }
 };
 
 // Handle field value changes
 const handleFieldChange = (fieldName, value) => {
-  console.log(`handleFieldChange: fieldName=${fieldName}, value=${value}, type=${typeof value}`);
-  console.log(`handleFieldChange: current formData before update:`, formData.value);
-  
+
   // Check if this is a fieldset field
   const field = props.formConfig.fields.find(f => f && f.name === fieldName);
   if (field && field.type === 'fieldset') {
-    console.log(`handleFieldChange: This is a fieldset field. Ensuring value is correct type.`);
-    console.log(`handleFieldChange: Original value:`, value, 'type:', typeof value);
-    
+
     // If fieldset has array attribute, ensure it's an array
     if (field.array) {
       if (!Array.isArray(value)) {
-        console.log(`handleFieldChange: Converting non-array value to empty array for fieldset with array attribute`);
+
         value = [];
       }
     } else {
       // Regular fieldset: ensure it's an object
       if (typeof value !== 'object' || value === null) {
-        console.log(`handleFieldChange: Converting non-object value to empty object`);
+
         value = {};
       }
     }
-    
-    console.log(`handleFieldChange: Final value for fieldset:`, value, 'type:', typeof value);
+
   }
   
   formData.value = {
@@ -336,9 +397,18 @@ const handleFieldChange = (fieldName, value) => {
     [fieldName]: value
   };
   
-  console.log(`handleFieldChange: formData after update:`, formData.value);
+  // Emit change event for user-initiated changes (only from handleFieldChange)
+  emit('change', formData.value, fieldName);
   emit('update:modelValue', formData.value);
-  validateField(fieldName);
+  
+  const errors = validateField(value, field);
+  if (errors.length > 0) {
+    handleValidationError(fieldName, { errors: errors });
+  } else {
+    handleValidationSuccess(fieldName, { value: value });
+  }
+  emit('validation-error', { field: fieldName, errors: errors });
+  
 };
 
 // Handle field validation errors
@@ -414,85 +484,40 @@ const getFieldLabel = (fieldName) => {
   return fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
 };
 
+// Get action classes - use custom modifiers or default classes
+const getActionClasses = (action) => {
+  // If custom actions have modifiers, use them
+  if (props.actions && props.actions.length > 0 && action.modifiers) {
+    return action.modifiers;
+  }
+  
+  // Otherwise use the default modifiers from the action object
+  return action.modifiers || 'px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors';
+};
+
 // Validation functions
-const validateField = (fieldName) => {
+const validateFieldLocal = (fieldName) => {
+
   const field = props.formConfig.fields.find(f => f.name === fieldName);
   if (!field) return true;
 
   const fieldValue = formData.value[fieldName];
-  const errors = [];
-
-  // Check required fields
-  if (field.required) {
-    if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
-      errors.push('This field is required');
-    } else if (Array.isArray(fieldValue) && fieldValue.length === 0) {
-      errors.push('This field is required');
-    } else if (typeof fieldValue === 'object' && Object.keys(fieldValue).length === 0) {
-      errors.push('This field is required');
-    }
-  }
-
-  // Check email format
-  if (field.type === 'email' && fieldValue && fieldValue !== '') {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(fieldValue)) {
-      errors.push('Please enter a valid email address');
-    }
-  }
-
-  // Check URL format
-  if (field.type === 'url' && fieldValue && fieldValue !== '') {
-    try {
-      new URL(fieldValue);
-    } catch {
-      errors.push('Please enter a valid URL');
-    }
-  }
-
-  // Check minimum length
-  if (field.minLength && fieldValue && fieldValue.length < field.minLength) {
-    errors.push(`Minimum length is ${field.minLength} characters`);
-  }
-
-  // Check maximum length
-  if (field.maxLength && fieldValue && fieldValue.length > field.maxLength) {
-    errors.push(`Maximum length is ${field.maxLength} characters`);
-  }
-
-  // Check minimum value for numbers
-  if (field.min !== undefined && fieldValue !== '' && !isNaN(fieldValue)) {
-    if (parseFloat(fieldValue) < field.min) {
-      errors.push(`Minimum value is ${field.min}`);
-    }
-  }
-
-  // Check maximum value for numbers
-  if (field.max !== undefined && fieldValue !== '' && !isNaN(fieldValue)) {
-    if (parseFloat(fieldValue) > field.max) {
-      errors.push(`Maximum value is ${field.max}`);
-    }
-  }
-
-  // Check checkbox/switch required validation
-  if ((field.type === 'checkbox' || field.type === 'switch') && field.required) {
-    if (fieldValue !== true) {
-      errors.push('This field is required');
-    }
-  }
-
-  // Check select/combobox required validation
-  if ((field.type === 'select' || field.type === 'combobox') && field.required) {
-    if (field.multiple) {
-      if (!Array.isArray(fieldValue) || fieldValue.length === 0) {
-        errors.push('Please select at least one option');
-      }
-    } else {
-      if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
-        errors.push('Please select an option');
-      }
-    }
-  }
+  
+  // Ensure config has all required properties for validation
+  const config = {
+    type: field.type || 'text',
+    required: field.required || false,
+    minLength: field.minLength,
+    maxLength: field.maxLength,
+    pattern: field.pattern,
+    min: field.min,
+    max: field.max,
+    ...field
+  };
+  
+  // Use the imported validation function (which now handles fieldsets and arrays recursively)
+  // validateField already handles nested fields in fieldsets and arrays, so we don't need to recurse here
+  const errors = validateField(fieldValue, config, formData.value);
 
   // If there are errors, add them to validation errors
   if (errors.length > 0) {
@@ -512,11 +537,11 @@ const validateForm = () => {
   validationErrors.value = [];
   fieldErrors.value = {}; // Clear field-specific errors
   
-  // Validate all fields
+  // Validate all fields (including nested fields recursively)
   if (props.formConfig && props.formConfig.fields) {
     props.formConfig.fields.forEach(field => {
       if (field && field.name) {
-        validateField(field.name);
+        validateFieldLocal(field.name);
       }
     });
   }
@@ -531,7 +556,7 @@ const validateForm = () => {
       formData.value = currentFormData;
     });
   }
-  
+
   return validationErrors.value.length === 0;
 };
 
@@ -539,30 +564,58 @@ const validateForm = () => {
 const handleAction = async (action) => {
   const { type, action: actionName } = action;
   
+  // If validateOnSubmit is enabled and this is a save action, validate first
+  // if (props.validateOnSubmit && (type === 'save' ||type === 'submit' ||  actionName === 'save' || actionName === 'submit')) {
+  //   const isValid = validateForm();
+  //   if (!isValid) {
+  //     // Validation failed - errors are already displayed by FormViewer
+  //     // Don't call actionHandler if validation fails
+  //     return;
+  //   }
+  // }
+  
+  // If actionHandler is provided, call it first
+  if (props.actionHandler && typeof props.actionHandler === 'function') {
+    try {
+      await props.actionHandler({ type, action: actionName, formData: formData.value });
+      return; // If actionHandler handles the action, don't continue with default behavior
+    } catch (error) {
+      console.error('Error in actionHandler:', error);
+      // Continue with default behavior if actionHandler fails
+    }
+  }
+  
   switch (type) {
-    case 'save':
+    case 'submit':
       await submitForm();
       break;
     case 'cancel':
-      resetForm();
+      if (actionName === 'close') {
+        // Emit close event for parent to handle
+        emit('action', { type: 'close', action: 'close', formData: formData.value });
+      } else {
+        // Default to reset behavior
+        resetForm();
+      }
       break;
     default:
       // Emit custom action for parent to handle
       emit('action', { type, action: actionName, formData: formData.value });
+      emit('customAction', { type, action: actionName, formData: formData.value });
       break;
   }
 };
 
 // Enhanced submit form with toastr support
 const submitForm = async () => {
-  isSubmitting.value = true;
-  
+  internalSubmitting.value = true;
+
   try {
     const isValid = validateForm();
     
     if (isValid) {
       emit('submit', formData.value);
-      
+     
       // Show success message if toastr is available
       if (typeof window !== 'undefined' && window.toastr) {
         window.toastr.success('Form submitted successfully!');
@@ -570,6 +623,7 @@ const submitForm = async () => {
         window.showToast('Form submitted successfully!', 'success');
       }
     } else {
+ 
       // Don't show toast messages for validation errors - let parent handle this
       // Just scroll to the first validation error field
       if (validationErrors.value.length > 0) {
@@ -589,7 +643,7 @@ const submitForm = async () => {
       window.showToast('Error submitting form: ' + error.message, 'error');
     }
   } finally {
-    isSubmitting.value = false;
+    internalSubmitting.value = false;
   }
 };
 
@@ -601,67 +655,132 @@ const resetForm = () => {
   initializeFormData();
 };
 
+const isFieldRequired = (field) => {
+  if (field.required === undefined) return false;
+  if (typeof field.required === 'boolean') return field.required;
+  if (field.required === 'true') return true;
+  if (field.required === 'false') return false;
+  return !!field.required;
+};
+
+// Resolve initial array length: optional + min 0 → []; missing min → 1; required + min 0 → 1
+const getArrayInitialCount = (field) => {
+  const rawMin = field.array?.min;
+  const hasExplicitMin = rawMin !== undefined && rawMin !== null && rawMin !== '';
+  const minItems = hasExplicitMin ? Number(rawMin) : 1;
+  const required = isFieldRequired(field);
+
+  if (!required && minItems === 0) {
+    return 0;
+  }
+  if (required && minItems === 0) {
+    return 1;
+  }
+  return Number.isFinite(minItems) ? Math.max(minItems, 0) : 1;
+};
+
 // Initialize form data
 const initializeFormData = () => {
-  if (!props.formConfig || !props.formConfig.fields || !Array.isArray(props.formConfig.fields)) return;
+
+  if (!props.formConfig || !props.formConfig.fields || !Array.isArray(props.formConfig.fields)) {
+
+    return;
+  }
   
   const newData = {};
   
   props.formConfig.fields.filter(field => field && typeof field === 'object' && field.name).forEach(field => {
-    console.log(`Processing field: ${field.name}, type: ${field.type}, has array: ${!!field.array}`);
     if (field.type === 'fieldset') {
       // If fieldset has array attribute, initialize as array
       if (field.array) {
-        const minItems = field.array.min || 1;
-        newData[field.name] = Array(minItems).fill({});
-        console.log(`initializeFormData: Setting fieldset with array ${field.name} to array with ${minItems} empty objects`);
+        const minItems = getArrayInitialCount(field);
+        newData[field.name] = minItems === 0 ? [] : Array(minItems).fill({});
       } else {
         newData[field.name] = {};
-        console.log(`initializeFormData: Setting fieldset ${field.name} to empty object`);
       }
     } else if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
-      newData[field.name] = field.defaultValue || false;
+  
+      // Check initialData first, then fall back to field.value
+      const raw = (props.initialData && props.initialData[field.name] !== undefined) 
+        ? props.initialData[field.name] 
+        : field.value;
+      
+      // For checkbox fields, always preserve string values from initialData
+      if (field.type === 'checkbox') {
+        // If we have initialData with string values, preserve them
+        if (props.initialData && props.initialData[field.name] !== undefined && typeof props.initialData[field.name] === 'string') {
+          newData[field.name] = raw; // Keep as string
+        } else if (field.options && field.options.length > 0) {
+          newData[field.name] = raw; // Keep as string to match options
+        } else {
+          // Normalize to boolean for checkbox fields without options
+          const normalized = raw === true || raw === 'true' ? true : false;
+          newData[field.name] = normalized;
+        }
+      } else {
+        // For other boolean types (boolean, switch), normalize to boolean
+        const normalized = raw === true || raw === 'true' ? true : false;
+        newData[field.name] = normalized;
+      }
+
     } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {
-      if (field.multiple) {
+      if (isMultipleFlag(field.multiple)) {
         newData[field.name] = [];
       } else {
-        newData[field.name] = '';
+        // Check initialData first, then fall back to field.value
+        newData[field.name] = (props.initialData && props.initialData[field.name] !== undefined) 
+          ? props.initialData[field.name] 
+          : (field.value || '');
       }
     } else if (field.array) {
-      const minItems = field.array.min || 1;
-      newData[field.name] = Array(minItems).fill('').map(() => {
+      const minItems = getArrayInitialCount(field);
+      newData[field.name] = minItems === 0 ? [] : Array(minItems).fill('').map(() => {
         if (field.type === 'boolean' || field.type === 'checkbox' || field.type === 'switch') {
           return false;
         } else if (['select', 'radio', 'combobox', 'range'].includes(field.type)) {
-          return field.multiple ? [] : '';
+          return isMultipleFlag(field.multiple) ? [] : (field.value || '');
         } else {
           return '';
         }
       });
     } else if (field.type === 'text') {
-      newData[field.name] = field.value || '';
+      // Check initialData first, then fall back to field.value
+      newData[field.name] = (props.initialData && props.initialData[field.name] !== undefined) 
+        ? props.initialData[field.name] 
+        : (field.value || '');
     } else {
-      newData[field.name] = '';
+      // Check initialData first, then fall back to empty string
+      newData[field.name] = (props.initialData && props.initialData[field.name] !== undefined) 
+        ? props.initialData[field.name] 
+        : '';
     }
   });
-  
-  console.log('Before merging with initial data:', newData);
   
   // Merge with initial data, but preserve fieldset objects
-  Object.keys(props.initialData).forEach(key => {
-    const field = props.formConfig.fields.find(f => f && f.name === key);
-    if (field && field.type === 'fieldset') {
-      // Don't overwrite fieldset objects with strings
-      if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
-        newData[key] = { ...newData[key], ...props.initialData[key] };
-        console.log(`initializeFormData: Merging fieldset ${key} with initial data: ${JSON.stringify(newData[key])}`);
+  if (props.initialData && typeof props.initialData === 'object') {
+    Object.keys(props.initialData).forEach(key => {
+      const field = props.formConfig.fields.find(f => f && f.name === key);
+      if (field && field.type === 'fieldset') {
+        // If fieldset has array attribute, it should be an array
+        if (field.array) {
+          // For array fieldsets, use the initialData array directly if it's an array
+          if (Array.isArray(props.initialData[key])) {
+            newData[key] = props.initialData[key];
+          } else if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
+            // If it's an object but should be array, convert it
+            newData[key] = [];
+          }
+        } else {
+          // Regular fieldset: merge objects
+          if (typeof props.initialData[key] === 'object' && props.initialData[key] !== null) {
+            newData[key] = { ...newData[key], ...props.initialData[key] };
+          }
+        }
+      } else {
+        newData[key] = props.initialData[key];
       }
-    } else {
-      newData[key] = props.initialData[key];
-    }
-  });
-  
-  console.log('Final formData after initialization:', newData);
+    });
+  }
   formData.value = newData;
 };
 
@@ -673,12 +792,11 @@ watch(() => props.formConfig, () => {
 watch(() => props.initialData, () => {
   initializeFormData();
 }, { deep: true });
-
-watch(formData, (newData) => {
-  emit('update:modelValue', newData);
-}, { deep: true });
-
+// watch(formData, (newData) => {
+//   emit('update:modelValue', newData);
+// }, { deep: true });
 // Watch for changes in formData to re-evaluate conditions
+// Note: We don't emit update:modelValue here to avoid loops - it's only emitted from handleFieldChange
 watch(formData, () => {
   // Force re-render when form data changes to update conditional logic
 }, { deep: true });
@@ -708,8 +826,8 @@ defineExpose({
 
 <style scoped>
 .form-viewer-container {
-  width: 100%;
-  max-width: none;
+  width: 100% !important;
+  max-width: none !important;
 }
 
 /* Force next element to start on new row but respect column width */

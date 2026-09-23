@@ -1,32 +1,33 @@
 <template>
   <div class="array-field-container">
     <!-- Array Header -->
-    <div v-if="field.array && field.label" class="array-header mb-2">
+    <!-- <div v-if="field.array && field.label" class="array-header mb-2">
       <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ field.label }}</h3>
       <p v-if="field.help" class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ field.help }}</p>
-    </div>
+    </div> -->
 
-    <!-- Array Items with inline + - controls -->
+    <!-- Array Items: field full width, buttons at bottom-right of each -->
     <div v-if="arrayValues.length > 0" class="array-items flex flex-col gap-2">
       <div 
         v-for="(item, index) in arrayValues" 
         :key="`${field.name}-${index}`"
-        class="flex items-center gap-2"
+        class="array-item flex flex-col gap-1"
       >
-        <!-- Field Component -->
-        <component
-          :is="fieldComponent"
-          v-bind="fieldProps"
-          :value="item"
-          :disabled="disabled"
-          :edit="edit"
-          @update:value="(value) => updateItem(index, value)"
-          @validation-error="(data) => handleValidationError(index, data)"
-          @validation-success="(data) => handleValidationSuccess(index, data)"
-        />
-        <!-- Inline + - Controls -->
-        <div v-if="edit && !disabled" class="flex items-center gap-1 ml-1">
-          <!-- Add (+) Button -->
+        <!-- Field Component (full width) -->
+        <div class="w-full">
+          <component
+            :is="fieldComponent"
+            v-bind="fieldProps"
+            :value="item"
+            :disabled="disabled"
+            :edit="edit"
+            @update:value="(value) => updateItem(index, value)"
+            @validation-error="(data) => handleValidationError(index, data)"
+            @validation-success="(data) => handleValidationSuccess(index, data)"
+          />
+        </div>
+        <!-- Buttons at bottom-right of this field -->
+        <div v-if="edit && !disabled" class="flex justify-end gap-1">
           <button
             v-if="canAdd()"
             @click="addItemAfter(index)"
@@ -38,7 +39,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
             </svg>
           </button>
-          <!-- Duplicate Button -->
           <button
             v-if="canDuplicate(index) && canAdd()"
             @click="duplicateItem(index)"
@@ -50,7 +50,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
           </button>
-          <!-- Remove (-) Button -->
           <button
             v-if="canRemove(index)"
             @click="removeItem(index)"
@@ -75,6 +74,21 @@
       >
         <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        {{ getAddLabel() }}
+      </button>
+    </div>
+
+    <!-- Add at end (when array has items) -->
+    <div v-if="arrayValues.length > 0 && edit && !disabled && canAdd()" class="mt-2">
+      <button
+        @click="addItem"
+        type="button"
+        class="icon-btn plus-btn"
+        :title="getAddLabel()"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
         </svg>
         {{ getAddLabel() }}
       </button>
@@ -112,6 +126,7 @@ import CheckboxField from './CheckboxField.vue';
 import SwitchField from './SwitchField.vue';
 import FieldsetField from './FieldsetField.vue';
 import OutputField from './OutputField.vue';
+import { isMultipleFlag } from './functions.js';
 
 const props = defineProps({
   field: {
@@ -179,23 +194,44 @@ const arrayConfig = computed(() => {
   return props.field.array || {};
 });
 
-const minItems = computed(() => arrayConfig.value.min || 0);
+const minItems = computed(() => {
+  const raw = arrayConfig.value.min;
+  if (raw === undefined || raw === null || raw === '') return 0;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? Math.max(parsed, 0) : 0;
+});
 const maxItems = computed(() => arrayConfig.value.max || 10);
+const addConfig = computed(() => arrayConfig.value.add || {});
 const duplicateConfig = computed(() => arrayConfig.value.duplicate || {});
 const removeConfig = computed(() => arrayConfig.value.remove || {});
 
+const isFieldRequired = () => {
+  const required = props.field.required;
+  if (required === undefined) return false;
+  if (typeof required === 'boolean') return required;
+  if (required === 'true') return true;
+  if (required === 'false') return false;
+  return !!required;
+};
+
 // Initialize array values
 const initializeArray = () => {
+  const optionalEmptyDefault = !isFieldRequired() && minItems.value === 0;
+
   if (Array.isArray(props.value)) {
     arrayValues.value = [...props.value];
   } else {
-    // Initialize with minimum items or default
-    const initialCount = Math.max(minItems.value, 0); // Start with 0 if no min requirement
+    // Optional + min 0: start empty so the Add button is the default UI
+    const initialCount = optionalEmptyDefault
+      ? 0
+      : Math.max(minItems.value, isFieldRequired() ? 1 : 0);
     arrayValues.value = Array(initialCount).fill('').map(() => getDefaultValue());
   }
-  // Ensure we have at least minItems
-  while (arrayValues.value.length < minItems.value) {
-    arrayValues.value.push(getDefaultValue());
+  // Ensure we have at least minItems (skip padding for optional min 0)
+  if (!optionalEmptyDefault) {
+    while (arrayValues.value.length < minItems.value) {
+      arrayValues.value.push(getDefaultValue());
+    }
   }
   emit('update:value', arrayValues.value);
 };
@@ -210,7 +246,7 @@ const getDefaultValue = () => {
   } else if ([
     'select', 'radio', 'combobox', 'range'
   ].includes(fieldType)) {
-    return props.field.multiple ? [] : '';
+    return isMultipleFlag(props.field.multiple) ? [] : '';
   } else {
     return '';
   }
@@ -218,36 +254,32 @@ const getDefaultValue = () => {
 
 // Array control methods
 const canAdd = () => {
+  const enable = addConfig.value.enable;
+  if (enable === false || enable === 'never') return false;
+  if (enable === 'auto') return arrayValues.value.length < maxItems.value;
   return arrayValues.value.length < maxItems.value;
 };
 
 const canDuplicate = (index) => {
   const enable = duplicateConfig.value.enable;
-  console.log('canDuplicate debug:', { 
-    enable, 
-    enableType: typeof enable, 
-    index, 
-    duplicateConfig: duplicateConfig.value,
-    arrayLength: arrayValues.value.length,
-    maxItems: maxItems.value
-  });
+
   
   // If enable is explicitly false or 'never', return false
   if (enable === false || enable === 'never') {
-    console.log('canDuplicate: returning false - enable is false or never');
+  
     return false;
   }
   
   // If enable is 'auto', check if we can add more items
   if (enable === 'auto') {
     const canAddMore = arrayValues.value.length < maxItems.value;
-    console.log('canDuplicate: auto mode, canAddMore:', canAddMore);
+ 
     return canAddMore;
   }
   
   // If enable is true or any other truthy value, return true (if we can add more items)
   const result = arrayValues.value.length < maxItems.value;
-  console.log('canDuplicate: enable is true, returning:', result);
+ 
   return result;
 };
 
@@ -287,10 +319,10 @@ const addItemAfter = (index) => {
 };
 
 const duplicateItem = (index) => {
-  console.log('duplicateItem called:', { index, canDuplicate: canDuplicate(index), canAdd: canAdd() });
+
   if (canDuplicate(index) && canAdd()) {
     const clonedValue = JSON.parse(JSON.stringify(arrayValues.value[index]));
-    console.log('duplicateItem: cloning value:', clonedValue);
+
     arrayValues.value.splice(index + 1, 0, clonedValue);
     emit('update:value', arrayValues.value);
   }
@@ -315,7 +347,7 @@ const getItemLabel = (index) => {
 };
 
 const getAddLabel = () => {
-  return duplicateConfig.value.label || `Add ${props.field.label || 'Item'}`;
+  return addConfig.value.label || `Add ${props.field.label || 'Item'}`;
 };
 
 const getDuplicateLabel = () => {

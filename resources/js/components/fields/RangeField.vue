@@ -68,7 +68,7 @@ const props = defineProps({
   min: { type: [Number, String], default: 0 },
   max: { type: [Number, String], default: 100 },
   step: { type: [Number, String], default: 1 },
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
   edit:  { type: [Boolean,String,Array], default: true },

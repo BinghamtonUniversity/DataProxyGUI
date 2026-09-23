@@ -35,7 +35,7 @@ const mediaQuery = () => {
     return window.matchMedia('(prefers-color-scheme: dark)');
 };
 
-const getStoredAppearance = () => {
+export const getStoredAppearance = () => {
     if (typeof window === 'undefined') {
         return null;
     }

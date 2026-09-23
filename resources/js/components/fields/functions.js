@@ -6,6 +6,14 @@
 import { validateField } from './validation.js';
 
 /**
+ * Normalize multiple flag from boolean or string config values.
+ * Avoids treating "false" as true (Vue Boolean casting / JS truthiness).
+ * @param {boolean|string|undefined|null} value
+ * @returns {boolean}
+ */
+export const isMultipleFlag = (value) => value === true || value === 'true';
+
+/**
  * Get the appropriate Vue component for a field type
  * @param {string} fieldType - The type of field
  * @param {Object} field - The field configuration object (optional)
@@ -244,7 +252,7 @@ export const getSafeFieldValue = (field, formData) => {
   }
   
   // Handle arrays/multiple-selection
-  if (field.array || field.multiple) {
+  if (field.array || isMultipleFlag(field.multiple)) {
     return Array.isArray(fieldValue) ? fieldValue : [];
   }
   

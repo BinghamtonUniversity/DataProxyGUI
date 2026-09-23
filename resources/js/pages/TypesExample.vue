@@ -737,7 +737,7 @@ const handleJsonChange = () => {
     const parsed = JSON.parse(jsonConfig.value);
     if (typeof parsed.value === 'undefined') {
       fieldValue.value = '';
-      console.log('fieldValue reset to empty string');
+  
     }
     // else: do not reset, let the watcher handle it
   } catch {
@@ -782,7 +782,7 @@ const handleValidationError = (validationData) => {
     message: validationData.errors[0],
     errors: validationData.errors
   };
-  console.log('Validation error:', validationData);
+
 };
 
 const handleValidationSuccess = (validationData) => {
@@ -790,7 +790,7 @@ const handleValidationSuccess = (validationData) => {
     isValid: true,
     message: 'Field is valid'
   };
-  console.log('Validation success:', validationData);
+
 };
 
 const loadExample = (config) => {

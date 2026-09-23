@@ -2,10 +2,13 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\ServerUserPolicyService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
+use Illuminate\Support\Facades\Gate;
+
 
 class HandleInertiaRequests extends Middleware
 {
@@ -39,6 +42,8 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
+        $serverSlug = $request->route('server_slug');
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -46,11 +51,17 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'can' => [
+                'manage_users' => Gate::check('viewAny', \App\Models\User::class),
+                'server_admin' => $serverSlug? app(ServerUserPolicyService::class)->isAdminForServer($serverSlug): false,
+            ],
+            'server_slug' => $serverSlug ?? null,
             'ziggy' => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'isImpersonating' => $request->session()->has('impersonator_id'),
         ];
     }
 }

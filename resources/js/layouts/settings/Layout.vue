@@ -4,23 +4,46 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
+import { User, Palette, Server, Users } from 'lucide-vue-next';
+import Toaster from '@/components/toaster/Toaster.vue';
+import { useProxyServer } from '@/composables/useProxyServer';
+import { computed } from 'vue';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: '/settings/profile',
-    },
-    {
-        title: 'Password',
-        href: '/settings/password',
-    },
-    {
-        title: 'Appearance',
-        href: '/settings/appearance',
-    },
-];
+const { serverSlug } = useProxyServer();
 
 const page = usePage();
+
+const can = computed(() => page.props.can as { manage_users: boolean});
+
+const sidebarNavItems = computed(() => {
+    const baseItems: NavItem[] = [
+        {
+            title: 'Profile',
+            href: serverSlug.value ? `/${serverSlug.value}/settings/profile` : '/settings/profile',
+            icon: User,
+        },
+        {
+            title: 'Appearance',
+            href: serverSlug.value ? `/${serverSlug.value}/settings/appearance` : '/settings/appearance',
+            icon: Palette,
+        },
+        {
+            title: 'Servers',
+            href: serverSlug.value ? `/${serverSlug.value}/settings/servers` : '/settings/servers',
+            icon: Server,
+        },
+        ...(can.value.manage_users
+            ? [
+                  {
+                      title: 'Internal Users',
+                      href: serverSlug.value ? `/${serverSlug.value}/settings/users` : '/settings/users',
+                      icon: Users,
+                  },
+              ]
+            : []),
+    ];
+    return baseItems;
+});
 
 const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.location).pathname : '';
 </script>
@@ -40,6 +63,7 @@ const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.locati
                         as-child
                     >
                         <Link :href="item.href">
+                            <component :is="item.icon" class="w-4 h-4 mr-2 text-w-600 dark:text-white-400" />
                             {{ item.title }}
                         </Link>
                     </Button>
@@ -48,11 +72,13 @@ const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.locati
 
             <Separator class="my-6 md:hidden" />
 
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+            <div class="flex-1 ">
+                <section class="w-full space-y-12">
                     <slot />
                 </section>
             </div>
         </div>
+        <!-- Global Toaster -->
+        <Toaster />
     </div>
 </template>

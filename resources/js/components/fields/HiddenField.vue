@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="hidden-field-container">
+  <div v-if="show" class="hidden-field-container hidden" style="display: none;">
     <!-- Hidden Input -->
     <input
       :id="fieldId"
@@ -52,7 +52,7 @@ const props = defineProps({
     type: [String, Number, Boolean],
     default: ''
   },
-  required:  { type: [Boolean,String,Array], default: true },
+  required:  { type: [Boolean,String,Array], default: false },
   disabled: {
     type: Boolean,
     default: false
