@@ -349,7 +349,7 @@ const fetchInstances = async () => {
 }
 
 const viewInstance = (instance: any) => {
-    const instanceUrl = `${window.location.origin}/api_instances/${serverApiType.value}/${instance.id}/main`
+    const instanceUrl = `${window.location.origin}/${serverSlug.value}/api_instances/${instance.id}/main`
     window.open(instanceUrl, '_blank')
 }
 
