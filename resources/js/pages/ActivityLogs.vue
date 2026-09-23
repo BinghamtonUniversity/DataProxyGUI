@@ -127,7 +127,7 @@ const activityLogsSchema = {
         {
             name: "created_at",
             label: "Time Stamp",
-            type: "text",
+            type: "date",
             placeholder: "Time stamp",
             value: "",
             help: "Time stamp of the event that was performed",

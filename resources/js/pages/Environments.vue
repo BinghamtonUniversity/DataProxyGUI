@@ -5,6 +5,7 @@ import { Head } from '@inertiajs/vue3';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted } from 'vue';
@@ -25,6 +26,11 @@ const showModal = ref(false);
 const modalMode = ref<'new' | 'edit'>('new');
 const editingRow = ref<any>(null);
 const submitting = ref(false);
+
+// Delete confirmation dialog
+const showDeleteModal = ref(false);
+const pendingDeleteIds = ref<number[]>([]);
+const deleting = ref(false);
 
 // Data state
 const environments = ref<any[]>([]);
@@ -374,48 +380,66 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
     }
 };
 
-const handleDelete = async (selectedRowIds?: number[]) => {
- 
-    if (selectedRowIds && selectedRowIds.length > 0) {
-        const envsToDelete = environments.value.filter(env => selectedRowIds.includes(env.id));
-    
-        try {
-            // Delete environments via API
-            for (const env of envsToDelete) {
-                const response = await fetch(`${apiBaseUrl}/environments/${env.id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': getCsrfToken() || '',
-                    },
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || `Failed to delete environment ${env.name}. Status: ${response.status}`);
-                }
-            }
-            
-            // Remove from local state after successful API calls
-            envsToDelete.forEach(env => {
-                const index = environments.value.findIndex(e => e.id === env.id);
-                if (index !== -1) {
-                    environments.value.splice(index, 1);
-                }
-            });
-            
-            // Show success message
-            if (envsToDelete.length === 1) {
-                success(`Environment "${envsToDelete[0].name}" deleted successfully!`, 'Environment Deleted');
-            } else {
-                success(`${envsToDelete.length} environments deleted successfully!`, 'Environments Deleted');
-            }
-        } catch (err: any) {
-            showError(err.message || 'Failed to delete environments. Please try again.', 'Error');
-            console.error('Delete error:', err);
-        }
-    } else {
+const handleDelete = (selectedRowIds?: number[]) => {
+    if (!selectedRowIds || selectedRowIds.length === 0) {
         warning('Please select at least one environment to delete.', 'Selection Required');
+        return;
+    }
+    pendingDeleteIds.value = [...selectedRowIds];
+    showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+    if (deleting.value) return;
+    showDeleteModal.value = false;
+    pendingDeleteIds.value = [];
+};
+
+const confirmDelete = async () => {
+    const selectedRowIds = pendingDeleteIds.value;
+    if (!selectedRowIds.length) {
+        closeDeleteModal();
+        return;
+    }
+
+    const envsToDelete = environments.value.filter(env => selectedRowIds.includes(env.id));
+    deleting.value = true;
+    try {
+        for (const env of envsToDelete) {
+            const response = await fetch(`${apiBaseUrl}/environments/${env.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken() || '',
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Failed to delete environment ${env.name}. Status: ${response.status}`);
+            }
+        }
+
+        envsToDelete.forEach(env => {
+            const index = environments.value.findIndex(e => e.id === env.id);
+            if (index !== -1) {
+                environments.value.splice(index, 1);
+            }
+        });
+
+        if (envsToDelete.length === 1) {
+            success(`Environment "${envsToDelete[0].name}" deleted successfully!`, 'Environment Deleted');
+        } else {
+            success(`${envsToDelete.length} environments deleted successfully!`, 'Environments Deleted');
+        }
+
+        showDeleteModal.value = false;
+        pendingDeleteIds.value = [];
+    } catch (err: any) {
+        showError(err.message || 'Failed to delete environments. Please try again.', 'Error');
+        console.error('Delete error:', err);
+    } finally {
+        deleting.value = false;
     }
 };
 
@@ -475,6 +499,15 @@ onMounted(() => {
                 
                           
             </AlertModal>
+
+            <!-- Delete confirmation -->
+            <ConfirmDeleteModal
+                :isOpen="showDeleteModal"
+                :count="pendingDeleteIds.length"
+                :deleting="deleting"
+                @confirm="confirmDelete"
+                @close="closeDeleteModal"
+            />
             
             <!-- Global Toaster -->
             <Toaster />

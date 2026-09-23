@@ -1206,37 +1206,41 @@ function smartCompare(a, b) {
   // Convert to strings for analysis
   const aStr = String(a).trim();
   const bStr = String(b).trim();
-  
-  // Check if values are numbers (including decimal numbers)
-  const aNum = parseFloat(aStr);
-  const bNum = parseFloat(bStr);
-  const aIsNum = !isNaN(aNum) && isFinite(aNum) && aStr !== '';
-  const bIsNum = !isNaN(bNum) && isFinite(bNum) && bStr !== '';
-  
-  // If both are numbers, compare numerically
-  if (aIsNum && bIsNum) {
-    return aNum - bNum;
-  }
-  
-  // Check if values are dates
-  const aDate = new Date(aStr);
-  const bDate = new Date(bStr);
-  const aIsDate = !isNaN(aDate.getTime()) && aStr !== '';
-  const bIsDate = !isNaN(bDate.getTime()) && bStr !== '';
-  
-  // If both are valid dates, compare by date
+
+  // Strict number check: whole string must be numeric (avoids parseFloat("2026-03-07T...") === 2026)
+  const isPlainNumber = (str) => /^-?\d+(\.\d+)?$/.test(str);
+  const aIsNum = isPlainNumber(aStr);
+  const bIsNum = isPlainNumber(bStr);
+
+  // Prefer date detection for ISO / datetime-like strings before numeric sorting
+  const isDateLike = (str) => {
+    if (!str) return false;
+    // ISO 8601 / common datetime patterns (includes fractional seconds)
+    if (/^\d{4}-\d{2}-\d{2}([T\s]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/.test(str)) {
+      const d = new Date(str);
+      return !isNaN(d.getTime());
+    }
+    return false;
+  };
+
+  const aIsDate = isDateLike(aStr);
+  const bIsDate = isDateLike(bStr);
+
   if (aIsDate && bIsDate) {
-    return aDate.getTime() - bDate.getTime();
+    return new Date(aStr).getTime() - new Date(bStr).getTime();
   }
-  
-  // If one is a number and the other isn't, numbers come first
-  if (aIsNum && !bIsNum) return -1;
-  if (!aIsNum && bIsNum) return 1;
-  
-  // If one is a date and the other isn't, dates come first
+
+  // If both are plain numbers, compare numerically
+  if (aIsNum && bIsNum) {
+    return parseFloat(aStr) - parseFloat(bStr);
+  }
+
+  // Mixed type ordering
   if (aIsDate && !bIsDate) return -1;
   if (!aIsDate && bIsDate) return 1;
-  
+  if (aIsNum && !bIsNum) return -1;
+  if (!aIsNum && bIsNum) return 1;
+
   // Default to case-insensitive string comparison
   return aStr.toLowerCase().localeCompare(bStr.toLowerCase());
 }

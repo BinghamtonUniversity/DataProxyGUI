@@ -22,6 +22,7 @@ import { useToaster } from '@/composables/useToaster';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 import { useProxyServer } from '@/composables/useProxyServer';
 
 
@@ -253,9 +254,40 @@ const newApiInstanceForm = ref<NewApiInstanceForm>({
 const newApiInstanceLoading = ref(false)
 const newApiInstanceError = ref('')
 
+// Delete confirmation dialog
+const showDeleteModal = ref(false)
+const pendingDeleteInstances = ref<ApiInstance[]>([])
+const deleting = ref(false)
+
 // Edit API Instance
 const isEditMode = ref(false)
 const editingApiInstanceId = ref<number|null>(null)
+
+// Comment dialog (required before create/update request)
+const commentDialogOpen = ref(false)
+const commentFormRef = ref<InstanceType<typeof FormViewer> | null>(null)
+const commentForm = ref({ comment: '' })
+const pendingApiInstancePayload = ref<Record<string, any> | null>(null)
+const pendingRequestMethod = ref<'POST' | 'PUT'>('POST')
+const pendingRequestUrl = ref('api/api_instances')
+
+const commentFormConfig = {
+  label: '',
+  description: '',
+  name: 'api-instance-comment-form',
+  showLabel: false,
+  files: false,
+  fields: [
+    {
+      name: 'comment',
+      label: 'Comment',
+      type: 'textarea',
+      placeholder: 'Describe why this change is being made',
+      value: '',
+      required: true,
+    },
+  ],
+}
 
 // Dropdown state
 const dropdownOpen = reactive({
@@ -263,7 +295,7 @@ const dropdownOpen = reactive({
   api: false
 })
 
-const openNewApiInstanceDialog = () => {
+const resetApiInstanceForm = () => {
   newApiInstanceForm.value = {
     environment_id: '',
     api_id: '',
@@ -273,30 +305,42 @@ const openNewApiInstanceDialog = () => {
     public: 0,
     route_user_map: [],
     resources: [],
-    options: {} as ApiInstanceOptions,
+    options: [] as any,
     api_type: serverApiType.value as string
   }
+}
+
+const clearPendingApiInstanceSave = () => {
+  pendingApiInstancePayload.value = null
+  pendingRequestMethod.value = 'POST'
+  pendingRequestUrl.value = 'api/api_instances'
+  commentForm.value = { comment: '' }
+  isEditMode.value = false
+  editingApiInstanceId.value = null
+}
+
+const openNewApiInstanceDialog = () => {
+  resetApiInstanceForm()
+  newApiInstanceForm.value.options = {} as ApiInstanceOptions
   newApiInstanceError.value = ''
+  clearPendingApiInstanceSave()
+  commentDialogOpen.value = false
   newApiInstanceDialogOpen.value = true
 }
 
 const closeNewApiInstanceDialog = () => {
   newApiInstanceDialogOpen.value = false
   newApiInstanceError.value = ''
-  newApiInstanceForm.value = {
-    environment_id: '',
-    api_id: '',
-    api_version_id: '',
-    name: '',
-    route: '',
-    public: 0,
-    route_user_map: [],
-    resources: [],
-    options: [],
-    api_type: serverApiType.value as string
+  resetApiInstanceForm()
+  if (!commentDialogOpen.value) {
+    clearPendingApiInstanceSave()
   }
-  isEditMode.value = false
-  editingApiInstanceId.value = null
+}
+
+const closeCommentDialog = () => {
+  commentDialogOpen.value = false
+  clearPendingApiInstanceSave()
+  newApiInstanceError.value = ''
 }
 
 // TODO: do we need this?? now
@@ -328,84 +372,168 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
             closeNewApiInstanceDialog();
             break;
         case 'save':
-            submitNewApiInstance(actionData.formData);
+            prepareApiInstanceSave(actionData.formData);
             break;
         default:
             warning('Unknown FormViewer action type:', actionData.type);
     }
 };
-const submitNewApiInstance = async ( formData: any) => {
-  
-  newApiInstanceLoading.value = true
-  newApiInstanceError.value = ''
-  
-  if (formRef.value) {
-    const isValid = formRef.value.validateForm();
-    if (!isValid) {   
-      newApiInstanceError.value = 'Please fix validation errors before saving'
-      error(newApiInstanceError.value, 'Validation Error')
-      newApiInstanceLoading.value = false
-      return;
-    }
+
+const handleCommentFormAction = (actionData: { type: string; action: string; formData: any }) => {
+  switch (actionData.type) {
+    case 'close':
+    case 'cancel':
+      closeCommentDialog()
+      break
+    case 'save':
+      submitApiInstanceWithComment(actionData.formData)
+      break
+    default:
+      warning('Unknown FormViewer action type:', actionData.type)
+  }
+}
+
+const buildApiInstanceRequestBody = (formData: any) => {
+  const data = { ...formData }
+
+  // For PHP APIs, set slug
+  if (data.api_type === 'php' && !data.slug) {
+    data.slug = data.route
+  }
+  const { api_type, ...formDataWithoutApiType } = data
+  const normalizedFormData = {
+    ...formDataWithoutApiType,
+    api_version_id:
+      formDataWithoutApiType.api_version_id === -1
+        ? ""
+        : formDataWithoutApiType.api_version_id,
   }
 
+  return isEditMode.value && editingApiInstanceId.value
+    ? { ...normalizedFormData, id: editingApiInstanceId.value }
+    : { ...normalizedFormData }
+}
+
+const prepareApiInstanceSave = (formData: any) => {
+  newApiInstanceError.value = ''
+
+  if (formRef.value) {
+    const isValid = formRef.value.validateForm()
+    if (!isValid) {
+      newApiInstanceError.value = 'Please fix validation errors before saving'
+      error(newApiInstanceError.value, 'Validation Error')
+      return
+    }
+  }
 
   // Trim and normalize route just in case
   const routeToCheck = formData.route.trim().toLowerCase()
   const envToCheck = formData.environment_id
   // Composite duplicate check (route + environment)
   const duplicate = api_instances.value.some(inst => {
-    const type = inst.api_type;
-    const normalizedCheck = routeToCheck.trim().toLowerCase();
+    const type = inst.api_type
+    const normalizedCheck = routeToCheck.trim().toLowerCase()
 
     // Use route for python, slug for php
     const instPath = type === 'php'
         ? inst.slug?.trim().toLowerCase()
-        : inst.route?.trim().toLowerCase();
+        : inst.route?.trim().toLowerCase()
 
     return (
         instPath === normalizedCheck &&
         inst.environment_id === Number(envToCheck) &&
         type === formData.api_type &&
         (!isEditMode.value || inst.id !== editingApiInstanceId.value)
-    );
-});
+    )
+  })
 
   if (duplicate) {
     newApiInstanceError.value = 'An API instance with this route already exists in the selected environment.'
     error(newApiInstanceError.value, 'Duplicate Entry')
-    newApiInstanceLoading.value = false
     return // prevent API call
   }
 
+  pendingApiInstancePayload.value = buildApiInstanceRequestBody(formData)
+  pendingRequestUrl.value = isEditMode.value && editingApiInstanceId.value
+    ? `api/api_instances/${editingApiInstanceId.value}`
+    : 'api/api_instances'
+  pendingRequestMethod.value = isEditMode.value && editingApiInstanceId.value ? 'PUT' : 'POST'
+
+  commentForm.value = { comment: '' }
+  commentDialogOpen.value = true
+  newApiInstanceDialogOpen.value = false
+  newApiInstanceError.value = ''
+  resetApiInstanceForm()
+}
+
+const normalizeApiInstance = (instance: any): ApiInstance => {
+  const normalized = { ...instance }
+
+  if (normalized.slug != null) {
+    normalized.route = normalized.slug
+  }
+  if (normalized.api_version_id === null) {
+    normalized.api_version_id = -1
+  }
+
+  const apiType = apis.value.find((api: any) => api.id === Number(normalized.api_id))?.api_type
+  normalized.api_type = apiType || normalized.api_type || 'php'
+
+  return normalized
+}
+
+const applyApiInstanceToTable = (instance: any, mode: 'create' | 'edit') => {
+  const normalized = normalizeApiInstance(instance)
+
+  if (mode === 'edit') {
+    const index = api_instances.value.findIndex(
+      (inst) => inst.id === normalized.id || inst.id === editingApiInstanceId.value
+    )
+    if (index !== -1) {
+      api_instances.value[index] = normalized
+      return
+    }
+  }
+
+  api_instances.value.unshift(normalized)
+}
+
+const submitApiInstanceWithComment = async (formData: any) => {
+  if (!commentFormRef.value) {
+    warning('Form is not ready. Please try again.', 'Validation Error')
+    return
+  }
+  const isValid = commentFormRef.value.validateForm()
+  if (!isValid) {
+    warning('Please enter a comment before saving.', 'Validation Error')
+    return
+  }
+
+  const comment = (formData?.comment ?? '').trim()
+  if (!comment) {
+    warning('Comment is required.', 'Validation Error')
+    return
+  }
+
+  if (!pendingApiInstancePayload.value) {
+    error('Nothing to save. Please try again.', 'Error')
+    closeCommentDialog()
+    return
+  }
+
+  newApiInstanceLoading.value = true
+  newApiInstanceError.value = ''
+
+  const wasEdit = isEditMode.value
+
   try {
-    let url = `api/api_instances`
-    let request_method = 'POST'
-    if (isEditMode.value && editingApiInstanceId.value) {
-      url = `api/api_instances/${editingApiInstanceId.value}`
-      request_method = 'PUT'
+    const body = {
+      ...pendingApiInstancePayload.value,
+      comment,
     }
 
-    // For PHP APIs, set slug
-    if(formData.api_type === 'php' && !formData.slug) {
-      formData.slug = formData.route;
-    }
-    const { api_type, ...formDataWithoutApiType } = formData;
-    const normalizedFormData = {
-      ...formDataWithoutApiType,
-      api_version_id:
-        formDataWithoutApiType.api_version_id === -1
-          ? ""
-          : formDataWithoutApiType.api_version_id,
-    };
-
-    const body =
-      isEditMode.value && editingApiInstanceId.value
-        ? { ...normalizedFormData, id: editingApiInstanceId.value }
-        : { ...normalizedFormData };
-
-    const response = await fetch(url, {
-      method: request_method,
+    const response = await fetch(pendingRequestUrl.value, {
+      method: pendingRequestMethod.value,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -415,51 +543,89 @@ const submitNewApiInstance = async ( formData: any) => {
     })
 
     if (!response.ok) throw new Error('Failed to save API Instance')
-    if(isEditMode.value) {
-      success('Updated successfully', 'API Instance Updated');
+
+    const savedInstance = await response.json()
+    applyApiInstanceToTable(savedInstance, wasEdit ? 'edit' : 'create')
+
+    if (wasEdit) {
+      success('Updated successfully', 'API Instance Updated')
     } else {
-      success('Created successfully', 'API Instance Created');
+      success('Created successfully', 'API Instance Created')
     }
-    closeNewApiInstanceDialog()
-    await fetchApiInstances()
-    await fetchAllData()
+    commentDialogOpen.value = false
+    clearPendingApiInstanceSave()
   } catch (err: any) {
     newApiInstanceError.value = err.message || 'Error saving API Instance'
-    error(newApiInstanceError.value, 'Error');
+    error(newApiInstanceError.value, 'Error')
   } finally {
     newApiInstanceLoading.value = false
-    isEditMode.value = false
-    editingApiInstanceId.value = null
   }
 }
 
-const handleDeleteInstance = async (instance: ApiInstance) => {
-  if (!confirm(`Are you sure you want to delete API Instance "${instance.name}"? This action cannot be undone.`)) {
+const handleDeleteInstance = (instance: ApiInstance) => {
+  if (!instance) {
+    warning('Please select at least one API instance to delete.', 'Selection Required')
     return
   }
-  try{
-    const response = await fetch(`api/api_instances/${instance.id}`, {
-      method: 'DELETE',
-      headers: {
-        'X-CSRF-TOKEN': getCsrfToken() || '',
-      },
-    })
-    if (!response.ok) {
-      error('Failed to delete API Instance', 'Error')
-      throw new Error('Failed to delete API Instance')
+  pendingDeleteInstances.value = [instance]
+  showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+  if (deleting.value) return
+  showDeleteModal.value = false
+  pendingDeleteInstances.value = []
+}
+
+const confirmDelete = async () => {
+  const instancesToDelete = pendingDeleteInstances.value
+  if (!instancesToDelete.length) {
+    closeDeleteModal()
+    return
+  }
+
+  deleting.value = true
+  try {
+    for (const instance of instancesToDelete) {
+      const response = await fetch(`api/api_instances/${instance.id}`, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRF-TOKEN': getCsrfToken() || '',
+        },
+      })
+      if (!response.ok) {
+        error('Failed to delete API Instance', 'Error')
+        throw new Error(`Failed to delete API Instance "${instance.name}"`)
+      }
     }
-    success(`API Instance "${instance.name}" deleted successfully`, 'API Instance Deleted');
-    await fetchApiInstances()
+
+    instancesToDelete.forEach((instance) => {
+      const index = api_instances.value.findIndex((inst) => inst.id === instance.id)
+      if (index !== -1) {
+        api_instances.value.splice(index, 1)
+      }
+    })
+
+    if (instancesToDelete.length === 1) {
+      success(`API Instance "${instancesToDelete[0].name}" deleted successfully`, 'API Instance Deleted')
+    } else {
+      success(`${instancesToDelete.length} API instances deleted successfully`, 'API Instances Deleted')
+    }
+
+    showDeleteModal.value = false
+    pendingDeleteInstances.value = []
   } catch (err: any) {
     error(err.message || 'Error deleting API Instance', 'Error')
   } finally {
-    // cleanup 
+    deleting.value = false
   }
 }
 
 const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
   isEditMode.value = true
   editingApiInstanceId.value = apiInstance.id
+  pendingApiInstancePayload.value = null
+  commentDialogOpen.value = false
   newApiInstanceForm.value = {
     environment_id: apiInstance.environment_id?.toString() || '',
     api_id: apiInstance.api_id?.toString() || '',
@@ -548,22 +714,8 @@ const fetchApiInstances = async () => {
   loading.value = true
   try {
     const response = await fetch(`api/api_instances`)
-    api_instances.value = await response.json()
-
-   
-    // Set api_version_id to -1 if it is null
-    api_instances.value.forEach((instance: any) => {
-        if (instance.slug != null) {
-            instance.route = instance.slug
-        }
-        if(instance.api_version_id === null) {
-            instance.api_version_id = -1
-        }
-        let api_type = apis.value.find((api: any) => api.id === instance.api_id)?.api_type;
-       
-        instance.api_type = api_type || 'php';
-    });
-
+    const data = await response.json()
+    api_instances.value = data.map((instance: any) => normalizeApiInstance(instance))
   } catch (e) {
     api_instances.value = []
     console.error('Error fetching API Instances:', e)
@@ -612,23 +764,10 @@ const fetchAllData = async (mode: string = 'default') => {
       apiVersionsResponse.json(),
     ])
 
-    api_instances.value = apiInstancesData
     environments.value = environmentsData;
     apis.value = apisData;
     api_versions.value = apiVersionsData;
-
-
-    api_instances.value.forEach((instance: any) => {
-        if (instance.slug != null) {
-            instance.route = instance.slug
-        }
-        if(instance.api_version_id === null) {
-            instance.api_version_id = -1
-        }
-        let api_type = apis.value.find((api: any) => api.id === instance.api_id)?.api_type;
-       
-        instance.api_type = api_type || 'php';
-    });
+    api_instances.value = apiInstancesData.map((instance: any) => normalizeApiInstance(instance))
     
     apiInstancesSchema.fields[3].options = environmentsData.map((env: any) => ({
         label: env.name + ' (' + env.type + ') '  || `Environment ${env.id}`,
@@ -746,6 +885,9 @@ const handleDataGridCustomAction = (actionData: { action: string; selectedRows: 
     case 'create':
       openNewApiInstanceDialog();
       break;
+    case 'edit':
+      openEditApiInstanceDialog(actionData.selectedData[0]);
+      break;
     case 'delete':
       handleDeleteInstance(actionData.selectedData[0]);
       break;
@@ -784,6 +926,7 @@ const handleDataGridRowClick = (row: any) => {
             theme="default"
             :actions="[
               {name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus'},
+              {name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right'},
               {name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right'}
             ]"
             :rowActions="[
@@ -816,11 +959,41 @@ const handleDataGridRowClick = (row: any) => {
             :disabled="newApiInstanceLoading"
             />
         </AlertModal>
+
+        <!-- Required comment before create/update request -->
+        <AlertModal
+            :isOpen="commentDialogOpen"
+            title="Save comment"
+            @close="() => { if (!newApiInstanceLoading) closeCommentDialog() }"
+        >
+          <FormViewer
+              ref="commentFormRef"
+              :formConfig="commentFormConfig"
+              :initialData="commentForm"
+              :cancelAction="'close'"
+              :actionHandler="handleCommentFormAction"
+              :actions="[
+                  { type: 'save', action: 'save', label: 'Confirm', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+                  { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+              ]"
+              :isSubmitting="newApiInstanceLoading"
+              :disabled="newApiInstanceLoading"
+          />
+        </AlertModal>
+
+        <!-- Delete confirmation -->
+        <ConfirmDeleteModal
+            :isOpen="showDeleteModal"
+            :count="pendingDeleteInstances.length"
+            :deleting="deleting"
+            @confirm="confirmDelete"
+            @close="closeDeleteModal"
+        />
         
         <!-- Create/Edit Dialog 
         <Dialog v-model:open="newApiInstanceDialogOpen">
           <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <form @submit="submitNewApiInstance" class="space-y-6">
+            <form @submit.prevent class="space-y-6">
               <DialogHeader>
                 <DialogTitle>{{ isEditMode ? 'Edit API Instance' : 'Create New API Instance' }}</DialogTitle>
               </DialogHeader>

@@ -11,6 +11,7 @@ import { useToaster } from '@/composables/useToaster'
 import DataGrid from '@/components/datagrid/DataGrid.vue'
 import FormViewer from '@/components/formviewer/FormViewer.vue'
 import AlertModal from '@/components/AlertModal.vue'
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue'
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -386,11 +387,42 @@ const newResourceForm = ref<NewResourceForm>({
 const newResourceLoading = ref(false)
 const newResourceError = ref('')
 
+// Delete confirmation dialog
+const showDeleteModal = ref(false)
+const pendingDeleteResource = ref<{ resource: Resource; index: number } | null>(null)
+const deleting = ref(false)
+
 // Edit Resource
 const isEditMode = ref(false)
 const editingResourceId = ref<number | null>(null)
 
-const openNewResourceDialog = () => {
+// Comment dialog (required before create/update request)
+const commentDialogOpen = ref(false)
+const commentFormRef = ref<InstanceType<typeof FormViewer> | null>(null)
+const commentForm = ref({ comment: '' })
+const pendingResourcePayload = ref<Record<string, any> | null>(null)
+const pendingRequestMethod = ref<'POST' | 'PUT'>('POST')
+const pendingRequestUrl = ref('ajax/resources')
+
+const commentFormConfig = {
+  label: '',
+  description: '',
+  name: 'resource-comment-form',
+  showLabel: false,
+  files: false,
+  fields: [
+    {
+      name: 'comment',
+      label: 'Comment',
+      type: 'textarea',
+      placeholder: 'Describe why this change is being made',
+      value: '',
+      required: true,
+    },
+  ],
+}
+
+const resetResourceForm = () => {
   newResourceForm.value = {
     name: '',
     type: '',
@@ -403,27 +435,37 @@ const openNewResourceDialog = () => {
     value: '',
     secret_value: ''
   }
+}
+
+const clearPendingSave = () => {
+  pendingResourcePayload.value = null
+  pendingRequestMethod.value = 'POST'
+  pendingRequestUrl.value = 'ajax/resources'
+  commentForm.value = { comment: '' }
+  isEditMode.value = false
+  editingResourceId.value = null
+}
+
+const openNewResourceDialog = () => {
+  resetResourceForm()
   newResourceError.value = ''
+  clearPendingSave()
   newResourceDialogOpen.value = true
 }
 
 const closeNewResourceDialog = () => {
   newResourceDialogOpen.value = false
   newResourceError.value = ''
-  newResourceForm.value = {
-    name: '',
-    type: '',
-    resource_type: '',
-    user: '',
-    pass: '',
-    tns: '',
-    db_name: '',    
-    server: '',
-    value: '',
-    secret_value: ''
+  resetResourceForm()
+  if (!commentDialogOpen.value) {
+    clearPendingSave()
   }
-  isEditMode.value = false
-  editingResourceId.value = null
+}
+
+const closeCommentDialog = () => {
+  commentDialogOpen.value = false
+  clearPendingSave()
+  newResourceError.value = ''
 }
 
 // Handle FormViewer action events
@@ -434,14 +476,78 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
       closeNewResourceDialog()
       break
     case 'save':
-      submitNewResource(actionData.formData)
+      prepareResourceSave(actionData.formData)
       break
     default:
       warning('Unknown FormViewer action type:', actionData.type)
   }
 }
 
-const submitNewResource = async (formData: any) => {
+const handleCommentFormAction = (actionData: { type: string; action: string; formData: any }) => {
+  switch (actionData.type) {
+    case 'close':
+    case 'cancel':
+      closeCommentDialog()
+      break
+    case 'save':
+      submitResourceWithComment(actionData.formData)
+      break
+    default:
+      warning('Unknown FormViewer action type:', actionData.type)
+  }
+}
+
+const buildResourceRequestData = (formData: any) => {
+  const body = isEditMode.value && editingResourceId.value
+    ? { ...formData, id: editingResourceId.value }
+    : { ...formData }
+
+  let config: Record<string, any> = {}
+
+  switch (body.resource_type) {
+    case 'oracle':
+      config = {
+        user: body.user,
+        pass: body.pass,
+        tns: body.tns
+      }
+      break
+
+    case 'mysql':
+    case 'sqlsrv':
+      config = {
+        user: body.user,
+        pass: body.pass,
+        name: body.db_name,
+        server: body.server
+      }
+      break
+
+    case 'value':
+      config = {
+        value: body.value
+      }
+      break
+
+    case 'secret':
+      config = {
+        value: body.secret_value
+      }
+      break
+
+    default:
+      config = {}
+  }
+
+  return {
+    name: body.name,
+    type: body.type,
+    resource_type: body.resource_type,
+    config
+  }
+}
+
+const prepareResourceSave = (formData: any) => {
   if (!resourceFormRef.value) {
     warning('Form is not ready. Please try again.', 'Validation Error');
     return;
@@ -451,11 +557,10 @@ const submitNewResource = async (formData: any) => {
     warning('Please fix validation errors before saving.', 'Validation Error');
     return;
   }
-  newResourceLoading.value = true
   newResourceError.value = ''
 
   // Duplicate name + environment check
-  const duplicate = resources.value.find((res, idx) =>
+  const duplicate = resources.value.find((res) =>
     res.name.toLowerCase().trim() === formData.name.trim().toLowerCase() &&
     res.type === formData.type &&
     (isEditMode.value ? res.id !== editingResourceId.value : true)
@@ -464,70 +569,56 @@ const submitNewResource = async (formData: any) => {
   if (duplicate) {
     newResourceError.value = `A Resource with name "${formData.name}" already exists in environment "${formData.type}".`
     error(newResourceError.value, 'Duplicate Entry')
-    newResourceLoading.value = false
     return
   }
 
+  pendingResourcePayload.value = buildResourceRequestData(formData)
+  pendingRequestUrl.value = isEditMode.value && editingResourceId.value
+    ? `ajax/resources/${editingResourceId.value}`
+    : 'ajax/resources'
+  pendingRequestMethod.value = isEditMode.value && editingResourceId.value ? 'PUT' : 'POST'
+
+  commentForm.value = { comment: '' }
+  commentDialogOpen.value = true
+  newResourceDialogOpen.value = false
+  newResourceError.value = ''
+  resetResourceForm()
+}
+
+const submitResourceWithComment = async (formData: any) => {
+  if (!commentFormRef.value) {
+    warning('Form is not ready. Please try again.', 'Validation Error');
+    return;
+  }
+  const isValid = commentFormRef.value?.validateForm();
+  if (!isValid) {
+    warning('Please enter a comment before saving.', 'Validation Error');
+    return;
+  }
+
+  const comment = (formData?.comment ?? '').trim()
+  if (!comment) {
+    warning('Comment is required.', 'Validation Error');
+    return;
+  }
+
+  if (!pendingResourcePayload.value) {
+    error('Nothing to save. Please try again.', 'Error')
+    closeCommentDialog()
+    return
+  }
+
+  newResourceLoading.value = true
+  newResourceError.value = ''
+
   try {
-    let url = `ajax/resources`
-    let request_method = 'POST'
-
-    if (isEditMode.value && editingResourceId.value) {
-      url = `ajax/resources/${editingResourceId.value}`
-      request_method = 'PUT'
-    }
-
-    const body = isEditMode.value && editingResourceId.value
-      ? { ...formData, id: editingResourceId.value }
-      : { ...formData }
-
-
-    let config: Record<string, any> = {}
-
-    switch (body.resource_type) {
-      case 'oracle':
-        config = {
-          user: body.user,
-          pass: body.pass,
-          tns: body.tns
-        }
-        break
-
-      case 'mysql':
-      case 'sqlsrv':
-        config = {
-          user: body.user,
-          pass: body.pass,
-          name: body.db_name,
-          server: body.server
-        }
-        break
-
-      case 'value':
-        config = {
-          value: body.value
-        }
-        break
-
-      case 'secret':
-        config = {
-          value: body.secret_value
-        }
-        break
-
-      default:
-        config = {}
-    }
-
     const requestData = {
-      name: body.name,
-      type: body.type,
-      resource_type: body.resource_type,
-      config
+      ...pendingResourcePayload.value,
+      comment,
     }
 
-    const response = await fetch(url, {
-      method: request_method,
+    const response = await fetch(pendingRequestUrl.value, {
+      method: pendingRequestMethod.value,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -537,32 +628,43 @@ const submitNewResource = async (formData: any) => {
     })
 
     if (!response.ok) throw new Error('Failed to save Resource')
-    
+
     if (isEditMode.value) {
       success('Updated successfully', 'Resource Updated')
     } else {
       success('Created successfully', 'Resource Created')
     }
-    
-    closeNewResourceDialog()
+
+    commentDialogOpen.value = false
+    clearPendingSave()
     await fetchResources()
   } catch (err: any) {
     newResourceError.value = err.message || 'Error saving Resource'
     error(newResourceError.value, 'Error')
   } finally {
     newResourceLoading.value = false
-    isEditMode.value = false
-    editingResourceId.value = null
   }
 }
 
-const handleDeleteResource = async (resource: Resource, index: number) => {
- 
+const handleDeleteResource = (resource: Resource, index: number) => {
+  pendingDeleteResource.value = { resource, index }
+  showDeleteModal.value = true
+}
 
-  if (!confirm(`Are you sure you want to delete Resource "${resource.name}"? This action cannot be undone.`)) {
+const closeDeleteModal = () => {
+  if (deleting.value) return
+  showDeleteModal.value = false
+  pendingDeleteResource.value = null
+}
+
+const confirmDelete = async () => {
+  if (!pendingDeleteResource.value) {
+    closeDeleteModal()
     return
   }
-  
+
+  const { resource, index } = pendingDeleteResource.value
+  deleting.value = true
   try {
     const response = await fetch(`ajax/resources/${resource.id}`, {
       method: 'DELETE',
@@ -578,8 +680,12 @@ const handleDeleteResource = async (resource: Resource, index: number) => {
 
     resources.value.splice(index, 1);
     success(`Resource "${resource.name}" deleted successfully`, 'Resource Deleted')
+    showDeleteModal.value = false
+    pendingDeleteResource.value = null
   } catch (err: any) {
     error(err.message || 'Error deleting Resource', 'Error')
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -691,6 +797,9 @@ const handleDataGridCustomAction = (actionData: { action: string; selectedRows: 
     case 'create':
       openNewResourceDialog()
       break
+    case 'edit':
+      openEditResourceDialog(actionData.selectedData[0])
+      break
     case 'delete':
       handleDeleteResource(actionData.selectedData[0], actionData.selectedIndex[0])
       break
@@ -732,6 +841,7 @@ onMounted(() => {
         theme="default"
         :actions="[
           {name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus'},
+          {name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right'},
           {name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right'}
         ]"
         :rowActions="[
@@ -763,6 +873,35 @@ onMounted(() => {
           :disabled="newResourceLoading"
         />
       </AlertModal>
+
+      <!-- Required comment before create/update request -->
+      <AlertModal
+        :isOpen="commentDialogOpen"
+        title="Save comment"
+        @close="() => { if (!newResourceLoading) closeCommentDialog() }"
+      >
+        <FormViewer
+          ref="commentFormRef"
+          :formConfig="commentFormConfig"
+          :initialData="commentForm"
+          :cancelAction="'close'"
+          :actionHandler="handleCommentFormAction"
+          :actions="[
+            { type: 'save', action: 'save', label: 'Confirm', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+            { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+          ]"
+          :isSubmitting="newResourceLoading"
+          :disabled="newResourceLoading"
+        />
+      </AlertModal>
+
+      <ConfirmDeleteModal
+        :isOpen="showDeleteModal"
+        :count="pendingDeleteResource ? 1 : 0"
+        :deleting="deleting"
+        @confirm="confirmDelete"
+        @close="closeDeleteModal"
+      />
     </div>
     <Toaster />
   </AppLayout>

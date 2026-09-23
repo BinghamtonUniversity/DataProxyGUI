@@ -5,6 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { type BreadcrumbItem, type Api, ApiUser, User } from '@/types';
@@ -27,6 +28,35 @@ const modalMode = ref<'new' | 'edit'>('new');
 const editingRow = ref<any>(null);
 const submitting = ref(false);
 const apiFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
+
+// Comment dialog (required before create/update request)
+const commentDialogOpen = ref(false);
+const commentFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
+const commentForm = ref({ comment: '' });
+const pendingApiPayload = ref<Record<string, any> | null>(null);
+
+const commentFormConfig = {
+    label: '',
+    description: '',
+    name: 'api-comment-form',
+    showLabel: false,
+    files: false,
+    fields: [
+        {
+            name: 'comment',
+            label: 'Comment',
+            type: 'textarea',
+            placeholder: 'Describe why this change is being made',
+            value: '',
+            required: true,
+        },
+    ],
+};
+
+// Delete confirmation dialog
+const showDeleteModal = ref(false);
+const pendingDeleteIds = ref<number[]>([]);
+const deleting = ref(false);
 
 // Data state
 const apis = ref<Api[]>([]);
@@ -384,15 +414,21 @@ const fetchApis = async () => {
 };
 
 // Modal functions
+const clearPendingApiSave = () => {
+    pendingApiPayload.value = null;
+    commentForm.value = { comment: '' };
+};
+
 const openNewModal = () => {
     modalMode.value = 'new';
-    // editingRow.value = null;
     editingRow.value = {
         name: '',
         description: '',
         api_type: serverApiType.value || 'python',
         tags: ''
-    }
+    };
+    clearPendingApiSave();
+    commentDialogOpen.value = false;
     showModal.value = true;
 };
 
@@ -404,15 +440,26 @@ const openEditModal = (row: any) => {
         created_at: undefined,
         created_by_id: undefined
     };
+    clearPendingApiSave();
+    commentDialogOpen.value = false;
     showModal.value = true;
 };
 
 const closeModal = () => {
     showModal.value = false;
-    editingRow.value = null;
+    if (!commentDialogOpen.value) {
+        editingRow.value = null;
+        clearPendingApiSave();
+    }
 };
 
-const handleFormSubmit = async (formValues: any) => {
+const closeCommentDialog = () => {
+    commentDialogOpen.value = false;
+    editingRow.value = null;
+    clearPendingApiSave();
+};
+
+const prepareApiSave = (formValues: any) => {
     if (!apiFormRef.value) {
         warning('Form is not ready. Please try again.', 'Validation Error');
         return;
@@ -422,18 +469,57 @@ const handleFormSubmit = async (formValues: any) => {
         warning('Please fix validation errors before saving.', 'Validation Error');
         return;
     }
+
+    if (modalMode.value === 'edit' && !editingRow.value) {
+        warning('Please select exactly one row to edit.', 'Selection Required');
+        return;
+    }
+
+    const cleanedData = cleanFormData(formValues);
+
+    if (cleanedData.api_type === 'php' && cleanedData.name && cleanedData.name.includes(' ')) {
+        showError('API name cannot contain spaces. Please use underscores or hyphens instead.', 'Validation Error');
+        return;
+    }
+
+    pendingApiPayload.value = cleanedData;
+    commentForm.value = { comment: '' };
+    commentDialogOpen.value = true;
+    showModal.value = false;
+};
+
+const submitApiWithComment = async (formData: any) => {
+    if (!commentFormRef.value) {
+        warning('Form is not ready. Please try again.', 'Validation Error');
+        return;
+    }
+    const isValid = commentFormRef.value.validateForm();
+    if (!isValid) {
+        warning('Please enter a comment before saving.', 'Validation Error');
+        return;
+    }
+
+    const comment = (formData?.comment ?? '').trim();
+    if (!comment) {
+        warning('Comment is required.', 'Validation Error');
+        return;
+    }
+
+    if (!pendingApiPayload.value) {
+        showError('Nothing to save. Please try again.', 'Error');
+        closeCommentDialog();
+        return;
+    }
+
+    const cleanedData = {
+        ...pendingApiPayload.value,
+        comment,
+    };
+
     try {
         submitting.value = true;
-        
+
         if (modalMode.value === 'new') {
-            // Create new API
-            const cleanedData = cleanFormData(formValues);
-
-            // Check if name contains spaces
-            if (cleanedData.api_type === 'php' && cleanedData.name && cleanedData.name.includes(' ')) {
-                throw new Error('API name cannot contain spaces. Please use underscores or hyphens instead.');
-            }
-
             const response = await fetch(`api/apis`, {
                 method: 'POST',
                 headers: {
@@ -451,11 +537,7 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const newApi = await response.json();
-            
 
-
-            // Format and add to local state
-            // TO-DO: created_by_id mapping for php??
             const resolvedUserId = newApi.user_id ?? newApi.user;
             apis.value.push({
                 ...newApi,
@@ -463,19 +545,10 @@ const handleFormSubmit = async (formValues: any) => {
                 created_at: newApi.created_at ? new Date(newApi.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
                 user_name: resolvedUserId ? users.value.find((user: User) => user.id === resolvedUserId)?.name : "Unknown",
                 user_id: resolvedUserId
-
             });
-            
-            success('API created successfully!', 'API Created');
-        } else {
 
-            // Update existing API
-            const cleanedData = cleanFormData(formValues);
-             // Check if name contains spaces
-            if (cleanedData.api_type === 'php' && cleanedData.name && cleanedData.name.includes(' ')) {
-                throw new Error('API name cannot contain spaces. Please use underscores or hyphens instead.');
-            }
-            
+            success('API created successfully!', 'API Created');
+        } else if (modalMode.value === 'edit' && editingRow.value) {
             const response = await fetch(`api/apis/${editingRow.value.id}`, {
                 method: 'PUT',
                 headers: {
@@ -492,10 +565,8 @@ const handleFormSubmit = async (formValues: any) => {
                 throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
             }
 
-
             const updatedApi = await response.json();
-            
-            // Update local state
+
             const index = apis.value.findIndex(api => api.id === editingRow.value.id);
             if (index !== -1) {
                 const resolvedUserId = updatedApi.user_id ?? updatedApi.user;
@@ -505,18 +576,34 @@ const handleFormSubmit = async (formValues: any) => {
                     created_at: updatedApi.created_at ? new Date(updatedApi.created_at).toLocaleDateString() : apis.value[index].created_at,
                     user_name: resolvedUserId ? users.value.find((user: User) => user.id === resolvedUserId)?.name : "Unknown",
                     user_id: resolvedUserId
-
-                };           
+                };
             }
-            
+
             success('API updated successfully!', 'API Updated');
         }
-        closeModal();
+
+        commentDialogOpen.value = false;
+        editingRow.value = null;
+        clearPendingApiSave();
     } catch (err: any) {
         showError(err.message || 'Failed to save API. Please try again.', 'Error');
         console.error('Form submission error:', err);
     } finally {
         submitting.value = false;
+    }
+};
+
+const handleCommentFormAction = (actionData: { type: string; action: string; formData: any }) => {
+    switch (actionData.type) {
+        case 'close':
+        case 'cancel':
+            closeCommentDialog();
+            break;
+        case 'save':
+            submitApiWithComment(actionData.formData);
+            break;
+        default:
+            warning('Unknown FormViewer action type:', actionData.type);
     }
 };
 
@@ -557,17 +644,14 @@ const handleRowClick = (row: any) => {
 };
 
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
-
-    
     switch (actionData.type) {
         case 'close':
         case 'cancel':
             closeModal();
             break;
         case 'save':
-            // Prevent multiple submissions
-            if(!submitting.value) {
-                handleFormSubmit(actionData.formData);
+            if (!submitting.value) {
+                prepareApiSave(actionData.formData);
             }
             break;
         default:
@@ -575,54 +659,67 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
     }
 };
 
-const handleDelete = async (selectedRowIds?: number[]) => {
-    if (selectedRowIds && selectedRowIds.length > 0) {
-        const apisToDelete = apis.value.filter(api => selectedRowIds.includes(api.id));
-        
-        // Confirm deletion
-        const apiNames = apisToDelete.map(api => api.name).join(', ');
-        if (!confirm(`Are you sure you want to delete ${apisToDelete.length} API(s): ${apiNames}? This action cannot be undone.`)) {
-            return;
-        }
-        
-        try {
-            // Delete APIs via API
-            for (const api of apisToDelete) {
-                const response = await fetch(`api/apis/${api.id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': getCsrfToken() || '',
-                    },
-                    credentials: 'same-origin'
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || `Failed to delete API. Status: ${response.status}`);
-                }
-            }
-            
-            // Remove from local state after successful API calls
-            apisToDelete.forEach(api => {
-                const index = apis.value.findIndex(a => a.id === api.id);
-                if (index !== -1) {
-                    apis.value.splice(index, 1);
-                }
-            });
-            
-            // Show success message
-            if (apisToDelete.length === 1) {
-                success(`API "${apisToDelete[0].name}" deleted successfully!`, 'API Deleted');
-            } else {
-                success(`${apisToDelete.length} APIs deleted successfully!`, 'APIs Deleted');
-            }
-        } catch (err: any) {
-            showError(err.message || 'Failed to delete APIs. Please try again.', 'Error');
-            console.error('Delete error:', err);
-        }
-    } else {
+const handleDelete = (selectedRowIds?: number[]) => {
+    if (!selectedRowIds || selectedRowIds.length === 0) {
         warning('Please select at least one API to delete.', 'Selection Required');
+        return;
+    }
+    pendingDeleteIds.value = [...selectedRowIds];
+    showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+    if (deleting.value) return;
+    showDeleteModal.value = false;
+    pendingDeleteIds.value = [];
+};
+
+const confirmDelete = async () => {
+    const selectedRowIds = pendingDeleteIds.value;
+    if (!selectedRowIds.length) {
+        closeDeleteModal();
+        return;
+    }
+
+    const apisToDelete = apis.value.filter(api => selectedRowIds.includes(api.id));
+    deleting.value = true;
+    try {
+        for (const api of apisToDelete) {
+            const response = await fetch(`api/apis/${api.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken() || '',
+                },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Failed to delete API. Status: ${response.status}`);
+            }
+        }
+
+        apisToDelete.forEach(api => {
+            const index = apis.value.findIndex(a => a.id === api.id);
+            if (index !== -1) {
+                apis.value.splice(index, 1);
+            }
+        });
+
+        if (apisToDelete.length === 1) {
+            success(`API "${apisToDelete[0].name}" deleted successfully!`, 'API Deleted');
+        } else {
+            success(`${apisToDelete.length} APIs deleted successfully!`, 'APIs Deleted');
+        }
+
+        showDeleteModal.value = false;
+        pendingDeleteIds.value = [];
+    } catch (err: any) {
+        showError(err.message || 'Failed to delete APIs. Please try again.', 'Error');
+        console.error('Delete error:', err);
+    } finally {
+        deleting.value = false;
     }
 };
 
@@ -713,8 +810,38 @@ onMounted(() => {
                             { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
                         ]"
                         :isSubmitting="submitting"
+                        :disabled="submitting"
                     />
                 </AlertModal>
+
+                <!-- Required comment before create/update request -->
+                <AlertModal
+                    :isOpen="commentDialogOpen"
+                    title="Save comment"
+                    @close="() => { if (!submitting) closeCommentDialog() }"
+                >
+                    <FormViewer
+                        ref="commentFormRef"
+                        :formConfig="commentFormConfig"
+                        :initialData="commentForm"
+                        :cancelAction="'close'"
+                        :actionHandler="handleCommentFormAction"
+                        :isSubmitting="submitting"
+                        :actions="[
+                            { type: 'save', action: 'save', label: 'Confirm', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+                            { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+                        ]"
+                        :disabled="submitting"
+                    />
+                </AlertModal>
+
+                <ConfirmDeleteModal
+                    :isOpen="showDeleteModal"
+                    :count="pendingDeleteIds.length"
+                    :deleting="deleting"
+                    @confirm="confirmDelete"
+                    @close="closeDeleteModal"
+                />
                 
                 <!-- Global Toaster -->
                 <Toaster />

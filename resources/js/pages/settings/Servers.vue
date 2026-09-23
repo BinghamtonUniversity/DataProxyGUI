@@ -9,11 +9,17 @@ import { onMounted, ref, computed } from 'vue';
 import CardWidget from '@/components/CardWidget.vue';
 import ButtonWidget from '@/components/ButtonWidget.vue';
 import AlertModal from '@/components/AlertModal.vue';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 import { Plus, Pencil, Server, Trash, Check, Eye } from 'lucide-vue-next';
 import { useProxyServer } from '@/composables/useProxyServer';
 const { buildUrl, serverSlug } = useProxyServer();
 const { success, error, warning, info } = useToaster();
 const isLoading = ref(false);
+
+// Delete confirmation dialog
+const showDeleteModal = ref(false);
+const pendingDeleteServerId = ref<number | null>(null);
+const deleting = ref(false);
 
 const page = usePage();
 const canManage = computed(() => (page.props.can as { manage_users?: boolean })?.manage_users ?? false);
@@ -239,28 +245,50 @@ const handleServerAction = async (action: { type: string; action: string; payloa
     }
 }
 
-const deleteServer = async (id: number) => {
-    if (confirm('Are you sure you want to delete this server?')) {
-    const response = await fetch(`/api/proxy-servers/${id}`, {
-        method: 'DELETE',
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken() || '',
-        },
-        credentials: 'same-origin',
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        error(errorData.message || `HTTP error! status: ${response.status}`);
+const deleteServer = (id: number) => {
+    pendingDeleteServerId.value = id;
+    showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+    if (deleting.value) return;
+    showDeleteModal.value = false;
+    pendingDeleteServerId.value = null;
+};
+
+const confirmDelete = async () => {
+    const id = pendingDeleteServerId.value;
+    if (id == null) {
+        closeDeleteModal();
         return;
     }
-            const data = await response.json();
+
+    deleting.value = true;
+    try {
+        const response = await fetch(`/api/proxy-servers/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            credentials: 'same-origin',
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            error(errorData.message || `HTTP error! status: ${response.status}`);
+            return;
+        }
+        const data = await response.json();
         initialData.value.servers = data;
         success('Server deleted successfully', 'Success');
         await getServers();
+        showDeleteModal.value = false;
+        pendingDeleteServerId.value = null;
+    } finally {
+        deleting.value = false;
     }
-}
+};
 onMounted(() => {
     getServers();
 })
@@ -400,6 +428,14 @@ onMounted(() => {
                     :actionHandler="handleServerFormAction"
                 />
             </AlertModal>
+
+            <ConfirmDeleteModal
+                :isOpen="showDeleteModal"
+                :count="pendingDeleteServerId != null ? 1 : 0"
+                :deleting="deleting"
+                @confirm="confirmDelete"
+                @close="closeDeleteModal"
+            />
         </SettingsLayout>
         
     
