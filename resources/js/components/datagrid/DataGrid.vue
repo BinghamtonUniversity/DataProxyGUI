@@ -202,7 +202,19 @@
     </div>
     
     <div class="overflow-x-auto">
-      <table :class="currentTheme.table">
+      <table
+        :class="[currentTheme.table, hasResizedColumns ? 'table-fixed' : '']"
+        :style="tableResizeStyle"
+      >
+        <colgroup>
+          <col v-if="showCheckboxes" style="width: 32px" />
+          <col
+            v-for="col in computedColumns"
+            :key="col.key"
+            :style="getColumnColStyle(col.key)"
+          />
+          <col v-if="rowActions.length > 0" style="width: 120px" />
+        </colgroup>
         <thead>
           <tr>
             <th v-if="showCheckboxes" :class="[currentTheme.headerCell, 'w-[32px]', 'min-w-[32px]', 'max-w-[32px]']">
@@ -221,24 +233,43 @@
             </th>
             <th 
               v-for="(col, colIdx) in computedColumns" 
-              :key="col.key" 
+              :key="col.key"
+              :data-col-key="col.key"
               :class="[
-                currentTheme.headerCell, 
-                'cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'
+                currentTheme.headerCell,
+                'relative cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
+                isResizingColumn === col.key ? 'bg-gray-100 dark:bg-gray-700' : ''
               ]"
-              @click="handleSort(colIdx)"
+              :style="getColumnStyle(col.key)"
+              @click="onHeaderClick(colIdx)"
             >
-              <div class="flex items-center justify-between">
-                <label :for="col.key + '-filter'">{{ col.label }}</label>
+              <div class="flex items-center justify-between overflow-hidden pr-1">
+                <label :for="col.key + '-filter'" class="truncate">{{ col.label }}</label>
                 <span 
                   :class="[
-                    'ml-2 text-sm transition-colors',
+                    'ml-2 text-sm transition-colors flex-shrink-0',
                     getSortClass(colIdx)
                   ]"
                   :title="`Sort by ${col.label} ${sortColumn === colIdx ? (sortDirection === 'asc' ? '(ascending)' : '(descending)') : ''}`"
                 >
                   {{ getSortIcon(colIdx) }}
                 </span>
+              </div>
+              <div
+                class="absolute top-0 right-0 h-full w-1.5 cursor-col-resize z-20 group/resize"
+                title="Drag to resize column"
+                @mousedown.stop.prevent="startColumnResize($event, col.key)"
+                @click.stop.prevent
+                @dblclick.stop.prevent="resetColumnWidth(col.key)"
+              >
+                <div
+                  :class="[
+                    'absolute inset-y-0 right-0 w-0.5 transition-colors',
+                    isResizingColumn === col.key
+                      ? 'bg-blue-500'
+                      : 'bg-transparent group-hover/resize:bg-blue-400 dark:group-hover/resize:bg-blue-500'
+                  ]"
+                ></div>
               </div>
             </th>
             <th v-if="rowActions.length > 0" :class="[currentTheme.headerCell, 'text-right']">
@@ -251,10 +282,15 @@
             <td v-if="showCheckboxes" :class="[currentTheme.filterCell]">
               <button @click="clearFilters" :class="currentTheme.clearButton" title="Clear all filters">Clear</button>
             </td>
-            <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.filterCell]">
+            <td
+              v-for="(col, colIdx) in computedColumns"
+              :key="col.key"
+              :class="[currentTheme.filterCell, 'overflow-hidden']"
+              :style="getColumnStyle(col.key)"
+            >
               <span v-if="col.options">
                 <select
-                  class="input-field bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600 rounded-md p-2"
+                  class="input-field w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-300 dark:border-gray-600 rounded-md p-2"
                   :id="col.key + '-filter'"
                   :name="col.key + '-filter'"
                   v-model="filters[col.key]"
@@ -311,7 +347,12 @@
                 ]"
               />
             </td>
-            <td v-for="(col, colIdx) in computedColumns" :key="col.key" :class="[currentTheme.cell]">
+            <td
+              v-for="(col, colIdx) in computedColumns"
+              :key="col.key"
+              :class="[currentTheme.cell, 'overflow-hidden']"
+              :style="getColumnStyle(col.key)"
+            >
               <!-- Render Mustache template if column has template -->
               <span v-if="col.template" class="whitespace-pre-wrap">{{ renderCellTemplate(col.template, row) }}</span>
               <!-- Render merged array objects if this column is a merge target -->
@@ -463,7 +504,7 @@
         </tbody>
       </table>
     </div>
-    <div class="mt-10 px-8 py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-gray-50 dark:bg-gray-900 rounded-b-lg shadow-inner">
+    <div class="mt-10 px-8 py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-gray-50 dark:bg-gray-800 rounded-b-lg shadow-inner">
       <div class="flex items-center flex-wrap gap-4 text-base">
         <span class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full px-5 py-2 text-sm font-normal">{{ pageSummary }}</span>
         <select v-model="pageSize" aria-label="Results per page" class="ml-2 px-4 py-2 pr-8 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-base text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500">
@@ -500,7 +541,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, getCurrentInstance } from 'vue';
 import Mustache from 'mustache';
 import { getThemeClasses, getDynamicColor } from '../Theme.js';
 import TextField from '../fields/TextField.vue';
@@ -620,6 +661,120 @@ const openMenuId = ref(null);
 // Sorting state
 const sortColumn = ref(null);
 const sortDirection = ref('asc'); // 'asc' or 'desc'
+
+// Column resize state (Excel-like grip on header edge)
+const columnWidths = ref({});
+const isResizingColumn = ref(null);
+const skipNextSort = ref(false);
+const MIN_COLUMN_WIDTH = 60;
+let resizeMoveHandler = null;
+let resizeUpHandler = null;
+
+const hasResizedColumns = computed(() => Object.keys(columnWidths.value).length > 0);
+
+const tableResizeStyle = computed(() => {
+  if (!hasResizedColumns.value) return {};
+  let sum = Object.values(columnWidths.value).reduce((total, width) => total + width, 0);
+  if (props.showCheckboxes) sum += 32;
+  if (props.rowActions.length > 0) sum += 120;
+  return {
+    width: `${sum}px`,
+    minWidth: '100%'
+  };
+});
+
+function getColumnStyle(key) {
+  const width = columnWidths.value[key];
+  if (!width) return {};
+  return {
+    width: `${width}px`,
+    minWidth: `${width}px`,
+    maxWidth: `${width}px`
+  };
+}
+
+function getColumnColStyle(key) {
+  const width = columnWidths.value[key];
+  if (!width) return {};
+  return { width: `${width}px` };
+}
+
+function captureColumnWidths(headerEl) {
+  const row = headerEl?.closest('tr');
+  if (!row) return;
+  const next = { ...columnWidths.value };
+  row.querySelectorAll('th[data-col-key]').forEach((th) => {
+    const key = th.getAttribute('data-col-key');
+    if (key && next[key] == null) {
+      next[key] = Math.round(th.getBoundingClientRect().width);
+    }
+  });
+  columnWidths.value = next;
+}
+
+function cleanupColumnResizeListeners() {
+  if (resizeMoveHandler) {
+    document.removeEventListener('mousemove', resizeMoveHandler);
+    resizeMoveHandler = null;
+  }
+  if (resizeUpHandler) {
+    document.removeEventListener('mouseup', resizeUpHandler);
+    resizeUpHandler = null;
+  }
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+  isResizingColumn.value = null;
+}
+
+function startColumnResize(event, colKey) {
+  const headerEl = event.currentTarget?.closest('th') || event.target?.closest('th');
+  if (!headerEl) return;
+
+  captureColumnWidths(headerEl);
+
+  const startX = event.clientX;
+  const startWidth = columnWidths.value[colKey] || Math.round(headerEl.getBoundingClientRect().width);
+
+  isResizingColumn.value = colKey;
+  skipNextSort.value = true;
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+
+  resizeMoveHandler = (moveEvent) => {
+    const nextWidth = Math.max(MIN_COLUMN_WIDTH, Math.round(startWidth + (moveEvent.clientX - startX)));
+    columnWidths.value = {
+      ...columnWidths.value,
+      [colKey]: nextWidth
+    };
+  };
+
+  resizeUpHandler = () => {
+    cleanupColumnResizeListeners();
+    // Prevent the click that follows mouseup from toggling sort
+    setTimeout(() => {
+      skipNextSort.value = false;
+    }, 0);
+  };
+
+  document.addEventListener('mousemove', resizeMoveHandler);
+  document.addEventListener('mouseup', resizeUpHandler);
+}
+
+function resetColumnWidth(colKey) {
+  if (columnWidths.value[colKey] == null) return;
+  const next = { ...columnWidths.value };
+  delete next[colKey];
+  columnWidths.value = next;
+  skipNextSort.value = true;
+  setTimeout(() => {
+    skipNextSort.value = false;
+  }, 0);
+}
+
+function onHeaderClick(columnIndex) {
+  if (skipNextSort.value || isResizingColumn.value) return;
+  handleSort(columnIndex);
+}
 
 // File input ref
 const fileInput = ref(null);
@@ -1416,6 +1571,10 @@ onMounted(() => {
       openMenuId.value = null;
     }
   });
+});
+
+onUnmounted(() => {
+  cleanupColumnResizeListeners();
 });
 function emitRowClick(row, idx) {
   // Calculate the actual index in filteredRows

@@ -27,6 +27,30 @@ const modalMode = ref<'new' | 'edit'>('new');
 const editingRow = ref<any>(null);
 const submitting = ref(false);
 
+// Comment dialog (required before create/update request)
+const commentDialogOpen = ref(false);
+const commentFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
+const commentForm = ref({ comment: '' });
+const pendingEnvironmentPayload = ref<Record<string, any> | null>(null);
+
+const commentFormConfig = {
+    label: '',
+    description: '',
+    name: 'environment-comment-form',
+    showLabel: false,
+    files: false,
+    fields: [
+        {
+            name: 'comment',
+            label: 'Comment',
+            type: 'textarea',
+            placeholder: 'Describe why this change is being made',
+            value: '',
+            required: true,
+        },
+    ],
+};
+
 // Delete confirmation dialog
 const showDeleteModal = ref(false);
 const pendingDeleteIds = ref<number[]>([]);
@@ -221,25 +245,30 @@ const fetchEnvironments = async () => {
 };
 
 // Modal functions
+const clearPendingEnvironmentSave = () => {
+    pendingEnvironmentPayload.value = null;
+    commentForm.value = { comment: '' };
+};
+
 const openNewModal = () => {
     modalMode.value = 'new';
-    // Let FormViewer use the default values from formConfig
     editingRow.value = null;
+    clearPendingEnvironmentSave();
+    commentDialogOpen.value = false;
     showModal.value = true;
 };
 
 const openEditModal = (row?: any) => {
     if (row) {
         modalMode.value = 'edit';
-        // Create a clean copy for editing, preserving original data
-        editingRow.value = { 
+        editingRow.value = {
             id: row.id,
             name: row.name,
             domain: row.domain,
             type: row.type
-            // Don't include created_at, updated_at as they're server-managed
         };
-    
+        clearPendingEnvironmentSave();
+        commentDialogOpen.value = false;
         showModal.value = true;
     } else {
         warning('Please select exactly one row to edit.', 'Selection Required');
@@ -248,10 +277,19 @@ const openEditModal = (row?: any) => {
 
 const closeModal = () => {
     showModal.value = false;
-    editingRow.value = null;
+    if (!commentDialogOpen.value) {
+        editingRow.value = null;
+        clearPendingEnvironmentSave();
+    }
 };
 
-const handleFormSubmit = async (formValues: any) => {
+const closeCommentDialog = () => {
+    commentDialogOpen.value = false;
+    editingRow.value = null;
+    clearPendingEnvironmentSave();
+};
+
+const prepareEnvironmentSave = (formValues: any) => {
     if (!environmentFormRef.value) {
         warning('Form is not ready. Please try again.', 'Validation Error');
         return;
@@ -261,14 +299,50 @@ const handleFormSubmit = async (formValues: any) => {
         warning('Please fix validation errors before saving.', 'Validation Error');
         return;
     }
+
+    if (modalMode.value === 'edit' && !editingRow.value) {
+        warning('Please select exactly one row to edit.', 'Selection Required');
+        return;
+    }
+
+    pendingEnvironmentPayload.value = cleanFormData(formValues);
+    commentForm.value = { comment: '' };
+    commentDialogOpen.value = true;
+    showModal.value = false;
+};
+
+const submitEnvironmentWithComment = async (formData: any) => {
+    if (!commentFormRef.value) {
+        warning('Form is not ready. Please try again.', 'Validation Error');
+        return;
+    }
+    const isValid = commentFormRef.value.validateForm();
+    if (!isValid) {
+        warning('Please enter a comment before saving.', 'Validation Error');
+        return;
+    }
+
+    const comment = (formData?.comment ?? '').trim();
+    if (!comment) {
+        warning('Comment is required.', 'Validation Error');
+        return;
+    }
+
+    if (!pendingEnvironmentPayload.value) {
+        showError('Nothing to save. Please try again.', 'Error');
+        closeCommentDialog();
+        return;
+    }
+
+    const cleanedData = {
+        ...pendingEnvironmentPayload.value,
+        comment,
+    };
+
     try {
         submitting.value = true;
 
-
-        
         if (modalMode.value === 'new') {
-            // Create new environment via API
-            const cleanedData = cleanFormData(formValues);
             const response = await fetch(`${apiBaseUrl}/environments`, {
                 method: 'POST',
                 headers: {
@@ -286,22 +360,17 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const newEnv = await response.json();
-        
-            
-            // Add to local state with server-provided data and formatted timestamps
+
             const formattedNewEnv = {
                 ...newEnv,
-                // Use server-provided timestamps, not user input
                 created_at: newEnv.created_at ? new Date(newEnv.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
                 updated_at: newEnv.updated_at ? new Date(newEnv.updated_at).toLocaleDateString() : new Date().toLocaleDateString()
             };
-        
+
             environments.value.push(formattedNewEnv);
-            
-            success(`Environment "${formValues.name}" added successfully!`, 'Environment Added');
+
+            success(`Environment "${cleanedData.name}" added successfully!`, 'Environment Added');
         } else if (modalMode.value === 'edit' && editingRow.value) {
-            // Update existing environment via API
-            const cleanedData = cleanFormData(formValues);
             const response = await fetch(`${apiBaseUrl}/environments/${editingRow.value.id}`, {
                 method: 'PUT',
                 headers: {
@@ -319,29 +388,43 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const updatedEnv = await response.json();
-          
-            
-            // Update local state with server-provided data
+
             const index = environments.value.findIndex((env: any) => env.id === editingRow.value.id);
             if (index !== -1) {
                 const formattedEnv = {
                     ...updatedEnv,
-                    // Use server-provided timestamps, not user input
                     created_at: updatedEnv.created_at ? new Date(updatedEnv.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
                     updated_at: updatedEnv.updated_at ? new Date(updatedEnv.updated_at).toLocaleDateString() : new Date().toLocaleDateString()
                 };
-            
+
                 environments.value[index] = formattedEnv;
             }
-            
-            success(`Environment "${formValues.name}" updated successfully!`, 'Environment Updated');
+
+            success(`Environment "${cleanedData.name}" updated successfully!`, 'Environment Updated');
         }
-        closeModal();
+
+        commentDialogOpen.value = false;
+        editingRow.value = null;
+        clearPendingEnvironmentSave();
     } catch (err: any) {
         showError(err.message || 'Failed to save environment. Please try again.', 'Error');
         console.error('Form submission error:', err);
     } finally {
         submitting.value = false;
+    }
+};
+
+const handleCommentFormAction = (actionData: { type: string; action: string; formData: any }) => {
+    switch (actionData.type) {
+        case 'close':
+        case 'cancel':
+            closeCommentDialog();
+            break;
+        case 'save':
+            submitEnvironmentWithComment(actionData.formData);
+            break;
+        default:
+            warning('Unknown FormViewer action type:', actionData.type);
     }
 };
 
@@ -365,15 +448,13 @@ const handleDataGridActionHandler = (actionData: { action: string; selectedRows:
 
 // Handle FormViewer action events
 const handleFormAction = (actionData: { type: string; action: string; formData: any }) => {
-
-    
     switch (actionData.type) {
         case 'close':
         case 'cancel':
             closeModal();
             break;
         case 'save':
-            handleFormSubmit(actionData.formData);
+            prepareEnvironmentSave(actionData.formData);
             break;
         default:
             warning('Unknown FormViewer action type:', actionData.type);
@@ -491,13 +572,33 @@ onMounted(() => {
                       :cancelAction="'close'"
                       :actionHandler="handleFormAction"
                       :isSubmitting="submitting"
+                      :disabled="submitting"
                       :actions="[
                         { type: 'save', action: 'save', label: 'Save', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
                         { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
                       ]"
                   />
-                
-                          
+            </AlertModal>
+
+            <!-- Required comment before create/update request -->
+            <AlertModal
+                :isOpen="commentDialogOpen"
+                title="Save comment"
+                @close="() => { if (!submitting) closeCommentDialog() }"
+            >
+                <FormViewer
+                    ref="commentFormRef"
+                    :formConfig="commentFormConfig"
+                    :initialData="commentForm"
+                    :cancelAction="'close'"
+                    :actionHandler="handleCommentFormAction"
+                    :isSubmitting="submitting"
+                    :actions="[
+                        { type: 'save', action: 'save', label: 'Confirm', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+                        { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+                    ]"
+                    :disabled="submitting"
+                />
             </AlertModal>
 
             <!-- Delete confirmation -->
