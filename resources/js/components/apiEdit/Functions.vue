@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
-import { Trash2, Pencil } from 'lucide-vue-next'
+import { Trash2, Pencil, ChevronDown, Plus } from 'lucide-vue-next'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 
@@ -49,6 +49,9 @@ const saveError = ref<string | null>(null)
 const saveSuccess = ref(false)
 const editorRef = ref<any>(null)
 const editorContainerRef = ref<HTMLElement | null>(null)
+const leftCollapsed = ref(false)
+
+
 const validationErrors = ref<number>(0)
 const validationWarnings = ref<number>(0)
 
@@ -571,13 +574,26 @@ defineExpose({
                 <template v-else-if="apiData?.version_views">
                     <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
                         <!-- Function List Sidebar -->
-                    <aside class="max-w-xs lg:w-50 lg:min-w-50 lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)]">
+                    <aside :class="[
+                            'max-w-xs lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)] transition-all',
+                            leftCollapsed ? 'lg:w-10' : 'lg:w-50 lg:min-w-50'
+                        ]"
+                    >
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            class="mb-2 w-full justify-center shrink-0" 
+                            @click="leftCollapsed = !leftCollapsed"
+                        >
+                            <ChevronDown :class="['h-4 w-4 transition-transform', leftCollapsed ? '-rotate-90' : 'rotate-90']" />
+                        </Button>
+                        <div v-show="!leftCollapsed" class="flex flex-col min-h-0 flex-1">
                             <!-- New View Button -->
                             <div class="mb-4 shrink-0">
                                 <Dialog v-model:open="isNewViewDialogOpen" @update:open="resetNewViewDialog">
                                     <DialogTrigger as-child>
-                                        <Button variant="outline" class="w-full text-xs">
-                                            + New View
+                                        <Button variant="outline" class="ml-4 w-full text-sm text-green-600">
+                                             <Plus class="mr-2 h-4 w-4" /> New
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent class="sm:max-w-md">
@@ -684,7 +700,8 @@ defineExpose({
                                     
                                 </div>
                             </nav>
-                        </aside>
+                        </div>
+                    </aside>
 
                         <!-- Editor Area -->
                         <div class="flex-1 min-w-0" ref="editorContainerRef">
