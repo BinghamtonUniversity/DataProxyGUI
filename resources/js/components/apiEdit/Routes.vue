@@ -68,12 +68,12 @@ const routeFormConfig = {
         { name: 'description', label: 'Description', type: 'text', required: false },
         {
             name: "view_name",
-            label: "View Name",
+            label: "Function",
             type: "text",
-            placeholder: "Enter view name",
+            placeholder: "Enter function name",
             value: "",
-            help: "Name of the view function",
-            info: "Name of the view function",
+            help: "Name of the function",
+            info: "Name of the function",
             width: "12",
             offset: "0",
             required: true
@@ -203,13 +203,14 @@ const optionalParamsFormConfig = {
     ]
 }
 const newRouteFormConfig = computed(() => ({
-    label: 'New Route',
-    description: 'Create a new route',
+    label: isEditMode.value ? 'Edit Route' : 'New Route',
+    description: isEditMode.value ? 'Edit the selected route' : 'Create a new route',
     name: "new-route-form",
     files: false,
     fields: [
         //view_name name cannot be "Constructor"
-        { name: 'view_name', label: 'View Name', type: 'select',options: props.apiData?.version_views?.filter((view: any ) => view.name !== 'Constructor').map((view: any ) => ({ label: view.name, value: view.name })), required: true },
+        { name: 'description', label: 'Description', type: 'text', required: true },
+        { name: 'view_name', label: 'Function', type: 'select',options: props.apiData?.version_views?.filter((view: any ) => view.name !== 'Constructor').map((view: any ) => ({ label: view.name, value: view.name })), required: true },
         //path should start with /
         { name: 'path', label: 'Path', type: 'text', required: true, validate: [{ type: 'pattern', regex: '^/', message: 'Path must start with /', conditions: true }] },
         { name: 'verb', label: 'HTTP Method', type: 'select', required: true, options: [
@@ -219,7 +220,7 @@ const newRouteFormConfig = computed(() => ({
             { label: 'DELETE', value: 'DELETE' },
             { label: 'PATCH', value: 'PATCH' }
         ] },
-        { name: 'description', label: 'Description', type: 'text', required: false },
+        
     ]
 }))
 

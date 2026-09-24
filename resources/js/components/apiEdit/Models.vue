@@ -900,9 +900,9 @@ onUnmounted(() => {
                         <!-- Model Dialog -->
                         <Dialog v-model:open="newModelDialogOpen">
                           <DialogTrigger as-child>
-                            <Button class="ml-4 text-green-600 text-xs" variant="outline" @click="openNewModelDialog">
+                            <Button class="ml-4 w-full text-sm text-green-600" variant="outline" @click="openNewModelDialog">
                               <Plus class="mr-2 h-4 w-4" />
-                              New Model
+                              New
                             </Button>
                           </DialogTrigger>
                           <DialogContent class="sm:max-w-3xl">
