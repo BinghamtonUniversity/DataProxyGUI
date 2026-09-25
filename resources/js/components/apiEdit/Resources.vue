@@ -7,6 +7,7 @@ import { useToaster } from '@/composables/useToaster';
 import DataGrid from '@/components/datagrid/DataGrid.vue'
 import AlertModal from '@/components/AlertModal.vue'
 import FormViewer from '@/components/formviewer/FormViewer.vue'
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue'
 
 interface Props {
     api_id: string
@@ -41,6 +42,10 @@ const formViewerRef = ref<InstanceType<typeof FormViewer> | null>(null)
 
 // Toaster
 const { success, error, warning, info } = useToaster();
+
+const showDeleteModal = ref(false)
+const pendingDeleteResource = ref<ResourceData | null>(null)
+const deleting = ref(false)
 
 // Computed formConfig that dynamically sets required for model_name based on visibility
 const formConfig = computed(() => {
@@ -270,27 +275,46 @@ const submitNewResource = async () => {
   }
 }
 
-const handleDelete = async (resource: ResourceData) => {
-    if (!confirm(`Are you sure you want to delete the resource "${resource.name}"?`)) {
+const handleDelete = (resource: ResourceData) => {
+    pendingDeleteResource.value = resource
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    if (deleting.value) return
+    showDeleteModal.value = false
+    pendingDeleteResource.value = null
+}
+
+const confirmDelete = async () => {
+    const resource = pendingDeleteResource.value
+    if (!resource) {
+        closeDeleteModal()
         return
     }
 
     if (!props.apiData) {
         console.error('API data not available')
+        closeDeleteModal()
         return
     }
-    
+
+    deleting.value = true
     try {
         const updatedApiData = {
             ...props.apiData,
             resources: props.apiData.resources?.filter(res => !(res.name === resource.name)) || []
         }
-        
+
         props.updateApiData(updatedApiData)
         success(`Resource "${resource.name}" deleted successfully`, 'Resource Deleted');
+        showDeleteModal.value = false
+        pendingDeleteResource.value = null
     } catch (err: any) {
         console.error('Error deleting route:', err)
         error(err.message || 'Error deleting resource', 'Error');
+    } finally {
+        deleting.value = false
     }
 }
 
@@ -409,7 +433,14 @@ const highlightText = (text: string, query: string) => {
             </template>
         </div>        
     </div>
-  
+
+    <ConfirmDeleteModal
+        :isOpen="showDeleteModal"
+        :count="pendingDeleteResource ? 1 : 0"
+        :deleting="deleting"
+        @confirm="confirmDelete"
+        @close="closeDeleteModal"
+    />
 </template>
 <!--  OLD CODE --------------
 <div class="w-full">

@@ -5,6 +5,7 @@ import { Head } from '@inertiajs/vue3';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted } from 'vue';
@@ -28,10 +29,39 @@ const modalMode = ref<'new' | 'edit'>('new');
 const editingRow = ref<any>(null);
 const submitting = ref(false);
 
+// Comment dialog (required before create/update request)
+const commentDialogOpen = ref(false);
+const commentFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
+const commentForm = ref({ comment: '' });
+const pendingAccountPayload = ref<Record<string, any> | null>(null);
+
+const commentFormConfig = {
+    label: '',
+    description: '',
+    name: 'api-account-comment-form',
+    showLabel: false,
+    files: false,
+    fields: [
+        {
+            name: 'comment',
+            label: 'Comment',
+            type: 'textarea',
+            placeholder: 'Describe why this change is being made',
+            value: '',
+            required: true,
+        },
+    ],
+};
+
 // Secret modal state
 const showSecretModal = ref(false);
 const decryptedSecret = ref('');
 const secretLoading = ref(false);
+
+// Delete confirmation dialog
+const showDeleteModal = ref(false);
+const pendingDeleteIds = ref<number[]>([]);
+const deleting = ref(false);
 
 // Data state
 const users = ref<any[]>([]);
@@ -230,6 +260,8 @@ const openNewModal = () => {
     modalMode.value = 'new';
     // Let FormViewer use the default values from formConfig
     editingRow.value = null;
+    pendingAccountPayload.value = null;
+    commentDialogOpen.value = false;
     showModal.value = true;
 };
 
@@ -246,15 +278,31 @@ const openEditModal = (row?: any) => {
             // is_active: row.is_active
         };
     
+        pendingAccountPayload.value = null;
+        commentDialogOpen.value = false;
         showModal.value = true;
     } else {
         warning('Please select exactly one row to edit.', 'Selection Required');
     }
 };
 
+const clearPendingAccountSave = () => {
+    pendingAccountPayload.value = null;
+    commentForm.value = { comment: '' };
+};
+
 const closeModal = () => {
     showModal.value = false;
+    if (!commentDialogOpen.value) {
+        editingRow.value = null;
+        clearPendingAccountSave();
+    }
+};
+
+const closeCommentDialog = () => {
+    commentDialogOpen.value = false;
     editingRow.value = null;
+    clearPendingAccountSave();
 };
 
 const closeSecretModal = () => {
@@ -324,8 +372,7 @@ const copyToClipboard = async () => {
     }
 };
 
-const handleFormSubmit = async (formValues: any) => {
-
+const prepareAccountSave = (formValues: any) => {
     if (!apiAccountFromRef.value) {
         warning('Form is not ready. Please try again.', 'Validation Error');
         return;
@@ -335,12 +382,72 @@ const handleFormSubmit = async (formValues: any) => {
         warning('Please fix validation errors before saving.', 'Validation Error');
         return;
     }
+
+    if (modalMode.value === 'edit' && !editingRow.value) {
+        warning('Please select exactly one row to edit.', 'Selection Required');
+        return;
+    }
+
+    pendingAccountPayload.value = cleanFormData(formValues);
+    commentForm.value = { comment: '' };
+    commentDialogOpen.value = true;
+    showModal.value = false;
+};
+
+const resolveEnvironmentId = (user: any, fallback?: any) => {
+    if (user?.environment_id != null && typeof user.environment_id !== 'object') {
+        return Number(user.environment_id);
+    }
+    if (user?.environment != null && typeof user.environment === 'object') {
+        return user.environment.id != null ? Number(user.environment.id) : null;
+    }
+    if (user?.environment != null && typeof user.environment !== 'object') {
+        return Number(user.environment);
+    }
+    if (fallback != null && typeof fallback !== 'object') {
+        return Number(fallback);
+    }
+    return null;
+};
+
+const normalizeApiUser = (user: any, fallbackEnvironmentId?: any) => {
+    const normalized = { ...user };
+    normalized.environment_id = resolveEnvironmentId(normalized, fallbackEnvironmentId);
+    return normalized;
+};
+
+const submitAccountWithComment = async (formData: any) => {
+    if (!commentFormRef.value) {
+        warning('Form is not ready. Please try again.', 'Validation Error');
+        return;
+    }
+    const isValid = commentFormRef.value.validateForm();
+    if (!isValid) {
+        warning('Please enter a comment before saving.', 'Validation Error');
+        return;
+    }
+
+    const comment = (formData?.comment ?? '').trim();
+    if (!comment) {
+        warning('Comment is required.', 'Validation Error');
+        return;
+    }
+
+    if (!pendingAccountPayload.value) {
+        showError('Nothing to save. Please try again.', 'Error');
+        closeCommentDialog();
+        return;
+    }
+
+    const cleanedData = {
+        ...pendingAccountPayload.value,
+        comment,
+    };
+
     try {
         submitting.value = true;
-        
+
         if (modalMode.value === 'new') {
-            // Create new API user via API
-            const cleanedData = cleanFormData(formValues);
             const response = await fetch(`${apiBaseUrl}/api_users`, {
                 method: 'POST',
                 headers: {
@@ -358,18 +465,10 @@ const handleFormSubmit = async (formValues: any) => {
             }
 
             const newUser = await response.json();
-            // NOTE: API response include environment instead of environment_id
-            // Also added additionally environment.id to the response
-            newUser.environment_id = newUser.environment_id || newUser.environment ||  newUser.environment.id;
+            users.value.push(normalizeApiUser(newUser, cleanedData.environment_id));
 
-            
-            // Add to local state with server-provided data
-            users.value.push(newUser);
-            
-            success(`API User "${formValues.app_name}" added successfully!`, 'API User Added');
+            success(`API User "${cleanedData.app_name}" added successfully!`, 'API User Added');
         } else if (modalMode.value === 'edit' && editingRow.value) {
-            // Update existing API user via API
-            const cleanedData = cleanFormData(formValues);
             const response = await fetch(`${apiBaseUrl}/api_users/${editingRow.value.id}`, {
                 method: 'PUT',
                 headers: {
@@ -388,16 +487,20 @@ const handleFormSubmit = async (formValues: any) => {
 
             const updatedUser = await response.json();
 
-            
-            // Update local state with server-provided data
             const index = users.value.findIndex((user: any) => user.id === editingRow.value.id);
             if (index !== -1) {
-                users.value[index] = updatedUser;
+                users.value[index] = normalizeApiUser(
+                    updatedUser,
+                    cleanedData.environment_id ?? editingRow.value.environment_id
+                );
             }
-            
-            success(`API User "${formValues.app_name}" updated successfully!`, 'API User Updated');
+
+            success(`API User "${cleanedData.app_name}" updated successfully!`, 'API User Updated');
         }
-        closeModal();
+
+        commentDialogOpen.value = false;
+        editingRow.value = null;
+        clearPendingAccountSave();
     } catch (err: any) {
         showError(err.message || 'Failed to save user. Please try again.', 'Error');
         console.error('Form submission error:', err);
@@ -405,6 +508,21 @@ const handleFormSubmit = async (formValues: any) => {
         submitting.value = false;
     }
 };
+
+const handleCommentFormAction = (actionData: { type: string; action: string; formData: any }) => {
+    switch (actionData.type) {
+        case 'close':
+        case 'cancel':
+            closeCommentDialog();
+            break;
+        case 'save':
+            submitAccountWithComment(actionData.formData);
+            break;
+        default:
+            warning('Unknown FormViewer action type:', actionData.type);
+    }
+};
+
 const handleClick = (row: any) => {
   
     info(`User "${row.app_name}" clicked!`, 'User Clicked');
@@ -443,54 +561,74 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
             closeModal();
             break;
         case 'save':
-            handleFormSubmit(actionData.formData);
+            prepareAccountSave(actionData.formData);
             break;
         default:
             warning('Unknown FormViewer action type:', actionData.type);
     }
 };
 
-const handleDelete = async (selectedRowIds?: number[]) => {
-    if (selectedRowIds && selectedRowIds.length > 0) {
-        const usersToDelete = users.value.filter(user => selectedRowIds.includes(user.id));
-        try {
-            // Delete API users via API
-            for (const user of usersToDelete) {
-                const response = await fetch(`${apiBaseUrl}/api_users/${user.id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': getCsrfToken() || '',
-                    },
-                    credentials: 'same-origin'
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || `Failed to delete API user ${user.app_name}. Status: ${response.status}`);
-                }
-            }
-            
-            // Remove from local state after successful API calls
-            usersToDelete.forEach(user => {
-                const index = users.value.findIndex(u => u.id === user.id);
-                if (index !== -1) {
-                    users.value.splice(index, 1);
-                }
-            });
-            
-            // Show success message
-            if (usersToDelete.length === 1) {
-                success(`API User "${usersToDelete[0].app_name}" deleted successfully!`, 'API User Deleted');
-            } else {
-                success(`${usersToDelete.length} API users deleted successfully!`, 'API Users Deleted');
-            }
-        } catch (err: any) {
-            showError(err.message || 'Failed to delete users. Please try again.', 'Error');
-            console.error('Delete error:', err);
-        }
-    } else {
+const handleDelete = (selectedRowIds?: number[]) => {
+    if (!selectedRowIds || selectedRowIds.length === 0) {
         warning('Please select at least one user to delete.', 'Selection Required');
+        return;
+    }
+    pendingDeleteIds.value = [...selectedRowIds];
+    showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+    if (deleting.value) return;
+    showDeleteModal.value = false;
+    pendingDeleteIds.value = [];
+};
+
+const confirmDelete = async () => {
+    const selectedRowIds = pendingDeleteIds.value;
+    if (!selectedRowIds.length) {
+        closeDeleteModal();
+        return;
+    }
+
+    const usersToDelete = users.value.filter(user => selectedRowIds.includes(user.id));
+    deleting.value = true;
+    try {
+        for (const user of usersToDelete) {
+            const response = await fetch(`${apiBaseUrl}/api_users/${user.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken() || '',
+                },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Failed to delete API user ${user.app_name}. Status: ${response.status}`);
+            }
+        }
+
+        usersToDelete.forEach(user => {
+            const index = users.value.findIndex(u => u.id === user.id);
+            if (index !== -1) {
+                users.value.splice(index, 1);
+            }
+        });
+
+        if (usersToDelete.length === 1) {
+            success(`API User "${usersToDelete[0].app_name}" deleted successfully!`, 'API User Deleted');
+        } else {
+            success(`${usersToDelete.length} API users deleted successfully!`, 'API Users Deleted');
+        }
+
+        showDeleteModal.value = false;
+        pendingDeleteIds.value = [];
+    } catch (err: any) {
+        showError(err.message || 'Failed to delete users. Please try again.', 'Error');
+        console.error('Delete error:', err);
+    } finally {
+        deleting.value = false;
     }
 };
 
@@ -597,6 +735,36 @@ onMounted(async () => {
                     ]"
                 />
             </AlertModal>
+
+            <!-- Required comment before create/update request -->
+            <AlertModal
+                :isOpen="commentDialogOpen"
+                title="Save comment"
+                @close="() => { if (!submitting) closeCommentDialog() }"
+            >
+                <FormViewer
+                    ref="commentFormRef"
+                    :formConfig="commentFormConfig"
+                    :initialData="commentForm"
+                    :cancelAction="'close'"
+                    :actionHandler="handleCommentFormAction"
+                    :isSubmitting="submitting"
+                    :actions="[
+                        { type: 'save', action: 'save', label: 'Confirm', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+                        { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+                    ]"
+                    :disabled="submitting"
+                />
+            </AlertModal>
+
+            <!-- Delete confirmation -->
+            <ConfirmDeleteModal
+                :isOpen="showDeleteModal"
+                :count="pendingDeleteIds.length"
+                :deleting="deleting"
+                @confirm="confirmDelete"
+                @close="closeDeleteModal"
+            />
 
             <!-- Modal for showing decrypted secret -->
             <AlertModal 

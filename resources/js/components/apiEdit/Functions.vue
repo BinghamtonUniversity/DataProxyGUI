@@ -24,6 +24,7 @@ import { getCsrfToken } from '@/lib/utils'
 import { Trash2, Pencil, ChevronDown, Plus } from 'lucide-vue-next'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 
 
 interface Props {
@@ -57,6 +58,11 @@ const validationWarnings = ref<number>(0)
 
 // Toaster
 const { success, error, warning, info } = useToaster();
+
+// Delete confirmation dialog
+const showDeleteModal = ref(false)
+const pendingDeleteFunction = ref<ApiVersionFunction | null>(null)
+const deleting = ref(false)
 
 // New view dialog state
 const isNewViewDialogOpen = ref(false)
@@ -215,33 +221,47 @@ const handleCreateNewView = async () => {
     }
 }
 
-const handleDeleteFunction = async (view: ApiVersionFunction ) =>{
-    if (!confirm(`Are you sure you want to delete the function "${view.name}"?`)) {
+const handleDeleteFunction = (view: ApiVersionFunction) => {
+    pendingDeleteFunction.value = view
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    if (deleting.value) return
+    showDeleteModal.value = false
+    pendingDeleteFunction.value = null
+}
+
+const confirmDelete = async () => {
+    const view = pendingDeleteFunction.value
+    if (!view) {
+        closeDeleteModal()
         return
     }
 
     if (!props.apiData) {
         console.error('API data not available')
+        closeDeleteModal()
         return
     }
-    
+
+    deleting.value = true
     try {
         const updatedApiData = {
             ...props.apiData,
             version_views: props.apiData.version_views?.filter(existingView => !(existingView.name === view.name)) || []
         }
-       
-        props.updateApiData(updatedApiData)
-        
-        // // Clear cache for deleted function
-        // unsavedEditsCache.value.delete(view.name)
-        
-        selectedFunction.value = null
-        success(`Function "${view.name}" deleted successfully`, 'Function Deleted');
 
+        props.updateApiData(updatedApiData)
+        selectedFunction.value = null
+        success(`Function "${view.name}" deleted successfully`, 'Function Deleted')
+        showDeleteModal.value = false
+        pendingDeleteFunction.value = null
     } catch (err: any) {
         console.error('Error deleting route:', err)
-        error(err.message || 'Error deleting function', 'Error');
+        error(err.message || 'Error deleting function', 'Error')
+    } finally {
+        deleting.value = false
     }
 }
 
@@ -740,4 +760,12 @@ defineExpose({
             </div>
         </div>
     </TooltipProvider>
+
+    <ConfirmDeleteModal
+        :isOpen="showDeleteModal"
+        :count="pendingDeleteFunction ? 1 : 0"
+        :deleting="deleting"
+        @confirm="confirmDelete"
+        @close="closeDeleteModal"
+    />
 </template>

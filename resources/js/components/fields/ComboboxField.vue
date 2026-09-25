@@ -575,9 +575,9 @@ watch(() => props.value, (newValue) => {
     return;
   }
   internalValue.value = newValue || '';
-  // Set searchValue to label of current value
+  // Set searchValue to label of current value (coerce types: "5" vs 5)
   const flat = flattenedOptions.value;
-  const current = flat.find(opt => opt.value === internalValue.value);
+  const current = flat.find(opt => valuesEqual(opt.value, internalValue.value));
   searchValue.value = current ? current.label : '';
 }, { immediate: true });
 

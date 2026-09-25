@@ -24,6 +24,7 @@ import { getCsrfToken } from '@/lib/utils'
 import { Trash2, Pencil, ChevronDown, Plus } from 'lucide-vue-next'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 
 
 interface Props {
@@ -65,6 +66,9 @@ const validationWarnings = ref<number>(0)
 // Toaster
 const { success, error, warning, info } = useToaster();
 
+const showDeleteModal = ref(false)
+const pendingDeleteFile = ref<ApiVersionFunction | null>(null)
+const deleting = ref(false)
 
 const handleUpdateCode = (updatedCode: string) => {
     if (!selectedFile.value || !props.apiData) {
@@ -299,30 +303,47 @@ const handleUpdateFileName = async () => {
   }
 }
 
-const handleDeleteFile = async (file: ApiVersionFunction ) =>{
-    if (!confirm(`Are you sure you want to delete the file "${file.name}"?`)) {
+const handleDeleteFile = (file: ApiVersionFunction) => {
+    pendingDeleteFile.value = file
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    if (deleting.value) return
+    showDeleteModal.value = false
+    pendingDeleteFile.value = null
+}
+
+const confirmDelete = async () => {
+    const file = pendingDeleteFile.value
+    if (!file) {
+        closeDeleteModal()
         return
     }
 
     if (!props.apiData) {
         console.error('API data not available')
+        closeDeleteModal()
         return
     }
-    
+
+    deleting.value = true
     try {
         const updatedApiData = {
             ...props.apiData,
             version_files: props.apiData.version_files?.filter(existingFile => !(existingFile.name === file.name)) || []
         }
 
-        // const responseData = await response.json()
         props.updateApiData(updatedApiData)
         selectedFile.value = null
         success(`File "${file.name}" deleted successfully`, 'File Deleted');
-
+        showDeleteModal.value = false
+        pendingDeleteFile.value = null
     } catch (err: any) {
         console.error('Error deleting route:', err)
         error(err.message || 'Error deleting file', 'Error');
+    } finally {
+        deleting.value = false
     }
 }
 
@@ -679,5 +700,12 @@ onUnmounted(() => {
             </div>
         </div>
     </TooltipProvider>
-  
+
+    <ConfirmDeleteModal
+        :isOpen="showDeleteModal"
+        :count="pendingDeleteFile ? 1 : 0"
+        :deleting="deleting"
+        @confirm="confirmDelete"
+        @close="closeDeleteModal"
+    />
 </template>

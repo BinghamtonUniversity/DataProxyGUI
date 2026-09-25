@@ -6,6 +6,7 @@ import { useToaster } from '@/composables/useToaster';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 
 interface Props {
     api_id: string
@@ -47,6 +48,10 @@ const optionalParamsData = ref<any>(null);
 
 // Toaster
 const { success, error, warning, info } = useToaster();
+
+const showDeleteModal = ref(false)
+const pendingDeleteRoute = ref<RouteData | null>(null)
+const deleting = ref(false)
 
 // FormViewer refs for validation
 const newRouteFormViewer = ref<any>(null);
@@ -464,32 +469,50 @@ const submitNewRoute = async (formData: any) => {
     }
 }
 
-const handleDelete = async (route: RouteData) => {
-    if (!confirm(`Are you sure you want to delete the route "${route.view_name}" (${route.verb} ${route.path})?`)) {
+const handleDelete = (route: RouteData) => {
+    pendingDeleteRoute.value = route
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    if (deleting.value) return
+    showDeleteModal.value = false
+    pendingDeleteRoute.value = null
+}
+
+const confirmDelete = async () => {
+    const route = pendingDeleteRoute.value
+    if (!route) {
+        closeDeleteModal()
         return
     }
 
     if (!props.apiData) {
         console.error('API data not available')
+        closeDeleteModal()
         return
     }
-    
+
+    deleting.value = true
     try {
         const updatedApiData = {
             ...props.apiData,
-            version_urls: props.apiData.version_urls?.filter(existingRoute => 
-                !(existingRoute.view_name === route.view_name && 
-                  existingRoute.path === route.path && 
+            version_urls: props.apiData.version_urls?.filter(existingRoute =>
+                !(existingRoute.view_name === route.view_name &&
+                  existingRoute.path === route.path &&
                   existingRoute.verb === route.verb)
             ) || []
         }
- 
+
         props.updateApiData(updatedApiData)
         success(`Path "${route.path}-${route.verb}" deleted successfully`, 'Route Deleted');
-
+        showDeleteModal.value = false
+        pendingDeleteRoute.value = null
     } catch (err: any) {
         console.error('Error deleting route:', err)
         error(err.message || 'Error deleting route', 'Error');
+    } finally {
+        deleting.value = false
     }
 }
 
@@ -707,6 +730,14 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
 
         </div>
     </div>
+
+    <ConfirmDeleteModal
+        :isOpen="showDeleteModal"
+        :count="pendingDeleteRoute ? 1 : 0"
+        :deleting="deleting"
+        @confirm="confirmDelete"
+        @close="closeDeleteModal"
+    />
 </template>
 
 
