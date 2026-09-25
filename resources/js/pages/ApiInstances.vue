@@ -472,8 +472,24 @@ const normalizeApiInstance = (instance: any): ApiInstance => {
   if (normalized.slug != null) {
     normalized.route = normalized.slug
   }
-  if (normalized.api_version_id === null) {
+  if (normalized.api_version_id === null || normalized.api_version_id === '') {
     normalized.api_version_id = -1
+  }
+
+  // Coerce IDs to numbers so DataGrid option badges match (option values are numbers)
+  if (normalized.environment_id !== undefined && normalized.environment_id !== null && normalized.environment_id !== '') {
+    normalized.environment_id = Number(normalized.environment_id)
+  }
+  if (normalized.api_id !== undefined && normalized.api_id !== null && normalized.api_id !== '') {
+    normalized.api_id = Number(normalized.api_id)
+  }
+  if (
+    normalized.api_version_id !== undefined &&
+    normalized.api_version_id !== null &&
+    normalized.api_version_id !== '' &&
+    normalized.api_version_id !== -1
+  ) {
+    normalized.api_version_id = Number(normalized.api_version_id)
   }
 
   const apiType = apis.value.find((api: any) => api.id === Number(normalized.api_id))?.api_type
@@ -483,7 +499,13 @@ const normalizeApiInstance = (instance: any): ApiInstance => {
 }
 
 const applyApiInstanceToTable = (instance: any, mode: 'create' | 'edit') => {
-  const normalized = normalizeApiInstance(instance)
+  // Merge pending form payload so create/update responses that omit fields
+  // (e.g. environment_id) still show correctly until the next full refresh
+  const merged = {
+    ...(pendingApiInstancePayload.value || {}),
+    ...instance,
+  }
+  const normalized = normalizeApiInstance(merged)
 
   if (mode === 'edit') {
     const index = api_instances.value.findIndex(
