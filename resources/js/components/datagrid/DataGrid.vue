@@ -353,6 +353,7 @@
               :class="[currentTheme.cell, 'overflow-hidden']"
               :style="getColumnStyle(col.key)"
             >
+              <slot :name="`cell-${col.key}`" :row="row" :value="row[col.key]" :col="col">
               <!-- Render Mustache template if column has template -->
               <span v-if="col.template" class="whitespace-pre-wrap">{{ renderCellTemplate(col.template, row) }}</span>
               <!-- Render merged array objects if this column is a merge target -->
@@ -443,6 +444,7 @@
               ] : ''">
                 {{ row[col.key] }}
               </span>
+              </slot>
             </td>
             <td :class="[currentTheme.cell]">
               <div v-if="rowActions.length > 0" class="relative flex justify-end" @click.stop>
