@@ -83,6 +83,21 @@ const routeFetchToken = ref(0);
 // Toaster
 const { success, error: showError, warning, info } = useToaster();
 
+/** Build unique route select options from version_urls (dedupe by path). */
+const uniqueRouteOptions = (versionUrls: any[] | null | undefined) => {
+    const seen = new Set<string>();
+    const options: { label: string; value: string }[] = [];
+    for (const route of versionUrls || []) {
+        const path = route?.path;
+        if (path == null || path === '' || seen.has(path)) {
+            continue;
+        }
+        seen.add(path);
+        options.push({ label: `${path}`, value: path });
+    }
+    return options;
+};
+
 const argumentsFormConfig = computed(() => ({
     label: 'Arguments',
     description: 'A list of arguments with their information.',
@@ -778,10 +793,7 @@ const openEditModal = async (row?: any) => {
         const apiVersion = await fetchAPIVersion(apiInstances.value.find(instance => instance.id === editingRow.value.api_instance_id));
         const normalizedApiVersion = normalizeApiData(apiVersion, serverApiType.value as 'python' | 'php');
         
-        formConfig.value.fields[4].options = normalizedApiVersion.version_urls.map((route: any) => ({
-                label: `${route.path}`,
-                value: route.path
-        }));
+        formConfig.value.fields[4].options = uniqueRouteOptions(normalizedApiVersion.version_urls);
         formConfig.value.fields[4].placeholder = 'Select a route';
         lastFetchedApiInstanceId.value = editingRow.value.api_instance_id;
         
@@ -862,7 +874,7 @@ const submitScheduleWithComment = async (formData: any) => {
         return;
     }
 
-    const formValues = {
+    const formValues: Record<string, any> = {
         ...pendingSchedulePayload.value,
         comment,
     };
@@ -1137,10 +1149,7 @@ const handleFormDataChange = async (data: any, field: string) => {
             }
 
             apiVersion = normalizeApiData(apiVersion, serverApiType.value as 'python' | 'php');
-            formConfig.value.fields[4].options = (apiVersion.version_urls || []).map((route: any) => ({
-                label: `${route.path}`,
-                value: route.path
-            }));
+            formConfig.value.fields[4].options = uniqueRouteOptions(apiVersion.version_urls);
         } catch (err: any) {
             if (token === routeFetchToken.value) {
                 lastFetchedApiInstanceId.value = null;
