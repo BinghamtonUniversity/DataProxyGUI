@@ -48,8 +48,8 @@ const formConfig = computed(() => {
   const isModelNameVisible = newResourceForm.value.type === 'Model'
   
   return {
-    label: 'New Resource',
-    description: 'Create a new resource',
+    label: isEditMode.value ? 'Edit Resource' : 'New Resource',
+    description: isEditMode.value ? 'Edit the selected resource' : 'Create a new resource',
     fields: [
       { name: 'name', label: 'Name', type: 'text', required: true },
       { name: 'type', label: 'Type', type: 'select', required: props.api_type === 'python' ? true : false, show: props.api_type === 'python' ? true : false, options: ['Model', 'Password', 'Other'] },
