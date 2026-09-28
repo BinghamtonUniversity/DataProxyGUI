@@ -6,6 +6,7 @@ import { useToaster } from '@/composables/useToaster';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 
 interface Props {
     api_id: string
@@ -48,6 +49,10 @@ const optionalParamsData = ref<any>(null);
 // Toaster
 const { success, error, warning, info } = useToaster();
 
+const showDeleteModal = ref(false)
+const pendingDeleteRoute = ref<RouteData | null>(null)
+const deleting = ref(false)
+
 // FormViewer refs for validation
 const newRouteFormViewer = ref<any>(null);
 const requiredParamsFormViewer = ref<any>(null);
@@ -63,12 +68,12 @@ const routeFormConfig = {
         { name: 'description', label: 'Description', type: 'text', required: false },
         {
             name: "view_name",
-            label: "View Name",
+            label: "Function",
             type: "text",
-            placeholder: "Enter view name",
+            placeholder: "Enter function name",
             value: "",
-            help: "Name of the view function",
-            info: "Name of the view function",
+            help: "Name of the function",
+            info: "Name of the function",
             width: "12",
             offset: "0",
             required: true
@@ -198,13 +203,14 @@ const optionalParamsFormConfig = {
     ]
 }
 const newRouteFormConfig = computed(() => ({
-    label: 'New Route',
-    description: 'Create a new route',
+    label: isEditMode.value ? 'Edit Route' : 'New Route',
+    description: isEditMode.value ? 'Edit the selected route' : 'Create a new route',
     name: "new-route-form",
     files: false,
     fields: [
         //view_name name cannot be "Constructor"
-        { name: 'view_name', label: 'View Name', type: 'select',options: props.apiData?.version_views?.filter((view: any ) => view.name !== 'Constructor').map((view: any ) => ({ label: view.name, value: view.name })), required: true },
+        { name: 'description', label: 'Description', type: 'text', required: true },
+        { name: 'view_name', label: 'Function', type: 'select',options: props.apiData?.version_views?.filter((view: any ) => view.name !== 'Constructor').map((view: any ) => ({ label: view.name, value: view.name })), required: true },
         //path should start with /
         { name: 'path', label: 'Path', type: 'text', required: true, validate: [{ type: 'pattern', regex: '^/', message: 'Path must start with /', conditions: true }] },
         { name: 'verb', label: 'HTTP Method', type: 'select', required: true, options: [
@@ -214,7 +220,7 @@ const newRouteFormConfig = computed(() => ({
             { label: 'DELETE', value: 'DELETE' },
             { label: 'PATCH', value: 'PATCH' }
         ] },
-        { name: 'description', label: 'Description', type: 'text', required: false },
+        
     ]
 }))
 
@@ -463,32 +469,50 @@ const submitNewRoute = async (formData: any) => {
     }
 }
 
-const handleDelete = async (route: RouteData) => {
-    if (!confirm(`Are you sure you want to delete the route "${route.view_name}" (${route.verb} ${route.path})?`)) {
+const handleDelete = (route: RouteData) => {
+    pendingDeleteRoute.value = route
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    if (deleting.value) return
+    showDeleteModal.value = false
+    pendingDeleteRoute.value = null
+}
+
+const confirmDelete = async () => {
+    const route = pendingDeleteRoute.value
+    if (!route) {
+        closeDeleteModal()
         return
     }
 
     if (!props.apiData) {
         console.error('API data not available')
+        closeDeleteModal()
         return
     }
-    
+
+    deleting.value = true
     try {
         const updatedApiData = {
             ...props.apiData,
-            version_urls: props.apiData.version_urls?.filter(existingRoute => 
-                !(existingRoute.view_name === route.view_name && 
-                  existingRoute.path === route.path && 
+            version_urls: props.apiData.version_urls?.filter(existingRoute =>
+                !(existingRoute.view_name === route.view_name &&
+                  existingRoute.path === route.path &&
                   existingRoute.verb === route.verb)
             ) || []
         }
- 
+
         props.updateApiData(updatedApiData)
         success(`Path "${route.path}-${route.verb}" deleted successfully`, 'Route Deleted');
-
+        showDeleteModal.value = false
+        pendingDeleteRoute.value = null
     } catch (err: any) {
         console.error('Error deleting route:', err)
         error(err.message || 'Error deleting route', 'Error');
+    } finally {
+        deleting.value = false
     }
 }
 
@@ -706,6 +730,14 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
 
         </div>
     </div>
+
+    <ConfirmDeleteModal
+        :isOpen="showDeleteModal"
+        :count="pendingDeleteRoute ? 1 : 0"
+        :deleting="deleting"
+        @confirm="confirmDelete"
+        @close="closeDeleteModal"
+    />
 </template>
 
 

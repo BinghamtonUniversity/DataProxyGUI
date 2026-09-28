@@ -28,6 +28,7 @@ import Editor from '@/pages/Editor.vue'
 import DataGrid from '@/components/datagrid/DataGrid.vue'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 
 interface Props {
     api_id: string
@@ -48,6 +49,14 @@ const props = defineProps<Props>()
 
 // Toaster
 const { success, error, warning, info } = useToaster();
+
+type ModelClassMethod = { name: string; params: string[]; content: string }
+
+const showDeleteModal = ref(false)
+const pendingDeleteKind = ref<'model' | 'method' | null>(null)
+const pendingDeleteModel = ref<ModelData | null>(null)
+const pendingDeleteMethod = ref<ModelClassMethod | null>(null)
+const deleting = ref(false)
 
 // --- Dialog State and Handlers ---
 const newModelDialogOpen = ref(false)
@@ -420,28 +429,72 @@ const submitNewModel = async (e: Event) => {
   }
 }
 
-const handleDelete = async (model: ModelData) => {
-    if (!confirm(`Are you sure you want to delete the resource "${model.name}"?`)) {
+const handleDelete = (model: ModelData) => {
+    pendingDeleteKind.value = 'model'
+    pendingDeleteModel.value = model
+    pendingDeleteMethod.value = null
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    if (deleting.value) return
+    showDeleteModal.value = false
+    pendingDeleteKind.value = null
+    pendingDeleteModel.value = null
+    pendingDeleteMethod.value = null
+}
+
+const confirmDelete = async () => {
+    if (pendingDeleteKind.value === 'model') {
+        const model = pendingDeleteModel.value
+        if (!model) {
+            closeDeleteModal()
+            return
+        }
+
+        if (!props.apiData) {
+            console.error('API data not available')
+            closeDeleteModal()
+            return
+        }
+
+        deleting.value = true
+        try {
+            const updatedApiData = {
+                ...props.apiData,
+                version_models: props.apiData.version_models?.filter(existingModel => !(existingModel.name === model.name)) || []
+            }
+
+            props.updateApiData(updatedApiData)
+            success(`Model "${model.name}" deleted successfully`, 'Model Deleted');
+            showDeleteModal.value = false
+            pendingDeleteKind.value = null
+            pendingDeleteModel.value = null
+        } catch (err: any) {
+            console.error('Error deleting model:', err)
+            error(err.message || 'Error deleting model', 'Error');
+        } finally {
+            deleting.value = false
+        }
         return
     }
 
-    if (!props.apiData) {
-        console.error('API data not available')
-        return
-    }
-    
-    try {
-        const updatedApiData = {
-            ...props.apiData,
-            version_models: props.apiData.version_models?.filter(existingModel => !(existingModel.name === model.name)) || []
+    if (pendingDeleteKind.value === 'method') {
+        const method = pendingDeleteMethod.value
+        if (!method || !selectedModel.value || !selectedModel.value.class_methods) {
+            closeDeleteModal()
+            return
         }
-       
-        props.updateApiData(updatedApiData)
-        success(`Model "${model.name}" deleted successfully`, 'Model Deleted');
-        
-    } catch (err: any) {
-        console.error('Error deleting model:', err)
-        error(err.message || 'Error deleting model', 'Error');
+
+        deleting.value = true
+        try {
+            selectedModel.value.class_methods = selectedModel.value.class_methods?.filter(m => m.name !== method.name)
+            showDeleteModal.value = false
+            pendingDeleteKind.value = null
+            pendingDeleteMethod.value = null
+        } finally {
+            deleting.value = false
+        }
     }
 }
 
@@ -617,16 +670,15 @@ const handleUpdateMethodName = async () => {
 }
 
 
-const handleDeleteMethod = (method: { name: string; params: string[]; content: string }) => {
+const handleDeleteMethod = (method: ModelClassMethod) => {
     if (!selectedModel.value || !selectedModel.value.class_methods) {
         return
     }
 
-    if (!confirm(`Are you sure you want to delete the method "${method.name}"?`)) {
-        return
-    }
-
-    selectedModel.value.class_methods = selectedModel.value.class_methods?.filter(m => m.name !== method.name)
+    pendingDeleteKind.value = 'method'
+    pendingDeleteMethod.value = method
+    pendingDeleteModel.value = null
+    showDeleteModal.value = true
 }
 
 // Handle search result selection
@@ -848,9 +900,9 @@ onUnmounted(() => {
                         <!-- Model Dialog -->
                         <Dialog v-model:open="newModelDialogOpen">
                           <DialogTrigger as-child>
-                            <Button class="ml-4 text-green-600 text-xs" variant="outline" @click="openNewModelDialog">
+                            <Button class="ml-4 w-full text-sm text-green-600" variant="outline" @click="openNewModelDialog">
                               <Plus class="mr-2 h-4 w-4" />
-                              New Model
+                              New
                             </Button>
                           </DialogTrigger>
                           <DialogContent class="sm:max-w-3xl">
@@ -1236,6 +1288,13 @@ onUnmounted(() => {
         </div>
     </div>
 
+    <ConfirmDeleteModal
+        :isOpen="showDeleteModal"
+        :count="(pendingDeleteModel || pendingDeleteMethod) ? 1 : 0"
+        :deleting="deleting"
+        @confirm="confirmDelete"
+        @close="closeDeleteModal"
+    />
 </template>
 
 <style>

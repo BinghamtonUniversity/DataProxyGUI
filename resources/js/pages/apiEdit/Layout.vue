@@ -349,7 +349,7 @@ const fetchInstances = async () => {
 }
 
 const viewInstance = (instance: any) => {
-    const instanceUrl = `${window.location.origin}/api_instances/${serverApiType.value}/${instance.id}/main`
+    const instanceUrl = `${window.location.origin}/${serverSlug.value}/api_instances/${instance.id}/main`
     window.open(instanceUrl, '_blank')
 }
 
@@ -962,7 +962,7 @@ const handleValidationError = (componentId: string, errorCount: number) => {
     validationErrors.value[componentId] = errorCount
 }
 
-// Component props to pass down
+// Component props to pass down (onValidationError only for tabs that declare/use it)
 const componentProps = computed(() => ({
     api_id: props.api_id,
     api_type: serverApiType.value as string,
@@ -975,7 +975,11 @@ const componentProps = computed(() => ({
     handleSave,
     highlightQuery: highlightQuery.value || "",
     highlightTarget: highlightTarget.value || "",
-    onValidationError: handleValidationError
+}))
+
+const validationAwareProps = computed(() => ({
+    ...componentProps.value,
+    onValidationError: handleValidationError,
 }))
 
 
@@ -1251,13 +1255,13 @@ onUnmounted(() => {
                             <Resources v-bind="componentProps" />
                         </div>
                         <div v-show="currentTab === 'functions'">
-                            <Functions ref="functionsComponentRef" v-bind="componentProps" />
+                            <Functions ref="functionsComponentRef" v-bind="validationAwareProps" />
                         </div>
                         <div v-show="currentTab === 'models' && serverApiType === 'python'">
-                            <Models v-bind="componentProps" />
+                            <Models v-bind="validationAwareProps" />
                         </div>
                         <div v-show="currentTab === 'files'">
-                            <Files v-bind="componentProps" />
+                            <Files v-bind="validationAwareProps" />
                         </div>
                         <div v-show="currentTab === 'options'">
                             <Options v-bind="componentProps" />

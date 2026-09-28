@@ -51,6 +51,7 @@ import { useToaster } from '@/composables/useToaster';
 import AlertModal from '@/components/AlertModal.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 
 interface Props {
     instance_id: string,
@@ -79,6 +80,10 @@ const editingPermissionIndex = ref<number | null>(null)
 
 // Toaster
 const { success, error, warning, info } = useToaster();
+
+const showDeleteModal = ref(false)
+const pendingDeletePermission = ref<ApiInstanceRouteUserMap | null>(null)
+const deleting = ref(false)
 
 // FormViewer ref for validation
 const permissionFormViewer = ref<InstanceType<typeof FormViewer> | null>(null)
@@ -240,33 +245,47 @@ const submitNewPermission = async (formData: any) => {
     }
 }
 
-const handleDelete = async (permission: ApiInstanceRouteUserMap) => {
-    const api_user = props.apiUsers?.find(u => u.id === Number(permission.api_user))?.app_name
-    if (!confirm(`Are you sure you want to delete the api user "${api_user}"?`)) {
+const handleDelete = (permission: ApiInstanceRouteUserMap) => {
+    pendingDeletePermission.value = permission
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    if (deleting.value) return
+    showDeleteModal.value = false
+    pendingDeletePermission.value = null
+}
+
+const confirmDelete = async () => {
+    const permission = pendingDeletePermission.value
+    if (!permission) {
+        closeDeleteModal()
         return
     }
 
     if (!props.apiInstanceData) {
         console.error('API Instance data not available')
+        closeDeleteModal()
         return
     }
-    
+
+    deleting.value = true
     try {
         const updatedApiInstanceData = {
                 ...props.apiInstanceData,
-                route_user_map: props.apiInstanceData.route_user_map?.filter(existingPermission => 
-                    !(existingPermission.api_user === permission.api_user && 
-                      existingPermission.route === permission.route && 
+                route_user_map: props.apiInstanceData.route_user_map?.filter(existingPermission =>
+                    !(existingPermission.api_user === permission.api_user &&
+                      existingPermission.route === permission.route &&
                       existingPermission.verb === permission.verb)
                 ) || []
             }
-        
+
         const requestData = {
             id: updatedApiInstanceData.id,
             name: updatedApiInstanceData.name,
-            route: updatedApiInstanceData.route, 
+            route: updatedApiInstanceData.route,
             route_user_map: updatedApiInstanceData.route_user_map,
-            resources: updatedApiInstanceData.resources, 
+            resources: updatedApiInstanceData.resources,
             options: updatedApiInstanceData.options,
             public: updatedApiInstanceData.public,
             api_id: updatedApiInstanceData.api.id,
@@ -276,10 +295,13 @@ const handleDelete = async (permission: ApiInstanceRouteUserMap) => {
 
         props.updateApiInstanceData(requestData)
         success('Deleted successfully', 'Permission Deleted');
-
+        showDeleteModal.value = false
+        pendingDeletePermission.value = null
     } catch (err: any) {
-        // console.error('Error deleting route:', err)
-        error(err.message || 'Error deleting permission', 'Error');}
+        error(err.message || 'Error deleting permission', 'Error');
+    } finally {
+        deleting.value = false
+    }
 }
 
 
@@ -404,4 +426,12 @@ const handleDataGridRowClick = (row: any, index: number) => {
             </template>
       
     </div>
+
+    <ConfirmDeleteModal
+        :isOpen="showDeleteModal"
+        :count="pendingDeletePermission ? 1 : 0"
+        :deleting="deleting"
+        @confirm="confirmDelete"
+        @close="closeDeleteModal"
+    />
 </template>

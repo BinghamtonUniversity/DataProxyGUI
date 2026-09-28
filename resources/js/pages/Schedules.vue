@@ -5,6 +5,7 @@ import { Head } from '@inertiajs/vue3';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted, computed } from 'vue';
@@ -35,6 +36,36 @@ const modalMode = ref<'new' | 'edit'>('new');
 let selectedInstanceId = ref<number | null>(null);
 const editingRow = ref<any>(null);
 const loadingRoutes = ref(false);
+const scheduleSaving = ref(false);
+
+// Delete confirmation dialog
+const showDeleteModal = ref(false);
+const pendingDeleteIds = ref<number[]>([]);
+const deleting = ref(false);
+
+// Comment dialog (required before create/update schedule request — not arguments)
+const commentDialogOpen = ref(false);
+const commentFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
+const commentForm = ref({ comment: '' });
+const pendingSchedulePayload = ref<Record<string, any> | null>(null);
+
+const commentFormConfig = {
+    label: '',
+    description: '',
+    name: 'schedule-comment-form',
+    showLabel: false,
+    files: false,
+    fields: [
+        {
+            name: 'comment',
+            label: 'Comment',
+            type: 'textarea',
+            placeholder: 'Describe why this change is being made',
+            value: '',
+            required: true,
+        },
+    ],
+};
 
 // Data state
 const schedules = ref<any[]>([]);
@@ -46,8 +77,26 @@ const formRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const argumentsFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const showArgumentsModal = ref<boolean>(false);
 const showReportModal = ref<boolean>(false);
+// Avoid duplicate versions/latest fetches when Combobox emits select + blur
+const lastFetchedApiInstanceId = ref<number | string | null>(null);
+const routeFetchToken = ref(0);
 // Toaster
 const { success, error: showError, warning, info } = useToaster();
+
+/** Build unique route select options from version_urls (dedupe by path). */
+const uniqueRouteOptions = (versionUrls: any[] | null | undefined) => {
+    const seen = new Set<string>();
+    const options: { label: string; value: string }[] = [];
+    for (const route of versionUrls || []) {
+        const path = route?.path;
+        if (path == null || path === '' || seen.has(path)) {
+            continue;
+        }
+        seen.add(path);
+        options.push({ label: `${path}`, value: path });
+    }
+    return options;
+};
 
 const argumentsFormConfig = computed(() => ({
     label: 'Arguments',
@@ -717,6 +766,10 @@ const openNewModal = () => {
     modalMode.value = 'new';
     // Let FormViewer use the default values from formConfig
     editingRow.value = null;
+    pendingSchedulePayload.value = null;
+    commentDialogOpen.value = false;
+    lastFetchedApiInstanceId.value = null;
+    formConfig.value.fields[4].options = [];
     showModal.value = true;
 };
 
@@ -740,25 +793,39 @@ const openEditModal = async (row?: any) => {
         const apiVersion = await fetchAPIVersion(apiInstances.value.find(instance => instance.id === editingRow.value.api_instance_id));
         const normalizedApiVersion = normalizeApiData(apiVersion, serverApiType.value as 'python' | 'php');
         
-        formConfig.value.fields[4].options = normalizedApiVersion.version_urls.map((route: any) => ({
-                label: `${route.path}`,
-                value: route.path
-        }));
+        formConfig.value.fields[4].options = uniqueRouteOptions(normalizedApiVersion.version_urls);
         formConfig.value.fields[4].placeholder = 'Select a route';
+        lastFetchedApiInstanceId.value = editingRow.value.api_instance_id;
         
         loadingRoutes.value = false;
+        pendingSchedulePayload.value = null;
+        commentDialogOpen.value = false;
         showModal.value = true;
     } else {
         warning('Please select exactly one row to edit.', 'Selection Required');
     }
 };
 
-const closeModal = () => {
-    showModal.value = false;
-    editingRow.value = null;
+const clearPendingScheduleSave = () => {
+    pendingSchedulePayload.value = null;
+    commentForm.value = { comment: '' };
 };
 
-const handleFormSubmit = async (formValues: any) => {
+const closeModal = () => {
+    showModal.value = false;
+    if (!commentDialogOpen.value) {
+        editingRow.value = null;
+        clearPendingScheduleSave();
+    }
+};
+
+const closeCommentDialog = () => {
+    commentDialogOpen.value = false;
+    editingRow.value = null;
+    clearPendingScheduleSave();
+};
+
+const prepareScheduleSave = (formValues: any) => {
     try {
         if (formRef.value) {
             const isValid = formRef.value.validateForm();
@@ -770,86 +837,155 @@ const handleFormSubmit = async (formValues: any) => {
     } catch (err: any) {
         showError(err.message || 'Failed to save schedule. Please try again.', 'Error');
         console.error('Form submission error:', err);
+        return;
     }
-    try {
-    if (modalMode.value === 'new') {
-        // Create new schedule via API
 
-        const response = await fetch(`${apiBaseUrl}/scheduler`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify(formValues)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
-
-        const newSchedule = await response.json();
-
-        newSchedule.api_instance_id = newSchedule.api_instance != null ? Number(newSchedule.api_instance) : newSchedule.api_instance_id!=null ? Number(newSchedule.api_instance_id) : null;
-
-        // Add to local state with server-provided data
-        schedules.value.unshift(newSchedule);
-        closeModal();
-        success(`Schedule "${formValues.name}" added successfully!`, 'Schedule Added');
-    } else if (modalMode.value === 'edit' && editingRow.value) {
-        // Update existing schedule via API
-
-        const response = await fetch(`${apiBaseUrl}/scheduler/${editingRow.value.id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken() || '',
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify(formValues)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
-
-        const updatedSchedule = await response.json();
-        updatedSchedule.api_instance_id = updatedSchedule.api_instance_id!=null ? Number(updatedSchedule.api_instance_id) : null;
-
-
-
-        // Update local state with server-provided data
-        const index = schedules.value.findIndex((schedule: any) => schedule.id === editingRow.value.id);
-        if (index !== -1) {
-            schedules.value[index] = updatedSchedule;
-        }
-
-        success(`Schedule "${formValues.name}" updated successfully!`, 'Schedule Updated');
-        closeModal();
-    } else {
+    if (modalMode.value === 'edit' && !editingRow.value) {
         warning('Please select exactly one row to edit.', 'Selection Required');
+        return;
     }
+
+    pendingSchedulePayload.value = { ...formValues };
+    commentForm.value = { comment: '' };
+    commentDialogOpen.value = true;
+    showModal.value = false;
+};
+
+const submitScheduleWithComment = async (formData: any) => {
+    if (!commentFormRef.value) {
+        warning('Form is not ready. Please try again.', 'Validation Error');
+        return;
+    }
+    const isValid = commentFormRef.value.validateForm();
+    if (!isValid) {
+        warning('Please enter a comment before saving.', 'Validation Error');
+        return;
+    }
+
+    const comment = (formData?.comment ?? '').trim();
+    if (!comment) {
+        warning('Comment is required.', 'Validation Error');
+        return;
+    }
+
+    if (!pendingSchedulePayload.value) {
+        showError('Nothing to save. Please try again.', 'Error');
+        closeCommentDialog();
+        return;
+    }
+
+    const formValues: Record<string, any> = {
+        ...pendingSchedulePayload.value,
+        comment,
+    };
+
+    scheduleSaving.value = true;
+    try {
+        if (modalMode.value === 'new') {
+            const response = await fetch(`${apiBaseUrl}/scheduler`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken() || '',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(formValues)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+
+            const newSchedule = await response.json();
+
+            newSchedule.api_instance_id = newSchedule.api_instance != null ? Number(newSchedule.api_instance) : newSchedule.api_instance_id!=null ? Number(newSchedule.api_instance_id) : null;
+
+            schedules.value.unshift(newSchedule);
+            commentDialogOpen.value = false;
+            editingRow.value = null;
+            clearPendingScheduleSave();
+            success(`Schedule "${formValues.name}" added successfully!`, 'Schedule Added');
+        } else if (modalMode.value === 'edit' && editingRow.value) {
+            const response = await fetch(`${apiBaseUrl}/scheduler/${editingRow.value.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken() || '',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(formValues)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+
+            const updatedSchedule = await response.json();
+            updatedSchedule.api_instance_id = updatedSchedule.api_instance_id!=null ? Number(updatedSchedule.api_instance_id) : null;
+
+            const index = schedules.value.findIndex((schedule: any) => schedule.id === editingRow.value.id);
+            if (index !== -1) {
+                schedules.value[index] = updatedSchedule;
+            }
+
+            success(`Schedule "${formValues.name}" updated successfully!`, 'Schedule Updated');
+            commentDialogOpen.value = false;
+            editingRow.value = null;
+            clearPendingScheduleSave();
+        } else {
+            warning('Please select exactly one row to edit.', 'Selection Required');
+        }
     } catch (err: any) {
         showError(err.message || 'Failed to save schedule. Please try again.', 'Error');
         console.error('Form submission error:', err);
     } finally {
-
-       
+        scheduleSaving.value = false;
     }
 };
 
-const handleDelete = async (selectedRowIds?: number[]) => {
-    if (!confirm(`Are you sure you want to delete ${selectedRowIds?.length || 0} schedule(s)? This action cannot be undone.`)) {
+const handleCommentFormAction = (action: { type: string; action: string; formData: any }) => {
+    switch (action.type) {
+        case 'close':
+        case 'cancel':
+            closeCommentDialog();
+            break;
+        case 'save':
+            submitScheduleWithComment(action.formData);
+            break;
+        default:
+            warning('Unknown FormViewer action type:', action.type);
+    }
+};
+
+const handleDelete = (selectedRowIds?: number[]) => {
+    if (!selectedRowIds || selectedRowIds.length === 0) {
+        warning('Please select at least one schedule to delete.', 'Selection Required');
         return;
-    }   
-    
+    }
+    pendingDeleteIds.value = [...selectedRowIds];
+    showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+    if (deleting.value) return;
+    showDeleteModal.value = false;
+    pendingDeleteIds.value = [];
+};
+
+const confirmDelete = async () => {
+    const selectedRowIds = pendingDeleteIds.value;
+    if (!selectedRowIds.length) {
+        closeDeleteModal();
+        return;
+    }
+
+    deleting.value = true;
     try {
-        for (const id of selectedRowIds || []) {
+        for (const id of selectedRowIds) {
             const response = await fetch(`${apiBaseUrl}/scheduler/${id}`, {
                 method: 'DELETE',
                 headers: {
@@ -869,10 +1005,14 @@ const handleDelete = async (selectedRowIds?: number[]) => {
             }
         }
 
-        success(`${selectedRowIds?.length ?? 0} schedule(s) deleted successfully!`, 'Schedules Deleted');
+        success(`${selectedRowIds.length} schedule(s) deleted successfully!`, 'Schedules Deleted');
+        showDeleteModal.value = false;
+        pendingDeleteIds.value = [];
     } catch (err: any) {
         showError(err.message || 'Failed to delete schedules. Please try again.', 'Error');
         console.error('Delete error:', err);
+    } finally {
+        deleting.value = false;
     }
 };  
 // Fetch api version details by selected api instance's version
@@ -980,20 +1120,47 @@ const closeArgumentsModal = () => {
 };
 const handleFormDataChange = async (data: any, field: string) => {
     if (field === 'api_instance_id') {
-        loadingRoutes.value = true;
-        if (data.api_instance_id) {
-            let apiVersion = await fetchAPIVersion(apiInstances.value.find(instance => instance.id === data.api_instance_id));
-            if(serverApiType.value === 'php') {
-                apiVersion = mapPhpToApiData(apiVersion);
-            }
-            formConfig.value.fields[4].options = apiVersion.version_urls.map((route: any) => ({
-                label: `${route.path}`,
-                value: route.path
-            }));
-        } else {
-            formConfig.value.fields[4].options = [];
+        const instanceId = data.api_instance_id ?? null;
+
+        // Combobox often emits update:value twice (select + blur) for the same value
+        if (instanceId === lastFetchedApiInstanceId.value) {
+            return;
         }
-        loadingRoutes.value = false;
+
+        if (!instanceId) {
+            lastFetchedApiInstanceId.value = null;
+            formConfig.value.fields[4].options = [];
+            return;
+        }
+
+        const token = ++routeFetchToken.value;
+        lastFetchedApiInstanceId.value = instanceId;
+        loadingRoutes.value = true;
+        try {
+            const instance = apiInstances.value.find(inst => inst.id === instanceId);
+            if (!instance) {
+                formConfig.value.fields[4].options = [];
+                return;
+            }
+
+            let apiVersion = await fetchAPIVersion(instance);
+            if (token !== routeFetchToken.value) {
+                return;
+            }
+
+            apiVersion = normalizeApiData(apiVersion, serverApiType.value as 'python' | 'php');
+            formConfig.value.fields[4].options = uniqueRouteOptions(apiVersion.version_urls);
+        } catch (err: any) {
+            if (token === routeFetchToken.value) {
+                lastFetchedApiInstanceId.value = null;
+                formConfig.value.fields[4].options = [];
+                console.error('Error loading routes for API instance:', err);
+            }
+        } finally {
+            if (token === routeFetchToken.value) {
+                loadingRoutes.value = false;
+            }
+        }
     }
 };
 
@@ -1091,7 +1258,7 @@ const handleDataGridRowClick = (row: any) => {
 const handleFormActionHandler = (action: { type: string; action: string; formData: any }) => {
     switch (action.type) {
         case 'save':
-            handleFormSubmit(action.formData);
+            prepareScheduleSave(action.formData);
             break;
         case 'close':
         case 'cancel':
@@ -1184,6 +1351,27 @@ onMounted(async () => {
                     />
                 </div>
             </AlertModal>
+
+            <!-- Required comment before create/update schedule request -->
+            <AlertModal
+                :isOpen="commentDialogOpen"
+                title="Save comment"
+                @close="() => { if (!scheduleSaving) closeCommentDialog() }"
+            >
+                <FormViewer
+                    ref="commentFormRef"
+                    :formConfig="commentFormConfig"
+                    :initialData="commentForm"
+                    :cancelAction="'close'"
+                    :actionHandler="handleCommentFormAction"
+                    :actions="[
+                        { type: 'save', action: 'save', label: 'Confirm', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+                        { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+                    ]"
+                    :isSubmitting="scheduleSaving"
+                    :disabled="scheduleSaving"
+                />
+            </AlertModal>
             
             <!-- Modal for Arguments -->
             <AlertModal 
@@ -1223,6 +1411,15 @@ onMounted(async () => {
             />
               
             </AlertModal>
+
+            <ConfirmDeleteModal
+                :isOpen="showDeleteModal"
+                :count="pendingDeleteIds.length"
+                :deleting="deleting"
+                @confirm="confirmDelete"
+                @close="closeDeleteModal"
+            />
+
             <!-- Global Toaster -->
             <Toaster />
         </div>

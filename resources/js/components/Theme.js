@@ -58,11 +58,11 @@ export const theme = {
     table:
       'w-full caption-bottom text-sm rounded-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100',
     headerCell:
-      'h-12 px-4 text-left align-middle font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800',
+      'h-12 px-4 text-left align-middle font-medium text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700',
     filterCell:
-      'px-4 py-2 border-b border-gray-100 dark:border-gray-800',
+      'px-4 py-2 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/70',
     clearButton:
-      'px-2 py-1 text-xs rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700',
+      'px-2 py-1 text-xs rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
     row:
       'border-b border-gray-100 dark:border-gray-800 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800',
     rowEven:
@@ -95,8 +95,8 @@ export const theme = {
       deleteButton: 'px-3 py-1.5 rounded text-sm bg-red-500 text-white hover:bg-red-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed',
       searchContainer: 'p-3 border-b border-gray-100 dark:border-gray-700',
       table: 'min-w-full bg-white dark:bg-gray-800',
-      headerCell: 'px-4 py-2 text-left text-sm text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700',
-      filterCell: 'px-4 py-1 border-b border-gray-50 dark:border-gray-900',
+      headerCell: 'px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700',
+      filterCell: 'px-4 py-1 border-b border-gray-50 dark:border-gray-700 bg-white dark:bg-gray-800/70',
       clearButton: 'px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
       row: 'bg-white dark:bg-gray-800',
       rowEven: 'bg-gray-50 dark:bg-gray-900',
@@ -119,8 +119,8 @@ export const theme = {
       deleteButton: 'px-4 py-2 rounded border-2 border-red-600 bg-red-600 text-white hover:bg-red-700 hover:border-red-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed',
       searchContainer: 'p-4 border-b-2 border-gray-300 dark:border-gray-600',
       table: 'min-w-full bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600',
-      headerCell: 'px-6 py-3 text-left font-semibold text-gray-900 dark:text-white border-b-2 border-gray-300 dark:border-gray-600',
-      filterCell: 'px-6 py-2 border-b border-gray-200 dark:border-gray-700',
+      headerCell: 'px-6 py-3 text-left font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 border-b-2 border-gray-300 dark:border-gray-600',
+      filterCell: 'px-6 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/70',
       clearButton: 'px-3 py-1 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none',
       row: 'bg-white dark:bg-gray-800',
       rowEven: 'bg-gray-50 dark:bg-gray-900',

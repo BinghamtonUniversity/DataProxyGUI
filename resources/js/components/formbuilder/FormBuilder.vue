@@ -1984,33 +1984,16 @@ function getFieldJson(field) {
     base.info = field.info;
   }
 
-  // Add display properties (only include if not default values)
-  if (field.width && field.width !== '12') {
-    base.width = field.width;
-  }
-  if (field.offset && field.offset !== '0') {
-    base.offset = field.offset;
-  }
+  // Legacy layout: always emit columns (number), never width.
+  // Prefer UI width; fall back to columns so width-only forms still convert correctly.
+  const columns = parseInt(field.width ?? field.columns ?? '12', 10);
+  base.columns = Number.isNaN(columns) ? 12 : columns;
+
+  const offset = parseInt(field.offset ?? '0', 10);
+  base.offset = Number.isNaN(offset) ? 0 : offset;
+
   if (field.forceRow) {
     base.forceRow = field.forceRow;
-  }
-  if (field.allowDuplication) {
-    base.allowDuplication = field.allowDuplication;
-  }
-  if (field.arrayMin !== undefined) {
-    base.arrayMin = field.arrayMin;
-  }
-  if (field.arrayMax !== undefined) {
-    base.arrayMax = field.arrayMax;
-  }
-  if (field.duplicateEnable !== undefined) {
-    base.duplicateEnable = field.duplicateEnable;
-  }
-  if (field.removeEnable !== undefined) {
-    base.removeEnable = field.removeEnable;
-  }
-  if (field.duplicateClone !== undefined) {
-    base.duplicateClone = field.duplicateClone;
   }
   if (field.enableValidate !== undefined) {
     base.enableValidate = field.enableValidate;
@@ -2019,10 +2002,28 @@ function getFieldJson(field) {
     base.validationType = field.validationType;
   }
 
-
-
-
-
+  // Legacy array: false when off; object when allowDuplication or type === 'array'
+  const duplicationEnabled =
+    field.allowDuplication === true ||
+    field.allowDuplication === 'true' ||
+    field.type === 'array';
+  if (duplicationEnabled) {
+    base.array = {
+      min: field.arrayMin ?? 1,
+      max: field.arrayMax ?? 52,
+      duplicate: field.arrayDuplicate ?? {
+        enable: field.duplicateEnable || 'auto',
+        label: '',
+        clone: field.duplicateClone !== undefined ? field.duplicateClone : true
+      },
+      remove: field.arrayRemove ?? {
+        enable: field.removeEnable || 'auto',
+        label: ''
+      }
+    };
+  } else {
+    base.array = false;
+  }
 
   // Add type-specific properties
   switch (field.type) {
@@ -2055,17 +2056,7 @@ function getFieldJson(field) {
       }
       break;
     case 'array':
-      base.array = {
-        min: field.arrayMin || null,
-        max: field.arrayMax || null,
-        duplicate: {
-          enable: field.duplicateEnable || "auto",
-          clone: field.duplicateClone || false
-        },
-        remove: {
-          enable: field.removeEnable || "auto"
-        }
-      };
+      // array shape already set above from allowDuplication / type
       break;
     case 'checkbox':
     case 'switch':
@@ -2082,19 +2073,6 @@ function getFieldJson(field) {
             { label: 'true', value: 'true' }
           ];
       break;
-  }
-
-  // Add array properties for any field that has allowDuplication enabled
-  if ((field.arrayMin !== undefined || field.arrayMax !== undefined)) {
-    if (!base.array) {
-      base.array = {};
-    }
-    if (field.arrayMin !== undefined) {
-      base.array.min = field.arrayMin;
-    }
-    if (field.arrayMax !== undefined) {
-      base.array.max = field.arrayMax;
-    }
   }
 
   // Add conditions (only include if not default true values)
@@ -2315,18 +2293,26 @@ watch(
         delete field.fields;
       }
       if (newType === 'array') {
-        field.arrayMin = field.arrayMin || null;
-        field.arrayMax = field.arrayMax || null;
+        field.arrayMin = field.arrayMin ?? 1;
+        field.arrayMax = field.arrayMax ?? 52;
         field.duplicateEnable = field.duplicateEnable || 'auto';
         field.removeEnable = field.removeEnable || 'auto';
-        field.duplicateClone = field.duplicateClone || false;
-      } 
-      else {
+        field.duplicateClone = field.duplicateClone !== undefined ? field.duplicateClone : true;
+        if (!field.arrayDuplicate) {
+          field.arrayDuplicate = { enable: 'auto', label: '', clone: true };
+        }
+        if (!field.arrayRemove) {
+          field.arrayRemove = { enable: 'auto', label: '' };
+        }
+      } else if (field.allowDuplication !== true && field.allowDuplication !== 'true') {
+        // Only clear duplication config when leaving type 'array' without Allow Duplication
         delete field.arrayMin;
         delete field.arrayMax;
         delete field.duplicateEnable;
         delete field.removeEnable;
         delete field.duplicateClone;
+        delete field.arrayDuplicate;
+        delete field.arrayRemove;
       }
     }
   }
@@ -2521,6 +2507,49 @@ function initializeFieldDefaults(field) {
   }
   if (field.required === undefined) {
     field.required = 'false';
+  }
+
+  // Layout: columns (legacy) or width (newer builder) → internal width for UI
+  if (field.columns !== undefined && field.columns !== null) {
+    field.width = String(field.columns);
+  }
+  if (field.width === undefined || field.width === null || field.width === '') {
+    field.width = '12';
+  }
+
+  // Default offset to 0 when missing
+  if (field.offset === undefined || field.offset === null || field.offset === '') {
+    field.offset = '0';
+  }
+
+  // Legacy array → internal allowDuplication / min / max (preserve duplicate/remove for round-trip)
+  if (field.array && typeof field.array === 'object' && !Array.isArray(field.array)) {
+    field.allowDuplication = true;
+    if (field.array.min !== undefined) {
+      field.arrayMin = field.array.min;
+    }
+    if (field.array.max !== undefined) {
+      field.arrayMax = field.array.max;
+    }
+    if (field.array.duplicate) {
+      field.arrayDuplicate = field.array.duplicate;
+      if (field.array.duplicate.enable !== undefined) {
+        field.duplicateEnable = field.array.duplicate.enable;
+      }
+      if (field.array.duplicate.clone !== undefined) {
+        field.duplicateClone = field.array.duplicate.clone;
+      }
+    }
+    if (field.array.remove) {
+      field.arrayRemove = field.array.remove;
+      if (field.array.remove.enable !== undefined) {
+        field.removeEnable = field.array.remove.enable;
+      }
+    }
+  } else if (field.array === false) {
+    field.allowDuplication = false;
+  } else if (field.allowDuplication === undefined) {
+    field.allowDuplication = false;
   }
   
   // Recursively initialize nested fields in fieldsets

@@ -21,9 +21,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
-import { Trash2, Pencil } from 'lucide-vue-next'
+import { Trash2, Pencil, ChevronDown, Plus } from 'lucide-vue-next'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 
 
 interface Props {
@@ -48,6 +49,7 @@ const isSaving = ref(false)
 const saveError = ref<string | null>(null)
 const saveSuccess = ref(false)
 const editorRef = ref<any>(null)
+const leftCollapsed = ref(false)
 
 // New file dialog state
 const isNewViewDialogOpen = ref(false)
@@ -64,6 +66,9 @@ const validationWarnings = ref<number>(0)
 // Toaster
 const { success, error, warning, info } = useToaster();
 
+const showDeleteModal = ref(false)
+const pendingDeleteFile = ref<ApiVersionFunction | null>(null)
+const deleting = ref(false)
 
 const handleUpdateCode = (updatedCode: string) => {
     if (!selectedFile.value || !props.apiData) {
@@ -298,30 +303,47 @@ const handleUpdateFileName = async () => {
   }
 }
 
-const handleDeleteFile = async (file: ApiVersionFunction ) =>{
-    if (!confirm(`Are you sure you want to delete the file "${file.name}"?`)) {
+const handleDeleteFile = (file: ApiVersionFunction) => {
+    pendingDeleteFile.value = file
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    if (deleting.value) return
+    showDeleteModal.value = false
+    pendingDeleteFile.value = null
+}
+
+const confirmDelete = async () => {
+    const file = pendingDeleteFile.value
+    if (!file) {
+        closeDeleteModal()
         return
     }
 
     if (!props.apiData) {
         console.error('API data not available')
+        closeDeleteModal()
         return
     }
-    
+
+    deleting.value = true
     try {
         const updatedApiData = {
             ...props.apiData,
             version_files: props.apiData.version_files?.filter(existingFile => !(existingFile.name === file.name)) || []
         }
 
-        // const responseData = await response.json()
         props.updateApiData(updatedApiData)
         selectedFile.value = null
         success(`File "${file.name}" deleted successfully`, 'File Deleted');
-
+        showDeleteModal.value = false
+        pendingDeleteFile.value = null
     } catch (err: any) {
         console.error('Error deleting route:', err)
         error(err.message || 'Error deleting file', 'Error');
+    } finally {
+        deleting.value = false
     }
 }
 
@@ -516,13 +538,26 @@ onUnmounted(() => {
                 <template v-else-if="apiData?.version_files">
                     <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
                         <!-- Files List Sidebar -->
-                    <aside class="max-w-xs lg:w-50 lg:min-w-50 lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)]">
+                    <aside class="[
+                            'max-w-xs lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)] transition-all',
+                            leftCollapsed ? 'lg:w-10' : 'lg:w-50 lg:min-w-50'
+                        ]"
+                    >
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            class="mb-2 w-full justify-center shrink-0" 
+                            @click="leftCollapsed = !leftCollapsed"
+                        >
+                            <ChevronDown :class="['h-4 w-4 transition-transform', leftCollapsed ? '-rotate-90' : 'rotate-90']" />
+                        </Button>
+                        <div v-show="!leftCollapsed" class="flex flex-col min-h-0 flex-1">
                             <!-- New View Button -->
                             <div class="mb-4">
                                 <Dialog v-model:open="isNewViewDialogOpen" @update:open="resetNewViewDialog">
                                     <DialogTrigger as-child>
-                                        <Button variant="outline" class="w-full text-xs">
-                                            + New File
+                                        <Button variant="outline" class="ml-4 w-full text-sm text-green-600">
+                                            <Plus class="mr-2 h-4 w-4" /> New
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent class="sm:max-w-md">
@@ -618,7 +653,8 @@ onUnmounted(() => {
                                     </Button>
                                 </div>
                             </nav>
-                        </aside>
+                        </div>
+                    </aside>
 
                         <!-- Editor Area -->
                         <div class="flex-1 min-w-0">
@@ -664,5 +700,12 @@ onUnmounted(() => {
             </div>
         </div>
     </TooltipProvider>
-  
+
+    <ConfirmDeleteModal
+        :isOpen="showDeleteModal"
+        :count="pendingDeleteFile ? 1 : 0"
+        :deleting="deleting"
+        @confirm="confirmDelete"
+        @close="closeDeleteModal"
+    />
 </template>

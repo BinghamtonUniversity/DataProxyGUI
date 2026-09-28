@@ -21,9 +21,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
-import { Trash2, Pencil } from 'lucide-vue-next'
+import { Trash2, Pencil, ChevronDown, Plus } from 'lucide-vue-next'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 
 
 interface Props {
@@ -49,11 +50,19 @@ const saveError = ref<string | null>(null)
 const saveSuccess = ref(false)
 const editorRef = ref<any>(null)
 const editorContainerRef = ref<HTMLElement | null>(null)
+const leftCollapsed = ref(false)
+
+
 const validationErrors = ref<number>(0)
 const validationWarnings = ref<number>(0)
 
 // Toaster
 const { success, error, warning, info } = useToaster();
+
+// Delete confirmation dialog
+const showDeleteModal = ref(false)
+const pendingDeleteFunction = ref<ApiVersionFunction | null>(null)
+const deleting = ref(false)
 
 // New view dialog state
 const isNewViewDialogOpen = ref(false)
@@ -212,33 +221,47 @@ const handleCreateNewView = async () => {
     }
 }
 
-const handleDeleteFunction = async (view: ApiVersionFunction ) =>{
-    if (!confirm(`Are you sure you want to delete the function "${view.name}"?`)) {
+const handleDeleteFunction = (view: ApiVersionFunction) => {
+    pendingDeleteFunction.value = view
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    if (deleting.value) return
+    showDeleteModal.value = false
+    pendingDeleteFunction.value = null
+}
+
+const confirmDelete = async () => {
+    const view = pendingDeleteFunction.value
+    if (!view) {
+        closeDeleteModal()
         return
     }
 
     if (!props.apiData) {
         console.error('API data not available')
+        closeDeleteModal()
         return
     }
-    
+
+    deleting.value = true
     try {
         const updatedApiData = {
             ...props.apiData,
             version_views: props.apiData.version_views?.filter(existingView => !(existingView.name === view.name)) || []
         }
-       
-        props.updateApiData(updatedApiData)
-        
-        // // Clear cache for deleted function
-        // unsavedEditsCache.value.delete(view.name)
-        
-        selectedFunction.value = null
-        success(`Function "${view.name}" deleted successfully`, 'Function Deleted');
 
+        props.updateApiData(updatedApiData)
+        selectedFunction.value = null
+        success(`Function "${view.name}" deleted successfully`, 'Function Deleted')
+        showDeleteModal.value = false
+        pendingDeleteFunction.value = null
     } catch (err: any) {
         console.error('Error deleting route:', err)
-        error(err.message || 'Error deleting function', 'Error');
+        error(err.message || 'Error deleting function', 'Error')
+    } finally {
+        deleting.value = false
     }
 }
 
@@ -571,13 +594,26 @@ defineExpose({
                 <template v-else-if="apiData?.version_views">
                     <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
                         <!-- Function List Sidebar -->
-                    <aside class="max-w-xs lg:w-50 lg:min-w-50 lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)]">
+                    <aside :class="[
+                            'max-w-xs lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)] transition-all',
+                            leftCollapsed ? 'lg:w-10' : 'lg:w-50 lg:min-w-50'
+                        ]"
+                    >
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            class="mb-2 w-full justify-center shrink-0" 
+                            @click="leftCollapsed = !leftCollapsed"
+                        >
+                            <ChevronDown :class="['h-4 w-4 transition-transform', leftCollapsed ? '-rotate-90' : 'rotate-90']" />
+                        </Button>
+                        <div v-show="!leftCollapsed" class="flex flex-col min-h-0 flex-1">
                             <!-- New View Button -->
                             <div class="mb-4 shrink-0">
                                 <Dialog v-model:open="isNewViewDialogOpen" @update:open="resetNewViewDialog">
                                     <DialogTrigger as-child>
-                                        <Button variant="outline" class="w-full text-xs">
-                                            + New View
+                                        <Button variant="outline" class="ml-4 w-full text-sm text-green-600">
+                                             <Plus class="mr-2 h-4 w-4" /> New
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent class="sm:max-w-md">
@@ -684,7 +720,8 @@ defineExpose({
                                     
                                 </div>
                             </nav>
-                        </aside>
+                        </div>
+                    </aside>
 
                         <!-- Editor Area -->
                         <div class="flex-1 min-w-0" ref="editorContainerRef">
@@ -723,4 +760,12 @@ defineExpose({
             </div>
         </div>
     </TooltipProvider>
+
+    <ConfirmDeleteModal
+        :isOpen="showDeleteModal"
+        :count="pendingDeleteFunction ? 1 : 0"
+        :deleting="deleting"
+        @confirm="confirmDelete"
+        @close="closeDeleteModal"
+    />
 </template>

@@ -4,6 +4,7 @@ import { Head } from '@inertiajs/vue3';
 import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { type ApiData } from '@/types';
@@ -27,6 +28,10 @@ const showModal = ref(false);
 const modalMode = ref<'new' | 'edit'>('new');
 const editingRow = ref<any>(null);
 const submitting = ref(false);
+
+const showDeleteModal = ref(false);
+const pendingDeleteIds = ref<number[]>([]);
+const deleting = ref(false);
 
 // Data state
 const allUsers = ref<any>([]);
@@ -385,51 +390,70 @@ const handleFormAction = (actionData: { type: string; action: string; formData: 
     }
 };
 
-const handleDelete = async (selectedRowIds?: number[]) => {
-    if (selectedRowIds && selectedRowIds.length > 0) {
-        const developersToDelete = apiDevelopers.value.filter(dev => selectedRowIds.includes(dev.id));
-        
-        try {
-            // Delete API developer assignments via API
-            for (const dev of developersToDelete) {
-                const response = await fetch(`/${props.server_slug}/api/apis/${props.api_id}/developers/${dev.user_id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': getCsrfToken() || '',
-                    },
-                    credentials: 'same-origin'
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || `Failed to remove developer assignment. Status: ${response.status}`);
-                }
-            }
-            
-            // Remove from local state after successful API calls
-            developersToDelete.forEach(dev => {
-                const index = apiDevelopers.value.findIndex(d => d.id === dev.id);
-                if (index !== -1) {
-                    apiDevelopers.value.splice(index, 1);
-                }
-            });
-            
-            // Refresh available developers for the dropdown
-            await fetchAvailableUsers();
-            
-            // Show success message
-            if (developersToDelete.length === 1) {
-                success(`Developer assignment removed successfully!`, 'Assignment Removed');
-            } else {
-                success(`${developersToDelete.length} developer assignments removed successfully!`, 'Assignments Removed');
-            }
-        } catch (err: any) {
-            showError(err.message || 'Failed to remove developer assignments. Please try again.', 'Error');
-            console.error('Delete error:', err);
-        }
-    } else {
+const handleDelete = (selectedRowIds?: number[]) => {
+    if (!selectedRowIds || selectedRowIds.length === 0) {
         warning('Please select at least one developer assignment to remove.', 'Selection Required');
+        return;
+    }
+    pendingDeleteIds.value = [...selectedRowIds];
+    showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+    if (deleting.value) return;
+    showDeleteModal.value = false;
+    pendingDeleteIds.value = [];
+};
+
+const confirmDelete = async () => {
+    const selectedRowIds = pendingDeleteIds.value;
+    if (!selectedRowIds.length) {
+        closeDeleteModal();
+        return;
+    }
+
+    const developersToDelete = apiDevelopers.value.filter(dev => selectedRowIds.includes(dev.id));
+
+    deleting.value = true;
+    try {
+        for (const dev of developersToDelete) {
+            const response = await fetch(`/${props.server_slug}/api/apis/${props.api_id}/developers/${dev.user_id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken() || '',
+                },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Failed to remove developer assignment. Status: ${response.status}`);
+            }
+        }
+
+        developersToDelete.forEach(dev => {
+            const index = apiDevelopers.value.findIndex(d => d.id === dev.id);
+            if (index !== -1) {
+                apiDevelopers.value.splice(index, 1);
+            }
+        });
+
+        await fetchAvailableUsers();
+
+        if (developersToDelete.length === 1) {
+            success(`Developer assignment removed successfully!`, 'Assignment Removed');
+        } else {
+            success(`${developersToDelete.length} developer assignments removed successfully!`, 'Assignments Removed');
+        }
+
+        showDeleteModal.value = false;
+        pendingDeleteIds.value = [];
+    } catch (err: any) {
+        showError(err.message || 'Failed to remove developer assignments. Please try again.', 'Error');
+        console.error('Delete error:', err);
+    } finally {
+        deleting.value = false;
     }
 };
 
@@ -542,6 +566,14 @@ onMounted(() => {
             
             <!-- Global Toaster -->
             <!-- <Toaster /> -->
+
+            <ConfirmDeleteModal
+                :isOpen="showDeleteModal"
+                :count="pendingDeleteIds.length"
+                :deleting="deleting"
+                @confirm="confirmDelete"
+                @close="closeDeleteModal"
+            />
         </div>
     </div>
 </template>

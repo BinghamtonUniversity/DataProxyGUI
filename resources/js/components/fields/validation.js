@@ -350,13 +350,16 @@ const rules = {
       if (!config.allowCustom && value !== undefined && value !== null && value !== '') {
         const validValues = getValidValuesFromOptions(config.options);
         if (validValues.length > 0) {
+          const isValidOption = (selectedValue) =>
+            validValues.some((validValue) => String(validValue) === String(selectedValue));
+
           if (isMultiple && Array.isArray(value)) {
             for (const selectedValue of value) {
-              if (!validValues.includes(selectedValue) && !validValues.includes(String(selectedValue))) {
+              if (!isValidOption(selectedValue)) {
                 return 'Please select a valid option from the list.';
               }
             }
-          } else if (!isMultiple && !validValues.includes(value) && !validValues.includes(String(value))) {
+          } else if (!isMultiple && !isValidOption(value)) {
             return 'Please select a valid option from the list.';
           }
         }
