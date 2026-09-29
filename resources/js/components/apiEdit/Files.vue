@@ -501,6 +501,13 @@ onUnmounted(() => {
     window.removeEventListener('search-result-selected', handleSearchResult as EventListener)
 })
 
+// Expose validation state to parent component
+defineExpose({
+    validationErrors,
+    validationWarnings,
+    hasValidationErrors: computed(() => validationErrors.value > 0)
+})
+
 </script>
 
 <style>
