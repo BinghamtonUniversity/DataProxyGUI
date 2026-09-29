@@ -869,13 +869,12 @@ const handleSave = async () => {
         showError('No apiData found to save in Layout.')
         return
     }
-    debugger;
     // Check for validation errors in Functions component (regardless of current tab)
     if (functionsComponentRef.value) {
         
         const hasErrors = functionsComponentRef.value.hasValidationErrors
         const errorCount = functionsComponentRef.value.validationErrors
-        debugger;
+    
         if (hasErrors) {
             showError(`Cannot save: There ${errorCount === 1 ? 'is' : 'are'} ${errorCount} validation error${errorCount === 1 ? '' : 's'} in the Functions tab. Please fix the errors before saving.`, 'Validation Errors')
             return
@@ -889,10 +888,9 @@ const handleSave = async () => {
             return
         }
     }
-    }
     
     if (isVersionSwitch.value) {
-        const confirmed = confirm('You have switched to a different version. Are you sure you want to save?')
+        const confirmed = confirm('You’ve switched to a different version. Are you sure you want to save your changes? This will save them to the latest working version.')
         if (!confirmed) {
             return
         }
