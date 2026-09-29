@@ -212,7 +212,7 @@ const currentComponentProps = computed(() => ({
         await fetchCurrentVersion()
         triggerUpdate()
     },
-    forceUpdate: forceUpdate.value,
+    // forceUpdate: forceUpdate.value,
 }))
 
 const selectedComponentProps = computed(() => ({
@@ -224,9 +224,9 @@ const selectedComponentProps = computed(() => ({
     apiError: error.value,
     updateApiData: () => {},
     refreshApiData: () => {},
-    isReadOnly: true,
-    disableActions: true,
-    viewOnly: true,
+    // isReadOnly: true,
+    // disableActions: true,
+    // viewOnly: true,
 }))
 
 const activeComponent = computed(() => {
@@ -285,8 +285,11 @@ const itemLabel = computed(() =>
     activeTab.value === 'functions' ? 'function' : activeTab.value === 'models' ? 'model' : 'file',
 )
 const diffLanguage = computed(() => {
-    if (activeTab.value === 'files') return languageForFile(selectedEntry.value?.name)
-    return serverApiType.value === 'php' ? 'php' : 'python'
+    if (activeTab.value === 'files') {
+        const lang = languageForFile(selectedEntry.value?.name)
+        return lang === 'plaintext' && serverApiType.value === 'php' ? 'php' : lang
+    }
+    return serverApiType.value === 'php' ? 'php-snippet' : 'python'
 })
 
 const sideBySide = ref(true)
@@ -493,7 +496,7 @@ onUnmounted(() => {
                         @click="navigateToTab(tab.id)"
                     >
                         {{ tab.title }}
-                        <span
+                        <!-- <span
                             v-if="tab.id === 'functions' && functionEntries.some((e) => e.status !== 'unchanged')"
                             class="ml-2 h-1.5 w-1.5 rounded-full bg-amber-500"
                             title="Has changes"
@@ -508,6 +511,11 @@ onUnmounted(() => {
                             class="ml-2 h-1.5 w-1.5 rounded-full bg-amber-500"
                             title="Has changes"
                         />
+                        <span
+                            v-if="tab.id === 'options' && optionsJsonData && (optionsJsonData.additions || optionsJsonData.deletions)"
+                            class="ml-2 h-1.5 w-1.5 rounded-full bg-amber-500"
+                            title="Has changes"
+                        /> -->
                     </Button>
                 </nav>
             </div>

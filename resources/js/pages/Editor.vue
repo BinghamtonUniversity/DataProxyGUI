@@ -1,12 +1,13 @@
 <script setup lang="ts">import { type BreadcrumbItem } from '@/types'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
-import { ref, shallowRef, watch, toRaw, onMounted,  onBeforeUnmount } from 'vue'
+import { ref, shallowRef, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Button } from '@/components/ui/button'
 import { getStoredAppearance } from '@/composables/useAppearance'
 import { validateCode as validateCodeLogic } from '@/lib/editorValidator'
 import { createPhpWorker } from '@/lib/createPhpWorker'
 import { createPythonWorker } from '@/lib/createPythonWorker'
 import { checkPythonForbiddenUsage } from '@/lib/pythonPolicyCheck'
+import { monacoLanguageFor, stripPhpTag } from '@/lib/monacoPhpSnippet'
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -20,6 +21,9 @@ const props = defineProps<{
   saveError?: string,
   saveSuccess?: Boolean,
   hasUnsavedChanges?: Boolean
+  // Files tab keep their `<?php` tag in the editor and when saving.
+  // PHP functions (default) are shown and saved without it.
+  keepPhpTag?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -33,6 +37,9 @@ let phpWorker: Worker | null = null
 let phpWorkerPromise: Promise<Worker> | null = null
 let requestCounter = 0
 let latestRequestId = 0
+// The editor shows code without `<?php`, but the PHP parser needs it, so validation
+// prepends the tag and shifts marker line numbers back by this many lines.
+let latestPhpLineOffset = 0
 
 let pythonWorker: Worker | null = null
 let pyRequestCounter = 0
@@ -44,8 +51,9 @@ async function getPhpWorker(): Promise<Worker> {
     phpWorkerPromise = createPhpWorker().then((worker) => {
       phpWorker = worker
       worker.onmessage = (e: MessageEvent) => {
-        const { requestId, markers } = e.data
+        const { requestId, markers: rawMarkers } = e.data
         if (requestId !== latestRequestId) return
+        const markers = shiftMarkers(rawMarkers, latestPhpLineOffset)
         if (!editor.value) return
         const model = editor.value.getModel()
         if (!model) return
@@ -63,10 +71,21 @@ async function getPhpWorker(): Promise<Worker> {
   return phpWorkerPromise
 }
 
+function shiftMarkers(markers: any[], offset: number) {
+  if (!offset) return markers
+  return markers.map((m) => ({
+    ...m,
+    startLineNumber: Math.max(1, m.startLineNumber - offset),
+    endLineNumber: Math.max(1, m.endLineNumber - offset),
+  }))
+}
+
 async function validatePhpRemote(code: string) {
   const worker = await getPhpWorker()
+  const hasTag = code.trimStart().startsWith('<?php')
+  latestPhpLineOffset = hasTag ? 0 : 1
   latestRequestId = ++requestCounter
-  worker.postMessage({ code, requestId: latestRequestId })
+  worker.postMessage({ code: hasTag ? code : '<?php\n' + code, requestId: latestRequestId })
 }
 
 function getPythonWorker(): Worker {
@@ -102,112 +121,34 @@ function validatePythonRemote(code: string) {
 }
 
 const language = ref(props.language)
+// Tagged PHP files use Monaco's built-in `php` (which needs the tag);
+// untagged function bodies use `php-snippet`.
+const monacoLanguage = computed(() =>
+  props.language === 'php' && props.keepPhpTag ? 'php' : monacoLanguageFor(props.language)
+)
 
-// Helper function to add <?php prefix for PHP files (for display only)
-const addPhpPrefix = (content: string): string => {
-  if (props.language === 'php' && !content.trim().startsWith('<?php')) {
-    return '<?php\n' + content
-  }
-  return content
-}
+// What leaves the editor (update:code / save): strip the tag unless it should be kept
+const outgoing = (content: string) =>
+  props.language === 'php' && !props.keepPhpTag ? stripPhpTag(content) : content
 
-// Initialize code with PHP prefix if needed
-const code = ref(addPhpPrefix(props.code))
-// const hasUnsavedChanges = ref(false)
+// The editor shows the code exactly as stored: functions without `<?php`
+// (highlighted by `php-snippet`), files with it (keepPhpTag).
+const code = ref(props.code)
 
-// Helper function to strip <?php prefix (for saving/emitting)
-const stripPhpPrefix = (content: string): string => {
-  if (props.language === 'php') {
-    const trimmed = content.trimStart()
-    if (trimmed.startsWith('<?php')) {
-      // Remove <?php and any following whitespace/newlines
-      return trimmed.replace(/^<\?php\s*\n?/, '').trimStart()
-    }
-  }
-  return content
-}
-
-watch(() => props.code, (val) => { 
-  // For PHP, ensure <?php prefix is added for display
-  code.value = addPhpPrefix(val)
-  // props.hasUnsavedChanges.value = false
-})
-watch(() => props.language, (val) => { 
-  if (val) {
-    const wasPhp = language.value === 'php'
-    language.value = val
-    // When language changes to PHP, ensure prefix is added
-    if (val === 'php') {
-      code.value = addPhpPrefix(code.value)
-    } else if (wasPhp) {
-      // When switching away from PHP, strip the prefix
-      code.value = stripPhpPrefix(code.value)
-    }
-  }
+watch(() => props.language, (val) => {
+  if (val) language.value = val
 })
 
-// Track changes to show unsaved status
-// watch(code, (newCode) => {
-//   // hasUnsavedChanges.value = newCode !== props.code
-//   // For PHP, ensure prefix is maintained in editor
-//   if (props.language === 'php' && !newCode.trim().startsWith('<?php')) {
-//     // Re-add prefix if it was removed
-//     const prefixedCode = '<?php\n' + newCode
-//     code.value = prefixedCode
-//     // Update editor if mounted
-//     if (editor.value) {
-//       const position = editor.value.getPosition()
-//       editor.value.setValue(prefixedCode)
-//       if (position) {
-//         editor.value.setPosition({
-//           lineNumber: position.lineNumber + 1,
-//           column: position.column
-//         })
-//       }
-//     }
-//     // Emit without prefix
-//     emit('update:code', stripPhpPrefix(prefixedCode))
-//     return
-//   }
-//   // Strip <?php prefix before emitting
-//   emit('update:code', stripPhpPrefix(newCode))
-// })
+watch(() => props.code, (val) => {
+  // Skip when it's just our own emit coming back, so the cursor doesn't jump
+  if (val !== outgoing(code.value)) code.value = val
+})
 
 watch(code, (newCode) => {
-  if (props.language === 'php' && !newCode.trim().startsWith('<?php')) {
-    const prefixedCode = '<?php\n' + newCode
-    // code.value = prefixedCode
-
-    if (editor.value) {
-      const model = editor.value.getModel()
-      if (model) {
-        const position = editor.value.getPosition()
-
-        // Insert '<?php\n' at the very start as a tracked, undoable edit
-        model.pushEditOperations(
-          [],
-          [
-            {
-              range: new window.monaco.Range(1, 1, 1, 1),
-              text: '<?php\n',
-            },
-          ],
-          () => null
-        )
-
-        if (position) {
-          editor.value.setPosition({
-            lineNumber: position.lineNumber + 1,
-            column: position.column,
-          })
-        }
-      }
-    }
-
-    emit('update:code', stripPhpPrefix(prefixedCode))
-    return
-  }
-  emit('update:code', stripPhpPrefix(newCode))
+  const out = outgoing(newCode)
+  // Only report real edits; not the parent's own value coming back in
+  // (e.g. switching versions), which would otherwise look like a change.
+  if (out !== props.code) emit('update:code', out)
 })
 
 declare global {
@@ -248,15 +189,6 @@ function handleEditorTheme(){
 
 function handleMount(editorInstance: any, monaco: any) {
   editor.value = editorInstance
-  
-  // Ensure PHP files have <?php prefix in the editor
-  if (props.language === 'php') {
-    const currentValue = editorInstance.getValue()
-    if (!currentValue.trim().startsWith('<?php')) {
-      editorInstance.setValue('<?php\n' + currentValue)
-      code.value = editorInstance.getValue()
-    }
-  }
   
   // Add keyboard shortcut for save (Ctrl+S / Cmd+S)
   editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
@@ -311,8 +243,7 @@ const handleValidate = (markers: any[]) => {
 
 const handleSave = () => {
   if (props.isSaving) return
-  // Strip <?php prefix before saving
-  emit('save', stripPhpPrefix(code.value))
+  emit('save', outgoing(code.value))
 }
 
 // const formatCode = () => {
@@ -362,50 +293,14 @@ onBeforeUnmount(() => {
             {{ props.saveError }}
           </div>
         </Transition>
-        
-        <!-- <Transition
-          enter-active-class="transition-all duration-300 ease-out"
-          enter-from-class="opacity-0 scale-95"
-          enter-to-class="opacity-100 scale-100"
-          leave-active-class="transition-all duration-200 ease-in"
-          leave-from-class="opacity-100 scale-100"
-          leave-to-class="opacity-0 scale-95"
-        >
-          <div v-if="props.saveSuccess" class="px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 rounded-md text-xs flex items-center gap-1.5">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            Saved!
-          </div>
-        </Transition> -->
-        <!-- <Button
-          variant="outline"
-          size="sm"
-          @click="formatCode"
-          :disabled="props.isSaving"
-        >
-          Format
-        </Button> -->
-        <!-- <Button
-          size="sm"
-          @click="handleSave"
-          :disabled="props.isSaving || !hasUnsavedChanges || validationErrors > 0"
-        >
-          <span v-if="props.isSaving" class="flex items-center gap-2">
-            <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-            Saving...
-          </span>
-          <span v-else>
-            Save
-          </span>
-        </Button> -->
+
       </div>
     </div>
 
     <div class="relative flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border" style="min-height: 70vh;">
       <vue-monaco-editor
         v-model:value="code"
-        :language="props.language"
+        :language="monacoLanguage"
         :theme="editorTheme"
         :options="editorOptions"
         @mount="handleMount"

@@ -84,9 +84,10 @@ const handleUpdateCode = (updatedCode: string) => {
                 func.name === selectedFile.value?.name 
                     ? { 
                         ...func, 
+                        // PHP files must always be stored with the opening tag
                         content: props.api_type === 'php' && !updatedCode.trimStart().startsWith('<?php')
-                            ? `<?php ${updatedCode}` 
-                            : updatedCode 
+                            ? `<?php\n${updatedCode}`
+                            : updatedCode
                     }
                     : func
             )
@@ -199,7 +200,8 @@ const handleCreateNewFile = async () => {
         // TO-DO:: PHP function template
         const newFunction: ApiVersionFunction = {
             name,
-            content: ``,
+            // PHP files start with the opening tag so it's visible in the editor from the start
+            content: props.api_type === 'php' ? '<?php\n' : '',
         }
 
         const updatedApiData = {
@@ -676,6 +678,7 @@ onUnmounted(() => {
                                 :is-saving="isSaving"
                                 :saveError="saveError??''"
                                 :saveSuccess="saveSuccess"
+                                keep-php-tag
                                 @save="handleSave"
                                 @update:code="handleUpdateCode"
                                 @validate="handleValidation"
