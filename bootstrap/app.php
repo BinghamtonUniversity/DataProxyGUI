@@ -54,6 +54,9 @@ return Application::configure(basePath: dirname(__DIR__))
             Request::HEADER_X_FORWARDED_PROTO |
             Request::HEADER_X_FORWARDED_AWS_ELB
         );
+        $middleware->trimStrings(except: [
+            fn (Request $request) => $request->is('*/ajax/apis/*/code'),
+        ]);
 
     })
     ->withExceptions(function (Exceptions $exceptions) {

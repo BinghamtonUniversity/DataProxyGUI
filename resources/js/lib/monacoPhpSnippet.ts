@@ -44,3 +44,19 @@ export const monacoLanguageFor = (lang?: string) => (lang === 'php' ? PHP_SNIPPE
 /** Remove a leading `<?php` tag (e.g. if someone pastes one in); the backend doesn't want it. */
 export const stripPhpTag = (content: string) =>
     content.trimStart().startsWith('<?php') ? content.trimStart().replace(/^<\?php\s*/, '') : content
+
+/** protects the cursor and undo history when the code changes from outside, for example when switching versions */
+export function minimalEdit(monaco: typeof Monaco, model: Monaco.editor.ITextModel, from: string, to: string) {
+    let start = 0
+    while (start < from.length && start < to.length && from[start] === to[start]) start++
+    let endFrom = from.length
+    let endTo = to.length
+    while (endFrom > start && endTo > start && from[endFrom - 1] === to[endTo - 1]) {
+        endFrom--
+        endTo--
+    }
+    return {
+        range: monaco.Range.fromPositions(model.getPositionAt(start), model.getPositionAt(endFrom)),
+        text: to.slice(start, endTo),
+    }
+}

@@ -7,7 +7,7 @@ import { validateCode as validateCodeLogic } from '@/lib/editorValidator'
 import { createPhpWorker } from '@/lib/createPhpWorker'
 import { createPythonWorker } from '@/lib/createPythonWorker'
 import { checkPythonForbiddenUsage } from '@/lib/pythonPolicyCheck'
-import { monacoLanguageFor, stripPhpTag } from '@/lib/monacoPhpSnippet'
+import { monacoLanguageFor, stripPhpTag, minimalEdit } from '@/lib/monacoPhpSnippet'
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -140,8 +140,20 @@ watch(() => props.language, (val) => {
 })
 
 watch(() => props.code, (val) => {
-  // Skip when it's just our own emit coming back, so the cursor doesn't jump
-  if (val !== outgoing(code.value)) code.value = val
+  // Skip when it's just our own emit coming back
+  if (val === outgoing(code.value)) return
+ 
+  // A real outside change (e.g. the saved version coming back from the server).
+  // Apply only the part that differs as a normal edit. Letting the editor component
+  // call setValue() instead would move the cursor to the start and clear undo history.
+  const ed = editor.value
+  const model = ed?.getModel()
+  if (ed && model && window.monaco && model.getValue() !== val) {
+    ed.pushUndoStop()
+    model.pushEditOperations(ed.getSelections(), [minimalEdit(window.monaco, model, model.getValue(), val)], () => null)
+    ed.pushUndoStop()
+  }
+  code.value = val
 })
 
 watch(code, (newCode) => {

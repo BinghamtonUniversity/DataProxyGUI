@@ -276,13 +276,15 @@ class ApiController extends BaseServerController
         $requestData = $request->all();
 
         try {
+            // Log::info('ApiEditUpdate called', ['api_id' => $api_id]);
+            // Log::info('Request data', ['data' => $requestData]);
             $result = $this->makeBackendRequest('PUT', $endpoint, $requestData, [], $server_slug);
 
-            Log::info('Request result', [
-                'success' => $result['success'],
-                'status' => $result['status'],
-                'data' => $result['data']
-            ]);
+            // Log::info('Request result', [
+            //     'success' => $result['success'],
+            //     'status' => $result['status'],
+            //     'data' => $result['data']
+            // ]);
 
             if ($result['success']) {
                 return response()->json($result['data']);
