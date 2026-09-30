@@ -124,6 +124,8 @@ const latestVersion = ref<any>(null)
 // Ref to access Functions component for validation checking
 const functionsComponentRef = ref<InstanceType<typeof Functions> | null>(null)
 
+const filesComponentRef = ref<InstanceType<typeof Files> | null>(null)
+
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: `API Edit`,
@@ -867,20 +869,28 @@ const handleSave = async () => {
         showError('No apiData found to save in Layout.')
         return
     }
-    
     // Check for validation errors in Functions component (regardless of current tab)
     if (functionsComponentRef.value) {
+        
         const hasErrors = functionsComponentRef.value.hasValidationErrors
         const errorCount = functionsComponentRef.value.validationErrors
-        
+    
         if (hasErrors) {
             showError(`Cannot save: There ${errorCount === 1 ? 'is' : 'are'} ${errorCount} validation error${errorCount === 1 ? '' : 's'} in the Functions tab. Please fix the errors before saving.`, 'Validation Errors')
             return
         }
     }
+    if (filesComponentRef.value) {
+        const hasErrors = filesComponentRef.value.hasValidationErrors
+        const errorCount = filesComponentRef.value.validationErrors
+        if (hasErrors) {
+            showError(`Cannot save: There ${errorCount === 1 ? 'is' : 'are'} ${errorCount} validation error${errorCount === 1 ? '' : 's'} in the Files tab. Please fix the errors before saving.`, 'Validation Errors')
+            return
+        }
+    }
     
     if (isVersionSwitch.value) {
-        const confirmed = confirm('You have switched to a different version. Are you sure you want to save?')
+        const confirmed = confirm('You’ve switched to a different version. Are you sure you want to save your changes? This will save them to the latest working version.')
         if (!confirmed) {
             return
         }
@@ -1261,7 +1271,7 @@ onUnmounted(() => {
                             <Models v-bind="validationAwareProps" />
                         </div>
                         <div v-show="currentTab === 'files'">
-                            <Files v-bind="validationAwareProps" />
+                            <Files  ref="filesComponentRef" v-bind="validationAwareProps" />
                         </div>
                         <div v-show="currentTab === 'options'">
                             <Options v-bind="componentProps" />
