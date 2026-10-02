@@ -88,16 +88,43 @@ const deleting = ref(false)
 // FormViewer ref for validation
 const permissionFormViewer = ref<InstanceType<typeof FormViewer> | null>(null)
 
+const resolveUserEnvironmentId = (user: ApiUser | any): number | null => {
+    if (user?.environment_id != null && typeof user.environment_id !== 'object') {
+        return Number(user.environment_id)
+    }
+    if (user?.environment != null && typeof user.environment === 'object') {
+        return user.environment.id != null ? Number(user.environment.id) : null
+    }
+    if (user?.environment != null && typeof user.environment !== 'object') {
+        return Number(user.environment)
+    }
+    return null
+}
+
+const instanceEnvironmentId = computed(() => {
+    const envId = props.apiInstanceData?.environment?.id ?? props.apiInstanceData?.environment_id
+    return envId != null ? Number(envId) : null
+})
+
+const environmentMatchedApiUsers = computed(() => {
+    if (!props.apiUsers || instanceEnvironmentId.value == null) {
+        return []
+    }
+    return props.apiUsers.filter(
+        (user: ApiUser) => resolveUserEnvironmentId(user) === instanceEnvironmentId.value
+    )
+})
+
 const formConfig = computed(() => ({
     label: 'New Permission',
     description: 'Create a new permission',
     fields: [
-        { name: 'api_user', label: 'User', type: 'combobox', options: props.apiUsers?.map((user: ApiUser) => ({
+        { name: 'api_user', label: 'User', type: 'combobox', options: environmentMatchedApiUsers.value.map((user: ApiUser) => ({
                 label: user.app_name,
                 value: user.id.toString()
-            })) || [], required: true },
+            })), required: true },
         { name: 'verb', label: 'HTTP Method (Verb)', type: 'select', options: ['ALL','GET', 'POST', 'PUT', 'DELETE', 'PATCH'], required: true },
-        { name: 'route', label: 'Route', type: 'select', options: [
+        { name: 'route', label: 'Route', type: 'combobox', options: [
                 { label: "*", value: "*" },
                 ...groupRoutePaths(props.apiInstanceData?.api_version?.version_urls || [])
                     .map(path => ({ label: path, value: path }))
