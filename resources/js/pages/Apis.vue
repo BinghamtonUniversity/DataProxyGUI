@@ -233,7 +233,7 @@ const formConfig = computed(() => ({
             info: "Detailed description",
             width: "12",
             offset: "0",
-            required: false,
+            required: true,
             show: true,
             edit: true,
             parse: true
@@ -268,7 +268,7 @@ const formConfig = computed(() => ({
             info: "User assigned as lead developer for this API",
             width: "12",
             offset: "0",
-            required: false,
+            required: true,
             options: users.value.map((user: any) => ({
                 label: user.name,
                 value: user.id
@@ -288,7 +288,7 @@ const formConfig = computed(() => ({
             info: "Comma-separated tags for categorization",
             width: "12",
             offset: "0",
-            required: false,
+            required: true,
             show: true,
             edit: true,
             parse: true
