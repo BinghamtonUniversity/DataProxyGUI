@@ -190,7 +190,7 @@ const editorOptions = {
 
 
 function handleEditorTheme(){
-  let theme = getStoredAppearance() ?? "dark"
+  let theme = getStoredAppearance() ?? "system"
   if(theme === "system"){//resolve system preference
     mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
     theme = mediaQueryList.matches ? "dark" : "light"
@@ -264,7 +264,7 @@ const handleSave = () => {
 
 onMounted(() => {
   handleEditorTheme()
-  if(getStoredAppearance() === "system"){//if system is theme watch live browser changes
+  if((getStoredAppearance() ?? "system") === "system"){//if system is theme watch live browser changes
     mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
     mediaQueryList.addEventListener("change", handleEditorTheme)
   }
