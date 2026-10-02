@@ -91,6 +91,62 @@ const apiInstanceError = ref('')
 const hasUnsavedChanges = ref(false)
 const originalApiInstanceData = ref<ApiInstance | null>(null)
 
+// Comment dialog (required before update request)
+const commentDialogOpen = ref(false)
+const commentFormRef = ref<InstanceType<typeof FormViewer> | null>(null)
+const commentForm = ref({ comment: '' })
+const pendingInstancePayload = ref<Record<string, any> | null>(null)
+const pendingPreservedNestedData = ref<{
+    api: ApiInstance['api'] | undefined
+    api_version: ApiInstance['api_version'] | undefined
+    environment: ApiInstance['environment'] | undefined
+} | null>(null)
+const saving = ref(false)
+
+const commentFormConfig = {
+    label: '',
+    description: '',
+    name: 'api-instance-edit-comment-form',
+    showLabel: false,
+    files: false,
+    fields: [
+        {
+            name: 'comment',
+            label: 'Comment',
+            type: 'textarea',
+            placeholder: 'Describe why this change is being made',
+            value: '',
+            required: true,
+        },
+    ],
+}
+
+const clearPendingInstanceSave = () => {
+    pendingInstancePayload.value = null
+    pendingPreservedNestedData.value = null
+    commentForm.value = { comment: '' }
+}
+
+const closeCommentDialog = () => {
+    if (saving.value) return
+    commentDialogOpen.value = false
+    clearPendingInstanceSave()
+}
+
+const handleCommentFormAction = (actionData: { type: string; action: string; formData: any }) => {
+    switch (actionData.type) {
+        case 'close':
+        case 'cancel':
+            closeCommentDialog()
+            break
+        case 'save':
+            submitInstanceWithComment(actionData.formData)
+            break
+        default:
+            warning('Unknown FormViewer action type:', actionData.type)
+    }
+}
+
 // Not being used currently, but might be useful later
 // Using fetchAllData instead
 const fetchApiInstanceData = async () => {
@@ -337,7 +393,7 @@ const viewDocumentation = () => {
     window.open(`/api/api_docs/${props.instance_id}`, '_blank');
 };
 
-const handleSave = async() => {
+const handleSave = () => {
     // Store the nested objects before the API call
     const preservedNestedData = {
         api: apiInstanceData.value?.api,
@@ -386,37 +442,82 @@ const handleSave = async() => {
         return
     }
 
-    const response = await fetch(`/${props.server_slug}/ajax/api_instances/${props.instance_id}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken() || '',
-        },
-        body: JSON.stringify(requestData)
-    })
+    pendingInstancePayload.value = requestData
+    pendingPreservedNestedData.value = preservedNestedData
+    commentForm.value = { comment: '' }
+    commentDialogOpen.value = true
+}
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        showError(errorData.message || `HTTP error! status: ${response.status}`)
+const submitInstanceWithComment = async (formData: any) => {
+    if (!commentFormRef.value) {
+        warning('Form is not ready. Please try again.', 'Validation Error')
         return
     }
-    success('API Instance data saved successfully!')
-    const responseData = await response.json()
-    
-    // Merge response with preserved nested objects
-    apiInstanceData.value = {
-        ...responseData,
-        slug: serverApiType.value === 'php'? responseData.slug : undefined,
-        // Restore nested objects if they're missing in the response -- PHP doesn't return them on update PUT
-        api: responseData.api || preservedNestedData.api,
-        api_version: responseData.api_version || preservedNestedData.api_version,
-        environment: responseData.environment || preservedNestedData.environment
+    const isValid = commentFormRef.value.validateForm()
+    if (!isValid) {
+        warning('Please enter a comment before saving.', 'Validation Error')
+        return
     }
 
-    // Reset dirty state after successful save
-    originalApiInstanceData.value = JSON.parse(JSON.stringify(apiInstanceData.value))
-    hasUnsavedChanges.value = false
+    const comment = (formData?.comment ?? '').trim()
+    if (!comment) {
+        warning('Comment is required.', 'Validation Error')
+        return
+    }
+
+    if (!pendingInstancePayload.value) {
+        showError('Nothing to save. Please try again.', 'Error')
+        closeCommentDialog()
+        return
+    }
+
+    saving.value = true
+    const preservedNestedData = pendingPreservedNestedData.value
+
+    try {
+        const body = {
+            ...pendingInstancePayload.value,
+            comment,
+        }
+
+        const response = await fetch(`/${props.server_slug}/ajax/api_instances/${props.instance_id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+            body: JSON.stringify(body)
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            showError(errorData.message || `HTTP error! status: ${response.status}`)
+            return
+        }
+        success('API Instance data saved successfully!')
+        const responseData = await response.json()
+        
+        // Merge response with preserved nested objects
+        apiInstanceData.value = {
+            ...responseData,
+            slug: serverApiType.value === 'php'? responseData.slug : undefined,
+            // Restore nested objects if they're missing in the response -- PHP doesn't return them on update PUT
+            api: responseData.api || preservedNestedData?.api,
+            api_version: responseData.api_version || preservedNestedData?.api_version,
+            environment: responseData.environment || preservedNestedData?.environment
+        }
+
+        // Reset dirty state after successful save
+        originalApiInstanceData.value = JSON.parse(JSON.stringify(apiInstanceData.value))
+        hasUnsavedChanges.value = false
+        commentDialogOpen.value = false
+        clearPendingInstanceSave()
+    } catch (err: any) {
+        showError(err.message || 'Error saving API Instance', 'Error')
+    } finally {
+        saving.value = false
+    }
 }
 
 const handlePopState = (event: PopStateEvent) => {
@@ -677,6 +778,27 @@ onUnmounted(() => {
                     </p>
                 </div>
             </div>
+        </AlertModal>
+
+        <!-- Required comment before update request -->
+        <AlertModal
+            :isOpen="commentDialogOpen"
+            title="Save comment"
+            @close="() => { if (!saving) closeCommentDialog() }"
+        >
+            <FormViewer
+                ref="commentFormRef"
+                :formConfig="commentFormConfig"
+                :initialData="commentForm"
+                :cancelAction="'close'"
+                :actionHandler="handleCommentFormAction"
+                :actions="[
+                    { type: 'save', action: 'save', label: 'Confirm', modifiers: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors' },
+                    { type: 'cancel', action: 'close', label: 'Cancel', modifiers: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors' }
+                ]"
+                :isSubmitting="saving"
+                :disabled="saving"
+            />
         </AlertModal>
     </AppLayout>
     <Toaster/>
