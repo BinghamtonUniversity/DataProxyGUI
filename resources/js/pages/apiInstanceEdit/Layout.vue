@@ -147,6 +147,8 @@ const handleCommentFormAction = (actionData: { type: string; action: string; for
     }
 }
 
+const deepClone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
+
 // Not being used currently, but might be useful later
 // Using fetchAllData instead
 const fetchApiInstanceData = async () => {
@@ -157,15 +159,11 @@ const fetchApiInstanceData = async () => {
  
         if (!response.ok) throw new Error('Failed to fetch API Instance data')
         const data = await response.json()
-        if (serverApiType.value === 'php') {
-            apiInstanceData.value = mapPhpToApiInstance(data)
-        } else {
-            apiInstanceData.value = data
-        }
+        apiInstanceData.value = serverApiType.value === 'php'
+            ? mapPhpToApiInstance(data)
+            : data
 
-        apiInstanceData.value = data
-
-        originalApiInstanceData.value = JSON.parse(JSON.stringify(data)) // Deep clone
+        originalApiInstanceData.value = deepClone(apiInstanceData.value)
         hasUnsavedChanges.value = false
 
     } catch (e: any) {
@@ -184,13 +182,11 @@ const fetchAllData = async () => {
     if (!apiInstancesResponse.ok) throw new Error('Failed to fetch API instances')
     
     const apiInstancesData = await apiInstancesResponse.json()
-    if (serverApiType.value === 'php') {
-        apiInstanceData.value = mapPhpToApiInstance(apiInstancesData)
-    } else {
-        apiInstanceData.value = apiInstancesData
-    }
-
-    originalApiInstanceData.value = JSON.parse(JSON.stringify(apiInstancesData)) // Deep clone
+    apiInstanceData.value = serverApiType.value === 'php'
+        ? mapPhpToApiInstance(apiInstancesData)
+        : apiInstancesData
+    // Clone what's actually in the form, not the raw response
+    originalApiInstanceData.value = deepClone(apiInstanceData.value)
     hasUnsavedChanges.value = false
     
     const environmentType = apiInstancesData.environment?.type || 'dev' // fallback to 'dev'
@@ -233,6 +229,27 @@ watch(apiInstanceData, (newVal) => {
     }
 }, { deep: true })
 
+// function findDiffs(a: any, b: any, path = ''): any[] {
+//   if (a === b) return []
+//   const isObj = (v: any) => v !== null && typeof v === 'object'
+//   if (!isObj(a) || !isObj(b)) {
+//     return [{ path: path || '(root)', original: a, current: b, origType: typeof a, currType: typeof b }]
+//   }
+//   const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+//   return [...keys].flatMap(k => findDiffs(a[k], b[k], path ? `${path}.${k}` : k))
+// }
+
+// watch(apiInstanceData, (newVal) => {
+//   if (originalApiInstanceData.value && newVal) {
+//     const diffs = findDiffs(toRaw(originalApiInstanceData.value), toRaw(newVal))
+//     if (diffs.length) console.table(diffs)
+//     else if (JSON.stringify(newVal) !== JSON.stringify(originalApiInstanceData.value)) {
+//       console.warn('Same values, different key order')
+//     }
+//     hasUnsavedChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalApiInstanceData.value)
+//   }
+// }, { deep: true })
+
 const updateApiInstanceData = (updatedApiInstanceData: Partial<ApiInstance>) => {
     if(!apiInstanceData) return
     
@@ -271,7 +288,23 @@ const fetchVersions = async () => {
             throw new Error(`HTTP error! status: ${response.status}`)
         }
 
-        versions.value = await response.json()
+        // versions.value = await response.json()
+        const stableVersions = await response.json()
+
+        // The backend only returns stable versions; "latest" means api_version_id = null
+        const current = apiInstanceData.value
+        const onLatest = current?.api_version_id == null
+        const latestVersion = {
+            id: null,
+            isLatest: true,
+            summary: 'Latest (Working or Published)',
+            description: 'Latest working version of this API',
+            stable: false,
+            // We only know latest's details if the instance is currently on it
+            created_at: onLatest ? current?.api_version?.created_at ?? null : null,
+        }
+
+        versions.value = [latestVersion, ...stableVersions]
     } catch (e: any) {
         versionsError.value = e.message || 'Error fetching versions'
         showError('Failed to fetch API versions. Please try again.', 'Error')
@@ -286,8 +319,15 @@ const openVersionModal = () => {
     fetchVersions()
 }
 
+const isCurrentVersion = (version: any) =>
+    (apiInstanceData.value?.api_version_id ?? null) === version.id
+
 // Update API version for the instance
 const updateInstanceVersion = async (version: any) => {
+    if (isCurrentVersion(version)) {
+        showVersionModal.value = false
+        return
+    }
 
     const requestData = {
         api_version_id: version.id,
@@ -443,7 +483,7 @@ const handleSave = () => {
     }
 
     pendingInstancePayload.value = requestData
-    pendingPreservedNestedData.value = preservedNestedData
+    // pendingPreservedNestedData.value = preservedNestedData
     commentForm.value = { comment: '' }
     commentDialogOpen.value = true
 }
@@ -472,7 +512,7 @@ const submitInstanceWithComment = async (formData: any) => {
     }
 
     saving.value = true
-    const preservedNestedData = pendingPreservedNestedData.value
+    // const preservedNestedData = pendingPreservedNestedData.value
 
     try {
         const body = {
@@ -498,18 +538,20 @@ const submitInstanceWithComment = async (formData: any) => {
         success('API Instance data saved successfully!')
         const responseData = await response.json()
         
+        const current = apiInstanceData.value
+        if (!current) return
         // Merge response with preserved nested objects
         apiInstanceData.value = {
-            ...responseData,
+            ...current,
             slug: serverApiType.value === 'php'? responseData.slug : undefined,
             // Restore nested objects if they're missing in the response -- PHP doesn't return them on update PUT
-            api: responseData.api || preservedNestedData?.api,
-            api_version: responseData.api_version || preservedNestedData?.api_version,
-            environment: responseData.environment || preservedNestedData?.environment
+            api: responseData.api ?? current.api,
+            api_version: responseData.api_version ?? current.api_version,
+            environment: responseData.environment ?? current.environment
         }
 
         // Reset dirty state after successful save
-        originalApiInstanceData.value = JSON.parse(JSON.stringify(apiInstanceData.value))
+        originalApiInstanceData.value = deepClone(apiInstanceData.value)
         hasUnsavedChanges.value = false
         commentDialogOpen.value = false
         clearPendingInstanceSave()
@@ -731,22 +773,22 @@ onUnmounted(() => {
                         class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                         :class="{
                             'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800': version.stable,
-                            'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800': !version.stable && index === versions.length - 1,
-                            'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800': apiInstanceData?.api_version_id === version.id
+                            'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800': version.isLatest,
+                            'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800': isCurrentVersion(version)
                         }"
                         @click="updateInstanceVersion(version)"
                     >
                         <div class="flex items-center justify-between">
                             <div class="flex-1">
                                 <h3 class="font-medium text-gray-900 dark:text-white">
-                                    {{ version.summary || 'Latest/Working' }}
+                                    {{ version.summary || 'Untitled version' }}
                                     <span v-if="version.stable" class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
                                         Stable
                                     </span>
-                                    <span v-else-if="index === versions.length - 1" class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
+                                    <span v-if="version.isLatest" class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
                                         Latest
                                     </span>
-                                    <span v-if="apiInstanceData?.api_version_id === version.id" class="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full">
+                                    <span v-if="isCurrentVersion(version)" class="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full">
                                         Current
                                     </span>
                                 </h3>
@@ -755,11 +797,11 @@ onUnmounted(() => {
                                 </p>
                             </div>
                             <div class="text-right">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                <p v-if="version.created_at" class="text-sm text-gray-500 dark:text-gray-400">
                                     {{ new Date(version.created_at).toLocaleDateString() }}
                                 </p>
-                                <p v-if="apiInstanceData?.api_version_id === version.id" class="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                                    Currently selected
+                                <p v-if="isCurrentVersion(version)" class="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                                    Current
                                 </p>
                             </div>
                         </div>
