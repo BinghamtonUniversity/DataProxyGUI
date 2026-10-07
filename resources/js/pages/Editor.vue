@@ -1,7 +1,8 @@
 <script setup lang="ts">import { type BreadcrumbItem } from '@/types'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
-import { ref, shallowRef, watch, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, shallowRef, watch, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { Button } from '@/components/ui/button'
+import { Maximize2, Minimize2 } from 'lucide-vue-next'
 import { getStoredAppearance } from '@/composables/useAppearance'
 import { validateCode as validateCodeLogic } from '@/lib/editorValidator'
 import { createPhpWorker } from '@/lib/createPhpWorker'
@@ -258,6 +259,34 @@ const handleSave = () => {
   emit('save', outgoing(code.value))
 }
 
+const isFullscreen = ref(false)
+
+async function refreshEditorLayout() {
+  await nextTick()
+  // Wait a frame so the fixed overlay size is applied before Monaco measures.
+  requestAnimationFrame(() => {
+    editor.value?.layout?.()
+  })
+}
+
+function exitFullscreen() {
+  if (!isFullscreen.value) return
+  isFullscreen.value = false
+  refreshEditorLayout()
+}
+
+function toggleFullscreen() {
+  isFullscreen.value = !isFullscreen.value
+  refreshEditorLayout()
+}
+
+function handleFullscreenKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && isFullscreen.value) {
+    event.preventDefault()
+    exitFullscreen()
+  }
+}
+
 // const formatCode = () => {
 //   editor.value?.getAction('editor.action.formatDocument').run()
 // }
@@ -268,6 +297,7 @@ onMounted(() => {
     mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)")
     mediaQueryList.addEventListener("change", handleEditorTheme)
   }
+  window.addEventListener('keydown', handleFullscreenKeydown)
 })
 onBeforeUnmount(() => {
   phpWorker?.terminate()
@@ -276,11 +306,19 @@ onBeforeUnmount(() => {
   if(mediaQueryList){
     mediaQueryList.removeEventListener("change", handleEditorTheme)
   }
+  window.removeEventListener('keydown', handleFullscreenKeydown)
 })
 </script>
 
 <template>
-  <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
+  <div
+    :class="[
+      'flex flex-col gap-4 p-4 overflow-x-auto',
+      isFullscreen
+        ? 'fixed inset-0 z-50 bg-background rounded-none'
+        : 'h-full flex-1 rounded-xl',
+    ]"
+  >
     <!-- Toolbar -->
     <div class="flex items-center justify-between gap-2 pb-2 border-b">
       <div class="flex items-center gap-2">
@@ -306,10 +344,23 @@ onBeforeUnmount(() => {
           </div>
         </Transition>
 
+        <Button
+          variant="ghost"
+          size="icon"
+          :title="isFullscreen ? 'Exit fullscreen' : 'Fullscreen'"
+          :aria-label="isFullscreen ? 'Exit fullscreen' : 'Fullscreen'"
+          @click="toggleFullscreen"
+        >
+          <Minimize2 v-if="isFullscreen" class="h-4 w-4" />
+          <Maximize2 v-else class="h-4 w-4" />
+        </Button>
       </div>
     </div>
 
-    <div class="relative flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border" style="min-height: 70vh;">
+    <div
+      class="relative flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+      :style="isFullscreen ? undefined : { minHeight: '70vh' }"
+    >
       <vue-monaco-editor
         v-model:value="code"
         :language="monacoLanguage"
@@ -324,6 +375,9 @@ onBeforeUnmount(() => {
     <!-- Keyboard shortcut hint -->
     <div class="text-xs text-muted-foreground">
       Press <kbd class="px-1 py-0.5 bg-muted rounded">Ctrl+S</kbd> (or <kbd class="px-1 py-0.5 bg-muted rounded">Cmd+S</kbd>) to save
+      <template v-if="isFullscreen">
+        · <kbd class="px-1 py-0.5 bg-muted rounded">Esc</kbd> to exit fullscreen
+      </template>
     </div>
   </div>
 </template>
