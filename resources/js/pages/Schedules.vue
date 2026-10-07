@@ -6,6 +6,7 @@ import DataGrid from '@/components/datagrid/DataGrid.vue';
 import FormViewer from '@/components/formviewer/FormViewer.vue';
 import AlertModal from '@/components/AlertModal.vue';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
+import ScheduleTimelineModal from '@/components/ScheduleTimelineModal.vue';
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import { ref, onMounted, computed } from 'vue';
@@ -77,6 +78,7 @@ const formRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const argumentsFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const showArgumentsModal = ref<boolean>(false);
 const showReportModal = ref<boolean>(false);
+const showTimelineModal = ref<boolean>(false);
 // Avoid duplicate versions/latest fetches when Combobox emits select + blur
 const lastFetchedApiInstanceId = ref<number | string | null>(null);
 const routeFetchToken = ref(0);
@@ -1178,6 +1180,9 @@ const handleDataGridActionHandler = (action: { action: string; selectedRows: any
         case 'manual_run':
             handleManualRun(action.selectedData[0].id);
             break;
+        case 'timeline':
+            showTimelineModal.value = true;
+            break;
         case 'view_report':
             openReportModal(action.selectedData[0]);
             break;
@@ -1302,6 +1307,7 @@ onMounted(async () => {
                     { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
                     { name: 'view_report', type: 'info', min: 1, max: 1, label: 'View Report', loc: 'left', icon: 'chart-bar' },
                     { name: 'manual_run', type: 'primary', min: 1, max: 1, label: 'Manual Run', loc: 'left', icon: 'play-circle' },
+                    { name: 'timeline', type: 'info', min: 0, label: 'Timeline', loc: 'left', icon: 'calendar' },
                     { name: 'arguments', type: 'info', min: 1, max: 1, label: 'Arguments', icon: 'cog', loc: 'right' },
                     { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
                     { name: 'delete', type: 'danger', min: 1, max: 1, label: 'Delete', icon: 'trash', loc: 'right' }
@@ -1411,6 +1417,12 @@ onMounted(async () => {
             />
               
             </AlertModal>
+
+            <ScheduleTimelineModal
+                :isOpen="showTimelineModal"
+                :schedules="schedules"
+                @close="showTimelineModal = false"
+            />
 
             <ConfirmDeleteModal
                 :isOpen="showDeleteModal"
