@@ -364,7 +364,8 @@ const directToInstanceRoute = (instance: any) => {
     let domain = environment.value.find((env: Environment) => env.id === instance.environment_id)?.domain
     const baseDomain = domain?.split('/').slice(0, 3).join('/')
     // TODO https or http?
-    instanceUrl = `http://${baseDomain}/${instance.slug}`
+    let slug = instance.slug ? instance.slug : instance.route
+    instanceUrl = `http://${baseDomain}/${slug}`
     window.open(instanceUrl, '_blank')
 }
 
@@ -919,7 +920,6 @@ const handleSave = async () => {
     const requestData = serverApiType.value === 'php' ? denormalizeToPhp(apiData.value): apiData.value
 
     const { created_at, created_by, ...cleanedData } = requestData; //omit these fields
-
 
     const response = await fetch(`/${props.server_slug}/ajax/apis/${props.api_id}/code`, {
         method: 'PUT',
