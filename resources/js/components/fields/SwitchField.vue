@@ -30,6 +30,10 @@
                  <button
            :id="fieldId"
            type="button"
+           role="switch"
+           :aria-checked="internalValue"
+           :aria-label="accessibleName"
+           :title="accessibleName"
            :disabled="disabled || !edit"
            :required="required"
            class="relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm"
@@ -45,7 +49,9 @@
            @blur="handleBlur"
            @focus="handleFocus"
          >
+           <span class="sr-only">{{ accessibleName }}</span>
            <span
+             aria-hidden="true"
              class="inline-block h-5 w-5 transform rounded-full transition-all duration-200 ease-in-out shadow-md border border-gray-200"
              :class="internalValue ? 'translate-x-6' : 'translate-x-1'"
            ></span>
@@ -156,6 +162,18 @@ const getSwitchLabel = () => {
   // Default labels
   return internalValue.value ? 'true' : 'false';
 };
+
+const accessibleName = computed(() => {
+  const fromLabel = typeof props.label === 'string' ? props.label.trim() : '';
+  if (fromLabel) {
+    return fromLabel;
+  }
+  const fromOptions = getSwitchLabel();
+  if (fromOptions && fromOptions !== 'true' && fromOptions !== 'false') {
+    return fromOptions;
+  }
+  return props.name || 'Toggle';
+});
 
 watch(() => props.value, (newValue) => {
   if (props.options && props.options.length >= 2) {

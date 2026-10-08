@@ -64,13 +64,20 @@ const updateLocalData = () => {
 // Initialize local data when component mounts
 updateLocalData()
 
-const formData = computed(() => ({
-    name: editableData.value.name,
-    route: editableData.value.route,
-    api: props.apiInstanceData?.api.name,
-    api_version: props.apiInstanceData?.api_version==null ? 'Latest working version' : props.apiInstanceData?.api_version.stable === false ? 'Latest working version' : props.apiInstanceData?.api_version.summary ?? undefined,
-    environment: props.apiInstanceData?.environment.name
-}))
+const formData = computed(() => {
+    const instance = props.apiInstanceData
+    const isLatest = instance?.api_version_id == null
+
+    return {
+        name: editableData.value.name,
+        route: editableData.value.route,
+        api: instance?.api?.name,
+        api_version: isLatest
+            ? 'Latest (Working or Published)'
+            : instance?.api_version?.summary ?? 'Untitled version',
+        environment: instance?.environment?.name,
+    }
+})
 
 
 const handleFormDataUpdate = (data: any) => {

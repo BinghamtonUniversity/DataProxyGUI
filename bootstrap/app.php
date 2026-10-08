@@ -57,6 +57,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trimStrings(except: [
             fn (Request $request) => $request->is('*/ajax/apis/*/code'),
         ]);
+        $middleware->convertEmptyStringsToNull(except: [
+            fn (Request $request) => $request->is('*/ajax/apis/*/code'),
+        ]);
 
     })
     ->withExceptions(function (Exceptions $exceptions) {
