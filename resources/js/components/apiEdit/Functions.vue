@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
-import { Trash2, Pencil, ChevronDown, Plus } from 'lucide-vue-next'
+import { Trash2, Pencil, ChevronDown, Plus, Search, X} from 'lucide-vue-next'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
@@ -78,6 +78,16 @@ const isEditingView = ref(false)
 // This checks the cache first, then falls back to the original content
 const currentFunctionCode = computed(() => {
     return selectedFunction.value?.content ?? ''
+})
+
+// Sidebar filter
+const functionFilter = ref('')
+
+const filteredFunctions = computed(() => {
+    const views = props.apiData?.version_views ?? []
+    const q = functionFilter.value.trim().toLowerCase()
+    if (!q) return views
+    return views.filter(func => func.name.toLowerCase().includes(q))
 })
 
 // New: central selection handler that also scrolls to the top of the editor
@@ -595,8 +605,8 @@ defineExpose({
                     <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
                         <!-- Function List Sidebar -->
                     <aside :class="[
-                            'max-w-xs lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)] transition-all',
-                            leftCollapsed ? 'lg:w-10' : 'lg:w-50 lg:min-w-50'
+                            'lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)] transition-all',
+                            leftCollapsed ? 'lg:w-10' : 'w-full lg:w-72 lg:min-w-72'
                         ]"
                     >
                         <Button 
@@ -612,7 +622,7 @@ defineExpose({
                             <div class="mb-4 shrink-0">
                                 <Dialog v-model:open="isNewViewDialogOpen" @update:open="resetNewViewDialog">
                                     <DialogTrigger as-child>
-                                        <Button variant="outline" class="ml-4 w-full text-sm text-green-600">
+                                        <Button variant="outline" class="w-full text-sm text-green-600">
                                              <Plus class="mr-2 h-4 w-4" /> New
                                         </Button>
                                     </DialogTrigger>
@@ -659,11 +669,30 @@ defineExpose({
                                     </DialogContent>
                                 </Dialog>
                             </div>
+                            <!-- Filter -->
+                             
+                            <div class="relative mb-3 shrink-0">
+                                <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                                <Input
+                                    v-model="functionFilter"
+                                    placeholder="Filter functions..."
+                                    class="h-8 pl-8 pr-8 text-xs"
+                                    @keydown.esc="functionFilter = ''"
+                                />
+                                <button
+                                    v-if="functionFilter"
+                                    type="button"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                    @click="functionFilter = ''"
+                                >
+                                    <X class="h-4 w-4" />
+                                </button>
+                            </div>
 
                             <!-- Function List -->
                             <nav class="flex flex-col space-y-1 overflow-y-auto min-h-0 flex-1">
                                 <div
-                                    v-for="item in apiData.version_views"
+                                    v-for="item in filteredFunctions"
                                     :key="item.name"
                                     class="flex items-center gap-1 group"
                                 >
@@ -719,6 +748,12 @@ defineExpose({
                                     
                                     
                                 </div>
+                                <p
+                                    v-if="functionFilter && filteredFunctions.length === 0"
+                                    class="px-3 py-2 text-xs text-muted-foreground"
+                                >
+                                    No functions match "{{ functionFilter }}"
+                                </p>
                             </nav>
                         </div>
                     </aside>
