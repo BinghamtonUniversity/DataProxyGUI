@@ -5,10 +5,11 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { Folder, LayoutGrid, Database, File, Calendar, History, Building2, ShieldCheck, Users } from 'lucide-vue-next';
+import { LayoutGrid, Database, File, Calendar, History, Building2, Network, Users, UserPlus, SquareCode} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { useProxyServer } from '@/composables/useProxyServer';
 import NoServerAvailable from '@/pages/NoServerAvailable.vue';
+
 
 const { buildUrl, serverSlug } = useProxyServer();
 const page = usePage();
@@ -29,27 +30,27 @@ const allNavItems: NavItem[] = [
     {
         title: 'API Accounts',
         href: buildUrl('api_accounts'),
-        icon: Users,
+        icon: UserPlus,
     },
     {
         title: 'Users',
         href: buildUrl('users'),
-        icon: ShieldCheck,
+        icon: Users,
     },
     {
         title: 'APIS',
         href: buildUrl('apis'),
-        icon: Folder,
+        icon: SquareCode,
     },
     {
         title: 'API Instances',
         href: buildUrl('api_instances'),
-        icon: Database,
+        icon: Network,
     },
     {
         title: 'Resources',
         href: buildUrl('resources'),
-        icon: File,
+        icon: Database,
     },
     {
         title: 'Schedules',

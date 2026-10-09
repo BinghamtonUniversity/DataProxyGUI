@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowUpDown, ChevronDown, Plus, Trash2, Code, Pencil } from 'lucide-vue-next'
+import { ArrowUpDown, ChevronDown, Plus, Trash2, Code, Pencil, Search, X } from 'lucide-vue-next'
 import { h, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { getCsrfToken, valueUpdater } from '@/lib/utils'
 
@@ -57,6 +57,16 @@ const pendingDeleteKind = ref<'model' | 'method' | null>(null)
 const pendingDeleteModel = ref<ModelData | null>(null)
 const pendingDeleteMethod = ref<ModelClassMethod | null>(null)
 const deleting = ref(false)
+
+// Sidebar filter
+const modelFilter = ref('')
+
+const filteredModels = computed(() => {
+  const models = props.apiData?.version_models ?? []
+  const q = modelFilter.value.trim().toLowerCase()
+  if (!q) return models
+  return models.filter(model => model.name.toLowerCase().includes(q))
+})
 
 // --- Dialog State and Handlers ---
 const newModelDialogOpen = ref(false)
@@ -891,16 +901,20 @@ onUnmounted(() => {
             <template v-else-if="apiData?.version_models">
               <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
                     <!-- Models List Sidebar (Left) -->
-                  <aside :class="['max-w-xs lg:flex-shrink-0 transition-all', leftCollapsed ? 'lg:w-10' : 'lg:w-48 lg:min-w-48']">
-                    <Button variant="ghost" size="sm" class="mb-2 w-full justify-center" @click="leftCollapsed = !leftCollapsed">
-                      <ChevronDown :class="['h-4 w-4 transition-transform', leftCollapsed ? 'rotate-90' : '-rotate-90']" />
+                  <aside :class="[
+                        'lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)] transition-all',
+                        leftCollapsed ? 'lg:w-10' : 'w-full lg:w-72 lg:min-w-72'
+                      ]"
+                  >
+                    <Button variant="ghost" size="sm" class="mb-2 w-full justify-center shrink-0" @click="leftCollapsed = !leftCollapsed">
+                      <ChevronDown :class="['h-4 w-4 transition-transform', leftCollapsed ? '-rotate-90' : 'rotate-90']" />
                     </Button>
-                    <div v-show="!leftCollapsed">
-                      <div class="mb-4">
+                    <div v-show="!leftCollapsed" class="flex flex-col min-h-0 flex-1">
+                      <div class="mb-4 shrink-0">
                         <!-- Model Dialog -->
                         <Dialog v-model:open="newModelDialogOpen">
                           <DialogTrigger as-child>
-                            <Button class="ml-4 w-full text-sm text-green-600" variant="outline" @click="openNewModelDialog">
+                            <Button class="w-full text-sm text-green-600" variant="outline" @click="openNewModelDialog">
                               <Plus class="mr-2 h-4 w-4" />
                               New
                             </Button>
@@ -989,9 +1003,27 @@ onUnmounted(() => {
                           </DialogContent>
                         </Dialog>       
                       </div>
-                        <nav class="flex flex-col space-y-1">
+                      <!-- Filter -->
+                      <div class="relative mb-3 shrink-0">
+                        <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Input
+                          v-model="modelFilter"
+                          placeholder="Filter models..."
+                          class="h-8 pl-8 pr-8 text-xs"
+                          @keydown.esc="modelFilter = ''"
+                        />
+                        <button
+                          v-if="modelFilter"
+                          type="button"
+                          class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          @click="modelFilter = ''"
+                        >
+                          <X class="h-4 w-4" />
+                        </button>
+                      </div>
+                      <nav class="flex flex-col space-y-1">
                           <div
-                              v-for="(item,index) in apiData.version_models"
+                              v-for="(item,index) in filteredModels"
                               :key="item.name"
                               class="flex items-center gap-1 group"
                           >
@@ -1040,8 +1072,13 @@ onUnmounted(() => {
                               >
                                   <Trash2 :size="1" />
                               </Button>
-                              
                           </div>
+                          <p
+                            v-if="modelFilter && filteredModels.length === 0"
+                            class="px-3 py-2 text-xs text-muted-foreground"
+                          >
+                            No models match "{{ modelFilter }}"
+                          </p>
                       </nav>
                      </div>
                   </aside>
@@ -1117,7 +1154,7 @@ onUnmounted(() => {
                   <!-- Content & Methods Sidebar (Right) -->
                   <aside :class="['max-w-xs lg:flex-shrink-0 transition-all', rightCollapsed ? 'lg:w-10' : 'lg:w-48 lg:min-w-48']" v-if="selectedModel">
                     <Button variant="ghost" size="sm" class="mb-2 w-full justify-center" @click="rightCollapsed = !rightCollapsed">
-                      <ChevronDown :class="['h-4 w-4 transition-transform', rightCollapsed ? '-rotate-90' : 'rotate-90']" />
+                      <ChevronDown :class="['h-4 w-4 transition-transform', rightCollapsed ? 'rotate-90' : '-rotate-90']" />
                     </Button>
                     <!-- New Method Button -->
                     <div v-show="!rightCollapsed">

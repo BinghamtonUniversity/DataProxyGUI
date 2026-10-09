@@ -1097,7 +1097,7 @@ onUnmounted(() => {
 </style>
 
 <template>
-    <Head :title="' API Edit'" />
+    <Head :title="api?.name ? `${api.name} API` : 'API'" />
     <Toaster />
     
     <AppLayout :breadcrumbs="breadcrumbItems">
