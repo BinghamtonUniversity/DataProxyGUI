@@ -924,7 +924,7 @@ const handleDataGridRowClick = (row: any) => {
 </script>
 
 <template>
-  <Head title="APIs" />
+  <Head title="API Instances" />
   
     <AppLayout :breadcrumbs="breadcrumbs">
     

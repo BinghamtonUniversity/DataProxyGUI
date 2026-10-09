@@ -645,10 +645,18 @@ onUnmounted(() => {
 
 })
 
+const pageTitle = computed(() => {
+    const name = apiInstanceData.value?.name
+    if (!name) return 'API Instance Details'
+
+    const env = apiInstanceData.value?.environment?.type
+    return env ? `${name} (${env})` : name
+})
+
 </script>
 
 <template>
-    <Head title="API Instace Details" />
+    <Head :title="pageTitle" />
     
     <AppLayout :breadcrumbs="breadcrumbItems">
         <div class="px-4 py-6">

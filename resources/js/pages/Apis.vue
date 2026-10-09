@@ -11,6 +11,8 @@ import { useToaster } from '@/composables/useToaster';
 import { type BreadcrumbItem, type Api, ApiUser, User } from '@/types';
 import { getCsrfToken } from '@/lib/utils';
 import { useProxyServer } from '@/composables/useProxyServer';
+import BottomSheet from '@/components/BottomSheet.vue';
+import ApiDevelopers from '@/components/apiEdit/ApiDevelopers.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -19,7 +21,7 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ]
 
-const { serverApiType } = useProxyServer();
+const { serverApiType, serverSlug } = useProxyServer();
 
 
 // Modal state
@@ -66,6 +68,19 @@ const error = ref<string | null>(null);
 
 // Toaster
 const { success, error: showError, warning, info } = useToaster();
+
+// API Developers sheet
+const showDevelopersSheet = ref(false);
+const developersApi = ref<Api | null>(null);
+
+const openDevelopersSheet = (row: Api) => {
+    developersApi.value = row;
+    showDevelopersSheet.value = true;
+};
+
+const closeDevelopersSheet = () => {
+    showDevelopersSheet.value = false;
+};
 
 // DataGrid configuration
 const dataGridConfig = {
@@ -627,9 +642,9 @@ const handleAction = (actionData: any) => {
         case 'single-delete':
             handleDelete([actionData.payload.id]);
             break;
-        case 'view':
+        case 'developers':
             // Navigate to API routes page
-            router.visit(`/apis/${actionData.payload.id}/routes`);
+            openDevelopersSheet(actionData.payload);
             break;
         case 'single-edit':
             openEditModal(actionData.payload);
@@ -776,7 +791,7 @@ onMounted(() => {
                     :showDelete="true"
                     :clickableRows="true"
                     :rowActions="[
-                        { type: 'view', label: 'View Details', icon: 'eye', colorClass: 'text-blue-600 hover:bg-blue-50' },
+                        { type: 'developers', label: 'Manage Developers', icon: 'user', colorClass: 'text-blue-600 hover:bg-blue-50' },
                         { type: 'single-edit', label: 'Edit', icon: 'edit', colorClass: 'text-green-600 hover:bg-green-50' },
                         { type: 'single-delete', label: 'Delete', icon: 'trash', colorClass: 'text-red-600 hover:bg-red-50' }
                     ]"
@@ -834,6 +849,26 @@ onMounted(() => {
                         :disabled="submitting"
                     />
                 </AlertModal>
+
+                <!-- API Developers Bottom Sheet -->
+                <BottomSheet
+                    :isOpen="showDevelopersSheet"
+                    :title="developersApi ? `API Developers – ${developersApi.name}` : 'API Developers'"
+                    maxHeight="85vh"
+                    @close="closeDevelopersSheet"
+                >
+                    <ApiDevelopers
+                        v-if="developersApi && serverSlug"
+                        :key="developersApi.id"
+                        :api_id="String(developersApi.id)"
+                        :server_slug="serverSlug"
+                        :apiData="null"
+                        :loadingApiData="false"
+                        apiError=""
+                        :updateApiData="() => {}"
+                        :refreshApiData="() => {}"
+                    />
+                </BottomSheet>
 
                 <ConfirmDeleteModal
                     :isOpen="showDeleteModal"
