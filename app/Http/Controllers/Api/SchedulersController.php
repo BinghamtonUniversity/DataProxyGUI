@@ -91,4 +91,18 @@ class SchedulersController extends BaseServerController{
             'status' => $result['status']
         ], $result['status']);
     }
+
+    public function lastResponseScheduler(string $server_slug, string $id): JsonResponse
+    {
+        $result = $this->makeBackendRequest('GET', "scheduler/{$id}/last_response", [], [], $server_slug);
+        if ($result['success']) {
+            return response()->json($result['data']);
+        }
+
+        return response()->json([
+            'error' => "Failed to fetch scheduler last response",
+            'details' => $result['data'],
+            'status' => $result['status']
+        ], $result['status']);
+    }
 }
