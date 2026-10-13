@@ -1241,9 +1241,9 @@ defineExpose({
                                         v-if="row.kind === 'path'"
                                         class="mx-1 shrink-0 rounded px-2 py-1.5 font-mono text-xs font-bold leading-snug break-all"
                                         :class="row.isGroup
-                                            ? 'mt-2 mb-0.5 border border-sky-500/25 bg-sky-500/5'
-                                            : 'mt-1 mb-0.5 border border-sky-500/40 bg-sky-500/15'"
-                                        :style="{ marginLeft: `${row.depth * 12}px`, color: row.isGroup ? '#38bdf8' : '#7dd3fc' }"
+                                            ? 'mt-2 mb-0.5 border border-emerald-600/40 bg-emerald-600/10 text-emerald-800 dark:border-emerald-400/35 dark:bg-emerald-500/10 dark:text-emerald-300'
+                                            : 'mt-1 mb-0.5 border border-emerald-700/50 bg-emerald-600/15 text-emerald-900 dark:border-emerald-400/50 dark:bg-emerald-500/20 dark:text-emerald-200'"
+                                        :style="{ marginLeft: `${row.depth * 12}px` }"
                                         :title="row.path"
                                     >
                                         {{ row.label }}
