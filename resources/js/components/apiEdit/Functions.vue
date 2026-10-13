@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
-import { Trash2, Pencil, ChevronDown, Plus, Search, X} from 'lucide-vue-next'
+import { Trash2, Pencil, ChevronDown, Plus, Search, X, GripVertical } from 'lucide-vue-next'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
@@ -89,6 +89,156 @@ const filteredFunctions = computed(() => {
     if (!q) return views
     return views.filter(func => func.name.toLowerCase().includes(q))
 })
+
+// Drag-and-drop reorder (disabled while filter is active)
+const canReorder = computed(() => functionFilter.value.trim() === '')
+const dragFromIndex = ref<number | null>(null)
+/** Insertion slot in the list: 0 = before first, length = after last */
+const dropInsertIndex = ref<number | null>(null)
+const draggingFunctionName = ref<string | null>(null)
+let dragGhostEl: HTMLElement | null = null
+
+const isNoOpInsert = computed(() => {
+    if (dragFromIndex.value === null || dropInsertIndex.value === null) return true
+    return (
+        dropInsertIndex.value === dragFromIndex.value ||
+        dropInsertIndex.value === dragFromIndex.value + 1
+    )
+})
+
+/** Neighbor names for the active insertion gap (makes "between X and Y" obvious). */
+const dropGapLabel = computed(() => {
+    if (dropInsertIndex.value === null || isNoOpInsert.value) return null
+    const views = filteredFunctions.value
+    const i = dropInsertIndex.value
+    const above = i > 0 ? views[i - 1]?.name : null
+    const below = i < views.length ? views[i]?.name : null
+    if (above && below) return `Between ${above} and ${below}`
+    if (below) return `Before ${below}`
+    if (above) return `After ${above}`
+    return null
+})
+
+const showDropGapAt = (slotIndex: number) => {
+    return (
+        dragFromIndex.value !== null &&
+        dropInsertIndex.value === slotIndex &&
+        !isNoOpInsert.value
+    )
+}
+
+/** Soft-highlight the two neighbors around the active insertion gap. */
+const isDropNeighbor = (index: number) => {
+    if (dropInsertIndex.value === null || isNoOpInsert.value) return false
+    return index === dropInsertIndex.value - 1 || index === dropInsertIndex.value
+}
+
+const reorderVersionViews = (fromIndex: number, insertIndex: number) => {
+    if (!props.apiData) return
+    if (insertIndex === fromIndex || insertIndex === fromIndex + 1) return
+    const views = [...props.apiData.version_views]
+    if (fromIndex < 0 || fromIndex >= views.length) return
+    if (insertIndex < 0 || insertIndex > views.length) return
+    const [moved] = views.splice(fromIndex, 1)
+    const to = fromIndex < insertIndex ? insertIndex - 1 : insertIndex
+    views.splice(to, 0, moved)
+    props.updateApiData({
+        ...props.apiData,
+        version_views: views,
+    })
+}
+
+const clearDragState = () => {
+    dragFromIndex.value = null
+    dropInsertIndex.value = null
+    draggingFunctionName.value = null
+    if (dragGhostEl?.parentNode) {
+        dragGhostEl.parentNode.removeChild(dragGhostEl)
+    }
+    dragGhostEl = null
+}
+
+const onFunctionDragStart = (event: DragEvent, index: number) => {
+    if (!canReorder.value || !props.apiData) {
+        event.preventDefault()
+        return
+    }
+    const name = props.apiData.version_views[index]?.name ?? ''
+    dragFromIndex.value = index
+    draggingFunctionName.value = name
+
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.setData('text/plain', name)
+
+        // Named drag preview that follows the cursor (inline colors — setDragImage ignores CSS vars)
+        const ghost = document.createElement('div')
+        ghost.textContent = name
+        ghost.style.cssText = [
+            'position: fixed',
+            'top: -1000px',
+            'left: -1000px',
+            'z-index: 9999',
+            'pointer-events: none',
+            'padding: 6px 12px',
+            'border-radius: 6px',
+            'font-size: 12px',
+            'font-weight: 600',
+            'font-family: ui-sans-serif, system-ui, sans-serif',
+            'white-space: nowrap',
+            'max-width: 220px',
+            'overflow: hidden',
+            'text-overflow: ellipsis',
+            'background: #2563eb',
+            'color: #ffffff',
+            'border: 1px solid #1d4ed8',
+            'box-shadow: 0 4px 12px rgba(0,0,0,0.3)',
+        ].join(';')
+        document.body.appendChild(ghost)
+        dragGhostEl = ghost
+        event.dataTransfer.setDragImage(ghost, 12, 16)
+    }
+}
+
+const onFunctionDragOver = (event: DragEvent, index: number) => {
+    if (!canReorder.value || dragFromIndex.value === null) return
+    event.preventDefault()
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move'
+    }
+    const target = event.currentTarget as HTMLElement
+    const rect = target.getBoundingClientRect()
+    const insertBefore = event.clientY < rect.top + rect.height / 2
+    dropInsertIndex.value = insertBefore ? index : index + 1
+}
+
+const onFunctionDrop = (event: DragEvent) => {
+    event.preventDefault()
+    if (!canReorder.value || dragFromIndex.value === null || dropInsertIndex.value === null) {
+        clearDragState()
+        return
+    }
+    reorderVersionViews(dragFromIndex.value, dropInsertIndex.value)
+    clearDragState()
+}
+
+const onFunctionDragEnd = () => {
+    clearDragState()
+}
+
+const onListDragOver = (event: DragEvent) => {
+    if (!canReorder.value || dragFromIndex.value === null) return
+    event.preventDefault()
+}
+
+const onEndGapDragOver = (event: DragEvent) => {
+    if (!canReorder.value || dragFromIndex.value === null) return
+    event.preventDefault()
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move'
+    }
+    dropInsertIndex.value = filteredFunctions.value.length
+}
 
 // New: central selection handler that also scrolls to the top of the editor
 const selectFunction = (item: ApiVersionFunction) => {
@@ -690,64 +840,124 @@ defineExpose({
                             </div>
 
                             <!-- Function List -->
-                            <nav class="flex flex-col space-y-1 overflow-y-auto min-h-0 flex-1">
-                                <div
-                                    v-for="item in filteredFunctions"
+                            <nav
+                                class="flex flex-col overflow-y-auto min-h-0 flex-1"
+                                @dragover="onListDragOver"
+                                @drop="onFunctionDrop"
+                            >
+                                <template
+                                    v-for="(item, index) in filteredFunctions"
                                     :key="item.name"
-                                    class="flex items-center gap-1 group"
                                 >
-                                <Tooltip>
-                                    <TooltipTrigger as-child>
-                                        <Button
-                                            :data-function-name="item.name"
-                                            variant="ghost"
-                                            :class="[
-                                                'justify-start', 
-                                                'px-3', 
-                                                'py-1', 
-                                                'flex-1',
-                                                'text-xs',
-                                                'truncate',
-                                                'min-w-0',
-                                                selectedFunction?.name === item.name ? 'bg-accent' : ''
-                                            ]" 
-                                            @click="selectFunction(item)"             
+                                    <!-- Insertion gap before this item -->
+                                    <div
+                                        class="relative mx-1 flex items-center justify-center transition-[min-height] duration-100"
+                                        :class="showDropGapAt(index) ? 'min-h-7 my-0.5' : 'min-h-1'"
+                                        aria-hidden="true"
+                                    >
+                                        <div
+                                            v-if="showDropGapAt(index)"
+                                            class="absolute inset-x-0 flex flex-col items-stretch gap-0.5 pointer-events-none"
+                                        >
+                                            <div class="h-0.5 rounded-full bg-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.35)]" />
+                                            <p
+                                                v-if="dropGapLabel"
+                                                class="px-1 text-[10px] leading-tight font-semibold text-primary truncate text-center"
                                             >
+                                                <span v-if="draggingFunctionName">{{ draggingFunctionName }} → </span>{{ dropGapLabel }}
+                                            </p>
+                                            <div class="h-0.5 rounded-full bg-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.35)]" />
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="flex items-center gap-1 group rounded-md"
+                                        :class="[
+                                            dragFromIndex === index ? 'opacity-40 ring-1 ring-dashed ring-muted-foreground/40' : '',
+                                            isDropNeighbor(index) ? 'bg-primary/10 ring-1 ring-primary/40' : '',
+                                        ]"
+                                        @dragover="onFunctionDragOver($event, index)"
+                                        @drop="onFunctionDrop"
+                                        @dragend="onFunctionDragEnd"
+                                    >
+                                        <span
+                                            v-if="canReorder"
+                                            draggable="true"
+                                            class="flex shrink-0 items-center text-muted-foreground opacity-40 group-hover:opacity-100 pl-0.5 cursor-grab active:cursor-grabbing"
+                                            title="Drag to reorder"
+                                            @dragstart="onFunctionDragStart($event, index)"
+                                            @click.stop
+                                        >
+                                            <GripVertical class="h-3.5 w-3.5" />
+                                        </span>
+                                        <Tooltip>
+                                            <TooltipTrigger as-child>
+                                                <Button
+                                                    :data-function-name="item.name"
+                                                    variant="ghost"
+                                                    :class="[
+                                                        'justify-start',
+                                                        'px-3',
+                                                        'py-1',
+                                                        'flex-1',
+                                                        'text-xs',
+                                                        'truncate',
+                                                        'min-w-0',
+                                                        selectedFunction?.name === item.name ? 'bg-accent' : ''
+                                                    ]"
+                                                    @click="selectFunction(item)"
+                                                >
+                                                    {{ item.name }}
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="left">
                                                 {{ item.name }}
-                                                <!-- Unsaved changes indicator -->
-                                                <!-- <span 
-                                                    v-if="unsavedEditsCache.has(item.name)" 
-                                                    class="ml-2 h-2 w-2 rounded-full bg-orange-500"
-                                                    title="Unsaved changes"
-                                                ></span> -->
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left">
-                                        {{ item.name }}
-                                    </TooltipContent>
-                                </Tooltip>
-                                    <template v-if ="item.name !== 'Constructor'">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            @click.stop="editFunctionName(item)"
-                                            class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                                            </TooltipContent>
+                                        </Tooltip>
+                                        <template v-if="item.name !== 'Constructor'">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                @click.stop="editFunctionName(item)"
+                                                class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                                            >
+                                                <Pencil :size="1" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                @click.stop="handleDeleteFunction(item)"
+                                                class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
+                                            >
+                                                <Trash2 :size="1" />
+                                            </Button>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <!-- Insertion gap after last item -->
+                                <div
+                                    class="relative mx-1 flex items-center justify-center transition-[min-height] duration-100"
+                                    :class="showDropGapAt(filteredFunctions.length) ? 'min-h-7 my-0.5' : 'min-h-2'"
+                                    aria-hidden="true"
+                                    @dragover="onEndGapDragOver"
+                                    @drop="onFunctionDrop"
+                                >
+                                    <div
+                                        v-if="showDropGapAt(filteredFunctions.length)"
+                                        class="absolute inset-x-0 flex flex-col items-stretch gap-0.5 pointer-events-none"
+                                    >
+                                        <div class="h-0.5 rounded-full bg-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.35)]" />
+                                        <p
+                                            v-if="dropGapLabel"
+                                            class="px-1 text-[10px] leading-tight font-semibold text-primary truncate text-center"
                                         >
-                                            <Pencil :size="1" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            @click.stop="handleDeleteFunction(item)"
-                                            class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
-                                        >
-                                            <Trash2 :size="1" />
-                                        </Button>
-                                    
-                                    </template>
-                                    
-                                    
+                                            <span v-if="draggingFunctionName">{{ draggingFunctionName }} → </span>{{ dropGapLabel }}
+                                        </p>
+                                        <div class="h-0.5 rounded-full bg-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.35)]" />
+                                    </div>
                                 </div>
+
                                 <p
                                     v-if="functionFilter && filteredFunctions.length === 0"
                                     class="px-3 py-2 text-xs text-muted-foreground"
