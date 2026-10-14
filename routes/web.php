@@ -139,6 +139,7 @@ Route::prefix('{server_slug}')->middleware(['auth', 'proxy.server'])->group(func
         //Schedulers
         Route::get('/scheduler', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersIndex']);
         Route::get('/scheduler/{id}/run', [App\Http\Controllers\Api\SchedulersController::class, 'manualRunScheduler']);
+        Route::get('/scheduler/{id}/last_response', [App\Http\Controllers\Api\SchedulersController::class, 'lastResponseScheduler']);
         Route::post('/scheduler', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersStore']);
         Route::put('/scheduler/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersUpdate']);
         Route::delete('/scheduler/{id}', [App\Http\Controllers\Api\SchedulersController::class, 'schedulersDestroy']);

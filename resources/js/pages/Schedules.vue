@@ -78,6 +78,8 @@ const formRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const argumentsFormRef = ref<InstanceType<typeof FormViewer> | null>(null);
 const showArgumentsModal = ref<boolean>(false);
 const showReportModal = ref<boolean>(false);
+const reportLastResponse = ref<any>(null);
+const reportLastResponseLoading = ref(false);
 const showTimelineModal = ref<boolean>(false);
 // Avoid duplicate versions/latest fetches when Combobox emits select + blur
 const lastFetchedApiInstanceId = ref<number | string | null>(null);
@@ -402,7 +404,7 @@ const reportFormConfig = computed(() => ({
             name: "last_response",
             label: "Last Results:",
             type: "textarea",
-            placeholder: "Enter the id of the report",
+            placeholder: reportLastResponseLoading.value ? "Loading..." : "No last results",
             value: "",
 
             info: "last response of the report",
@@ -506,6 +508,7 @@ const reportInitialData = computed(() => {
     }
     return {
         ...editingRow.value,
+        last_response: reportLastResponse.value,
         next_runtimes: formatNextRuntimes(editingRow.value.next_runtimes),
     };
 });
@@ -1192,13 +1195,42 @@ const handleDataGridActionHandler = (action: { action: string; selectedRows: any
     }
 };
 
-const openReportModal = (row: any) => {
-    showReportModal.value = true;
+const openReportModal = async (row: any) => {
     editingRow.value = row;
+    reportLastResponse.value = null;
+    reportLastResponseLoading.value = true;
+    showReportModal.value = true;
+
+    try {
+        const response = await fetch(`${apiBaseUrl}/scheduler/${row.id}/last_response`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken() || '',
+            },
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            showError(
+                errorData.error || errorData.details?.error || `HTTP error! status: ${response.status}`,
+                'Error'
+            );
+            return;
+        }
+        const data = await response.json();
+        reportLastResponse.value = data.last_response ?? null;
+    } catch (e: any) {
+        showError(e?.message || 'Failed to fetch last response', 'Error');
+    } finally {
+        reportLastResponseLoading.value = false;
+    }
 };
 const closeReportModal = () => {
     showReportModal.value = false;
     editingRow.value = null;
+    reportLastResponse.value = null;
+    reportLastResponseLoading.value = false;
 };
 
 const handleReportFormActionHandler = (action: { type: string; action: string; formData: any }) => {
@@ -1403,7 +1435,7 @@ onMounted(async () => {
             <AlertModal 
                 :isOpen="showReportModal"
                 :title="''"
-                @close="showReportModal = false"
+                @close="closeReportModal"
             >
             <FormViewer
                 :formConfig="reportFormConfig"
