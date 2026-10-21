@@ -83,7 +83,9 @@ class OidcController extends Controller
             'email' => $email ?? "{$uniqueId}@example.com"]
         );
 
-        Auth::login($user, true);
+        Auth::login($user, false);
+
+        $request->session()->regenerate();
 
         $intendedUrl = session('url.intended', '/settings/servers');
         session()->forget('url.intended');
