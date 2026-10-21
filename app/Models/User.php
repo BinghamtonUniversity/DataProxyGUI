@@ -47,4 +47,13 @@ class User extends Authenticatable
             'super_admin' => 'boolean',
         ];
     }
+    public function getRememberToken()
+    {
+        if (! is_string($this->getAuthPassword())
+            || $this->getAuthPassword() === '') {
+            return null;
+        }
+
+        return parent::getRememberToken();
+    }
 }
