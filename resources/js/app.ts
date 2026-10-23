@@ -50,8 +50,8 @@ async function initializeMonaco() {
         // Laravel (:8000) and the Vite dev server (:5173) are different origins, and
         // browsers block cross-origin Worker scripts. Start each worker from a
         // same-origin blob that imports the real worker module from Vite.
-        const { default: editorWorkerUrl } = await import('monaco-editor/esm/vs/editor/editor.worker?worker&url');
-        const { default: jsonWorkerUrl } = await import('monaco-editor/esm/vs/language/json/json.worker?worker&url');
+        const { default: editorWorkerUrl } = await import('monaco-editor/editor/editor.worker?worker&url');
+        const { default: jsonWorkerUrl } = await import('monaco-editor/language/json/json.worker?worker&url');
 
         const devWorker = (url: string) => {
             const absolute = new URL(url, import.meta.url).href;
@@ -63,15 +63,14 @@ async function initializeMonaco() {
             getWorker: (_, label) => devWorker(label === 'json' ? jsonWorkerUrl : editorWorkerUrl),
         };
     } else {
-        const { default: EditorWorker } = await import('monaco-editor/esm/vs/editor/editor.worker?worker');
-        const { default: JsonWorker } = await import('monaco-editor/esm/vs/language/json/json.worker?worker');
+        const { default: EditorWorker } = await import('monaco-editor/editor/editor.worker?worker');
+        const { default: JsonWorker } = await import('monaco-editor/language/json/json.worker?worker');
 
         self.MonacoEnvironment = {
             getWorker: (_, label) => (label === 'json' ? new JsonWorker() : new EditorWorker()),
         };
     }
 
-    // loader.config({ monaco: (monaco as any).default ?? monaco });
     const monacoInstance = (monaco as any).default ?? monaco;
     loader.config({ monaco: monacoInstance });
     await registerPhpSnippetLanguage(monacoInstance);
