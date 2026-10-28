@@ -77,49 +77,30 @@ const resourcesFormConfig = computed(() => ({
 
 // Initial form data - map api_version.resources to form structure
 const initialFormData = computed(() => {
-  if (!props.apiInstanceData?.api_version?.resources) {
-    return { resources: [] }
+  const versionResources = props.apiInstanceData?.api_version?.resources ?? []
+  const instanceResources = props.apiInstanceData?.resources ?? []
+
+  return {
+    resources: versionResources.map((versionResource) => {
+      const instanceResource = instanceResources.find(r => r.name === versionResource.name)
+      return {
+        name: versionResource.name || '',
+        resource: instanceResource?.resource || '',
+      }
+    }),
   }
-
-  const resources = props.apiInstanceData.api_version.resources.map((versionResource, index) => {
-    // Find the corresponding resource ID from apiInstanceData.resources
-    const instanceResource = props.apiInstanceData?.resources?.[index]
-    return {
-      name: versionResource.name || instanceResource?.name || '',
-      resource: instanceResource?.resource || ''
-    }
-  })
-
-  return { resources }
 })
 
 // Handle form changes
 const handleFormChange = (formData: any) => {
   if (!props.apiInstanceData) return
 
-  if (formData.resources && formData.resources.length != 0) {
-    for (const resource of formData.resources) {
-        if (!resource.name || !resource.resource) {
-            // remove the resource from the updatedResources
-            formData.resources = formData.resources.filter((r: any) => r.name !== resource.name)
-        }
-    }
-  }
-
-  // Map form data back to apiInstanceData.resources structure
   const updatedResources = (formData.resources || []).map((item: any) => ({
     name: item.name || '',
-    resource: item.resource || ''
+    resource: item.resource || '',
   }))
 
-  
-
-  const updatedData = {
-    ...props.apiInstanceData,
-    resources: updatedResources
-  }
-
-  props.updateApiInstanceData(updatedData)
+  props.updateApiInstanceData({ resources: updatedResources })
 }
 
 // Handle form actions (if needed)
