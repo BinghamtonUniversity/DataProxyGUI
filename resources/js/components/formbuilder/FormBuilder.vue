@@ -970,11 +970,22 @@
       @close="closeJsonModal">
       <div class="space-y-4">
         <p class="text-sm text-on-surface-variant">
-          This is the JSON representation of your form configuration:
+          Edit the JSON and save it to update this form.
         </p>
-        <pre :class="formbuilderTheme.modalJson">{{ generatedJson }}</pre>
+        <textarea
+          v-model="jsonDraft"
+          spellcheck="false"
+          :class="[formbuilderTheme.modalJson, 'w-full min-h-80 resize-y font-mono']"
+        />
+        <p v-if="jsonError" class="text-sm text-red-600">{{ jsonError }}</p>
       </div>
       <template #footer>
+        <button
+          @click="applyJsonDraft"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium">
+          <i class="fas fa-save w-3 h-3"></i>
+          Save
+        </button>
         <button
           @click="handleCopyToClipboard"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium">
@@ -1144,6 +1155,8 @@ const isUpdatingFromProps = ref(false);
 
 const selectedFieldIndex = ref(null);
 const isJsonModalOpen = ref(false);
+const jsonDraft = ref('');
+const jsonError = ref('');
 const isPreviewModalOpen = ref(false);
 const formName = ref(props.formData.name || 'options');
 const previewFormData = ref({});
@@ -1722,11 +1735,53 @@ function removeField(index) {
 }
 
 function showJsonModal() {
+  jsonDraft.value = generatedJson.value;
+  jsonError.value = '';
   isJsonModalOpen.value = true;
 }
 
 function closeJsonModal() {
   isJsonModalOpen.value = false;
+  jsonError.value = '';
+}
+
+function applyJsonDraft() {
+  jsonError.value = '';
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonDraft.value);
+  } catch {
+    jsonError.value = 'Invalid JSON. Check the syntax and try again.';
+    return;
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    jsonError.value = 'JSON must be an object.';
+    return;
+  }
+
+  if (!Array.isArray(parsed.fields)) {
+    jsonError.value = 'JSON must contain a "fields" array.';
+    return;
+  }
+
+  if (typeof parsed.name === 'string') {
+    formName.value = parsed.name;
+  }
+
+  fields.value = parsed.fields.map(field => {
+    const cleanField = { ...field };
+    delete cleanField.updateKey;
+    initializeFieldDefaults(cleanField);
+    return cleanField;
+  });
+
+  if (selectedFieldIndex.value != null && (selectedFieldIndex.value < 0 || selectedFieldIndex.value >= fields.value.length)) {
+    selectedFieldIndex.value = null;
+  }
+
+  closeJsonModal();
 }
 
 function showPreviewModal() {
@@ -1751,7 +1806,7 @@ async function copyToClipboard(textToCopy) {
 }
 
 function handleCopyToClipboard() {
-  const text = generatedJson.value;
+  const text = jsonDraft.value || generatedJson.value;
   
   copyToClipboard(text).then(() => {
     success('JSON copied to clipboard', 'success');
