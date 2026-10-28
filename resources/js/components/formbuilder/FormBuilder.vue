@@ -228,8 +228,8 @@
           ref="configPanelRef"
           :class="[formbuilderTheme.configPanel, 'z-30 overflow-y-auto bg-white dark:bg-gray-800']"
           :style="configPanelStyle">
-          <!-- Action Buttons -->
-          <div class="flex gap-2 mb-4 justify-end px-4 py-4">
+          <!-- Action Buttons (stay visible while the panel scrolls) -->
+          <div class="sticky top-0 z-10 flex w-full shrink-0 justify-center gap-2 mb-4 bg-white px-4 py-4 dark:bg-gray-800">
             <button
               @click="showPreviewModal"
               :class="formbuilderTheme.configButton">
@@ -2621,9 +2621,11 @@ const updateConfigPanelPosition = () => {
 
   const columnRect = columnEl.getBoundingClientRect();
   const rootRect = rootEl.getBoundingClientRect();
-  const panelHeight = panelEl.offsetHeight;
-  const maxHeight = window.innerHeight - CONFIG_PANEL_TOP_OFFSET * 2;
-  const effectivePanelHeight = Math.min(panelHeight, maxHeight);
+  // scrollHeight stays stable when maxHeight changes, so the clamp does not
+  // chase the ResizeObserver and shift the panel on every frame.
+  const contentHeight = panelEl.scrollHeight;
+  const viewportCap = window.innerHeight - CONFIG_PANEL_TOP_OFFSET * 2;
+  const effectivePanelHeight = Math.min(contentHeight, viewportCap);
 
   let top = CONFIG_PANEL_TOP_OFFSET;
 
@@ -2638,12 +2640,16 @@ const updateConfigPanelPosition = () => {
     top = Math.max(maxTop, rootRect.top);
   }
 
+  // Cap to the space under the panel's real top. A full-viewport max-height
+  // paints past the window when the panel sits below the page header.
+  const availableHeight = Math.max(0, window.innerHeight - top - CONFIG_PANEL_TOP_OFFSET);
+
   configPanelStyle.value = {
     position: 'fixed',
     top: `${top}px`,
     left: `${columnRect.left}px`,
     width: `${columnRect.width}px`,
-    maxHeight: 'calc(100vh - 2rem)',
+    maxHeight: `${availableHeight}px`,
   };
 };
 
