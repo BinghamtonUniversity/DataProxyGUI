@@ -2,14 +2,14 @@
 <template>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
 
-  <div ref="formBuilderRootRef" :class="formbuilderTheme.container">
+  <div ref="formBuilderRootRef" :class="bare ? '@container' : [formbuilderTheme.container, '@container']">
     <!-- <div :class="formbuilderTheme.headerContainer">
       <h1 :class="formbuilderTheme.header">FormBuilder</h1>
       <p :class="formbuilderTheme.subheader">Drag field types above the canvas. Reorder fields. Configure field properties.</p>
     </div> -->
-    <div class="flex flex-row gap-6">
+    <div class="grid grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] items-start gap-6 @6xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)_minmax(0,1.15fr)]">
       <!-- Left: Form Configuration Sidebar -->
-  <div class="w-80 shrink-0 px-4 py-4">
+  <div class="col-start-1 row-start-1 min-w-0 w-full px-4 py-4">
         <div :class="formbuilderTheme.configSection">
           <h4 :class="formbuilderTheme.configHeader + ' mb-3'">Form Configuration</h4>
           
@@ -57,9 +57,9 @@
         </div>
       </div>
       <!-- Center: Main Area (Draggable Types + Canvas) -->
-      <div class="flex-1 flex flex-col gap-1">
+      <div class="col-start-1 row-start-2 flex min-w-0 flex-col gap-1 @6xl:col-start-2 @6xl:row-start-1">
         <!-- Draggable field types (horizontal) -->
-        <div class="flex flex-row gap-8 mb-4 pt-2">
+        <div class="mb-4 flex flex-row flex-wrap justify-center gap-8 pt-2">
           <!-- Text Fields -->
           <div class="flex flex-col gap-2">
             
@@ -222,14 +222,14 @@
         </div>
       </div>
       <!-- Right: Field Configuration Sidebar (floats while page scrolls) -->
-      <div ref="configColumnRef" class="w-[420px] shrink-0 self-start">
+      <div ref="configColumnRef" class="col-start-2 row-start-1 row-span-2 min-w-0 w-full self-start @6xl:col-start-3 @6xl:row-span-1">
         <!-- Field Configuration -->
         <div
           ref="configPanelRef"
-          :class="[formbuilderTheme.configPanel, 'z-30 overflow-y-auto bg-white dark:bg-gray-800']"
+          :class="[formbuilderTheme.configPanel, 'z-30 overflow-y-auto', bare ? 'bg-white dark:bg-gray-900' : 'bg-white dark:bg-gray-800']"
           :style="configPanelStyle">
           <!-- Action Buttons (stay visible while the panel scrolls) -->
-          <div class="sticky top-0 z-10 flex w-full shrink-0 justify-center gap-2 mb-4 bg-white px-4 py-4 dark:bg-gray-800">
+          <div :class="['sticky top-0 z-10 flex w-full shrink-0 justify-center gap-2 mb-4 px-4 py-4', bare ? 'bg-white dark:bg-gray-900' : 'bg-white dark:bg-gray-800']">
             <button
               @click="showPreviewModal"
               :class="formbuilderTheme.configButton">
@@ -1038,6 +1038,10 @@ const props = defineProps({
   allowFormNameEdit: {
     type: Boolean,
     default: true
+  },
+  bare: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -2607,7 +2611,7 @@ const configPanelStyle = ref({
   position: 'fixed',
   top: `${CONFIG_PANEL_TOP_OFFSET}px`,
   left: '0px',
-  width: '420px',
+  width: '480px',
   maxHeight: 'calc(100vh - 2rem)',
 });
 
@@ -2665,6 +2669,9 @@ const bindConfigPanelFloating = () => {
       updateConfigPanelPosition();
     });
     configPanelResizeObserver.observe(configPanelRef.value);
+    if (formBuilderRootRef.value) {
+      configPanelResizeObserver.observe(formBuilderRootRef.value);
+    }
   }
 };
 
