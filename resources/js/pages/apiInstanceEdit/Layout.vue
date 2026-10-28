@@ -479,8 +479,8 @@ const handleSave = () => {
         environment_id: originalApiInstanceData.value?.environment?.id
     }
 
-    const emptyResources = requestData.resources?.length !== 0 && requestData.resources?.every((r: any) => !r.name && !r.resource)
-    if (emptyResources) {
+    const hasEmptyResource = requestData.resources?.some((r: any) => !r.name || !r.resource)
+    if (hasEmptyResource) {
         warning('All resources must be configured before saving.', 'Validation Error')
         return
     }
