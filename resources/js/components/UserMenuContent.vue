@@ -101,17 +101,23 @@ const selectServer = (slug: string) => {
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
     const currentSlug = serverSlug.value;
     let newPath: string;
+
     if (currentSlug && path.startsWith(`/${currentSlug}`)) {
         const rest = path.slice(`/${currentSlug}`.length) || '';
         const segments = rest.split('/').filter(Boolean);
-        // Strip server-specific resource IDs (e.g. /apis/6/routes → /apis) so indexes don't carry over
+        
+        // Find the index of the first numeric ID segment
         const idIndex = segments.findIndex((s) => /^\d+$/.test(s));
+        
+        // Truncate everything from the ID onwards so nested routes (e.g., /apis/6/functions -> /apis) are stripped
         const baseSegments = idIndex >= 0 ? segments.slice(0, idIndex) : segments;
         const basePath = baseSegments.length > 0 ? `/${baseSegments.join('/')}` : '/dashboard';
+        
         newPath = `/${slug}${basePath}`;
     } else {
         newPath = `/${slug}/dashboard`;
     }
+
     router.visit(newPath);
 };
 
