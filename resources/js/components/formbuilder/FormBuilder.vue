@@ -2550,6 +2550,16 @@ watch(
   { immediate: true }
 );
 
+// Copy a field and every nested section field so later edits do not mutate props.formData.
+function cloneFieldForBuilder(field) {
+  const cleanField = { ...field };
+  delete cleanField.updateKey;
+  if (Array.isArray(field.fields)) {
+    cleanField.fields = field.fields.map(cloneFieldForBuilder);
+  }
+  return cleanField;
+}
+
 // Helper function to initialize default values for a field (including nested fields in fieldsets)
 function initializeFieldDefaults(field) {
   if (!field) return;
@@ -2628,8 +2638,7 @@ watch(() => props.formData, (newFormData) => {
     if (newFormData.fields && Array.isArray(newFormData.fields)) {
       // Clean the fields by removing internal properties like updateKey
       fields.value = newFormData.fields.map(field => {
-        const cleanField = { ...field };
-        delete cleanField.updateKey;
+        const cleanField = cloneFieldForBuilder(field);
         // Initialize default values for all fields (including nested ones)
         initializeFieldDefaults(cleanField);
         return cleanField;
@@ -2757,8 +2766,7 @@ onMounted(() => {
   if (props.formData.fields && props.formData.fields.length > 0) {
     // Clean the fields by removing internal properties like updateKey
     fields.value = props.formData.fields.map(field => {
-      const cleanField = { ...field };
-      delete cleanField.updateKey;
+      const cleanField = cloneFieldForBuilder(field);
       // Initialize default values for all fields (including nested ones)
       initializeFieldDefaults(cleanField);
       return cleanField;
