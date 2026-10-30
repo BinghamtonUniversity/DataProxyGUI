@@ -34,13 +34,25 @@ const formConfig = computed(() => ({
         { name: 'route', label: 'Route', type: 'text', required: true },
         { name: 'api', label: 'API', type: 'text', required: true, edit:false },
         { name: 'api_version', label: 'API Version', type: 'text', required: true, edit:false  },
-        { name: 'environment', label: 'Environment', type: 'text', required: true, edit:false  }
+        { name: 'environment', label: 'Environment', type: 'text', required: true, edit:false  },
+        {
+            name: 'errors',
+            label: 'Error Level',
+            type: 'select',
+            placeholder: 'Error Level',
+            required: false,
+            options: [
+                { label: 'All', value: 'all' },
+                { label: 'None', value: 'none' },
+            ],
+        }
     ]
 }));
 // Local reactive data for editable fields
 const editableData = ref({
     name: '',
-    route: ''
+    route: '',
+    errors: 'all'
 })
 
 watch(
@@ -49,6 +61,7 @@ watch(
     if (newVal) {
       editableData.value.name = newVal.name
       editableData.value.route = props.api_type === 'php' && newVal.slug ? newVal.slug : newVal.route
+      editableData.value.errors = (newVal as any).errors || 'all'
     }
   },
   { immediate: true } // run once right away as well
@@ -58,6 +71,7 @@ const updateLocalData = () => {
     if (props.apiInstanceData) {
         editableData.value.name = props.apiInstanceData.name
         editableData.value.route = props.api_type === 'php' && props.apiInstanceData.slug ? props.apiInstanceData.slug : props.apiInstanceData.route
+        editableData.value.errors = (props.apiInstanceData as any).errors || 'all'
     }
 }
 
@@ -76,6 +90,7 @@ const formData = computed(() => {
             ? 'Latest (Working or Published)'
             : instance?.api_version?.summary ?? 'Untitled version',
         environment: instance?.environment?.name,
+        errors: editableData.value.errors,
     }
 })
 
@@ -100,6 +115,9 @@ const handleFormDataUpdate = (data: any) => {
             if (data.route !== undefined) {
                 editableData.value.route = data.route || ''
             }
+            if (data.errors !== undefined) {
+                editableData.value.errors = data.errors || 'all'
+            }
             return
         }
     }
@@ -111,14 +129,18 @@ const handleFormDataUpdate = (data: any) => {
     if (data.route !== undefined) {
         editableData.value.route = data.route || ''
     }
+    if (data.errors !== undefined) {
+        editableData.value.errors = data.errors || 'all'
+    }
     
     // Save with merged data (preserves read-only fields)
     if (props.apiInstanceData && mergedData){
         const updatedData: ApiInstance = {
             ...props.apiInstanceData,
             name: mergedData.name || '',
-            route: mergedData.route || ''
-        }
+            route: mergedData.route || '',
+            errors: mergedData.errors || 'all'
+        } as ApiInstance
         const requestData = {
                 id: updatedData.id,
                 name: updatedData.name,
@@ -129,7 +151,8 @@ const handleFormDataUpdate = (data: any) => {
                 public: updatedData.public,
                 api_id: updatedData.api_id,
                 api_version_id: updatedData.api_version_id,
-                environment_id: updatedData.environment_id
+                environment_id: updatedData.environment_id,
+                errors: (updatedData as any).errors
             }
             props.updateApiInstanceData(requestData)
     }
@@ -153,8 +176,9 @@ const handleFormAction = async (actionData: { type: string; action: string; form
                 const updatedData: ApiInstance = {
                     ...props.apiInstanceData,
                     name: actionData.formData.name || '',
-                    route: actionData.formData.route || ''
-                }
+                    route: actionData.formData.route || '',
+                    errors: actionData.formData.errors || 'all'
+                } as ApiInstance
                 const requestData = {
                     id: updatedData.id,
                     name: updatedData.name,
@@ -165,7 +189,8 @@ const handleFormAction = async (actionData: { type: string; action: string; form
                     public: updatedData.public,
                     api_id: updatedData.api_id,
                     api_version_id: updatedData.api_version_id,
-                    environment_id: updatedData.environment_id
+                    environment_id: updatedData.environment_id,
+                errors: (updatedData as any).errors
                 }
                 props.updateApiInstanceData(requestData)
                 success('Changes saved successfully', 'Success')

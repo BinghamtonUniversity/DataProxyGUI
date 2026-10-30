@@ -87,7 +87,18 @@ const formConfig = {
       options: [],
       required: true,
     },
-   
+    {
+      name: "errors",
+      label: "Error Level",
+      type: "select",
+      placeholder: "Error Level",
+      value: "all",
+      options: [
+        { label: "All", value: "all" },
+        { label: "None", value: "none" },
+      ],
+      required: false,
+    },
   ]
 }
 // DataGrid schema for API instances
@@ -237,6 +248,7 @@ interface NewApiInstanceForm {
   resources: ApiInstanceResource[]
   options: [] | any
   api_type: string
+  errors: string
 }
 
 const newApiInstanceForm = ref<NewApiInstanceForm>({
@@ -249,7 +261,8 @@ const newApiInstanceForm = ref<NewApiInstanceForm>({
   route_user_map: [],
   resources: [],
   options: [],
-  api_type: serverApiType.value as string
+  api_type: serverApiType.value as string,
+  errors: 'all'
 })
 const newApiInstanceLoading = ref(false)
 const newApiInstanceError = ref('')
@@ -306,7 +319,8 @@ const resetApiInstanceForm = () => {
     route_user_map: [],
     resources: [],
     options: [] as any,
-    api_type: serverApiType.value as string
+    api_type: serverApiType.value as string,
+    errors: 'all'
   }
 }
 
@@ -672,7 +686,8 @@ const openEditApiInstanceDialog = (apiInstance: ApiInstance) => {
       }
     ],
     options: apiInstance.options || [],
-    api_type: apiInstance.api_type || ''
+    api_type: apiInstance.api_type || '',
+    errors: (apiInstance as any).errors || 'all'
   }
   newApiInstanceDialogOpen.value = true
 }
