@@ -123,6 +123,7 @@ export function mapPhpToApiInstance(php: any): ApiInstance {
     resources: php.resources ?? [],
     options: php.options ?? {},
     public: php.public ? 1 : 0,         // convert boolean to number
+    errors: php.errors ?? 'all',
     created_at: php.created_at,
     updated_at: php.updated_at,
     
