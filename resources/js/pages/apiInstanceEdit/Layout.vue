@@ -338,6 +338,7 @@ const updateInstanceVersion = async (version: any) => {
         resources: apiInstanceData.value?.resources, 
         options: apiInstanceData.value?.options,
         public: apiInstanceData.value?.public,
+        errors: (apiInstanceData.value as any)?.errors,
     }
 
     try {
@@ -461,7 +462,8 @@ const handleSave = () => {
             public: apiInstanceData.value?.public,
             api_id: apiInstanceData.value?.api.id,
             api_version_id: apiInstanceData.value?.api_version_id,
-            environment_id: apiInstanceData.value?.environment.id
+            environment_id: apiInstanceData.value?.environment.id,
+            errors: (apiInstanceData.value as any)?.errors
         }
     
     // Create comparable object from original data with same structure as requestData
@@ -476,7 +478,8 @@ const handleSave = () => {
         public: originalApiInstanceData.value?.public,
         api_id: originalApiInstanceData.value?.api?.id,
         api_version_id: originalApiInstanceData.value?.api_version_id,
-        environment_id: originalApiInstanceData.value?.environment?.id
+        environment_id: originalApiInstanceData.value?.environment?.id,
+        errors: (originalApiInstanceData.value as any)?.errors
     }
 
     const hasEmptyResource = requestData.resources?.some((r: any) => !r.name || !r.resource)
