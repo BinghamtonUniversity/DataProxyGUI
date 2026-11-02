@@ -556,6 +556,8 @@ const submitInstanceWithComment = async (formData: any) => {
         apiInstanceData.value = {
             ...current,
             slug: serverApiType.value === 'php'? responseData.slug : undefined,
+            errors: responseData.errors ?? (current as any).errors,
+
             // Restore nested objects if they're missing in the response -- PHP doesn't return them on update PUT
             api: responseData.api ?? current.api,
             api_version: responseData.api_version ?? current.api_version,
