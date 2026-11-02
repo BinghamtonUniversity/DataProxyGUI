@@ -152,6 +152,7 @@ export interface ApiInstance {
   api_version: ApiData
   environment: Environment
   api_type?: string
+  errors?: 'all' | 'none'
 }
 
 export interface Environment {

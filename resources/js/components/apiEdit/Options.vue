@@ -240,8 +240,8 @@ const importFormConfig = {
     apiError: string,
     updateApiData: (updatedApiData: ApiData) => void
 }">
-    <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-        <div class="">
+    <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
+        <div class="relative flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
 
             <!-- Loading State -->
             <template v-if="loadingApiData">
@@ -267,6 +267,7 @@ const importFormConfig = {
                 <FormBuilder 
                     :form-data="formData"
                     :allowFormNameEdit="false"
+                    bare
                     @update:form-data="handleFormChange"
                 />
 

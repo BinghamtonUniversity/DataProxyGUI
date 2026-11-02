@@ -2,14 +2,14 @@
 <template>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
 
-  <div ref="formBuilderRootRef" :class="formbuilderTheme.container">
+  <div ref="formBuilderRootRef" :class="bare ? '@container' : [formbuilderTheme.container, '@container']">
     <!-- <div :class="formbuilderTheme.headerContainer">
       <h1 :class="formbuilderTheme.header">FormBuilder</h1>
       <p :class="formbuilderTheme.subheader">Drag field types above the canvas. Reorder fields. Configure field properties.</p>
     </div> -->
-    <div class="flex flex-row gap-6">
+    <div class="grid grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] items-start gap-6 @6xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)_minmax(0,1.15fr)]">
       <!-- Left: Form Configuration Sidebar -->
-  <div class="w-80 shrink-0 px-4 py-4">
+  <div class="col-start-1 row-start-1 min-w-0 w-full px-4 py-4">
         <div :class="formbuilderTheme.configSection">
           <h4 :class="formbuilderTheme.configHeader + ' mb-3'">Form Configuration</h4>
           
@@ -57,9 +57,9 @@
         </div>
       </div>
       <!-- Center: Main Area (Draggable Types + Canvas) -->
-      <div class="flex-1 flex flex-col gap-1">
+      <div class="col-start-1 row-start-2 flex min-w-0 flex-col gap-1 @6xl:col-start-2 @6xl:row-start-1">
         <!-- Draggable field types (horizontal) -->
-        <div class="flex flex-row gap-8 mb-4 pt-2">
+        <div class="mb-4 flex flex-row flex-wrap justify-center gap-8 pt-2">
           <!-- Text Fields -->
           <div class="flex flex-col gap-2">
             
@@ -222,14 +222,14 @@
         </div>
       </div>
       <!-- Right: Field Configuration Sidebar (floats while page scrolls) -->
-      <div ref="configColumnRef" class="w-[420px] shrink-0 self-start">
+      <div ref="configColumnRef" class="col-start-2 row-start-1 row-span-2 min-w-0 w-full self-start @6xl:col-start-3 @6xl:row-span-1">
         <!-- Field Configuration -->
         <div
           ref="configPanelRef"
-          :class="[formbuilderTheme.configPanel, 'z-30 overflow-y-auto bg-white dark:bg-gray-800']"
+          :class="[formbuilderTheme.configPanel, 'z-30 overflow-y-auto', bare ? 'bg-white dark:bg-gray-900' : 'bg-white dark:bg-gray-800']"
           :style="configPanelStyle">
-          <!-- Action Buttons -->
-          <div class="flex gap-2 mb-4 justify-end px-4 py-4">
+          <!-- Action Buttons (stay visible while the panel scrolls) -->
+          <div :class="['sticky top-0 z-10 flex w-full shrink-0 justify-center gap-2 mb-4 px-4 py-4', bare ? 'bg-white dark:bg-gray-900' : 'bg-white dark:bg-gray-800']">
             <button
               @click="showPreviewModal"
               :class="formbuilderTheme.configButton">
@@ -970,11 +970,22 @@
       @close="closeJsonModal">
       <div class="space-y-4">
         <p class="text-sm text-on-surface-variant">
-          This is the JSON representation of your form configuration:
+          Edit the JSON and save it to update this form.
         </p>
-        <pre :class="formbuilderTheme.modalJson">{{ generatedJson }}</pre>
+        <textarea
+          v-model="jsonDraft"
+          spellcheck="false"
+          :class="[formbuilderTheme.modalJson, 'w-full min-h-80 resize-y font-mono']"
+        />
+        <p v-if="jsonError" class="text-sm text-red-600">{{ jsonError }}</p>
       </div>
       <template #footer>
+        <button
+          @click="applyJsonDraft"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium">
+          <i class="fas fa-save w-3 h-3"></i>
+          Save
+        </button>
         <button
           @click="handleCopyToClipboard"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium">
@@ -1038,6 +1049,10 @@ const props = defineProps({
   allowFormNameEdit: {
     type: Boolean,
     default: true
+  },
+  bare: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -1047,6 +1062,7 @@ import AlertModal from '../AlertModal.vue';
 import FormViewer from '../formviewer/FormViewer.vue';
 import ConditionalLogic from '../formbuilder/components/ConditionalLogic.vue';
 import { getThemeClasses } from '../Theme.js';
+import { useToaster } from '@/composables/useToaster';
 
 // Import all dynamic field components
 import {
@@ -1072,6 +1088,8 @@ import {
   OutputField
 } from '../fields';
 
+// Toaster      
+const { success, error: showError, warning, info } = useToaster();
 
 const fieldTypes = [
   { type: 'text', label: 'Text', category: 'input' },
@@ -1140,6 +1158,8 @@ const isUpdatingFromProps = ref(false);
 
 const selectedFieldIndex = ref(null);
 const isJsonModalOpen = ref(false);
+const jsonDraft = ref('');
+const jsonError = ref('');
 const isPreviewModalOpen = ref(false);
 const formName = ref(props.formData.name || 'options');
 const previewFormData = ref({});
@@ -1718,11 +1738,53 @@ function removeField(index) {
 }
 
 function showJsonModal() {
+  jsonDraft.value = generatedJson.value;
+  jsonError.value = '';
   isJsonModalOpen.value = true;
 }
 
 function closeJsonModal() {
   isJsonModalOpen.value = false;
+  jsonError.value = '';
+}
+
+function applyJsonDraft() {
+  jsonError.value = '';
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonDraft.value);
+  } catch {
+    jsonError.value = 'Invalid JSON. Check the syntax and try again.';
+    return;
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    jsonError.value = 'JSON must be an object.';
+    return;
+  }
+
+  if (!Array.isArray(parsed.fields)) {
+    jsonError.value = 'JSON must contain a "fields" array.';
+    return;
+  }
+
+  if (typeof parsed.name === 'string') {
+    formName.value = parsed.name;
+  }
+
+  fields.value = parsed.fields.map(field => {
+    const cleanField = { ...field };
+    delete cleanField.updateKey;
+    initializeFieldDefaults(cleanField);
+    return cleanField;
+  });
+
+  if (selectedFieldIndex.value != null && (selectedFieldIndex.value < 0 || selectedFieldIndex.value >= fields.value.length)) {
+    selectedFieldIndex.value = null;
+  }
+
+  closeJsonModal();
 }
 
 function showPreviewModal() {
@@ -1747,7 +1809,7 @@ async function copyToClipboard(textToCopy) {
 }
 
 function handleCopyToClipboard() {
-  const text = generatedJson.value;
+  const text = jsonDraft.value || generatedJson.value;
   
   copyToClipboard(text).then(() => {
     success('JSON copied to clipboard', 'success');
@@ -2491,6 +2553,16 @@ watch(
   { immediate: true }
 );
 
+// Copy a field and every nested section field so later edits do not mutate props.formData.
+function cloneFieldForBuilder(field) {
+  const cleanField = { ...field };
+  delete cleanField.updateKey;
+  if (Array.isArray(field.fields)) {
+    cleanField.fields = field.fields.map(cloneFieldForBuilder);
+  }
+  return cleanField;
+}
+
 // Helper function to initialize default values for a field (including nested fields in fieldsets)
 function initializeFieldDefaults(field) {
   if (!field) return;
@@ -2569,8 +2641,7 @@ watch(() => props.formData, (newFormData) => {
     if (newFormData.fields && Array.isArray(newFormData.fields)) {
       // Clean the fields by removing internal properties like updateKey
       fields.value = newFormData.fields.map(field => {
-        const cleanField = { ...field };
-        delete cleanField.updateKey;
+        const cleanField = cloneFieldForBuilder(field);
         // Initialize default values for all fields (including nested ones)
         initializeFieldDefaults(cleanField);
         return cleanField;
@@ -2607,7 +2678,7 @@ const configPanelStyle = ref({
   position: 'fixed',
   top: `${CONFIG_PANEL_TOP_OFFSET}px`,
   left: '0px',
-  width: '420px',
+  width: '480px',
   maxHeight: 'calc(100vh - 2rem)',
 });
 
@@ -2621,9 +2692,11 @@ const updateConfigPanelPosition = () => {
 
   const columnRect = columnEl.getBoundingClientRect();
   const rootRect = rootEl.getBoundingClientRect();
-  const panelHeight = panelEl.offsetHeight;
-  const maxHeight = window.innerHeight - CONFIG_PANEL_TOP_OFFSET * 2;
-  const effectivePanelHeight = Math.min(panelHeight, maxHeight);
+  // scrollHeight stays stable when maxHeight changes, so the clamp does not
+  // chase the ResizeObserver and shift the panel on every frame.
+  const contentHeight = panelEl.scrollHeight;
+  const viewportCap = window.innerHeight - CONFIG_PANEL_TOP_OFFSET * 2;
+  const effectivePanelHeight = Math.min(contentHeight, viewportCap);
 
   let top = CONFIG_PANEL_TOP_OFFSET;
 
@@ -2638,12 +2711,16 @@ const updateConfigPanelPosition = () => {
     top = Math.max(maxTop, rootRect.top);
   }
 
+  // Cap to the space under the panel's real top. A full-viewport max-height
+  // paints past the window when the panel sits below the page header.
+  const availableHeight = Math.max(0, window.innerHeight - top - CONFIG_PANEL_TOP_OFFSET);
+
   configPanelStyle.value = {
     position: 'fixed',
     top: `${top}px`,
     left: `${columnRect.left}px`,
     width: `${columnRect.width}px`,
-    maxHeight: 'calc(100vh - 2rem)',
+    maxHeight: `${availableHeight}px`,
   };
 };
 
@@ -2659,6 +2736,9 @@ const bindConfigPanelFloating = () => {
       updateConfigPanelPosition();
     });
     configPanelResizeObserver.observe(configPanelRef.value);
+    if (formBuilderRootRef.value) {
+      configPanelResizeObserver.observe(formBuilderRootRef.value);
+    }
   }
 };
 
@@ -2689,8 +2769,7 @@ onMounted(() => {
   if (props.formData.fields && props.formData.fields.length > 0) {
     // Clean the fields by removing internal properties like updateKey
     fields.value = props.formData.fields.map(field => {
-      const cleanField = { ...field };
-      delete cleanField.updateKey;
+      const cleanField = cloneFieldForBuilder(field);
       // Initialize default values for all fields (including nested ones)
       initializeFieldDefaults(cleanField);
       return cleanField;

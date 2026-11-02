@@ -210,7 +210,7 @@ const newRouteFormConfig = computed(() => ({
     fields: [
         //view_name name cannot be "Constructor"
         { name: 'description', label: 'Description', type: 'text', required: true },
-        { name: 'view_name', label: 'Function', type: 'select',options: props.apiData?.version_views?.filter((view: any ) => view.name !== 'Constructor').map((view: any ) => ({ label: view.name, value: view.name })), required: true },
+        { name: 'view_name', label: 'Function', type: 'combobox',options: props.apiData?.version_views?.filter((view: any ) => view.name !== 'Constructor').map((view: any ) => ({ label: view.name, value: view.name })), required: true },
         //path should start with /
         { name: 'path', label: 'Path', type: 'text', required: true, validate: [{ type: 'pattern', regex: '^/', message: 'Path must start with /', conditions: true }] },
         { name: 'verb', label: 'HTTP Method', type: 'select', required: true, options: [
