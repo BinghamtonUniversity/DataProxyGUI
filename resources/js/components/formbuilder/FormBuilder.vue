@@ -1062,6 +1062,7 @@ import AlertModal from '../AlertModal.vue';
 import FormViewer from '../formviewer/FormViewer.vue';
 import ConditionalLogic from '../formbuilder/components/ConditionalLogic.vue';
 import { getThemeClasses } from '../Theme.js';
+import { useToaster } from '@/composables/useToaster';
 
 // Import all dynamic field components
 import {
@@ -1087,6 +1088,8 @@ import {
   OutputField
 } from '../fields';
 
+// Toaster      
+const { success, error: showError, warning, info } = useToaster();
 
 const fieldTypes = [
   { type: 'text', label: 'Text', category: 'input' },
