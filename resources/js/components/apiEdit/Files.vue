@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { Button } from '@/components/ui/button'
 import Editor from '@/pages/Editor.vue'
 import { type ApiData, type ApiVersionFunction, Api} from '@/types'
@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getCsrfToken } from '@/lib/utils'
-import { Trash2, Pencil, ChevronDown, Plus, Search, X } from 'lucide-vue-next'
+import { Trash2, Pencil, ChevronDown, Plus, Search, X, GripVertical } from 'lucide-vue-next'
 import Toaster from '@/components/toaster/Toaster.vue';
 import { useToaster } from '@/composables/useToaster';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
@@ -49,6 +49,7 @@ const isSaving = ref(false)
 const saveError = ref<string | null>(null)
 const saveSuccess = ref(false)
 const editorRef = ref<any>(null)
+const editorContainerRef = ref<HTMLElement | null>(null)
 const leftCollapsed = ref(false)
 
 // New file dialog state
@@ -79,6 +80,163 @@ const filteredFiles = computed(() => {
     if (!q) return files
     return files.filter(func => func.name.toLowerCase().includes(q))
 })
+
+// Drag-and-drop reorder (disabled while filter is active)
+const canReorder = computed(() => filesFilter.value.trim() === '')
+const dragFromIndex = ref<number | null>(null)
+/** Insertion slot in the list: 0 = before first, length = after last */
+const dropInsertIndex = ref<number | null>(null)
+const draggingFileName = ref<string | null>(null)
+let dragGhostEl: HTMLElement | null = null
+
+const isNoOpInsert = computed(() => {
+    if (dragFromIndex.value === null || dropInsertIndex.value === null) return true
+    return (
+        dropInsertIndex.value === dragFromIndex.value ||
+        dropInsertIndex.value === dragFromIndex.value + 1
+    )
+})
+
+/** Neighbor names for the active insertion gap (makes "between X and Y" obvious). */
+const dropGapLabel = computed(() => {
+    if (dropInsertIndex.value === null || isNoOpInsert.value) return null
+    const files = filteredFiles.value
+    const i = dropInsertIndex.value
+    const above = i > 0 ? files[i - 1]?.name : null
+    const below = i < files.length ? files[i]?.name : null
+    if (above && below) return `Between ${above} and ${below}`
+    if (below) return `Before ${below}`
+    if (above) return `After ${above}`
+    return null
+})
+
+const showDropGapAt = (slotIndex: number) => {
+    return (
+        dragFromIndex.value !== null &&
+        dropInsertIndex.value === slotIndex &&
+        !isNoOpInsert.value
+    )
+}
+
+/** Soft-highlight the two neighbors around the active insertion gap. */
+const isDropNeighbor = (index: number) => {
+    if (dropInsertIndex.value === null || isNoOpInsert.value) return false
+    return index === dropInsertIndex.value - 1 || index === dropInsertIndex.value
+}
+
+const reorderVersionFiles = (fromIndex: number, insertIndex: number) => {
+    if (!props.apiData) return
+    if (insertIndex === fromIndex || insertIndex === fromIndex + 1) return
+    const files = [...props.apiData.version_files]
+    if (fromIndex < 0 || fromIndex >= files.length) return
+    if (insertIndex < 0 || insertIndex > files.length) return
+    const [moved] = files.splice(fromIndex, 1)
+    const to = fromIndex < insertIndex ? insertIndex - 1 : insertIndex
+    files.splice(to, 0, moved)
+    props.updateApiData({
+        ...props.apiData,
+        version_files: files,
+    })
+}
+
+const clearDragState = () => {
+    dragFromIndex.value = null
+    dropInsertIndex.value = null
+    draggingFileName.value = null
+    if (dragGhostEl?.parentNode) {
+        dragGhostEl.parentNode.removeChild(dragGhostEl)
+    }
+    dragGhostEl = null
+}
+
+const onFileDragStart = (event: DragEvent, index: number) => {
+    if (!canReorder.value || !props.apiData) {
+        event.preventDefault()
+        return
+    }
+    const name = props.apiData.version_files[index]?.name ?? ''
+    dragFromIndex.value = index
+    draggingFileName.value = name
+
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.setData('text/plain', name)
+
+        // Named drag preview that follows the cursor
+        const ghost = document.createElement('div')
+        ghost.textContent = name
+        ghost.style.cssText = [
+            'position: fixed',
+            'top: -1000px',
+            'left: -1000px',
+            'z-index: 9999',
+            'pointer-events: none',
+            'padding: 6px 12px',
+            'border-radius: 6px',
+            'font-size: 12px',
+            'font-weight: 600',
+            'font-family: ui-sans-serif, system-ui, sans-serif',
+            'white-space: nowrap',
+            'max-width: 220px',
+            'overflow: hidden',
+            'text-overflow: ellipsis',
+            'background: #2563eb',
+            'color: #ffffff',
+            'border: 1px solid #1d4ed8',
+            'box-shadow: 0 4px 12px rgba(0,0,0,0.3)',
+        ].join(';')
+        document.body.appendChild(ghost)
+        dragGhostEl = ghost
+        event.dataTransfer.setDragImage(ghost, 12, 16)
+    }
+}
+
+const onFileDragOver = (event: DragEvent, index: number) => {
+    if (!canReorder.value || dragFromIndex.value === null) return
+    event.preventDefault()
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move'
+    }
+    const target = event.currentTarget as HTMLElement
+    const rect = target.getBoundingClientRect()
+    const insertBefore = event.clientY < rect.top + rect.height / 2
+    dropInsertIndex.value = insertBefore ? index : index + 1
+}
+
+const onFileDrop = (event: DragEvent) => {
+    event.preventDefault()
+    if (!canReorder.value || dragFromIndex.value === null || dropInsertIndex.value === null) {
+        clearDragState()
+        return
+    }
+    reorderVersionFiles(dragFromIndex.value, dropInsertIndex.value)
+    clearDragState()
+}
+
+const onFileDragEnd = () => {
+    clearDragState()
+}
+
+const onListDragOver = (event: DragEvent) => {
+    if (!canReorder.value || dragFromIndex.value === null) return
+    event.preventDefault()
+}
+
+const onEndGapDragOver = (event: DragEvent) => {
+    if (!canReorder.value || dragFromIndex.value === null) return
+    event.preventDefault()
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move'
+    }
+    dropInsertIndex.value = filteredFiles.value.length
+}
+
+const selectFile = (item: ApiVersionFunction) => {
+    selectedFile.value = item
+    nextTick(() => {
+        editorContainerRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+}
 
 const handleUpdateCode = (updatedCode: string) => {
     if (!selectedFile.value || !props.apiData) {
@@ -223,7 +381,7 @@ const handleCreateNewFile = async () => {
         props.updateApiData(updatedApiData)
         
         // Select the newly created function
-        selectedFile.value = newFunction
+        selectFile(newFunction)
         
         // Reset dialog state
         newViewName.value = ''
@@ -375,7 +533,7 @@ const handleSearchResult = (event: CustomEvent) => {
         // Find the file by name
         const fileToSelect = props.apiData.version_files.find(file => file.name === name)
         if (fileToSelect) {
-            selectedFile.value = fileToSelect
+            selectFile(fileToSelect)
             // Scroll to the file in the list
             setTimeout(() => {
                 const fileButton = document.querySelector(`[data-file-name="${name}"]`)
@@ -532,7 +690,7 @@ defineExpose({
 <template>
     <TooltipProvider :delay-duration="300">
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
-            <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
+            <div class="relative flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border p-4 bg-white dark:bg-gray-900">
                 
                 <!-- Loading State -->
                 <template v-if="loadingApiData">
@@ -555,11 +713,11 @@ defineExpose({
 
                 <!-- Files Content -->
                 <template v-else-if="apiData?.version_files">
-                    <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-8 h-full">
+                    <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:items-stretch lg:space-y-0 lg:space-x-8">
                         <!-- Files List Sidebar -->
                         <aside :class="[
-                                'lg:flex-shrink-0 flex flex-col max-h-[calc(100vh-8rem)] transition-all',
-                                leftCollapsed ? 'lg:w-10' : 'w-full lg:w-72 lg:min-w-72'
+                                'lg:flex-shrink-0 flex flex-col h-[calc(100vh-16rem)] sticky top-4 transition-all',
+                                leftCollapsed ? 'lg:w-10' : 'w-full lg:w-80 lg:min-w-80'
                             ]"
                         >
                         <Button 
@@ -570,9 +728,9 @@ defineExpose({
                         >
                             <ChevronDown :class="['h-4 w-4 transition-transform', leftCollapsed ? '-rotate-90' : 'rotate-90']" />
                         </Button>
-                        <div v-show="!leftCollapsed" class="flex flex-col min-h-0 flex-1">
+                        <div v-show="!leftCollapsed" class="flex flex-col min-h-0 flex-1 overflow-hidden">
                             <!-- New View Button -->
-                            <div class="mb-4">
+                            <div class="mb-4 shrink-0">
                                 <Dialog v-model:open="isNewViewDialogOpen" @update:open="resetNewViewDialog">
                                     <DialogTrigger as-child>
                                         <Button variant="outline" class="w-full text-sm text-green-600">
@@ -641,54 +799,123 @@ defineExpose({
                                 </button>
                             </div>
 
-                            <!-- Files List -->
-                            <nav class="flex flex-col space-y-1">
-                                <div
-                                    v-for="item in filteredFiles"
+                            <!-- Files List (reorderable) -->
+                            <nav 
+                                class="flex flex-col overflow-y-auto min-h-0 flex-1"
+                                @dragover="onListDragOver"
+                                @drop="onFileDrop"
+                            >
+                                <template
+                                    v-for="(item, index) in filteredFiles"
                                     :key="item.name"
-                                    class="flex items-center gap-1 group"
                                 >
-                                    <Tooltip>
-                                        <TooltipTrigger as-child>
-                                            <Button
-                                                :data-file-name="item.name"
-                                                variant="ghost"
-                                                :class="[
-                                                    'justify-start', 
-                                                    'px-3', 
-                                                    'py-1', 
-                                                    'flex-1',
-                                                    'text-xs',
-                                                    'truncate',
-                                                    'min-w-0',
-                                                    selectedFile?.name === item.name ? 'bg-accent' : ''
-                                                ]" 
-                                                @click="selectedFile = item"             
+                                    <!-- Insertion gap before this item -->
+                                    <div
+                                        class="relative mx-1 flex items-center justify-center transition-[min-height] duration-100"
+                                        :class="showDropGapAt(index) ? 'min-h-7 my-0.5' : 'min-h-1'"
+                                        aria-hidden="true"
+                                    >
+                                        <div
+                                            v-if="showDropGapAt(index)"
+                                            class="absolute inset-x-0 flex flex-col items-stretch gap-0.5 pointer-events-none"
+                                        >
+                                            <div class="h-0.5 rounded-full bg-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.35)]" />
+                                            <p
+                                                v-if="dropGapLabel"
+                                                class="px-1 text-[10px] leading-tight font-semibold text-primary truncate text-center"
                                             >
+                                                <span v-if="draggingFileName">{{ draggingFileName }} → </span>{{ dropGapLabel }}
+                                            </p>
+                                            <div class="h-0.5 rounded-full bg-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.35)]" />
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="flex items-center gap-1 group rounded-md"
+                                        :class="[
+                                            dragFromIndex === index ? 'opacity-40 ring-1 ring-dashed ring-muted-foreground/40' : '',
+                                            isDropNeighbor(index) ? 'bg-primary/10 ring-1 ring-primary/40' : '',
+                                        ]"
+                                        @dragover="onFileDragOver($event, index)"
+                                        @drop="onFileDrop"
+                                        @dragend="onFileDragEnd"
+                                    >
+                                        <span
+                                            v-if="canReorder"
+                                            draggable="true"
+                                            class="flex shrink-0 items-center text-muted-foreground opacity-40 group-hover:opacity-100 pl-0.5 cursor-grab active:cursor-grabbing"
+                                            title="Drag to reorder"
+                                            @dragstart="onFileDragStart($event, index)"
+                                            @click.stop
+                                        >
+                                            <GripVertical class="h-3.5 w-3.5" />
+                                        </span>
+                                        <Tooltip>
+                                            <TooltipTrigger as-child>
+                                                <Button
+                                                    :data-file-name="item.name"
+                                                    variant="ghost"
+                                                    :class="[
+                                                        'justify-start', 
+                                                        'px-3', 
+                                                        'py-1', 
+                                                        'flex-1',
+                                                        'text-xs',
+                                                        'truncate',
+                                                        'min-w-0',
+                                                        selectedFile?.name === item.name ? 'bg-accent' : ''
+                                                    ]" 
+                                                    @click="selectFile(item)"             
+                                                >
+                                                    {{ item.name }}
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="left">
                                                 {{ item.name }}
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="left">
-                                            {{ item.name }}
-                                        </TooltipContent>
-                                    </Tooltip>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        @click.stop="editFileName(item)"
-                                        class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                                            </TooltipContent>
+                                        </Tooltip>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click.stop="editFileName(item)"
+                                            class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-opacity"
+                                        >
+                                            <Pencil :size="1" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click.stop="handleDeleteFile(item)"
+                                            class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
+                                        >
+                                            <Trash2 :size="1" />
+                                        </Button>
+                                    </div>
+                                </template>
+
+                                <!-- Insertion gap after last item -->
+                                <div
+                                    class="relative mx-1 flex items-center justify-center transition-[min-height] duration-100"
+                                    :class="showDropGapAt(filteredFiles.length) ? 'min-h-7 my-0.5' : 'min-h-2'"
+                                    aria-hidden="true"
+                                    @dragover="onEndGapDragOver"
+                                    @drop="onFileDrop"
+                                >
+                                    <div
+                                        v-if="showDropGapAt(filteredFiles.length)"
+                                        class="absolute inset-x-0 flex flex-col items-stretch gap-0.5 pointer-events-none"
                                     >
-                                        <Pencil :size="1" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        @click.stop="handleDeleteFile(item)"
-                                        class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-opacity"
-                                    >
-                                        <Trash2 :size="1" />
-                                    </Button>
+                                        <div class="h-0.5 rounded-full bg-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.35)]" />
+                                        <p
+                                            v-if="dropGapLabel"
+                                            class="px-1 text-[10px] leading-tight font-semibold text-primary truncate text-center"
+                                        >
+                                            <span v-if="draggingFileName">{{ draggingFileName }} → </span>{{ dropGapLabel }}
+                                        </p>
+                                        <div class="h-0.5 rounded-full bg-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.35)]" />
+                                    </div>
                                 </div>
+
                                 <p
                                     v-if="filesFilter && filteredFiles.length === 0"
                                     class="px-3 py-2 text-xs text-muted-foreground"
@@ -700,15 +927,7 @@ defineExpose({
                     </aside>
 
                         <!-- Editor Area -->
-                        <div class="flex-1 min-w-0">
-                            <!-- Save status messages -->
-                            <!-- <div v-if="saveError" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-                                {{ saveError }}
-                            </div>
-                            <div v-if="saveSuccess" class="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm">
-                                Changes saved successfully!
-                            </div> -->
-                            
+                        <div class="flex-1 min-w-0" ref="editorContainerRef">
                             <!-- Code Editor -->
                             <Editor 
                                 ref="editorRef"
