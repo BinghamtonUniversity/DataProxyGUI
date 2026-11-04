@@ -106,7 +106,8 @@ const routeFormConfig = {
                 { label: "POST", value: "POST" , color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'},
                 { label: "PUT", value: "PUT" , color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'},
                 { label: "DELETE", value: "DELETE" , color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'},
-                { label: "PATCH", value: "PATCH" , color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'}
+                { label: "PATCH", value: "PATCH" , color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'},
+                { label: "ALL", value: "ALL" , color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'}
             ],
             multiple: false,
             show: true,
@@ -218,7 +219,8 @@ const newRouteFormConfig = computed(() => ({
             { label: 'POST', value: 'POST' },
             { label: 'PUT', value: 'PUT' },
             { label: 'DELETE', value: 'DELETE' },
-            { label: 'PATCH', value: 'PATCH' }
+            { label: 'PATCH', value: 'PATCH' },
+            { label: 'ALL', value: 'ALL' }
         ] },
         
     ]
@@ -418,18 +420,44 @@ const submitNewRoute = async (formData: any) => {
         }
         
         // Duplicate verb + path check
-        const existingRoutes = props.apiData.version_urls || []
-        const duplicate = existingRoutes.some((route, index) => {
-            const samePath = route.path.trim() === newRoute.path
-            const sameVerb = route.verb.trim().toUpperCase() === newRoute.verb
-            const isSameRoute = isEditMode.value && index === editingRouteIndex.value
+        // const existingRoutes = props.apiData.version_urls || []
+        // const duplicate = existingRoutes.some((route, index) => {
+        //     const samePath = route.path.trim() === newRoute.path
+        //     const sameVerb = route.verb.trim().toUpperCase() === newRoute.verb
+        //     const isSameRoute = isEditMode.value && index === editingRouteIndex.value
             
-            return samePath && sameVerb && !isSameRoute
+        //     return samePath && sameVerb && !isSameRoute
+        // })
+
+        // if (duplicate) {
+        //     newRouteError.value = `A route with path "${newRoute.path}" and verb "${newRoute.verb}" already exists.`
+        //     error( newRouteError.value, 'Duplicate Route')
+        //     newRouteLoading.value = false
+        //     return
+        // }
+
+        // Duplicate route check
+        // PHP routes by path + verb. Django ignores the verb, so for Python the path alone must be unique.
+        const isPython = props.api_type === 'python'
+        const newPath = newRoute.path.trim()
+        const newVerb = newRoute.verb.trim().toUpperCase()
+
+        const existingRoutes = props.apiData.version_urls || []
+        const duplicate = existingRoutes.find((route, index) => {
+            const samePath = route.path.trim() === newPath
+            const sameVerb = route.verb.trim().toUpperCase() === newVerb
+            const isSameRoute = isEditMode.value && index === editingRouteIndex.value
+
+            const sameParams = (route.required || []).map(p => p.name).join('/') === (newRoute.required || []).map((p: any) => p.name).join('/')
+
+            return samePath && (isPython ? sameParams : true) && (isPython || sameVerb) && !isSameRoute
         })
 
         if (duplicate) {
-            newRouteError.value = `A route with path "${newRoute.path}" and verb "${newRoute.verb}" already exists.`
-            error( newRouteError.value, 'Duplicate Route')
+            newRouteError.value = isPython
+                ? `A route with path "${newPath}" already exists (${duplicate.verb}). Django routes by path only, so use one route and check request.method in the function.`
+                : `A route with path "${newPath}" and verb "${newVerb}" already exists.`
+            error(newRouteError.value, 'Duplicate Route')
             newRouteLoading.value = false
             return
         }
@@ -541,6 +569,123 @@ const openEditRouteDialog = ( payload: any, index: number) => {
 
 
 
+// ---------------------------------------------------------------------------
+// Sort Routes Dialog (drag & drop)
+// ---------------------------------------------------------------------------
+const sortDialogOpen = ref(false)
+const sortSaving = ref(false)
+// Each item keeps a reference to the original route object + its original index
+const sortableRoutes = ref<{ route: RouteData; originalIndex: number }[]>([])
+const dragIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+
+const sortOrderChanged = computed(() =>
+    sortableRoutes.value.some((item, index) => item.originalIndex !== index)
+)
+
+const openSortDialog = () => {
+    const routes = props.apiData?.version_urls || []
+    if (routes.length < 2) {
+        info('You need at least two routes to change the order.', 'Nothing to Sort')
+        return
+    }
+    sortableRoutes.value = routes.map((route, index) => ({ route, originalIndex: index }))
+    dragIndex.value = null
+    dragOverIndex.value = null
+    sortDialogOpen.value = true
+}
+
+const closeSortDialog = () => {
+    if (sortSaving.value) return
+    sortDialogOpen.value = false
+    sortableRoutes.value = []
+    dragIndex.value = null
+    dragOverIndex.value = null
+}
+
+const moveSortItem = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= sortableRoutes.value.length) return
+    const items = [...sortableRoutes.value]
+    const [moved] = items.splice(from, 1)
+    items.splice(to, 0, moved)
+    sortableRoutes.value = items
+}
+
+const onSortDragStart = (event: DragEvent, index: number) => {
+    dragIndex.value = index
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move'
+        // Firefox requires data to be set for drag to start
+        event.dataTransfer.setData('text/plain', String(index))
+    }
+}
+
+const onSortDragOver = (event: DragEvent, index: number) => {
+    event.preventDefault()
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+    if (dragIndex.value === null || dragIndex.value === index) return
+    // Live reorder while dragging
+    moveSortItem(dragIndex.value, index)
+    dragIndex.value = index
+    dragOverIndex.value = index
+}
+
+const onSortDrop = (event: DragEvent) => {
+    event.preventDefault()
+    dragIndex.value = null
+    dragOverIndex.value = null
+}
+
+const onSortDragEnd = () => {
+    dragIndex.value = null
+    dragOverIndex.value = null
+}
+
+const resetSortOrder = () => {
+    sortableRoutes.value = [...sortableRoutes.value].sort((a, b) => a.originalIndex - b.originalIndex)
+}
+
+const saveSortOrder = async () => {
+    if (!props.apiData) {
+        error('API data not available', 'Error')
+        return
+    }
+    if (!sortOrderChanged.value) {
+        closeSortDialog()
+        return
+    }
+
+    sortSaving.value = true
+    try {
+        const updatedApiData = {
+            ...props.apiData,
+            version_urls: sortableRoutes.value.map(item => item.route),
+        }
+        // Update Layout's apiData only (persisted when the user clicks Layout's Save)
+        props.updateApiData(updatedApiData)
+        success('Route order updated. Please save.', 'Order Updated')
+
+        sortSaving.value = false
+        closeSortDialog()
+    } catch (err: any) {
+        error(err.message || 'Error saving route order', 'Error')
+    } finally {
+        sortSaving.value = false
+    }
+}
+
+const verbBadgeClass = (verb: string) => {
+    switch ((verb || '').toUpperCase()) {
+        case 'GET': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+        case 'POST': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+        case 'PUT': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+        case 'PATCH': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+        case 'DELETE': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+        case 'ALL': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+        default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+    }
+}
+
 // Function to highlight text in UI elements
 const highlightText = (text: string, query: string) => {
     if (!query || !text) return text
@@ -556,6 +701,9 @@ const handleDataGridActionHandler = (actionData: { action: string; selectedRows:
     switch (actionData.action) {
         case 'create':
             openNewRouteDialog();
+            break;
+        case 'sort':
+            openSortDialog();
             break;
         case 'edit':
             openEditRouteDialog(actionData.selectedData[0], actionData.selectedIndex[0]);
@@ -656,6 +804,7 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                     ]"
                     :actions="[
                         { name: 'create', type: 'success', min: 0, label: 'New', loc: 'left', icon: 'plus' },
+                        { name: 'sort', type: 'info', min: 0, label: 'Sort', loc: 'right', icon: 'sort' },
                         { name: 'required_parameters', type: 'warning', min: 1, max: 1, label: 'Required Parameters', icon: 'cog', loc: 'right' },
                         { name: 'optional_parameters', type: 'info', min: 1, max: 1, label: 'Optional Parameters', icon: 'cog', loc: 'right' },
                         { name: 'edit', type: 'primary', min: 1, max: 1, label: 'Edit', icon: 'edit', loc: 'right' },
@@ -715,7 +864,107 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                     :actionHandler="handleRouteFormAction"
                     :cancelAction="'close'" />
                 </AlertModal>
-             
+
+                <!-- Sort Routes Dialog -->
+                <AlertModal
+                    :isOpen="sortDialogOpen"
+                    title="Sort Routes"
+                    @close="closeSortDialog"
+                >
+                    <div class="space-y-4">
+                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                            Drag the routes to change their order, then click Save.
+                        </p>
+
+                        <ul class="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                            <li
+                                v-for="(item, index) in sortableRoutes"
+                                :key="`${item.originalIndex}-${item.route.verb}-${item.route.path}`"
+                                draggable="true"
+                                @dragstart="onSortDragStart($event, index)"
+                                @dragover="onSortDragOver($event, index)"
+                                @drop="onSortDrop"
+                                @dragend="onSortDragEnd"
+                                :class="[
+                                    'flex items-center gap-3 p-3 border rounded-lg bg-white dark:bg-gray-800 cursor-move select-none transition-all',
+                                    dragIndex === index
+                                        ? 'opacity-50 border-blue-400 ring-2 ring-blue-400/40'
+                                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                ]"
+                            >
+                                <!-- Drag handle -->
+                                <svg class="w-4 h-4 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7 4a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 6a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 6a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm9-12a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 6a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 6a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                                </svg>
+
+                                <span class="w-6 text-xs text-gray-500 dark:text-gray-400 text-right shrink-0">{{ index + 1 }}</span>
+
+                                <span :class="['px-2 py-0.5 text-xs font-semibold rounded shrink-0 w-16 text-center', verbBadgeClass(item.route.verb)]">
+                                    {{ item.route.verb }}
+                                </span>
+
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-mono text-sm text-gray-900 dark:text-white truncate">{{ item.route.path }}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                        {{ item.route.view_name }}<span v-if="item.route.description"> · {{ item.route.description }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Up / Down buttons (keyboard / non-drag fallback) -->
+                                <div class="flex flex-col shrink-0">
+                                    <button
+                                        type="button"
+                                        class="p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                        :disabled="index === 0"
+                                        title="Move up"
+                                        @click="moveSortItem(index, index - 1)"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="p-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                        :disabled="index === sortableRoutes.length - 1"
+                                        title="Move down"
+                                        @click="moveSortItem(index, index + 1)"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+
+                        <div class="flex items-center justify-between pt-2">
+                            <button
+                                type="button"
+                                class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                                :disabled="!sortOrderChanged || sortSaving"
+                                @click="resetSortOrder"
+                            >
+                                Reset
+                            </button>
+                            <div class="flex gap-2">
+                                <button
+                                    type="button"
+                                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500/20 transition-colors disabled:opacity-50"
+                                    :disabled="sortSaving"
+                                    @click="closeSortDialog"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    :disabled="!sortOrderChanged || sortSaving"
+                                    @click="saveSortOrder"
+                                >
+                                    {{ sortSaving ? 'Saving...' : 'Save' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </AlertModal>
+
             </template>
 
             <!-- No Data State -->
@@ -739,5 +988,3 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
         @close="closeDeleteModal"
     />
 </template>
-
-
