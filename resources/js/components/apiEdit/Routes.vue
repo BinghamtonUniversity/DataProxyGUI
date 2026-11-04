@@ -871,12 +871,12 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                     title="Sort Routes"
                     @close="closeSortDialog"
                 >
-                    <div class="space-y-4">
+                    <div class="space-y-4 w-full min-w-0 [contain:inline-size]">
                         <p class="text-sm text-gray-600 dark:text-gray-400">
                             Drag the routes to change their order, then click Save.
                         </p>
 
-                        <ul class="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                        <ul class="space-y-2 max-h-[60vh] overflow-y-auto overflow-x-hidden pr-1 w-full min-w-0">
                             <li
                                 v-for="(item, index) in sortableRoutes"
                                 :key="`${item.originalIndex}-${item.route.verb}-${item.route.path}`"
@@ -886,7 +886,7 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                                 @drop="onSortDrop"
                                 @dragend="onSortDragEnd"
                                 :class="[
-                                    'flex items-center gap-3 p-3 border rounded-lg bg-white dark:bg-gray-800 cursor-move select-none transition-all',
+                                    'flex items-center gap-3 p-3 border rounded-lg bg-white dark:bg-gray-800 cursor-move select-none transition-all w-full min-w-0 overflow-hidden',
                                     dragIndex === index
                                         ? 'opacity-50 border-blue-400 ring-2 ring-blue-400/40'
                                         : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -903,9 +903,14 @@ const handleDataGridRowActionHandler = (actionData: { type: string; payload: any
                                     {{ item.route.verb }}
                                 </span>
 
-                                <div class="flex-1 min-w-0">
-                                    <div class="font-mono text-sm text-gray-900 dark:text-white truncate">{{ item.route.path }}</div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                <div class="flex-1 min-w-0 overflow-hidden">
+                                    <div class="font-mono text-sm text-gray-900 dark:text-white truncate" :title="item.route.path">
+                                        {{ item.route.path }}
+                                    </div>
+                                    <div
+                                        class="text-xs text-gray-500 dark:text-gray-400 truncate"
+                                        :title="item.route.description ? `${item.route.view_name} · ${item.route.description}` : item.route.view_name"
+                                    >
                                         {{ item.route.view_name }}<span v-if="item.route.description"> · {{ item.route.description }}</span>
                                     </div>
                                 </div>
